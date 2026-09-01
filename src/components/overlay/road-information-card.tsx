@@ -1,0 +1,91 @@
+"use client";
+
+import {
+  AlertTriangle,
+  Camera,
+  Construction,
+  TrafficCone,
+} from "lucide-react";
+import { formatDistance } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import type { RoadIntelItem, RoadIntelKind } from "@/types/domain";
+
+const KIND_META: Record<
+  RoadIntelKind,
+  { label: string; className: string; icon: typeof Camera }
+> = {
+  cctv: {
+    label: "CCTV",
+    className: "text-violet-300 bg-violet-500/15",
+    icon: Camera,
+  },
+  construction: {
+    label: "施工",
+    className: "text-amber-300 bg-amber-500/15",
+    icon: Construction,
+  },
+  congestion: {
+    label: "壅塞",
+    className: "text-orange-300 bg-orange-500/15",
+    icon: TrafficCone,
+  },
+  accident: {
+    label: "事故",
+    className: "text-red-300 bg-red-500/15",
+    icon: AlertTriangle,
+  },
+  disaster: {
+    label: "災害",
+    className: "text-amber-200 bg-orange-400/15",
+    icon: AlertTriangle,
+  },
+};
+
+export function RoadInformationCard({
+  items,
+}: {
+  items: RoadIntelItem[];
+}) {
+  return (
+    <section className="pointer-events-auto w-full max-w-xl rounded-3xl border border-white/10 bg-black/55 p-4 text-white shadow-[0_12px_50px_rgba(0,0,0,0.45)] backdrop-blur-xl">
+      <div className="mb-3 flex items-baseline justify-between">
+        <h2 className="text-sm font-medium tracking-wide text-zinc-200">
+          前方道路情報
+        </h2>
+        <p className="text-[11px] text-zinc-500">模擬資料 · TDX 未串接</p>
+      </div>
+      {items.length === 0 ? (
+        <p className="text-sm text-zinc-400">前方暫無通報。</p>
+      ) : (
+        <ul className="space-y-2">
+          {items.map((item) => {
+            const meta = KIND_META[item.kind];
+            const Icon = meta.icon;
+            return (
+              <li
+                key={item.id}
+                className="flex items-center gap-3 rounded-2xl bg-white/4 px-3 py-2"
+              >
+                <span
+                  className={cn(
+                    "flex size-9 items-center justify-center rounded-xl",
+                    meta.className,
+                  )}
+                >
+                  <Icon className="size-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{item.title}</p>
+                  <p className="truncate text-xs text-zinc-400">{item.detail}</p>
+                </div>
+                <span className="shrink-0 text-xs text-zinc-400">
+                  {formatDistance(item.distanceMeters)}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}
