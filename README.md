@@ -76,6 +76,8 @@ src/
 
 底圖來源：[OpenFreeMap](https://openfreemap.org/) Dark，再覆寫成駕駛模式並降低 POI／次要地名密度。3D 模式會擠出建物。
 
+MapLibre GL JS 6 的向量圖磚依賴 Web Worker。Next.js 打包後預設 worker 路徑會失效，因此 `src/app/maplibre/[file]/route.ts` 會從本機 `node_modules` 提供 `maplibre-gl-worker.mjs`。
+
 ## Roadmap
 
 **Phase 1（本 repo）** 臺南駕駛 Prototype、mock CCTV／交通／災害、HUD 導航與情報卡。

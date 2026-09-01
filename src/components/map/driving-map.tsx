@@ -13,6 +13,7 @@ import {
   TAINAN_CENTER,
 } from "@/lib/constants";
 import { upsertIntelligenceLayers } from "@/lib/map-layers";
+import { configureMapLibreWorker } from "@/lib/maplibre-worker";
 import { applyDarkDrivingTheme } from "@/lib/map-style";
 import type {
   AccidentReport,
@@ -113,6 +114,8 @@ export function DrivingMap({
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
+    configureMapLibreWorker();
+
     const map = new MapLibreMap({
       container: containerRef.current,
       style: OPENFREEMAP_DARK_STYLE,
@@ -145,6 +148,9 @@ export function DrivingMap({
     };
 
     map.on("load", onLoad);
+    map.on("error", (event) => {
+      console.error("MapLibre error", event.error);
+    });
     map.on("dragstart", () => onUserPanRef.current());
     map.on("rotatestart", (event) => {
       if (event.originalEvent) onUserPanRef.current();
