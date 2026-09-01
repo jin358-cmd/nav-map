@@ -1,33 +1,60 @@
 # 智路臺灣 Smart Road Taiwan
 
-台灣智慧駕駛地圖＋即時道路情報平台的第一階段 Prototype。這不是 Google Maps 克隆：畫面以駕駛視角為主，強調前方路況、CCTV、壅塞與災害情報。
+台灣智慧駕駛地圖＋即時道路情報平台。產品定位是 **駕駛視角的道路情報**，不是 Google Maps 克隆。
 
-目前示範範圍：**臺南市區**（中正路北上、民生路口右轉往臺南火車站）。
+第一階段 Prototype 以 **臺南市區** 為示範範圍（中正路北上，民生路口右轉往臺南火車站），使用 mock CCTV、交通與災害資料。尚未串接真實 TDX。
 
-## 功能（Phase 1）
+## 技術架構
 
-- 全螢幕 MapLibre 地圖，預設中心在臺南
-- GPS 定位成功後，自訂車輛標記移到目前位置（不是 Google 藍點）
-- 駕駛視角：pitch 約 60°，車子約在畫面下方 30%，前方視野拉長
-- Dark Driving Mode：石墨黑底、灰藍道路、青綠路線高亮
-- 臺南 mock CCTV：點擊紫色鏡頭標記，底部資訊卡顯示路口、狀態、查看即時影像
-- mock 交通圖層與災害／事故標記，顏色可清楚區分
-- 頂部導航提示（八百公尺後右轉）
-- 底部半透明 Road Information Card
-- 地圖控制：定位、2D/3D、居中、回臺南示範
+| 層 | 技術 |
+| --- | --- |
+| 框架 | Next.js 16 App Router、TypeScript |
+| UI | Tailwind CSS 4、shadcn/ui |
+| 地圖 | MapLibre GL JS 6、OpenFreeMap 向量圖磚 |
+| 部署 | Vercel（Next.js 原生） |
 
-## 技術棧
+資料流維持分離：
 
-- Next.js 16（App Router）
-- TypeScript
-- Tailwind CSS 4 + shadcn/ui
-- MapLibre GL JS
-- OpenFreeMap vector tiles（無 API key）
+`components`（UI）→ `services`（資料存取）→ `data`（Phase 1 mock）或未來的 TDX／防災 API。
 
-## 快速開始
+```
+src/
+  app/                      App Router、MapLibre worker 路由
+  components/
+    driving/                全螢幕駕駛 HUD 組合
+    map/                    MapLibre、Vehicle Marker、控制鈕
+    overlay/                導航列、道路情報卡、CCTV 卡
+    ui/                     shadcn 元件
+  data/                     臺南 mock CCTV / traffic / disaster
+  services/
+    tdx.ts                  預留 MOTC TDX（Phase 2–3）
+    disaster-api.ts         預留防災 API（Phase 4）
+    geolocation.ts          瀏覽器 GPS
+  lib/                      地圖樣式、圖層、常數
+  types/                    領域型別
+```
+
+Dark Driving Mode：石墨黑底、灰藍道路、青綠路線；CCTV 紫、事故紅、壅塞橘紅、災害琥珀橘。
+
+## 安裝方式
+
+需要 Node.js 20 以上。
 
 ```bash
+git clone <repo-url>
+cd taiwan-pilot
 npm install
+```
+
+複製環境變數範本（目前可保持空白）：
+
+```bash
+cp .env.example .env.local
+```
+
+## 本機啟動方式
+
+```bash
 npm run dev
 ```
 
@@ -39,56 +66,53 @@ npm run build
 npm start
 ```
 
-定位權限可拒絕；拒絕後仍停留在臺南示範路線。未來串接 TDX 時，複製 `.env.example` 為 `.env.local` 並填入 Client ID／Secret。未設定時一律使用 mock 資料。
+定位權限可拒絕；拒絕後仍停留在臺南示範路線。GPS 授權成功則車輛標記移到目前位置。
 
-## 架構
+## 第一階段已完成功能
 
-```
-src/
-  app/                  App Router 入口
-  components/
-    driving/            畫面組合（地圖 + HUD）
-    map/                MapLibre、車輛標記、控制鈕
-    overlay/            導航列、道路情報卡、CCTV 卡
-    ui/                 shadcn 元件
-  data/                 Phase 1 mock 資料
-  services/             資料存取層（UI 不直接讀 mock）
-    tdx.ts              預留給 MOTC TDX CCTV／路況
-    disaster-api.ts     預留給防災／事故來源
-    geolocation.ts      瀏覽器 GPS
-  lib/                  地圖樣式、圖層、常數
-  types/                領域型別
-```
+- 全螢幕 MapLibre 地圖，預設中心在臺南
+- Dark Driving Mode（石墨黑、灰藍道路、青綠路線）
+- 駕駛視角 3D：pitch 約 60°，車子在可見駕駛區下方約 30%，前方視野拉長
+- 2D / 3D 切換、GPS 定位、居中、回臺南示範
+- 自訂 Vehicle Marker（不是 Google 藍點）
+- Mock CCTV Marker；點擊底部資訊卡（路口名稱、狀態、查看即時影像）
+- Mock Traffic 圖層、Mock Disaster / 事故標記
+- 頂部導航資訊 UI（八百公尺後右轉）
+- 底部半透明 Road Information Card
+- Android 直式優先的 Responsive HUD（資訊卡不遮住主要駕駛視野）
 
-資料流：`components` → `services` → `data`（mock）或未來的 TDX／防災 API。地圖視覺在 `lib/map-style.ts` 於 style load 後上色，情報圖層在 `lib/map-layers.ts` 以 GeoJSON 套上。
+目前 **不要** 填入真實 TDX 金鑰；`services/tdx.ts` 在未設定時一律回傳 mock。
 
-## 地圖視覺
+## Future Roadmap
 
-| 元素 | 顏色 |
-| --- | --- |
-| 背景 | 石墨黑 `#0b0d11` |
-| 道路 | 灰藍 `#3d4e64`–`#6d87a3` |
-| 導航路線 | 青藍 `#3ee0ff` |
-| CCTV | 紫 `#7c3aed` / `#c084fc` |
-| 事故 | 紅 `#ff3b3b` |
-| 壅塞 | 橘紅 `#ff6b35` |
-| 災害 | 琥珀橘 `#ff9f1c` |
+**Phase 2：TDX CCTV**  
+串接 [MOTC TDX](https://tdx.transportdata.tw/) 臺南 CCTV 清單與即時影像 URL。`fetchTainanCctv` / `fetchCctvSnapshotUrl` 已預留。
 
-底圖來源：[OpenFreeMap](https://openfreemap.org/) Dark，再覆寫成駕駛模式並降低 POI／次要地名密度。3D 模式會擠出建物。
+**Phase 3：即時交通**  
+TDX Live Traffic 取代 mock 壅塞線，依真實車速上色。
 
-MapLibre GL JS 6 的向量圖磚依賴 Web Worker。Next.js 打包後預設 worker 路徑會失效，因此 `src/app/maplibre/[file]/route.ts` 會從本機 `node_modules` 提供 `maplibre-gl-worker.mjs`。
+**Phase 4：災害資訊**  
+NCDR 或地方防災 API 取代 mock 積水／封路／強風標記。
 
-## Roadmap
+**Phase 5：路線規劃**  
+真實起訖點路徑規劃，不再只走臺南示範折線。
 
-**Phase 1（本 repo）** 臺南駕駛 Prototype、mock CCTV／交通／災害、HUD 導航與情報卡。
+**Phase 6：Turn-by-turn Navigation**  
+依 GPS heading 對齊車頭、逐步轉向指示與語音。
 
-**Phase 2** 串接 [TDX](https://tdx.transportdata.tw/) 即時 CCTV 影像與 Live Traffic，服務層已預留 `fetchTainanCctv` / `fetchTainanTraffic`。
+**Phase 7：PWA / Driving Assistant**  
+可安裝、離線底圖快取、車機／直式駕駛助理佈局。
 
-**Phase 3** 真實路徑規劃、車頭方向與 GPS heading 對齊、語音轉向。
+## Vercel 部署
 
-**Phase 4** 正式防災來源（NCDR 或地方防災），推播級災害與封路。
+本專案是標準 Next.js App Router，可直接部署 Vercel：
 
-**Phase 5** 擴充到全臺城市切換、離線快取、車機／PWA 佈局。
+- Framework Preset：Next.js
+- Build Command：`npm run build`
+- Output：Next.js 預設
+- 環境變數：可先不設 `NEXT_PUBLIC_TDX_*`
+
+MapLibre worker 由 `src/app/maplibre/[file]/route.ts` 提供，`next.config.ts` 已列入 tracing，避免 serverless 漏檔。
 
 ## 授權
 

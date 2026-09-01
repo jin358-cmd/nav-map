@@ -33,7 +33,7 @@ export function MapControls({
   const locating = gpsStatus === "locating";
 
   return (
-    <div className="pointer-events-auto flex flex-col gap-2">
+    <div className="pointer-events-auto flex flex-col items-end gap-2.5">
       <ControlButton
         label={gpsStatus === "active" ? "GPS 已鎖定" : "定位"}
         onClick={onLocate}
@@ -62,7 +62,7 @@ export function MapControls({
       <Button
         variant="outline"
         onClick={onDemoDrive}
-        className="mt-1 h-9 rounded-full border-white/15 bg-black/45 px-3 text-xs text-cyan-100 backdrop-blur-md hover:bg-black/60"
+        className="mt-0.5 h-11 min-w-11 rounded-full border-white/15 bg-black/50 px-3 text-xs text-cyan-100 shadow-lg backdrop-blur-md hover:bg-black/70 touch-manipulation"
       >
         臺南示範
       </Button>
@@ -90,7 +90,7 @@ function ControlButton({
       title={label}
       onClick={onClick}
       className={cn(
-        "size-11 rounded-2xl border-white/12 bg-black/50 text-zinc-100 shadow-lg backdrop-blur-md hover:bg-black/70",
+        "size-12 rounded-2xl border-white/12 bg-black/55 text-zinc-100 shadow-lg backdrop-blur-md hover:bg-black/70 touch-manipulation",
         active && "border-cyan-300/50 text-cyan-200",
       )}
     >

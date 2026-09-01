@@ -15,9 +15,10 @@ export const DEMO_VEHICLE: VehiclePose = {
 
 export const DRIVING_PITCH = 60;
 export const DRIVING_ZOOM = 17.15;
+export const DRIVING_ZOOM_MOBILE = 16.7;
 export const OVERHEAD_ZOOM = 15.4;
 
-/** 車子約在畫面下方 30%：上方 padding 40% 使相機中心落在 70% 高度 */
+/** 車子約在可見駕駛區下方 30%：上方 padding 約 40% 拉開前方視野 */
 export const DRIVING_PADDING_RATIO = 0.4;
 
 export const MAP_COLORS = {

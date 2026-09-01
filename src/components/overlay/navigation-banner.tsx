@@ -11,26 +11,26 @@ export function NavigationBanner({
 }) {
   if (!maneuver) {
     return (
-      <div className="pointer-events-none rounded-2xl border border-white/10 bg-black/45 px-4 py-3 text-sm text-zinc-300 backdrop-blur-md">
+      <div className="pointer-events-none rounded-2xl border border-white/10 bg-black/45 px-3 py-2 text-sm text-zinc-300 backdrop-blur-md">
         導航資訊載入中…
       </div>
     );
   }
 
   return (
-    <div className="pointer-events-none w-full max-w-xl rounded-2xl border border-cyan-300/20 bg-black/55 px-4 py-3 text-white shadow-[0_8px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl">
-      <div className="flex items-center gap-3">
-        <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-cyan-400/15 text-cyan-300">
-          <CornerUpRight className="size-6" />
+    <div className="pointer-events-none w-full max-w-xl rounded-2xl border border-cyan-300/20 bg-black/55 px-3 py-2 text-white shadow-[0_8px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:px-4 sm:py-3">
+      <div className="flex items-center gap-2.5 sm:gap-3">
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-cyan-400/15 text-cyan-300 sm:size-12 sm:rounded-2xl">
+          <CornerUpRight className="size-5 sm:size-6" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] tracking-wide text-cyan-200/80 uppercase">
+          <p className="hidden text-[11px] tracking-wide text-cyan-200/80 uppercase sm:block">
             智慧導航 · 示範路線
           </p>
-          <p className="truncate text-lg font-semibold tracking-tight">
+          <p className="truncate text-base font-semibold tracking-tight sm:text-lg">
             {formatDistance(maneuver.distanceMeters)}後{maneuver.action}
           </p>
-          <p className="truncate text-sm text-zinc-300">
+          <p className="truncate text-xs text-zinc-300 sm:text-sm">
             {maneuver.roadName}
             <span className="text-zinc-500"> · {maneuver.hint}</span>
           </p>

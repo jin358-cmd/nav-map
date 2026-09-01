@@ -131,7 +131,7 @@ export function DrivingApp() {
   }, []);
 
   return (
-    <div className="relative h-dvh w-full overflow-hidden bg-[#0b0d11] text-zinc-100">
+    <div className="relative h-dvh w-full overflow-hidden overscroll-none bg-[#0b0d11] text-zinc-100">
       <DrivingMap
         vehicle={vehicle}
         cameraMode={cameraMode}
@@ -148,38 +148,36 @@ export function DrivingApp() {
 
       <div className="driving-vignette pointer-events-none absolute inset-0" />
 
-      <header className="pointer-events-none absolute inset-x-0 top-0 z-10 flex flex-col gap-3 p-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="pointer-events-none rounded-2xl border border-white/10 bg-black/45 px-3 py-2 backdrop-blur-md">
-            <p className="text-[11px] tracking-[0.18em] text-cyan-200/80">
-              SMART ROAD
-            </p>
-            <p className="text-sm font-semibold">智路臺灣 · 臺南</p>
-          </div>
-          <div className="pointer-events-auto">
-            <MapControls
-              cameraMode={cameraMode}
-              gpsStatus={gpsStatus}
-              followVehicle={followVehicle}
-              onLocate={() => void locate()}
-              onToggleCamera={() =>
-                setCameraMode((mode) => (mode === "3d" ? "2d" : "3d"))
-              }
-              onRecenter={() => setFollowVehicle(true)}
-              onDemoDrive={goDemoDrive}
-            />
-          </div>
-        </div>
-        <div className="flex justify-center">
-          <NavigationBanner maneuver={maneuver} />
-        </div>
-      </header>
+      <div className="pointer-events-none absolute top-[max(0.45rem,env(safe-area-inset-top))] left-3 z-10 max-w-[58%] rounded-2xl border border-white/10 bg-black/45 px-2.5 py-1.5 backdrop-blur-md sm:max-w-none sm:px-3 sm:py-2">
+        <p className="hidden text-[10px] tracking-[0.18em] text-cyan-200/80 sm:block">
+          SMART ROAD
+        </p>
+        <p className="text-xs font-semibold sm:text-sm">智路臺灣 · 臺南</p>
+      </div>
 
-      <div className="pointer-events-none absolute bottom-0 left-0 z-10 hidden max-w-[11rem] p-3 sm:block">
+      <div className="pointer-events-none absolute top-[max(2.7rem,calc(env(safe-area-inset-top)+2.15rem))] right-[4.35rem] left-3 z-10 flex justify-center sm:top-[max(0.75rem,env(safe-area-inset-top))] sm:right-24 sm:left-44">
+        <NavigationBanner maneuver={maneuver} />
+      </div>
+
+      <div className="pointer-events-auto absolute top-[38%] right-[max(0.65rem,env(safe-area-inset-right))] z-20 -translate-y-1/2 sm:top-24 sm:translate-y-0">
+        <MapControls
+          cameraMode={cameraMode}
+          gpsStatus={gpsStatus}
+          followVehicle={followVehicle}
+          onLocate={() => void locate()}
+          onToggleCamera={() =>
+            setCameraMode((mode) => (mode === "3d" ? "2d" : "3d"))
+          }
+          onRecenter={() => setFollowVehicle(true)}
+          onDemoDrive={goDemoDrive}
+        />
+      </div>
+
+      <div className="pointer-events-none absolute bottom-28 left-2 z-10 hidden max-w-[11rem] sm:bottom-36 sm:left-3 sm:block">
         <Legend />
       </div>
 
-      <footer className="absolute inset-x-0 bottom-0 z-10 flex justify-center p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:p-4">
+      <footer className="absolute inset-x-0 bottom-0 z-10 flex justify-center px-2 pb-[max(0.45rem,env(safe-area-inset-bottom))] sm:p-4 sm:pt-0">
         {selectedCctv ? (
           <CctvDetailCard
             camera={selectedCctv}
@@ -195,14 +193,6 @@ export function DrivingApp() {
           {loadError}
         </div>
       ) : null}
-
-      <p className="pointer-events-none absolute right-3 bottom-28 z-10 hidden text-[10px] text-zinc-500 sm:block">
-        {gpsStatus === "active"
-          ? "GPS 定位中"
-          : gpsStatus === "denied"
-            ? "定位未授權 · 示範臺南"
-            : "示範駕駛視角"}
-      </p>
     </div>
   );
 }

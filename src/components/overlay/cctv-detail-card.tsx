@@ -19,14 +19,16 @@ export function CctvDetailCard({
   const online = camera.status === "online";
 
   return (
-    <section className="pointer-events-auto w-full max-w-xl rounded-3xl border border-violet-300/25 bg-black/60 p-4 text-white shadow-[0_12px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+    <section className="pointer-events-auto w-full max-w-xl rounded-2xl border border-violet-300/25 bg-black/60 p-3 text-white shadow-[0_12px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl sm:rounded-3xl sm:p-4">
       <div className="flex items-start gap-3">
-        <span className="flex size-11 items-center justify-center rounded-2xl bg-violet-500/20 text-violet-300">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-violet-500/20 text-violet-300 sm:size-11">
           <Camera className="size-5" />
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <h2 className="truncate text-base font-semibold">{camera.name}</h2>
+            <h2 className="truncate text-sm font-semibold sm:text-base">
+              {camera.name}
+            </h2>
             <Badge
               className={cn(
                 "border-0",
@@ -38,8 +40,10 @@ export function CctvDetailCard({
               {cctvStatusLabel(camera.status)}
             </Badge>
           </div>
-          <p className="mt-0.5 text-sm text-zinc-300">{camera.intersection}</p>
-          <p className="text-xs text-zinc-500">
+          <p className="mt-0.5 truncate text-sm text-zinc-300">
+            {camera.intersection}
+          </p>
+          <p className="truncate text-xs text-zinc-500">
             {camera.district} · {camera.snapshotLabel}
           </p>
         </div>
@@ -48,7 +52,7 @@ export function CctvDetailCard({
           size="icon-sm"
           aria-label="關閉"
           onClick={onClose}
-          className="text-zinc-300 hover:bg-white/10 hover:text-white"
+          className="size-11 text-zinc-300 hover:bg-white/10 hover:text-white touch-manipulation"
         >
           <X />
         </Button>
@@ -63,10 +67,10 @@ export function CctvDetailCard({
             </span>
             <span>TDX 尚未串接</span>
           </div>
-          <div className="relative aspect-video bg-[radial-gradient(circle_at_30%_40%,#2a1848,transparent_45%),linear-gradient(180deg,#0b0d11,black)]">
+          <div className="relative aspect-video max-h-40 bg-[radial-gradient(circle_at_30%_40%,#2a1848,transparent_45%),linear-gradient(180deg,#0b0d11,black)] sm:max-h-56">
             <div className="cctv-scan absolute inset-0" />
-            <div className="absolute inset-x-4 bottom-4 flex items-end justify-between text-[11px] text-cyan-100/80">
-              <span>{camera.intersection}</span>
+            <div className="absolute inset-x-4 bottom-3 flex items-end justify-between text-[11px] text-cyan-100/80">
+              <span className="truncate pr-2">{camera.intersection}</span>
               <span>CAM {camera.id.replace("cctv-", "").toUpperCase()}</span>
             </div>
           </div>
@@ -77,14 +81,14 @@ export function CctvDetailCard({
         <Button
           onClick={() => setShowFeed(true)}
           disabled={!online}
-          className="flex-1 rounded-xl bg-violet-500 text-white hover:bg-violet-400 disabled:bg-zinc-700"
+          className="h-11 flex-1 rounded-xl bg-violet-500 text-white hover:bg-violet-400 disabled:bg-zinc-700 touch-manipulation"
         >
           查看即時影像
         </Button>
         <Button
           variant="outline"
           onClick={onClose}
-          className="rounded-xl border-white/15 bg-transparent text-zinc-200 hover:bg-white/10"
+          className="h-11 rounded-xl border-white/15 bg-transparent text-zinc-200 hover:bg-white/10 touch-manipulation"
         >
           返回情報
         </Button>

@@ -8,6 +8,7 @@ import {
   DRIVING_PADDING_RATIO,
   DRIVING_PITCH,
   DRIVING_ZOOM,
+  DRIVING_ZOOM_MOBILE,
   OPENFREEMAP_DARK_STYLE,
   OVERHEAD_ZOOM,
   TAINAN_CENTER,
@@ -38,15 +39,32 @@ type DrivingMapProps = {
   onUserPan: () => void;
 };
 
-function drivingPadding(height: number, mode: CameraMode) {
+function isCompactViewport(width: number) {
+  return width < 640;
+}
+
+function drivingPadding(
+  height: number,
+  width: number,
+  mode: CameraMode,
+) {
+  const compact = isCompactViewport(width);
+  const bottomPad = compact ? 158 : 196;
+  const rightPad = compact ? 58 : 20;
   if (mode !== "3d") {
-    return { top: 80, bottom: 180, left: 16, right: 16 };
+    return {
+      top: compact ? 108 : 96,
+      bottom: bottomPad,
+      left: 12,
+      right: rightPad,
+    };
   }
+  const topPad = Math.round((height - bottomPad) * DRIVING_PADDING_RATIO);
   return {
-    top: Math.round(height * DRIVING_PADDING_RATIO),
-    bottom: 0,
-    left: 16,
-    right: 16,
+    top: Math.max(topPad, compact ? 96 : 80),
+    bottom: bottomPad,
+    left: 12,
+    right: rightPad,
   };
 }
 
@@ -56,12 +74,19 @@ function cameraOptions(
   mode: CameraMode,
 ) {
   const height = map.getContainer().clientHeight;
+  const width = map.getContainer().clientWidth;
+  const compact = isCompactViewport(width);
   return {
     center: [vehicle.lng, vehicle.lat] as [number, number],
     bearing: mode === "3d" ? vehicle.heading : 0,
     pitch: mode === "3d" ? DRIVING_PITCH : 0,
-    zoom: mode === "3d" ? DRIVING_ZOOM : OVERHEAD_ZOOM,
-    padding: drivingPadding(height, mode),
+    zoom:
+      mode === "3d"
+        ? compact
+          ? DRIVING_ZOOM_MOBILE
+          : DRIVING_ZOOM
+        : OVERHEAD_ZOOM,
+    padding: drivingPadding(height, width, mode),
   };
 }
 
@@ -100,6 +125,7 @@ export function DrivingMap({
   const vehicleRef = useRef(vehicle);
   const routeRef = useRef(route);
   const trafficRef = useRef(traffic);
+  const followVehicleRef = useRef(followVehicle);
   const readyRef = useRef(false);
 
   useEffect(() => {
@@ -109,7 +135,16 @@ export function DrivingMap({
     vehicleRef.current = vehicle;
     routeRef.current = route;
     trafficRef.current = traffic;
-  }, [onCctvSelect, onUserPan, cameraMode, vehicle, route, traffic]);
+    followVehicleRef.current = followVehicle;
+  }, [
+    onCctvSelect,
+    onUserPan,
+    cameraMode,
+    vehicle,
+    route,
+    traffic,
+    followVehicle,
+  ]);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -151,12 +186,21 @@ export function DrivingMap({
     map.on("error", (event) => {
       console.error("MapLibre error", event.error);
     });
+    const onResize = () => {
+      if (!readyRef.current) return;
+      map.resize();
+      if (followVehicleRef.current) {
+        map.jumpTo(cameraOptions(map, vehicleRef.current, modeRef.current));
+      }
+    };
+    window.addEventListener("resize", onResize);
     map.on("dragstart", () => onUserPanRef.current());
     map.on("rotatestart", (event) => {
       if (event.originalEvent) onUserPanRef.current();
     });
 
     return () => {
+      window.removeEventListener("resize", onResize);
       readyRef.current = false;
       vehicleMarkerRef.current?.remove();
       vehicleMarkerRef.current = null;

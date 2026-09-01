@@ -47,8 +47,8 @@ export function RoadInformationCard({
   items: RoadIntelItem[];
 }) {
   return (
-    <section className="pointer-events-auto w-full max-w-xl rounded-3xl border border-white/10 bg-black/55 p-4 text-white shadow-[0_12px_50px_rgba(0,0,0,0.45)] backdrop-blur-xl">
-      <div className="mb-3 flex items-baseline justify-between">
+    <section className="pointer-events-auto w-full max-w-xl rounded-2xl border border-white/10 bg-black/55 p-3 text-white shadow-[0_12px_50px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:rounded-3xl sm:p-4">
+      <div className="mb-2 flex items-baseline justify-between sm:mb-3">
         <h2 className="text-sm font-medium tracking-wide text-zinc-200">
           前方道路情報
         </h2>
@@ -57,18 +57,18 @@ export function RoadInformationCard({
       {items.length === 0 ? (
         <p className="text-sm text-zinc-400">前方暫無通報。</p>
       ) : (
-        <ul className="space-y-2">
+        <ul className="space-y-1.5 sm:space-y-2">
           {items.map((item) => {
             const meta = KIND_META[item.kind];
             const Icon = meta.icon;
             return (
               <li
                 key={item.id}
-                className="flex items-center gap-3 rounded-2xl bg-white/4 px-3 py-2"
+                className="flex min-h-11 items-center gap-2.5 rounded-xl bg-white/4 px-2.5 py-1.5 sm:gap-3 sm:rounded-2xl sm:px-3 sm:py-2"
               >
                 <span
                   className={cn(
-                    "flex size-9 items-center justify-center rounded-xl",
+                    "flex size-8 shrink-0 items-center justify-center rounded-lg sm:size-9 sm:rounded-xl",
                     meta.className,
                   )}
                 >

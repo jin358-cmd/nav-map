@@ -160,15 +160,16 @@
 }
 
 .intel-marker {
-  width: 30px;
-  height: 30px;
+  width: 40px;
+  height: 40px;
   border-radius: 999px;
   display: grid;
   place-items: center;
   color: white;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   cursor: pointer;
+  touch-action: manipulation;
   border: 2px solid rgba(255, 255, 255, 0.18);
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45);
 }
@@ -212,6 +213,14 @@
   to {
     transform: translateY(20%);
   }
+}
+
+.maplibregl-map {
+  font: inherit;
+}
+
+.maplibregl-canvas {
+  touch-action: none;
 }
 
 .maplibregl-ctrl-attrib {
