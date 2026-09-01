@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import maplibregl from "maplibre-gl";
+import { Map as MapLibreMap, Marker } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { createVehicleMarkerElement } from "@/components/map/vehicle-marker";
 import {
@@ -50,7 +50,7 @@ function drivingPadding(height: number, mode: CameraMode) {
 }
 
 function cameraOptions(
-  map: maplibregl.Map,
+  map: MapLibreMap,
   vehicle: VehiclePose,
   mode: CameraMode,
 ) {
@@ -90,9 +90,9 @@ export function DrivingMap({
   onUserPan,
 }: DrivingMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<maplibregl.Map | null>(null);
-  const vehicleMarkerRef = useRef<maplibregl.Marker | null>(null);
-  const intelMarkersRef = useRef<maplibregl.Marker[]>([]);
+  const mapRef = useRef<MapLibreMap | null>(null);
+  const vehicleMarkerRef = useRef<Marker | null>(null);
+  const intelMarkersRef = useRef<Marker[]>([]);
   const onCctvSelectRef = useRef(onCctvSelect);
   const onUserPanRef = useRef(onUserPan);
   const modeRef = useRef(cameraMode);
@@ -101,17 +101,19 @@ export function DrivingMap({
   const trafficRef = useRef(traffic);
   const readyRef = useRef(false);
 
-  onCctvSelectRef.current = onCctvSelect;
-  onUserPanRef.current = onUserPan;
-  modeRef.current = cameraMode;
-  vehicleRef.current = vehicle;
-  routeRef.current = route;
-  trafficRef.current = traffic;
+  useEffect(() => {
+    onCctvSelectRef.current = onCctvSelect;
+    onUserPanRef.current = onUserPan;
+    modeRef.current = cameraMode;
+    vehicleRef.current = vehicle;
+    routeRef.current = route;
+    trafficRef.current = traffic;
+  }, [onCctvSelect, onUserPan, cameraMode, vehicle, route, traffic]);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
-    const map = new maplibregl.Map({
+    const map = new MapLibreMap({
       container: containerRef.current,
       style: OPENFREEMAP_DARK_STYLE,
       center: [TAINAN_CENTER.lng, TAINAN_CENTER.lat],
@@ -126,7 +128,7 @@ export function DrivingMap({
     mapRef.current = map;
 
     const vehicleEl = createVehicleMarkerElement();
-    vehicleMarkerRef.current = new maplibregl.Marker({
+    vehicleMarkerRef.current = new Marker({
       element: vehicleEl,
       anchor: "center",
       pitchAlignment: "viewport",
@@ -185,7 +187,7 @@ export function DrivingMap({
         onCctvSelectRef.current(camera);
       });
       intelMarkersRef.current.push(
-        new maplibregl.Marker({ element: el, anchor: "bottom" })
+        new Marker({ element: el, anchor: "bottom" })
           .setLngLat([camera.location.lng, camera.location.lat])
           .addTo(map),
       );
@@ -194,7 +196,7 @@ export function DrivingMap({
     for (const accident of accidents) {
       const el = markerEl("intel-marker--accident", "!", accident.title);
       intelMarkersRef.current.push(
-        new maplibregl.Marker({ element: el, anchor: "bottom" })
+        new Marker({ element: el, anchor: "bottom" })
           .setLngLat([accident.location.lng, accident.location.lat])
           .addTo(map),
       );
@@ -203,7 +205,7 @@ export function DrivingMap({
     for (const disaster of disasters) {
       const el = markerEl("intel-marker--disaster", "▲", disaster.title);
       intelMarkersRef.current.push(
-        new maplibregl.Marker({ element: el, anchor: "bottom" })
+        new Marker({ element: el, anchor: "bottom" })
           .setLngLat([disaster.location.lng, disaster.location.lat])
           .addTo(map),
       );

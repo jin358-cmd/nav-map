@@ -1,4 +1,4 @@
-import type { Map as MapLibreMap } from "maplibre-gl";
+import type { GeoJSONSource, Map as MapLibreMap } from "maplibre-gl";
 import { MAP_COLORS } from "@/lib/constants";
 import type { TrafficSegment } from "@/types/domain";
 
@@ -33,16 +33,16 @@ export function upsertIntelligenceLayers(
   };
 
   const routeSource = map.getSource("demo-route");
-  if (routeSource && "setData" in routeSource) {
-    routeSource.setData(routeData);
-  } else {
+  if (routeSource?.type === "geojson") {
+    (routeSource as GeoJSONSource).setData(routeData);
+  } else if (!routeSource) {
     map.addSource("demo-route", { type: "geojson", data: routeData });
   }
 
   const trafficSource = map.getSource("mock-traffic");
-  if (trafficSource && "setData" in trafficSource) {
-    trafficSource.setData(trafficData);
-  } else {
+  if (trafficSource?.type === "geojson") {
+    (trafficSource as GeoJSONSource).setData(trafficData);
+  } else if (!trafficSource) {
     map.addSource("mock-traffic", { type: "geojson", data: trafficData });
   }
 

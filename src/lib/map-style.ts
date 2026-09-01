@@ -48,7 +48,11 @@ export function applyDarkDrivingTheme(map: MapLibreMap) {
     if (!map.getLayer(layerId)) continue;
     for (const [property, value] of Object.entries(paints)) {
       try {
-        map.setPaintProperty(layerId, property, value);
+        map.setPaintProperty(
+          layerId,
+          property as Parameters<MapLibreMap["setPaintProperty"]>[1],
+          value,
+        );
       } catch {
         // Layer exists but does not accept this paint property.
       }
