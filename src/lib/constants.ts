@@ -25,6 +25,8 @@ export const INTERSECTION_ZOOM = 18.65;
 export const INTERSECTION_ZOOM_MOBILE = 18.25;
 export const INTERSECTION_PITCH = 40;
 export const INTERSECTION_APPROACH_METERS = 95;
+/** 跑馬燈箭頭：接近路口約 30 公尺才顯現 */
+export const GUIDANCE_ARROW_APPROACH_METERS = 30;
 
 /** 車子約在可見駕駛區下方 30%：上方 padding 約 40% 拉開前方視野 */
 export const DRIVING_PADDING_RATIO = 0.4;

@@ -1,4 +1,7 @@
-import { INTERSECTION_APPROACH_METERS } from "@/lib/constants";
+import {
+  GUIDANCE_ARROW_APPROACH_METERS,
+  INTERSECTION_APPROACH_METERS,
+} from "@/lib/constants";
 import { bearingDegrees, distanceKm } from "@/lib/geo";
 import type { LngLat } from "@/types/domain";
 
@@ -69,7 +72,7 @@ export function guidanceArrowsAlong(
 ): GuidanceArrow[] {
   if (line.length < 2) return [];
   const arrows: GuidanceArrow[] = [];
-  let leftover = -((phase % 1) * spacingMeters);
+  let leftover = (phase % 1) * spacingMeters;
 
   for (let index = 1; index < line.length; index += 1) {
     const from = { lng: line[index - 1][0], lat: line[index - 1][1] };
@@ -98,11 +101,18 @@ export function guidanceArrowsAlong(
 }
 
 export function approachLookaheadMeters(distanceToNext: number) {
-  return Math.max(90, Math.min(220, distanceToNext + 55));
+  return Math.max(16, Math.min(32, distanceToNext));
 }
 
 export function isApproachingIntersection(distanceToNext: number) {
   return Number.isFinite(distanceToNext) && distanceToNext <= INTERSECTION_APPROACH_METERS;
+}
+
+export function shouldShowGuidanceArrows(distanceToNext: number) {
+  return (
+    Number.isFinite(distanceToNext) &&
+    distanceToNext <= GUIDANCE_ARROW_APPROACH_METERS
+  );
 }
 
 export function asLngLat(coord: [number, number]): LngLat {

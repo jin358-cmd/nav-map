@@ -2,6 +2,7 @@ import type { GeoJSONSource, Map as MapLibreMap } from "maplibre-gl";
 import {
   approachLookaheadMeters,
   guidanceArrowsAlong,
+  shouldShowGuidanceArrows,
   sliceRouteAhead,
 } from "@/lib/upcoming-route";
 
@@ -10,7 +11,7 @@ export const GUIDANCE_PATH_SOURCE_ID = "guidance-path";
 export const GUIDANCE_LAYER_ID = "guidance-arrows-layer";
 export const GUIDANCE_PATH_LAYER_ID = "guidance-path-layer";
 export const GUIDANCE_PATH_GLOW_ID = "guidance-path-glow";
-const CHEVRON_IMAGE_ID = "guidance-chevron";
+const CHEVRON_IMAGE_ID = "guidance-chevron-short";
 
 function emptyCollection() {
   return { type: "FeatureCollection" as const, features: [] };
@@ -42,12 +43,12 @@ function createChevronImage() {
     lineWidth: number,
   ) => {
     ctx.beginPath();
-    ctx.moveTo(0, -34 + offsetY);
-    ctx.lineTo(28, 10 + offsetY);
-    ctx.lineTo(14, 10 + offsetY);
-    ctx.lineTo(0, -6 + offsetY);
-    ctx.lineTo(-14, 10 + offsetY);
-    ctx.lineTo(-28, 10 + offsetY);
+    ctx.moveTo(0, -20 + offsetY);
+    ctx.lineTo(16, 8 + offsetY);
+    ctx.lineTo(8, 8 + offsetY);
+    ctx.lineTo(0, -4 + offsetY);
+    ctx.lineTo(-8, 8 + offsetY);
+    ctx.lineTo(-16, 8 + offsetY);
     ctx.closePath();
     ctx.fillStyle = fill;
     ctx.fill();
@@ -57,13 +58,13 @@ function createChevronImage() {
     ctx.stroke();
   };
 
-  draw(7, "rgba(161, 98, 7, 0.55)", "rgba(120, 53, 15, 0.35)", 2);
-  draw(0, "#facc15", "#fef08a", 3);
+  draw(5, "rgba(161, 98, 7, 0.55)", "rgba(120, 53, 15, 0.35)", 2);
+  draw(0, "#facc15", "#fef08a", 2.4);
   ctx.beginPath();
-  ctx.moveTo(0, -28);
-  ctx.lineTo(10, -8);
-  ctx.lineTo(0, -14);
-  ctx.lineTo(-10, -8);
+  ctx.moveTo(0, -16);
+  ctx.lineTo(6, -4);
+  ctx.lineTo(0, -8);
+  ctx.lineTo(-6, -4);
   ctx.closePath();
   ctx.fillStyle = "rgba(254, 249, 195, 0.85)";
   ctx.fill();
@@ -88,12 +89,11 @@ export function upsertGuidanceArrows(
 ) {
   ensureImages(map);
 
-  const ahead = navigating
+  const show = navigating && shouldShowGuidanceArrows(distanceToNext);
+  const ahead = show
     ? sliceRouteAhead(route, routeMeters, approachLookaheadMeters(distanceToNext))
     : [];
-  const arrows = navigating
-    ? guidanceArrowsAlong(ahead, 16, phase)
-    : [];
+  const arrows = show ? guidanceArrowsAlong(ahead, 10, phase) : [];
 
   const pathData = ahead.length >= 2
     ? {
@@ -140,7 +140,7 @@ export function upsertGuidanceArrows(
       source: GUIDANCE_PATH_SOURCE_ID,
       paint: {
         "line-color": "#fde047",
-        "line-width": ["interpolate", ["linear"], ["zoom"], 14, 10, 19, 28],
+        "line-width": ["interpolate", ["linear"], ["zoom"], 14, 7, 19, 18],
         "line-opacity": 0.22,
         "line-blur": 8,
       },
@@ -155,7 +155,7 @@ export function upsertGuidanceArrows(
       source: GUIDANCE_PATH_SOURCE_ID,
       paint: {
         "line-color": "#facc15",
-        "line-width": ["interpolate", ["linear"], ["zoom"], 14, 4.5, 19, 12],
+        "line-width": ["interpolate", ["linear"], ["zoom"], 14, 3.2, 19, 8],
         "line-opacity": 0.9,
       },
       layout: { "line-cap": "round", "line-join": "round" },
@@ -169,7 +169,7 @@ export function upsertGuidanceArrows(
       source: GUIDANCE_SOURCE_ID,
       layout: {
         "icon-image": CHEVRON_IMAGE_ID,
-        "icon-size": ["interpolate", ["linear"], ["zoom"], 15, 0.42, 19, 0.95],
+        "icon-size": ["interpolate", ["linear"], ["zoom"], 15, 0.32, 19, 0.68],
         "icon-rotate": ["get", "bearing"],
         "icon-rotation-alignment": "map",
         "icon-pitch-alignment": "map",
