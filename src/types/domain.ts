@@ -103,11 +103,11 @@ export type SpeedEnforcementPoint = {
   speedLimit?: number;
   note?: string;
   location: LngLat;
-  dataOrigin: "tgos";
+  dataOrigin: "tgos" | "open-data";
 };
 
 export type SpeedEnforcementCatalog = {
-  origin: "tgos";
+  origin: "tgos" | "open-data";
   points: SpeedEnforcementPoint[];
   fetchedAt: string;
 };

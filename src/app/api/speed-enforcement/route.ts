@@ -1,7 +1,4 @@
-import {
-  loadNearbySpeedEnforcement,
-  SpeedEnforcementConfigurationError,
-} from "@/services/speed-enforcement";
+import { loadNearbySpeedEnforcement } from "@/services/speed-enforcement";
 
 function readNumber(value: string | null) {
   if (!value) return undefined;
@@ -47,9 +44,6 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    if (error instanceof SpeedEnforcementConfigurationError) {
-      return Response.json({ error: error.message }, { status: 503 });
-    }
     console.warn(
       "TGOS speed enforcement API unavailable",
       error instanceof Error ? error.message : "unknown error",

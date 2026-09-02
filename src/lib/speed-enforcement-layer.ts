@@ -38,7 +38,7 @@ export function upsertSpeedEnforcementLayer(
       type: "geojson",
       data,
       attribution:
-        '<a href="https://data.tgos.tw/" target="_blank" rel="noopener noreferrer">內政部 TGOS 測速執法</a>',
+        '<a href="https://data.gov.tw/dataset/7320" target="_blank" rel="noopener noreferrer">警政署測速執法公開資料</a> / <a href="https://data.tgos.tw/" target="_blank" rel="noopener noreferrer">內政部 TGOS</a>',
     });
   }
 

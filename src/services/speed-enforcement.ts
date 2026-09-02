@@ -3,6 +3,7 @@ import {
   SPEED_ENFORCEMENT_CACHE_MS,
   SPEED_ENFORCEMENT_MAX_RADIUS_METERS,
   SPEED_ENFORCEMENT_MIN_RADIUS_METERS,
+  SPEED_ENFORCEMENT_PUBLIC_CACHE_MS,
   TGOS_SPEED_THEME_ID,
 } from "@/lib/speed-enforcement-constants";
 import type {
@@ -12,6 +13,8 @@ import type {
 
 const TGOS_BUFFER_ENDPOINT =
   "https://data.tgos.tw/MOIDataThemeAPIMgr/Theme/Buffer";
+const PUBLIC_DATASET_ENDPOINT =
+  "https://opdadm.moi.gov.tw/api/v1/no-auth/resource/api/dataset/EA5E6FCD-B82D-43B7-A5CF-E9893253187E/resource/8F8822DA-2D76-45B4-8945-71F5FFD0DE85/download";
 
 type TgosSpeedFeature = {
   geometry?: {
@@ -33,9 +36,9 @@ type CacheEntry = {
   cachedAt: number;
 };
 
-export class SpeedEnforcementConfigurationError extends Error {}
-
 const catalogCache = new Map<string, CacheEntry>();
+let publicCatalogCache: SpeedEnforcementPoint[] | null = null;
+let publicCatalogCachedAt = 0;
 
 function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
@@ -44,6 +47,64 @@ function text(value: unknown) {
 function finiteNumber(value: unknown) {
   const number = typeof value === "number" ? value : Number(value);
   return Number.isFinite(number) ? number : undefined;
+}
+
+function distanceMeters(
+  left: { lng: number; lat: number },
+  right: { lng: number; lat: number },
+) {
+  const radius = 6_371_000;
+  const toRadians = (value: number) => (value * Math.PI) / 180;
+  const dLat = toRadians(right.lat - left.lat);
+  const dLng = toRadians(right.lng - left.lng);
+  const lat1 = toRadians(left.lat);
+  const lat2 = toRadians(right.lat);
+  const value =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return radius * 2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value));
+}
+
+function parseCsv(input: string) {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = "";
+  let quoted = false;
+
+  for (let index = 0; index < input.length; index += 1) {
+    const character = input[index];
+    if (quoted) {
+      if (character === '"' && input[index + 1] === '"') {
+        field += '"';
+        index += 1;
+      } else if (character === '"') {
+        quoted = false;
+      } else {
+        field += character;
+      }
+      continue;
+    }
+
+    if (character === '"') {
+      quoted = true;
+    } else if (character === ",") {
+      row.push(field);
+      field = "";
+    } else if (character === "\n") {
+      row.push(field.replace(/\r$/, ""));
+      rows.push(row);
+      row = [];
+      field = "";
+    } else {
+      field += character;
+    }
+  }
+
+  if (field || row.length) {
+    row.push(field.replace(/\r$/, ""));
+    rows.push(row);
+  }
+  return rows;
 }
 
 function normalizeFeature(
@@ -85,6 +146,53 @@ function normalizeFeature(
   };
 }
 
+function normalizePublicCsv(input: string) {
+  const rows = parseCsv(input);
+  const headers = rows[0]?.map((header) => header.replace(/^\uFEFF/, ""));
+  if (!headers?.length) throw new Error("公開測速資料缺少欄位");
+  const column = new Map(headers.map((header, index) => [header, index]));
+  const required = ["CityName", "RegionName", "Address", "Longitude", "Latitude"];
+  if (required.some((header) => !column.has(header))) {
+    throw new Error("公開測速資料欄位格式不符");
+  }
+
+  const value = (row: string[], header: string) =>
+    row[column.get(header) ?? -1]?.trim() ?? "";
+  return rows.slice(1).flatMap((row, index) => {
+    if (value(row, "CityName") === "設置縣市") return [];
+    const lng = finiteNumber(value(row, "Longitude"));
+    const lat = finiteNumber(value(row, "Latitude"));
+    if (
+      lng === undefined ||
+      lat === undefined ||
+      lng < 118 ||
+      lng > 123 ||
+      lat < 20 ||
+      lat > 27
+    ) {
+      return [];
+    }
+    const speedLimit = finiteNumber(value(row, "limit"));
+    return [
+      {
+        id: `open-speed-${lng}-${lat}-${index}`,
+        city: value(row, "CityName"),
+        district: value(row, "RegionName"),
+        address: value(row, "Address") || "測速執法設置點",
+        department: value(row, "DeptNm"),
+        branch: value(row, "BranchNm"),
+        direction: value(row, "direct"),
+        speedLimit:
+          speedLimit !== undefined && speedLimit > 0
+            ? Math.round(speedLimit)
+            : undefined,
+        location: { lng, lat },
+        dataOrigin: "open-data" as const,
+      },
+    ];
+  });
+}
+
 function cacheKey(lng: number, lat: number, radiusMeters: number) {
   return `${lng.toFixed(4)},${lat.toFixed(4)},${radiusMeters}`;
 }
@@ -108,15 +216,6 @@ export async function loadNearbySpeedEnforcement({
   radiusMeters: number;
   force?: boolean;
 }): Promise<SpeedEnforcementCatalog> {
-  const apiKey =
-    process.env.TGOS_THEME_API_KEY?.trim() ||
-    process.env.TGOS_API_KEY?.trim();
-  if (!apiKey) {
-    throw new SpeedEnforcementConfigurationError(
-      "TGOS 測速圖層尚未設定 API 金鑰",
-    );
-  }
-
   const radius = Math.min(
     SPEED_ENFORCEMENT_MAX_RADIUS_METERS,
     Math.max(SPEED_ENFORCEMENT_MIN_RADIUS_METERS, Math.round(radiusMeters)),
@@ -130,6 +229,44 @@ export async function loadNearbySpeedEnforcement({
   ) {
     return cached.catalog;
   }
+
+  const apiKey = process.env.TGOS_THEME_API_KEY?.trim();
+  if (apiKey) {
+    try {
+      const catalog = await loadFromTgos({ lng, lat, radius, apiKey });
+      trimCache();
+      catalogCache.set(key, { catalog, cachedAt: Date.now() });
+      return catalog;
+    } catch (error) {
+      console.warn(
+        "TGOS theme API fallback to public speed dataset",
+        error instanceof Error ? error.message : "unknown error",
+      );
+    }
+  }
+
+  const catalog = await loadFromPublicDataset({
+    lng,
+    lat,
+    radius,
+    force,
+  });
+  trimCache();
+  catalogCache.set(key, { catalog, cachedAt: Date.now() });
+  return catalog;
+}
+
+async function loadFromTgos({
+  lng,
+  lat,
+  radius,
+  apiKey,
+}: {
+  lng: number;
+  lat: number;
+  radius: number;
+  apiKey: string;
+}): Promise<SpeedEnforcementCatalog> {
 
   const url = new URL(TGOS_BUFFER_ENDPOINT);
   url.searchParams.set("Apikey", apiKey);
@@ -161,7 +298,43 @@ export async function loadNearbySpeedEnforcement({
       .filter((point): point is SpeedEnforcementPoint => point !== null),
     fetchedAt: new Date().toISOString(),
   };
-  trimCache();
-  catalogCache.set(key, { catalog, cachedAt: Date.now() });
   return catalog;
+}
+
+async function loadFromPublicDataset({
+  lng,
+  lat,
+  radius,
+  force,
+}: {
+  lng: number;
+  lat: number;
+  radius: number;
+  force: boolean;
+}): Promise<SpeedEnforcementCatalog> {
+  if (
+    force ||
+    !publicCatalogCache ||
+    Date.now() - publicCatalogCachedAt >= SPEED_ENFORCEMENT_PUBLIC_CACHE_MS
+  ) {
+    const response = await fetch(PUBLIC_DATASET_ENDPOINT, {
+      headers: { Accept: "text/csv" },
+      cache: "no-store",
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!response.ok) {
+      throw new Error(`Public speed dataset request failed (${response.status})`);
+    }
+    publicCatalogCache = normalizePublicCsv(await response.text());
+    publicCatalogCachedAt = Date.now();
+  }
+
+  const center = { lng, lat };
+  return {
+    origin: "open-data",
+    points: publicCatalogCache.filter(
+      (point) => distanceMeters(center, point.location) <= radius,
+    ),
+    fetchedAt: new Date(publicCatalogCachedAt).toISOString(),
+  };
 }
