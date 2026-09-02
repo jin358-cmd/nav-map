@@ -141,6 +141,11 @@ function createDestinationPin(label: string): HTMLDivElement {
   el.className = "destination-pin";
   el.title = label;
   el.innerHTML = `
+    <span class="destination-beacon" aria-hidden="true">
+      <span class="destination-beacon__ring"></span>
+      <span class="destination-beacon__ring"></span>
+      <span class="destination-beacon__dot"></span>
+    </span>
     <span class="destination-pin__glow"></span>
     <svg class="destination-pin__mark" viewBox="0 0 48 58" width="30" height="36" aria-hidden="true">
       <defs>

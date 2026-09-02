@@ -86,13 +86,15 @@ npm start
 - 測速執法：警政署政府開放資料免金鑰 CSV，亦支援 TGOS 環域 API，依地圖中心載入 3–10 公里內點位與速限
 - NCDR 即時災害 GeoJSON 圖層（CAP 幾何中心）
 - 頂部搜尋：門牌、店家、公司行號、連鎖品牌與縮寫；範圍約全市 20 公里。長按地圖可自訂位置並存成最愛書籤
+- 底部狀態列中央為 Google 帳號：可登入並把最愛書籤同步到雲端；未設定 `NEXT_PUBLIC_GOOGLE_CLIENT_ID` 時書籤仍留在此裝置
 - 底部狀態列紅心：把目前或已輸入的位置加入最愛
-- 導航終點：黃色圓點＋圈線擴散特效
-- 點確認後進入駕駛畫面，最上方只顯示下一個路口距離（字級加大）；接近路口會自動放大，並以黃色立體走馬燈箭頭指引
+- 導航終點：既有立體圖釘＋圖示外中空黃點，外圈持續擴散；確認後與導航中都保留
+- 定位點改為黃色小三角形，隨車頭轉向
+- 點確認後進入駕駛畫面，最上方顯示下一個路口距離；橫向時縮小並貼左上。接近路口會自動放大，並以大型立體方向指示牌走馬燈指引
 - 任何時候可用雙指縮放、單指平移檢視；定位鈕回到跟隨
 - ChatGPT AI 語音播報轉向（可靜音）；未設定 `OPENAI_API_KEY` 時改用系統中文語音
 - 右側「5km」開關：開啟時只畫車輛 5 公里內與路線沿線路況
-- 底部狀態列可開啟 YouTube Music 簡易播放器，並切換開車／Lo-fi／夜車／Chill 清單
+- 底部狀態列可開啟 YouTube Music 小窗；播放時維持縮小，並可連到既有 YouTube Music 帳號
 - 底部半透明 Road Information Card
 - Android 直式優先的 Responsive HUD（資訊卡不遮住主要駕駛視野）
 
@@ -135,7 +137,7 @@ NCDR JSON Atom + CAP 取代 mock 積水／封路／強風標記；MapLibre 圖�
 - Framework Preset：Next.js
 - Build Command：`npm run build`
 - Output：Next.js 預設
-- 環境變數：正式路況用 `TDX_CLIENT_ID` / `TDX_CLIENT_SECRET`；正式戶政門牌定位用 `TGOS_APP_ID` / `TGOS_API_KEY`；測速公開資料不需金鑰，TGOS 主題 API 可選填 `TGOS_THEME_API_KEY`；NCDR 示警免金鑰，會員資料可選填 `NCDR_API_KEY`
+- 環境變數：正式路況用 `TDX_CLIENT_ID` / `TDX_CLIENT_SECRET`；正式戶政門牌定位用 `TGOS_APP_ID` / `TGOS_API_KEY`；測速公開資料不需金鑰，TGOS 主題 API 可選填 `TGOS_THEME_API_KEY`；NCDR 示警免金鑰，會員資料可選填 `NCDR_API_KEY`；Google 書籤同步可選填 `NEXT_PUBLIC_GOOGLE_CLIENT_ID`
 
 MapLibre worker 由 `src/app/maplibre/[file]/route.ts` 提供，`next.config.ts` 已列入 tracing，避免 serverless 漏檔。
 

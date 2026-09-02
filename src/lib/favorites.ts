@@ -106,3 +106,18 @@ export function toggleFavorite(hit: GeocodeHit) {
   addFavorite(hit);
   return true;
 }
+
+export function replaceFavorites(next: GeocodeHit[]) {
+  if (typeof window === "undefined") return;
+  writeFavorites(next.filter(isGeocodeHit).slice(0, MAX_ITEMS));
+}
+
+export function mergeFavorites(incoming: GeocodeHit[]) {
+  if (typeof window === "undefined") return;
+  const byKey = new Map<string, GeocodeHit>();
+  for (const item of [...getFavoritesSnapshot(), ...incoming.filter(isGeocodeHit)]) {
+    const key = placeKey(item);
+    if (!byKey.has(key)) byKey.set(key, item);
+  }
+  writeFavorites([...byKey.values()].slice(0, MAX_ITEMS));
+}

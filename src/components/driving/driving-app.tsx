@@ -19,6 +19,8 @@ import { RouteConfirmBar } from "@/components/overlay/route-preview";
 import { YouTubeMusicPlayer } from "@/components/overlay/youtube-music-player";
 import { useCctvView } from "@/hooks/use-cctv-view";
 import { useDisasterView } from "@/hooks/use-disaster-view";
+import { useGoogleAccount } from "@/hooks/use-google-account";
+import { useLandscape } from "@/hooks/use-landscape";
 import { useLocatedRegion } from "@/hooks/use-located-region";
 import { useNavigationVoice } from "@/hooks/use-navigation-voice";
 import { useSpeedEnforcementView } from "@/hooks/use-speed-enforcement-view";
@@ -123,6 +125,8 @@ export function DrivingApp() {
     getServerFavoritesSnapshot,
   );
   const [trafficFocus5km, setTrafficFocus5km] = useState(true);
+  const landscape = useLandscape();
+  const googleAccount = useGoogleAccount();
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [rerouting, setRerouting] = useState(false);
   const [navigationProgress, setNavigationProgress] =
@@ -556,13 +560,20 @@ export function DrivingApp() {
       ) : null}
 
       {destination && navigating ? (
-        <div className="absolute top-[max(0.45rem,env(safe-area-inset-top))] right-3 left-3 z-20 flex justify-center sm:right-24">
+        <div
+          className={
+            landscape
+              ? "absolute top-[max(0.4rem,env(safe-area-inset-top))] left-3 z-20"
+              : "absolute top-[max(0.45rem,env(safe-area-inset-top))] right-3 left-3 z-20 flex justify-center sm:right-24"
+          }
+        >
           <NextIntersectionHud
             step={activeNavigationStep}
             distanceMeters={distanceToNextMeters}
             offRoute={navigationProgress?.offRoute ?? false}
             rerouting={rerouting}
             voiceEnabled={voiceEnabled}
+            compact={landscape}
             onToggleVoice={() => setVoiceEnabled((value) => !value)}
             onExit={exitNavigation}
           />
@@ -635,6 +646,8 @@ export function DrivingApp() {
           <YouTubeMusicPlayer
             compact={musicMode === "mini"}
             onClose={() => setMusicMode("off")}
+            onExpand={() => setMusicMode("open")}
+            onPlaying={() => setMusicMode("mini")}
           />
         ) : null}
         <RoadInformationCard
@@ -660,6 +673,13 @@ export function DrivingApp() {
             void applyRoute(hit);
           }}
           onRemoveFavorite={removeFavorite}
+          account={googleAccount.account}
+          accountBusy={googleAccount.busy}
+          accountHint={googleAccount.hint}
+          accountConfigured={googleAccount.configured}
+          signInHostRef={googleAccount.signInHostRef}
+          onSignIn={googleAccount.signIn}
+          onSignOut={googleAccount.signOut}
           onPreviewOpen={() => {
             setFavoritesOpen(false);
             setSelectedCctv(null);
@@ -671,11 +691,7 @@ export function DrivingApp() {
             setSelectedCctv(null);
             setSelectedDisaster(null);
             setIntelCollapse((value) => value + 1);
-            setMusicMode((mode) => {
-              if (mode === "off") return "open";
-              if (mode === "open") return "mini";
-              return "open";
-            });
+            setMusicMode((mode) => (mode === "off" ? "mini" : "off"));
           }}
         />
       </footer>

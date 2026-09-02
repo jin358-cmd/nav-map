@@ -49,12 +49,21 @@ function loadMix(player: YouTubePlayer, playlist: YoutubePlaylist) {
 export function YouTubeMusicPlayer({
   compact = false,
   onClose,
+  onExpand,
+  onPlaying,
 }: {
   compact?: boolean;
   onClose: () => void;
+  onExpand?: () => void;
+  onPlaying?: () => void;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<YouTubePlayer | null>(null);
+  const onPlayingRef = useRef(onPlaying);
+
+  useEffect(() => {
+    onPlayingRef.current = onPlaying;
+  }, [onPlaying]);
   const [playing, setPlaying] = useState(false);
   const [title, setTitle] = useState("YouTube Music");
   const [artist, setArtist] = useState("駕駛聆聽");
@@ -110,7 +119,9 @@ export function YouTubeMusicPlayer({
             },
             onStateChange: (event) => {
               if (cancelled) return;
-              setPlaying(event.data === YT_PLAYING);
+              const nowPlaying = event.data === YT_PLAYING;
+              setPlaying(nowPlaying);
+              if (nowPlaying) onPlayingRef.current?.();
               if (event.data === YT_PLAYING || event.data === YT_PAUSED) {
                 const meta = readTrackMeta(event.target);
                 if (meta) {
@@ -146,6 +157,12 @@ export function YouTubeMusicPlayer({
     };
   }, []);
 
+  useEffect(() => {
+    if (compact || !playing) return;
+    const timer = window.setTimeout(() => onPlayingRef.current?.(), 4000);
+    return () => window.clearTimeout(timer);
+  }, [compact, playing]);
+
   function togglePlay() {
     const player = playerRef.current;
     if (!player) return;
@@ -174,7 +191,7 @@ export function YouTubeMusicPlayer({
     <div
       className={
         compact
-          ? "pointer-events-auto w-fit max-w-[16.5rem] overflow-hidden rounded-2xl border border-red-400/20 bg-black/78 shadow-[0_12px_40px_rgba(0,0,0,0.5)] backdrop-blur-xl"
+          ? "pointer-events-auto w-fit max-w-[15.25rem] overflow-hidden rounded-2xl border border-red-400/20 bg-black/78 shadow-[0_12px_40px_rgba(0,0,0,0.5)] backdrop-blur-xl"
           : "pointer-events-auto w-fit max-w-[20rem] overflow-hidden rounded-2xl border border-red-400/20 bg-black/78 shadow-[0_12px_40px_rgba(0,0,0,0.5)] backdrop-blur-xl"
       }
     >
@@ -196,7 +213,15 @@ export function YouTubeMusicPlayer({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1">
             <div className="min-w-0 flex-1">
-              {compact ? null : (
+              {compact ? (
+                <button
+                  type="button"
+                  onClick={() => onExpand?.()}
+                  className="block w-full truncate text-left text-[10px] tracking-wide text-red-300/90 touch-manipulation"
+                >
+                  YouTube Music · 我的帳號
+                </button>
+              ) : (
                 <p className="text-[10px] tracking-wide text-red-300/90">
                   YouTube Music · {playlist.hint}
                 </p>
@@ -215,7 +240,18 @@ export function YouTubeMusicPlayer({
             >
               {playing ? <Pause className="size-3.5" /> : <Play className="size-3.5 fill-white" />}
             </Button>
-            {compact ? null : (
+            {compact ? (
+              <a
+                href={YOUTUBE_MUSIC_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="開啟我的 YouTube Music 帳號"
+                title="連結既有 YouTube Music 帳號"
+                className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-zinc-300 hover:bg-white/10 hover:text-white"
+              >
+                <ExternalLink className="size-3.5" />
+              </a>
+            ) : (
               <Button
                 type="button"
                 variant="ghost"
@@ -278,7 +314,7 @@ export function YouTubeMusicPlayer({
                   rel="noopener noreferrer"
                   className="ml-auto inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] text-zinc-400 hover:bg-white/8 hover:text-zinc-200"
                 >
-                  完整版
+                  我的 YouTube Music
                   <ExternalLink className="size-3" />
                 </a>
               </div>

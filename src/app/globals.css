@@ -156,46 +156,30 @@
 
 .vehicle-marker {
   position: relative;
-  width: 54px;
-  height: 72px;
+  width: 22px;
+  height: 24px;
   pointer-events: none;
-  filter: drop-shadow(0 10px 16px rgba(62, 224, 255, 0.28));
+  filter: drop-shadow(0 4px 8px rgba(250, 204, 21, 0.45));
 }
 
 .vehicle-marker__halo {
   position: absolute;
   left: 50%;
-  bottom: 6px;
-  width: 42px;
-  height: 18px;
+  bottom: 1px;
+  width: 18px;
+  height: 8px;
   transform: translateX(-50%);
   border-radius: 999px;
-  background: radial-gradient(circle, rgba(62, 224, 255, 0.45), transparent 70%);
+  background: radial-gradient(circle, rgba(250, 204, 21, 0.5), transparent 72%);
 }
 
-.vehicle-marker__car {
-  position: relative;
-  z-index: 1;
-}
-
-.vehicle-marker__arrow {
-  display: none;
+.vehicle-marker__triangle {
   position: relative;
   z-index: 1;
 }
 
 .vehicle-marker--nav {
-  width: 46px;
-  height: 56px;
-  filter: drop-shadow(0 8px 18px rgba(62, 224, 255, 0.45));
-}
-
-.vehicle-marker--nav .vehicle-marker__car {
-  display: none;
-}
-
-.vehicle-marker--nav .vehicle-marker__arrow {
-  display: block;
+  filter: drop-shadow(0 0 10px rgba(250, 204, 21, 0.85));
 }
 
 .intel-marker {
@@ -245,18 +229,61 @@
 
 .destination-pin {
   position: relative;
-  width: 36px;
-  height: 42px;
+  width: 96px;
+  height: 96px;
   pointer-events: none;
   overflow: visible;
   transform-style: preserve-3d;
   filter: drop-shadow(0 7px 10px rgba(180, 83, 9, 0.55));
 }
 
+.destination-beacon {
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  width: 18px;
+  height: 18px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.destination-beacon__dot {
+  position: absolute;
+  inset: 0;
+  border: 2.5px solid #facc15;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: 0 0 10px rgba(250, 204, 21, 0.55);
+}
+
+.destination-beacon__ring {
+  position: absolute;
+  inset: -3px;
+  border: 2px solid rgba(250, 204, 21, 0.9);
+  border-radius: 999px;
+  animation: destination-beacon-pulse 2.1s ease-out infinite;
+}
+
+.destination-beacon__ring:nth-child(2) {
+  animation-delay: 1.05s;
+}
+
+@keyframes destination-beacon-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.88;
+  }
+  100% {
+    transform: scale(3.6);
+    opacity: 0;
+  }
+}
+
 .destination-pin__glow {
   position: absolute;
   left: 50%;
-  bottom: 1px;
+  bottom: 6px;
+  z-index: 1;
   width: 22px;
   height: 8px;
   transform: translateX(-50%);
@@ -265,8 +292,12 @@
 }
 
 .destination-pin__mark {
-  position: relative;
+  position: absolute;
+  left: 50%;
+  bottom: 8px;
+  z-index: 2;
   display: block;
+  transform: translateX(-50%);
   transform-origin: 50% 88%;
   animation: destination-pin-float 1.8s ease-in-out infinite;
 }
@@ -274,11 +305,15 @@
 @keyframes destination-pin-float {
   0%,
   100% {
-    transform: translateY(0) rotateX(8deg) rotateZ(-2deg);
+    transform: translateX(-50%) translateY(0) rotateX(8deg) rotateZ(-2deg);
   }
   50% {
-    transform: translateY(-3px) rotateX(16deg) rotateZ(2deg);
+    transform: translateX(-50%) translateY(-3px) rotateX(16deg) rotateZ(2deg);
   }
+}
+
+.google-signin-host iframe {
+  max-width: 100%;
 }
 
 .cctv-scan {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type Ref } from "react";
 import {
   AlertTriangle,
   Camera,
@@ -11,12 +11,14 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { AccountChip } from "@/components/overlay/account-chip";
 import {
   cctvOriginLabel,
   disasterOriginLabel,
   formatDistance,
   trafficOriginLabel,
 } from "@/lib/format";
+import type { GoogleAccount } from "@/lib/google-identity";
 import { cn } from "@/lib/utils";
 import type {
   CctvDataOrigin,
@@ -90,6 +92,13 @@ export function RoadInformationCard({
   onCloseFavorites,
   onSelectFavorite,
   onRemoveFavorite,
+  account = null,
+  accountBusy = false,
+  accountHint = null,
+  accountConfigured = false,
+  signInHostRef,
+  onSignIn,
+  onSignOut,
 }: {
   items: RoadIntelItem[];
   origin: CctvDataOrigin;
@@ -109,6 +118,13 @@ export function RoadInformationCard({
   onCloseFavorites?: () => void;
   onSelectFavorite?: (hit: GeocodeHit) => void;
   onRemoveFavorite?: (hit: GeocodeHit) => void;
+  account?: GoogleAccount | null;
+  accountBusy?: boolean;
+  accountHint?: string | null;
+  accountConfigured?: boolean;
+  signInHostRef?: Ref<HTMLDivElement>;
+  onSignIn?: () => void;
+  onSignOut?: () => void;
 }) {
   const [openKind, setOpenKind] = useState<RoadIntelKind | null>(null);
 
@@ -198,57 +214,70 @@ export function RoadInformationCard({
         </div>
       ) : null}
 
-      <div className="inline-flex w-fit items-center justify-center gap-1.5 rounded-full border border-white/10 bg-black/55 px-1.5 py-1 shadow-[0_10px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl">
-        {groups.length === 0 ? (
-          <p className="px-2 py-1 text-[11px] text-zinc-500">
-            {emptyHint ?? "前方暫無通報"}
-          </p>
-        ) : (
-          groups.map((group) => {
-            const meta = KIND_META[group.kind];
-            const Icon = meta.icon;
-            const active = openKind === group.kind;
-            return (
-              <button
-                key={group.kind}
-                type="button"
-                aria-label={`${meta.label}${group.items.length}則`}
-                aria-pressed={active}
-                onClick={() =>
-                  setOpenKind((current) => {
-                    const next = current === group.kind ? null : group.kind;
-                    if (next) onPreviewOpen?.();
-                    return next;
-                  })
-                }
-                className={cn(
-                  "relative flex size-10 items-center justify-center rounded-full border touch-manipulation",
-                  active ? meta.activeClass : meta.className,
-                )}
-              >
-                <Icon className="size-5" />
-                <span className="absolute -top-0.5 -right-0.5 flex min-w-4 items-center justify-center rounded-full bg-black/80 px-1 text-[10px] leading-4 text-zinc-200">
-                  {group.items.length}
-                </span>
-              </button>
-            );
-          })
-        )}
-        <FavoriteHeartButton
-          pressed={favoritesOpen || isCurrentFavorite}
-          count={favorites.length}
-          onToggle={() => {
-            setOpenKind(null);
-            onHeartClick?.();
-          }}
+      <div className="inline-flex w-fit max-w-[min(36rem,calc(100vw-0.75rem))] items-center justify-center gap-1.5 rounded-full border border-white/10 bg-black/55 px-1.5 py-1 shadow-[0_10px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl">
+        <div className="flex items-center gap-1.5">
+          {groups.length === 0 ? (
+            <p className="px-2 py-1 text-[11px] text-zinc-500">
+              {emptyHint ?? "前方暫無通報"}
+            </p>
+          ) : (
+            groups.map((group) => {
+              const meta = KIND_META[group.kind];
+              const Icon = meta.icon;
+              const active = openKind === group.kind;
+              return (
+                <button
+                  key={group.kind}
+                  type="button"
+                  aria-label={`${meta.label}${group.items.length}則`}
+                  aria-pressed={active}
+                  onClick={() =>
+                    setOpenKind((current) => {
+                      const next = current === group.kind ? null : group.kind;
+                      if (next) onPreviewOpen?.();
+                      return next;
+                    })
+                  }
+                  className={cn(
+                    "relative flex size-10 items-center justify-center rounded-full border touch-manipulation",
+                    active ? meta.activeClass : meta.className,
+                  )}
+                >
+                  <Icon className="size-5" />
+                  <span className="absolute -top-0.5 -right-0.5 flex min-w-4 items-center justify-center rounded-full bg-black/80 px-1 text-[10px] leading-4 text-zinc-200">
+                    {group.items.length}
+                  </span>
+                </button>
+              );
+            })
+          )}
+        </div>
+        <AccountChip
+          account={account}
+          busy={accountBusy}
+          hint={accountHint}
+          configured={accountConfigured}
+          signInHostRef={signInHostRef}
+          onSignIn={() => onSignIn?.()}
+          onSignOut={() => onSignOut?.()}
         />
-        <YouTubeMusicButton
-          pressed={musicOpen}
-          onToggle={() => {
-            setOpenKind(null);
-            onToggleMusic?.();
-          }}
-        />
+        <div className="flex items-center gap-1.5">
+          <FavoriteHeartButton
+            pressed={favoritesOpen || isCurrentFavorite}
+            count={favorites.length}
+            onToggle={() => {
+              setOpenKind(null);
+              onHeartClick?.();
+            }}
+          />
+          <YouTubeMusicButton
+            pressed={musicOpen}
+            onToggle={() => {
+              setOpenKind(null);
+              onToggleMusic?.();
+            }}
+          />
+        </div>
       </div>
     </section>
   );
