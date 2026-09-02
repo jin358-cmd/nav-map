@@ -19,6 +19,7 @@ import {
   TAINAN_CENTER,
 } from "@/lib/constants";
 import { bindCctvLayerClicks, upsertCctvLayer } from "@/lib/cctv-layer";
+import { bindDisasterLayerClicks, upsertDisasterLayer } from "@/lib/disaster-layer";
 import { upsertIntelligenceLayers } from "@/lib/map-layers";
 import { configureMapLibreWorker } from "@/lib/maplibre-worker";
 import { applyDarkDrivingTheme } from "@/lib/map-style";
@@ -42,6 +43,7 @@ type DrivingMapProps = {
   followVehicle: boolean;
   navigating: boolean;
   selectedCctvId: string | null;
+  selectedDisasterId: string | null;
   cameras: CctvCamera[];
   speedEnforcement: SpeedEnforcementPoint[];
   traffic: TrafficSegment[];
@@ -51,6 +53,7 @@ type DrivingMapProps = {
   destination: RouteDestination | null;
   fitRouteKey: number;
   onCctvSelect: (cameraId: string) => void;
+  onDisasterSelect: (alertId: string) => void;
   onUserPan: () => void;
   onViewportChange: (viewport: MapViewport) => void;
 };
@@ -136,6 +139,7 @@ export function DrivingMap({
   followVehicle,
   navigating,
   selectedCctvId,
+  selectedDisasterId,
   cameras,
   speedEnforcement,
   traffic,
@@ -145,6 +149,7 @@ export function DrivingMap({
   destination,
   fitRouteKey,
   onCctvSelect,
+  onDisasterSelect,
   onUserPan,
   onViewportChange,
 }: DrivingMapProps) {
@@ -154,6 +159,7 @@ export function DrivingMap({
   const intelMarkersRef = useRef<Marker[]>([]);
   const destMarkerRef = useRef<Marker | null>(null);
   const onCctvSelectRef = useRef(onCctvSelect);
+  const onDisasterSelectRef = useRef(onDisasterSelect);
   const onUserPanRef = useRef(onUserPan);
   const onViewportChangeRef = useRef(onViewportChange);
   const modeRef = useRef(cameraMode);
@@ -163,6 +169,8 @@ export function DrivingMap({
   const camerasRef = useRef(cameras);
   const speedEnforcementRef = useRef(speedEnforcement);
   const selectedRef = useRef(selectedCctvId);
+  const disastersRef = useRef(disasters);
+  const selectedDisasterRef = useRef(selectedDisasterId);
   const followVehicleRef = useRef(followVehicle);
   const navigatingRef = useRef(navigating);
   const readyRef = useRef(false);
@@ -172,6 +180,7 @@ export function DrivingMap({
 
   useEffect(() => {
     onCctvSelectRef.current = onCctvSelect;
+    onDisasterSelectRef.current = onDisasterSelect;
     onUserPanRef.current = onUserPan;
     onViewportChangeRef.current = onViewportChange;
     modeRef.current = cameraMode;
@@ -181,10 +190,13 @@ export function DrivingMap({
     camerasRef.current = cameras;
     speedEnforcementRef.current = speedEnforcement;
     selectedRef.current = selectedCctvId;
+    disastersRef.current = disasters;
+    selectedDisasterRef.current = selectedDisasterId;
     followVehicleRef.current = followVehicle;
     navigatingRef.current = navigating;
   }, [
     onCctvSelect,
+    onDisasterSelect,
     onUserPan,
     onViewportChange,
     cameraMode,
@@ -194,6 +206,8 @@ export function DrivingMap({
     cameras,
     speedEnforcement,
     selectedCctvId,
+    selectedDisasterId,
+    disasters,
     followVehicle,
     navigating,
   ]);
@@ -297,6 +311,8 @@ export function DrivingMap({
       try {
         upsertCctvLayer(map, camerasRef.current, selectedRef.current);
         bindCctvLayerClicks(map, (id) => onCctvSelectRef.current(id));
+        upsertDisasterLayer(map, disastersRef.current, selectedDisasterRef.current);
+        bindDisasterLayerClicks(map, (id) => onDisasterSelectRef.current(id));
       } catch (error) {
         console.error("CCTV layer skipped", error);
       }
@@ -372,6 +388,12 @@ export function DrivingMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !readyRef.current) return;
+    upsertDisasterLayer(map, disasters, selectedDisasterId);
+  }, [disasters, selectedDisasterId]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !readyRef.current) return;
     upsertSpeedEnforcementLayer(map, speedEnforcement);
   }, [speedEnforcement]);
 
@@ -391,15 +413,7 @@ export function DrivingMap({
       );
     }
 
-    for (const disaster of disasters) {
-      const el = markerEl("intel-marker--disaster", "▲", disaster.title);
-      intelMarkersRef.current.push(
-        new Marker({ element: el, anchor: "bottom" })
-          .setLngLat([disaster.location.lng, disaster.location.lat])
-          .addTo(map),
-      );
-    }
-  }, [accidents, disasters]);
+  }, [accidents]);
 
   useEffect(() => {
     const map = mapRef.current;

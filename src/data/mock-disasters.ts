@@ -10,6 +10,7 @@ export const TAINAN_DISASTERS: DisasterAlert[] = [
     severity: "watch",
     dataOrigin: "mock",
     source: "mock",
+    area: "安平區運河沿岸",
   },
   {
     id: "ds-jh-closure",
@@ -20,6 +21,7 @@ export const TAINAN_DISASTERS: DisasterAlert[] = [
     severity: "warning",
     dataOrigin: "mock",
     source: "mock",
+    area: "東區金華路三段",
   },
   {
     id: "ds-typhoon",
@@ -30,5 +32,6 @@ export const TAINAN_DISASTERS: DisasterAlert[] = [
     severity: "watch",
     dataOrigin: "mock",
     source: "mock",
+    area: "安平漁港至觀夕平台",
   },
 ];

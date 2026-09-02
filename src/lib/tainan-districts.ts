@@ -1,5 +1,5 @@
 import { TAINAN_CENTER } from "@/lib/constants";
-import type { LngLat } from "@/types/domain";
+import type { DisasterKind, LngLat } from "@/types/domain";
 
 export const TAINAN_CITY_LABELS = ["臺南市", "台南市", "臺南", "台南"] as const;
 
@@ -61,7 +61,7 @@ export function firstTainanDistrict(text: string): string | null {
 
 export function locationForTainanAlert(
   text: string,
-  kind: "flood" | "closure" | "quake" | "typhoon",
+  kind: DisasterKind,
 ): { areaDesc: string; location: LngLat } {
   const district = firstTainanDistrict(text);
   if (district) {
@@ -70,7 +70,7 @@ export function locationForTainanAlert(
       location: TAINAN_DISTRICT_CENTROIDS[district],
     };
   }
-  if (kind === "typhoon") {
+  if (kind === "typhoon" || kind === "strong-wind") {
     return { areaDesc: "臺南市沿海", location: TAINAN_COASTAL };
   }
   return { areaDesc: "臺南市", location: { ...TAINAN_CENTER } };

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MapControls } from "@/components/map/map-controls";
 import { AddressSearch } from "@/components/overlay/address-search";
 import { CctvDetailCard } from "@/components/overlay/cctv-detail-card";
+import { DisasterDetailCard } from "@/components/overlay/disaster-detail-card";
 import { NextIntersectionHud } from "@/components/overlay/navigation-banner";
 import { RoadInformationCard } from "@/components/overlay/road-information-card";
 import { RouteConfirmBar } from "@/components/overlay/route-preview";
@@ -38,6 +39,7 @@ import type {
   AccidentReport,
   CameraMode,
   CctvCamera,
+  DisasterAlert,
   GeocodeHit,
   GpsStatus,
   MapViewport,
@@ -83,6 +85,9 @@ export function DrivingApp() {
   const [routeError, setRouteError] = useState<string | null>(null);
   const [baseIntel, setBaseIntel] = useState<RoadIntelItem[]>([]);
   const [selectedCctv, setSelectedCctv] = useState<CctvCamera | null>(null);
+  const [selectedDisaster, setSelectedDisaster] = useState<DisasterAlert | null>(
+    null,
+  );
   const [loadError, setLoadError] = useState<string | null>(null);
   const [navigating, setNavigating] = useState(false);
   const [intelCollapse, setIntelCollapse] = useState(0);
@@ -259,6 +264,7 @@ export function DrivingApp() {
         gpsStatus === "active"
           ? { lng: vehicle.lng, lat: vehicle.lat }
           : (viewport?.center ?? { lng: vehicle.lng, lat: vehicle.lat });
+      setSelectedDisaster(null);
       setSelectedCctv({
         ...camera,
         distanceKm: camera.distanceKm ?? distanceKm(center, camera.location),
@@ -271,6 +277,7 @@ export function DrivingApp() {
     setRouting(true);
     setRouteError(null);
     setSelectedCctv(null);
+    setSelectedDisaster(null);
     try {
       const plan = await planDrivingRoute(
         { lng: vehicle.lng, lat: vehicle.lat },
@@ -332,6 +339,7 @@ export function DrivingApp() {
     setCameraMode("3d");
     setFollowVehicle(true);
     setSelectedCctv(null);
+    setSelectedDisaster(null);
     setIntelCollapse((value) => value + 1);
   }, [routeProgressModel, routeSteps, vehicle]);
 
@@ -396,6 +404,7 @@ export function DrivingApp() {
         followVehicle={followVehicle}
         navigating={navigating}
         selectedCctvId={selectedCctv?.id ?? null}
+        selectedDisasterId={selectedDisaster?.id ?? null}
         cameras={visible}
         speedEnforcement={speedEnforcement}
         traffic={traffic}
@@ -405,6 +414,11 @@ export function DrivingApp() {
         destination={destination}
         fitRouteKey={fitRouteKey}
         onCctvSelect={selectCamera}
+        onDisasterSelect={(id) => {
+          setSelectedCctv(null);
+          setMusicMode((mode) => (mode === "open" ? "mini" : mode));
+          setSelectedDisaster(disasters.find((alert) => alert.id === id) ?? null);
+        }}
         onUserPan={() => {
           setFollowVehicle(false);
         }}
@@ -479,6 +493,13 @@ export function DrivingApp() {
             onClose={() => setSelectedCctv(null)}
           />
         ) : null}
+        {selectedDisaster ? (
+          <DisasterDetailCard
+            alert={selectedDisaster}
+            origin={disasterOrigin}
+            onClose={() => setSelectedDisaster(null)}
+          />
+        ) : null}
         {musicMode !== "off" ? (
           <YouTubeMusicPlayer
             compact={musicMode === "mini"}
@@ -496,10 +517,12 @@ export function DrivingApp() {
           musicOpen={musicMode !== "off"}
           onPreviewOpen={() => {
             setSelectedCctv(null);
+            setSelectedDisaster(null);
             setMusicMode((mode) => (mode === "open" ? "mini" : mode));
           }}
           onToggleMusic={() => {
             setSelectedCctv(null);
+            setSelectedDisaster(null);
             setIntelCollapse((value) => value + 1);
             setMusicMode((mode) => {
               if (mode === "off") return "open";

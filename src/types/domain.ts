@@ -112,9 +112,18 @@ export type SpeedEnforcementCatalog = {
   fetchedAt: string;
 };
 
-export type DisasterKind = "flood" | "closure" | "quake" | "typhoon";
+export type DisasterKind =
+  | "flood"
+  | "closure"
+  | "quake"
+  | "typhoon"
+  | "heavy-rain"
+  | "strong-wind"
+  | "landslide"
+  | "other";
 export type DisasterDataOrigin = "ncdr-live" | "mock";
 export type DisasterPublishSource = "ncdr" | "mock";
+export type DisasterSeverity = "watch" | "warning" | "emergency";
 
 export type DisasterAlert = {
   id: string;
@@ -122,11 +131,14 @@ export type DisasterAlert = {
   title: string;
   description: string;
   location: LngLat;
-  severity: "watch" | "warning";
+  severity: DisasterSeverity;
   dataOrigin: DisasterDataOrigin;
-  source: DisasterPublishSource;
+  source: string;
   category?: string;
+  area?: string;
   areaDesc?: string;
+  sourceUrl?: string;
+  effectiveAt?: string;
   issuedAt?: string;
   expiresAt?: string;
   updatedAt?: string;

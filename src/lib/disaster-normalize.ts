@@ -101,7 +101,8 @@ export function finalizeDisasterAlert(
   return {
     ...alert,
     dataOrigin,
-    source: alert.source ?? (dataOrigin === "ncdr-live" ? "ncdr" : "mock"),
+    source: alert.source ?? (dataOrigin === "ncdr-live" ? "NCDR 民生示警" : "mock"),
+    area: alert.area ?? alert.areaDesc,
   };
 }
 
@@ -176,7 +177,7 @@ function normalizeNcdrEntry(
     location: placed.location,
     severity: severityForAlert(kind, haystack),
     dataOrigin: "ncdr-live",
-    source: "ncdr",
+    source: author || "NCDR 民生示警",
     category,
     areaDesc: placed.areaDesc,
     issuedAt: (effective ?? updated)?.toISOString(),

@@ -1,12 +1,15 @@
-import { disasterPublishSource, loadTainanDisasters } from "@/services/disaster-api";
+import { fetchDisasterCatalog } from "@/services/disasters";
+
+export const runtime = "nodejs";
+export const revalidate = 120;
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const fresh = url.searchParams.get("fresh") === "1";
 
   try {
-    const catalog = await loadTainanDisasters(fresh);
-    const source = disasterPublishSource(catalog.origin);
+    const catalog = await fetchDisasterCatalog();
+    const source = catalog.origin === "ncdr-live" ? "ncdr" : "mock";
     return Response.json(
       {
         source,
@@ -20,7 +23,7 @@ export async function GET(request: Request) {
         headers: {
           "Cache-Control": fresh
             ? "no-store"
-            : "private, max-age=30, stale-while-revalidate=60",
+            : "public, s-maxage=120, stale-while-revalidate=300",
         },
       },
     );

@@ -32,8 +32,7 @@ src/
     tdx-client.ts           MOTC TDX token 與 GET
     traffic.ts              即時路況 live → mock
     speed-enforcement.ts    TGOS 鄰近測速執法設置點
-    disaster-api.ts         NCDR 即時示警 live → mock
-    ncdr-client.ts          民生示警公開／會員 feed
+    disasters.ts            NCDR JSON Atom + CAP 正規化與 fallback
     geolocation.ts          瀏覽器 GPS
   lib/                      地圖樣式、CCTV／路況圖層與評分
   types/                    領域型別
@@ -85,7 +84,7 @@ npm start
 - CCTV：獨立 `cctv-source` / `cctv-layer`，依 1 km／8 km／zoom 顯示，點擊底部 HUD
 - 即時路況：獨立 `traffic-source` / `traffic-layer`，TDX live 或 MOCK 後備
 - 測速執法：警政署政府開放資料免金鑰 CSV，亦支援 TGOS 環域 API，依地圖中心載入 3–10 公里內點位與速限
-- 災害示警：NCDR live 或 MOCK 後備（積水／封路／地震／強風）
+- NCDR 即時災害 GeoJSON 圖層（CAP 幾何中心）／事故標記
 - Mock 事故標記
 - 頂部地址搜尋：戶政門牌優先、地政資料交叉比對，並保留最近 6 筆目的地
 - 點確認後進入駕駛畫面，最上方只顯示下一個路口距離
@@ -95,7 +94,7 @@ npm start
 
 未設定 TDX 金鑰時：CCTV 走本地 SNAPSHOT（來自 weather 的 city／freeway JSON），路況走臺南示範線，HUD 顯示「示範路況」。金鑰請放伺服器端 `TDX_CLIENT_ID` / `TDX_CLIENT_SECRET`（不可用 `NEXT_PUBLIC_`），由 `/api/traffic` 伺服器端打 TDX。憑證有效時 HUD 顯示「TDX 即時路況」。live cache 與前端輪詢約 **60 秒**；拖曳／縮放地圖不會重打 TDX。token 失敗、timeout、401／429／500 或資料異常時自動 fallback mock，不把密鑰或堆疊傳給瀏覽器。
 
-災害示警由 `/api/disasters` 抓 NCDR 民生示警公開 JSON（免金鑰）。可選填伺服器端 `NCDR_API_KEY` 走會員 webapi。HUD 顯示「NCDR 即時災害」或「示範災害」。live cache 與前端輪詢約 **60 秒**；feed 逾時或解析失敗時 fallback mock。
+災害示警由 `/api/disasters` 抓 NCDR 民生示警 JSON Atom，再讀各則 CAP 的 `polygon`／`circle` 幾何中心；沒有座標的示警不會用行政區質心臆測位置。可選填伺服器端 `NCDR_ALERT_FEED_URL`。HUD 顯示「NCDR 即時災害」或「示範災害」。live cache 與前端輪詢約 **120 秒**；feed 逾時或解析失敗時 fallback mock。
 
 測速點預設使用警政署在[政府資料開放平臺](https://data.gov.tw/dataset/7320)發布的免金鑰 CSV，因此公開網站可直接顯示。專案內附官方資料快照，來源站逾時時仍可正常載入；執行 `npm run update:speed-enforcement` 可更新快照。若另有 `TGOS_THEME_API_KEY`，會優先使用[內政部主題 API](https://data.tgos.tw/)的「測速執法設置點」（主題 ID `kJqZSMsB`），失敗時自動回到公開資料。環域查詢半徑依縮放層級為 3、6 或 10 公里；查詢結果快取 10 分鐘，公開全臺清單快取 6 小時。
 
@@ -113,8 +112,8 @@ Phase 4 災害說明：[`docs/PHASE-4-DISASTERS.md`](docs/PHASE-4-DISASTERS.md)�
 **Phase 3：即時交通（本階段）**  
 TDX 臺南市區 Live + Section + SectionShape，依壅塞級別／時速上色；無憑證或失敗時保留 mock。
 
-**Phase 4：災害資訊（本階段）**  
-NCDR 民生示警 JSON feed，過濾臺南駕駛相關示警；feed 失敗時保留 mock。
+**Phase 4：災害資訊（已完成）**  
+NCDR JSON Atom + CAP 取代 mock 積水／封路／強風標記；MapLibre 圖層、點擊詳情、120 秒快取與失敗 fallback。
 
 **Phase 5：路線規劃（部分完成）**  
 已可用地址／地標規劃開車路徑。進階避開壅塞與多點停靠尚未做。
