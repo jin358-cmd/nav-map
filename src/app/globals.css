@@ -245,43 +245,49 @@
 
 .destination-beacon {
   position: relative;
-  width: 28px;
-  height: 28px;
+  width: 96px;
+  height: 96px;
   pointer-events: none;
+  overflow: visible;
 }
 
 .destination-beacon__dot {
   position: absolute;
-  inset: 8px;
+  top: 50%;
+  left: 50%;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
   border-radius: 999px;
   background: #facc15;
-  border: 2px solid #fff7c2;
-  box-shadow: 0 0 12px rgba(250, 204, 21, 0.75);
+  border: 2px solid #fffbeb;
+  box-shadow: 0 0 16px rgba(250, 204, 21, 0.95);
 }
 
 .destination-beacon__ring {
   position: absolute;
-  inset: 0;
+  top: 50%;
+  left: 50%;
+  width: 22px;
+  height: 22px;
+  margin: -11px 0 0 -11px;
   border-radius: 999px;
   border: 2px solid rgba(250, 204, 21, 0.95);
-  box-shadow: 0 0 0 1px rgba(253, 224, 71, 0.25);
-  animation: destination-ripple 2.1s ease-out infinite;
+  transform-origin: center;
+  animation: destination-ripple 2s ease-out infinite;
 }
 
 .destination-beacon__ring--delay {
-  animation-delay: 1.05s;
+  animation-delay: 1s;
 }
 
 @keyframes destination-ripple {
   0% {
-    transform: scale(0.35);
-    opacity: 0.9;
-  }
-  70% {
-    opacity: 0.28;
+    transform: scale(0.6);
+    opacity: 0.95;
   }
   100% {
-    transform: scale(2.8);
+    transform: scale(4.2);
     opacity: 0;
   }
 }
@@ -310,6 +316,10 @@
 
 .maplibregl-canvas {
   touch-action: none;
+}
+
+.maplibregl-marker:has(.destination-beacon) {
+  overflow: visible;
 }
 
 .maplibregl-ctrl-attrib {
