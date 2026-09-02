@@ -1,7 +1,14 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { MapControls } from "@/components/map/map-controls";
 import { AddressSearch } from "@/components/overlay/address-search";
 import { CctvDetailCard } from "@/components/overlay/cctv-detail-card";
@@ -20,7 +27,17 @@ import { roadIntelFromCameras } from "@/lib/cctv-intel";
 import { deriveAccidentIntel, mapVisibleAccidents } from "@/lib/accident-query";
 import { deriveDisasterIntel } from "@/lib/disaster-intel";
 import { mapVisibleDisasters } from "@/lib/disaster-query";
+import { rememberAddress } from "@/lib/address-history";
+import {
+  addFavorite,
+  getFavoritesSnapshot,
+  getServerFavoritesSnapshot,
+  isFavorite,
+  removeFavorite,
+  subscribeFavorites,
+} from "@/lib/favorites";
 import { pinSelected } from "@/lib/map-visibility";
+import { destinationToHit } from "@/lib/poi-search";
 import { CITY_TRAFFIC_FOCUS_KM } from "@/lib/traffic-constants";
 import { DEMO_VEHICLE, INTERSECTION_APPROACH_METERS } from "@/lib/constants";
 import { distanceKm } from "@/lib/geo";
@@ -41,6 +58,7 @@ import {
   requestCurrentPosition,
   watchVehiclePosition,
 } from "@/services";
+import { reversePlace } from "@/services/routing";
 import type {
   AccidentReport,
   CameraMode,
@@ -98,6 +116,12 @@ export function DrivingApp() {
   const [navigating, setNavigating] = useState(false);
   const [intelCollapse, setIntelCollapse] = useState(0);
   const [musicMode, setMusicMode] = useState<"off" | "open" | "mini">("off");
+  const [favoritesOpen, setFavoritesOpen] = useState(false);
+  const favorites = useSyncExternalStore(
+    subscribeFavorites,
+    getFavoritesSnapshot,
+    getServerFavoritesSnapshot,
+  );
   const [trafficFocus5km, setTrafficFocus5km] = useState(true);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [rerouting, setRerouting] = useState(false);
@@ -337,6 +361,7 @@ export function DrivingApp() {
   );
 
   const applyRoute = useCallback(async (hit: GeocodeHit) => {
+    rememberAddress(hit);
     setRouting(true);
     setRouteError(null);
     setSelectedCctv(null);
@@ -361,6 +386,31 @@ export function DrivingApp() {
       setRouting(false);
     }
   }, [vehicle.lat, vehicle.lng]);
+
+  const handleLongPress = useCallback(
+    async (location: { lng: number; lat: number }) => {
+      const hit = await reversePlace(location);
+      addFavorite(hit);
+      setFavoritesOpen(true);
+      await applyRoute(hit);
+    },
+    [applyRoute],
+  );
+
+  const currentPlace = destination ? destinationToHit(destination) : null;
+  const isCurrentFavorite = currentPlace ? isFavorite(currentPlace) : false;
+
+  const handleHeartClick = useCallback(() => {
+    setSelectedCctv(null);
+    setSelectedDisaster(null);
+    setMusicMode((mode) => (mode === "open" ? "mini" : mode));
+    if (currentPlace && !isFavorite(currentPlace)) {
+      addFavorite(currentPlace);
+      setFavoritesOpen(true);
+      return;
+    }
+    setFavoritesOpen((open) => !open);
+  }, [currentPlace]);
 
   const clearRoute = useCallback(() => {
     setDestination(null);
@@ -489,6 +539,7 @@ export function DrivingApp() {
           setFollowVehicle(false);
         }}
         onViewportChange={setViewport}
+        onLongPress={(location) => void handleLongPress(location)}
       />
 
       <div className="driving-vignette pointer-events-none absolute inset-0" />
@@ -589,12 +640,28 @@ export function DrivingApp() {
           emptyHint="目前畫面內尚無 CCTV、事故或災害情報。"
           onSelectCctv={selectCamera}
           musicOpen={musicMode !== "off"}
+          favorites={favorites}
+          favoritesOpen={favoritesOpen}
+          canFavorite={Boolean(currentPlace)}
+          isCurrentFavorite={isCurrentFavorite}
+          onHeartClick={handleHeartClick}
+          onAddFavorite={() => {
+            if (currentPlace) addFavorite(currentPlace);
+          }}
+          onCloseFavorites={() => setFavoritesOpen(false)}
+          onSelectFavorite={(hit) => {
+            setFavoritesOpen(false);
+            void applyRoute(hit);
+          }}
+          onRemoveFavorite={removeFavorite}
           onPreviewOpen={() => {
+            setFavoritesOpen(false);
             setSelectedCctv(null);
             setSelectedDisaster(null);
             setMusicMode((mode) => (mode === "open" ? "mini" : mode));
           }}
           onToggleMusic={() => {
+            setFavoritesOpen(false);
             setSelectedCctv(null);
             setSelectedDisaster(null);
             setIntelCollapse((value) => value + 1);

@@ -5,7 +5,10 @@ import {
   AlertTriangle,
   Camera,
   Construction,
+  Heart,
+  MapPin,
   TrafficCone,
+  Trash2,
   X,
 } from "lucide-react";
 import {
@@ -18,6 +21,7 @@ import { cn } from "@/lib/utils";
 import type {
   CctvDataOrigin,
   DisasterDataOrigin,
+  GeocodeHit,
   RoadIntelItem,
   RoadIntelKind,
   TrafficDataOrigin,
@@ -77,6 +81,15 @@ export function RoadInformationCard({
   musicOpen = false,
   onToggleMusic,
   onPreviewOpen,
+  favorites = [],
+  favoritesOpen = false,
+  canFavorite = false,
+  isCurrentFavorite = false,
+  onHeartClick,
+  onAddFavorite,
+  onCloseFavorites,
+  onSelectFavorite,
+  onRemoveFavorite,
 }: {
   items: RoadIntelItem[];
   origin: CctvDataOrigin;
@@ -87,6 +100,15 @@ export function RoadInformationCard({
   musicOpen?: boolean;
   onToggleMusic?: () => void;
   onPreviewOpen?: () => void;
+  favorites?: GeocodeHit[];
+  favoritesOpen?: boolean;
+  canFavorite?: boolean;
+  isCurrentFavorite?: boolean;
+  onHeartClick?: () => void;
+  onAddFavorite?: () => void;
+  onCloseFavorites?: () => void;
+  onSelectFavorite?: (hit: GeocodeHit) => void;
+  onRemoveFavorite?: (hit: GeocodeHit) => void;
 }) {
   const [openKind, setOpenKind] = useState<RoadIntelKind | null>(null);
 
@@ -106,7 +128,17 @@ export function RoadInformationCard({
 
   return (
     <section className="pointer-events-auto inline-flex flex-col items-center text-white">
-      {previewItem ? (
+      {favoritesOpen ? (
+        <FavoritesPanel
+          favorites={favorites}
+          canFavorite={canFavorite}
+          isCurrentFavorite={isCurrentFavorite}
+          onAddCurrent={onAddFavorite}
+          onSelect={onSelectFavorite}
+          onRemove={onRemoveFavorite}
+          onClose={() => onCloseFavorites?.()}
+        />
+      ) : previewItem ? (
         <div className="mb-2 w-fit max-w-[17.5rem] rounded-2xl border border-white/10 bg-black/70 px-2.5 py-2 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl">
           <div className="mb-1 flex items-center justify-between gap-2">
             <p className="text-[11px] tracking-wide text-zinc-400">
@@ -200,6 +232,14 @@ export function RoadInformationCard({
             );
           })
         )}
+        <FavoriteHeartButton
+          pressed={favoritesOpen || isCurrentFavorite}
+          count={favorites.length}
+          onToggle={() => {
+            setOpenKind(null);
+            onHeartClick?.();
+          }}
+        />
         <YouTubeMusicButton
           pressed={musicOpen}
           onToggle={() => {
@@ -209,6 +249,116 @@ export function RoadInformationCard({
         />
       </div>
     </section>
+  );
+}
+
+function FavoriteHeartButton({
+  pressed,
+  count,
+  onToggle,
+}: {
+  pressed: boolean;
+  count: number;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={pressed ? "最愛書籤" : "加入最愛"}
+      aria-pressed={pressed}
+      title="加入最愛"
+      onClick={onToggle}
+      className={cn(
+        "relative flex size-10 items-center justify-center rounded-full border touch-manipulation",
+        pressed
+          ? "border-rose-300/80 bg-rose-500/35 text-rose-100"
+          : "border-rose-400/40 bg-rose-500/15 text-rose-200 hover:bg-rose-500/30",
+      )}
+    >
+      <Heart className={cn("size-5", pressed && "fill-rose-500")} />
+      {count > 0 ? (
+        <span className="absolute -top-0.5 -right-0.5 flex min-w-4 items-center justify-center rounded-full bg-black/80 px-1 text-[10px] leading-4 text-zinc-200">
+          {count}
+        </span>
+      ) : null}
+    </button>
+  );
+}
+
+function FavoritesPanel({
+  favorites,
+  canFavorite,
+  isCurrentFavorite,
+  onAddCurrent,
+  onSelect,
+  onRemove,
+  onClose,
+}: {
+  favorites: GeocodeHit[];
+  canFavorite: boolean;
+  isCurrentFavorite: boolean;
+  onAddCurrent?: () => void;
+  onSelect?: (hit: GeocodeHit) => void;
+  onRemove?: (hit: GeocodeHit) => void;
+  onClose?: () => void;
+}) {
+  return (
+    <div className="mb-2 w-fit max-w-[19rem] rounded-2xl border border-white/10 bg-black/70 px-2.5 py-2 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl">
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <p className="text-[11px] tracking-wide text-rose-200/90">最愛書籤</p>
+        <button
+          type="button"
+          aria-label="收合最愛"
+          onClick={onClose}
+          className="flex size-7 shrink-0 items-center justify-center rounded-lg text-zinc-400 hover:bg-white/10 hover:text-white touch-manipulation"
+        >
+          <X className="size-3.5" />
+        </button>
+      </div>
+      {canFavorite && !isCurrentFavorite ? (
+        <button
+          type="button"
+          onClick={onAddCurrent}
+          className="mb-1.5 flex w-full items-center gap-2 rounded-xl border border-rose-300/25 bg-rose-500/15 px-2 py-1.5 text-left text-sm text-rose-100 hover:bg-rose-500/25 touch-manipulation"
+        >
+          <Heart className="size-4 fill-rose-500" />
+          加入目前位置
+        </button>
+      ) : null}
+      {favorites.length === 0 ? (
+        <p className="px-1 py-2 text-[12px] text-zinc-400">
+          搜尋或長按地圖後，可把已輸入的位置存成書籤。
+        </p>
+      ) : (
+        <ul className="max-h-44 overflow-y-auto">
+          {favorites.map((hit) => (
+            <li key={hit.id} className="flex items-start">
+              <button
+                type="button"
+                onClick={() => onSelect?.(hit)}
+                className="flex min-w-0 flex-1 items-start gap-2 px-1 py-1.5 text-left hover:bg-white/8 touch-manipulation"
+              >
+                <MapPin className="mt-0.5 size-3.5 shrink-0 text-rose-300" />
+                <span className="min-w-0">
+                  <span className="block truncate text-sm">{hit.name}</span>
+                  <span className="block truncate text-[11px] text-zinc-500">
+                    {hit.address}
+                  </span>
+                </span>
+              </button>
+              <button
+                type="button"
+                aria-label={`移除${hit.name}`}
+                onClick={() => onRemove?.(hit)}
+                className="mt-1 flex size-7 shrink-0 items-center justify-center rounded-lg text-zinc-500 hover:bg-white/10 hover:text-white touch-manipulation"
+              >
+                <Trash2 className="size-3.5" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 

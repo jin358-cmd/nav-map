@@ -140,9 +140,6 @@ export async function searchNlscMapHits(
       const remark = xmlValue(block, "REMARK");
       const location = parseNlscLocation(xmlValue(block, "LOCATION"));
       if (!content || !location) return [];
-      if (!/臺南|台南/.test(`${content}${remark}`) && !key.startsWith("D,")) {
-        return [];
-      }
       return [
         {
           fullAddress: content.replace(/[０-９]/g, (digit) =>

@@ -8,7 +8,7 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
-import { History, Loader2, MapPin, Search, Trash2, X } from "lucide-react";
+import { Heart, History, Loader2, MapPin, Search, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TAIWAN_LANDMARKS } from "@/data/landmarks";
@@ -19,6 +19,14 @@ import {
   rememberAddress,
   subscribeAddressHistory,
 } from "@/lib/address-history";
+import {
+  addFavorite,
+  getFavoritesSnapshot,
+  getServerFavoritesSnapshot,
+  isFavorite,
+  removeFavorite,
+  subscribeFavorites,
+} from "@/lib/favorites";
 import { cn } from "@/lib/utils";
 import { searchAddresses } from "@/services/routing";
 import type { GeocodeHit, LngLat } from "@/types/domain";
@@ -46,6 +54,11 @@ export function AddressSearch({
     subscribeAddressHistory,
     getAddressHistorySnapshot,
     getServerAddressHistorySnapshot,
+  );
+  const favorites = useSyncExternalStore(
+    subscribeFavorites,
+    getFavoritesSnapshot,
+    getServerFavoritesSnapshot,
   );
   const needle = query.trim();
   const submitFirstHitRef = useRef(false);
@@ -77,7 +90,9 @@ export function AddressSearch({
         .then((rows) => {
           if (cancelled) return;
           setHits(rows);
-          setSearchError(rows.length ? null : "找不到這個地址，請換個關鍵字。");
+          setSearchError(
+            rows.length ? null : "找不到店家、公司或地址，請換關鍵字或縮寫。",
+          );
           if (submitFirstHitRef.current && rows[0]) {
             submitFirstHitRef.current = false;
             selectHit(rows[0]);
@@ -160,8 +175,8 @@ export function AddressSearch({
               }
               if (needle.length >= 2) submitFirstHitRef.current = true;
             }}
-            placeholder="輸入地址、路口或地標"
-            aria-label="目的地地址"
+            placeholder="地址、店家、公司、品牌或縮寫"
+            aria-label="目的地搜尋"
             className="h-10 border-0 bg-transparent px-1 text-sm text-white shadow-none placeholder:text-zinc-500 focus-visible:ring-0"
           />
           {query ? (
@@ -187,8 +202,26 @@ export function AddressSearch({
       {open ? (
         <div className="mt-1.5 overflow-hidden rounded-2xl border border-white/10 bg-black/78 shadow-xl backdrop-blur-xl">
           <p className="px-3 pt-2 text-[11px] text-zinc-500">
-            從目前位置出發 · 國土測量雲建物門牌定位
+            全市約 20 公里 · 店家／公司／品牌／縮寫 · 長按地圖自訂位置
           </p>
+          {needle.length < 2 && favorites.length ? (
+            <div className="px-3 pt-1">
+              <p className="mb-1 text-[10px] text-rose-200/80">最愛書籤</p>
+              <ul className="flex flex-wrap gap-1.5">
+                {favorites.slice(0, 8).map((hit) => (
+                  <li key={`fav-${hit.id}`}>
+                    <button
+                      type="button"
+                      onClick={() => selectHit(hit)}
+                      className="rounded-full border border-rose-300/25 bg-rose-500/15 px-2.5 py-1 text-[11px] text-rose-100 hover:bg-rose-500/25 touch-manipulation"
+                    >
+                      {hit.name}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           {needle.length < 2 ? (
             <ul className="flex flex-wrap gap-1.5 px-3 py-2">
               {chips.map((chip) => (
@@ -217,13 +250,13 @@ export function AddressSearch({
           {!searching && !busy && visibleHits.length > 0 ? (
             <ul className="max-h-56 overflow-y-auto py-1">
               {visibleHits.map((hit) => (
-                <li key={hit.id}>
+                <li key={hit.id} className="flex items-start">
                   <button
                     type="button"
                     onClick={() => {
                       selectHit(hit);
                     }}
-                    className="flex w-full items-start gap-2.5 px-3 py-2.5 text-left hover:bg-white/8 touch-manipulation"
+                    className="flex min-w-0 flex-1 items-start gap-2.5 px-3 py-2.5 text-left hover:bg-white/8 touch-manipulation"
                   >
                     <MapPin className="mt-0.5 size-4 shrink-0 text-cyan-300" />
                     <span className="min-w-0">
@@ -234,6 +267,22 @@ export function AddressSearch({
                         {hit.address}
                       </span>
                     </span>
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={isFavorite(hit) ? "移出最愛" : "加入最愛"}
+                    onClick={() => {
+                      if (isFavorite(hit)) removeFavorite(hit);
+                      else addFavorite(hit);
+                    }}
+                    className="mt-1.5 mr-2 flex size-8 shrink-0 items-center justify-center rounded-full text-rose-300 hover:bg-white/10 touch-manipulation"
+                  >
+                    <Heart
+                      className={cn(
+                        "size-4",
+                        isFavorite(hit) && "fill-rose-500 text-rose-400",
+                      )}
+                    />
                   </button>
                 </li>
               ))}

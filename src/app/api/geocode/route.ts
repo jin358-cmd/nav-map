@@ -1,9 +1,16 @@
 import { matchLandmarks } from "@/data/landmarks";
 import { TAINAN_CENTER } from "@/lib/constants";
 import {
+  expandKeywordQueries,
+  filterWithinSearchRadius,
+  isDoorplateQuery,
+  matchLocalPois,
+  rankSearchHits,
+} from "@/lib/poi-search";
+import { SEARCH_RADIUS_KM, SEARCH_RESULT_LIMIT } from "@/lib/search-constants";
+import {
   describeRelaxedMatch,
   expandTaiwanGeocodeQueries,
-  mentionsTainanCity,
   officialAddressQuery,
   parseTaiwanAddress,
 } from "@/lib/taiwan-address";
@@ -15,6 +22,7 @@ import {
   searchHouseholdAddresses,
   searchNlscMapHits,
 } from "@/services/official-address";
+import { searchOverpassPois } from "@/services/overpass-poi";
 import type { GeocodeHit } from "@/types/domain";
 
 const NOMINATIM = "https://nominatim.openstreetmap.org/search";
@@ -30,7 +38,7 @@ type NominatimRow = {
   lon: string;
 };
 
-function mergeHits(rows: GeocodeHit[]) {
+function mergeHits(rows: GeocodeHit[], limit = SEARCH_RESULT_LIMIT) {
   const seen = new Set<string>();
   const out: GeocodeHit[] = [];
   for (const hit of rows) {
@@ -39,7 +47,7 @@ function mergeHits(rows: GeocodeHit[]) {
     seen.add(key);
     out.push(hit);
   }
-  return out.slice(0, 8);
+  return out.slice(0, limit);
 }
 
 async function searchNominatim(
@@ -49,14 +57,15 @@ async function searchNominatim(
   const nominatim = new URL(NOMINATIM);
   nominatim.searchParams.set("format", "jsonv2");
   nominatim.searchParams.set("countrycodes", "tw");
-  nominatim.searchParams.set("limit", "6");
+  nominatim.searchParams.set("limit", "10");
   nominatim.searchParams.set("q", query);
   nominatim.searchParams.set("accept-language", "zh-TW");
   if (bias) {
-    const pad = 0.45;
+    const padLng = SEARCH_RADIUS_KM / 101;
+    const padLat = SEARCH_RADIUS_KM / 111;
     nominatim.searchParams.set(
       "viewbox",
-      `${bias.lng - pad},${bias.lat + pad},${bias.lng + pad},${bias.lat - pad}`,
+      `${bias.lng - padLng},${bias.lat + padLat},${bias.lng + padLng},${bias.lat - padLat}`,
     );
     nominatim.searchParams.set("bounded", "0");
   }
@@ -91,8 +100,7 @@ async function searchNominatim(
 }
 
 function preferLocalRows(rows: NominatimRow[]) {
-  const tainan = rows.filter((row) => mentionsTainanCity(row.display_name));
-  return tainan.length ? tainan : rows;
+  return rows;
 }
 
 function sleep(ms: number) {
@@ -111,7 +119,7 @@ async function searchPhoton(
 ): Promise<GeocodeHit[]> {
   const photon = new URL(PHOTON);
   photon.searchParams.set("q", query);
-  photon.searchParams.set("limit", "6");
+  photon.searchParams.set("limit", "10");
   photon.searchParams.set("lang", "zh");
   if (bias) {
     photon.searchParams.set("lon", String(bias.lng));
@@ -136,20 +144,17 @@ async function searchPhoton(
       const name =
         feature.properties?.name ||
         feature.properties?.street ||
-        query;
+        original;
       return [
         {
           id: `photon-${feature.properties?.osm_id ?? index}`,
-          name: original,
+          name,
           address: describeRelaxedMatch(original, query, name),
           location: { lng, lat },
         },
       ];
     });
-    const tainan = hits.filter((hit) =>
-      mentionsTainanCity(`${hit.address}${hit.name}`),
-    );
-    return tainan.length ? tainan : hits;
+    return hits;
   } catch {
     return [];
   } finally {
@@ -167,8 +172,8 @@ function toHits(
       const osmName = item.name || item.display_name.split(",")[0] || original;
       return {
         id: `osm-${item.place_id}`,
-        name: original,
-        address: describeRelaxedMatch(original, matchedQuery, osmName),
+        name: osmName,
+        address: describeRelaxedMatch(original, matchedQuery, item.display_name),
         location: { lng: Number(item.lon), lat: Number(item.lat) },
       };
     })
@@ -203,28 +208,36 @@ export async function GET(request: Request) {
     Number.isFinite(biasLng) && Number.isFinite(biasLat)
       ? { lng: biasLng, lat: biasLat }
       : { ...TAINAN_CENTER };
-  const local = matchLandmarks(query);
+  const local = [
+    ...matchLandmarks(query),
+    ...matchLocalPois(query, bias),
+  ];
 
   if (query.length < 2) {
-    return Response.json({ results: local });
+    return Response.json({
+      results: mergeHits(filterWithinSearchRadius(local, bias)),
+    });
   }
 
   try {
     const parsed = parseTaiwanAddress(query);
     const officialQuery = officialAddressQuery(query);
+    const doorplate = isDoorplateQuery(query);
     const nlsc = await searchNlscMapHits(officialQuery, bias);
-    if (nlsc.length) {
-      const ranked = [...nlsc].sort((a, b) => {
+    const nlscHits: GeocodeHit[] = [...nlsc]
+      .sort((a, b) => {
         const rank = (kind: typeof a.kind) =>
           kind === "ADDRESS" ? 0 : kind === "CROSSROAD" ? 1 : kind === "LANDGOAL" ? 2 : 3;
         return rank(a.kind) - rank(b.kind);
-      });
-      const nlscHits: GeocodeHit[] = ranked.map((item, index) => ({
+      })
+      .map((item, index) => ({
         id: `nlsc-${item.kind}-${index}-${item.location.lng.toFixed(6)}-${item.location.lat.toFixed(6)}`,
         name: item.fullAddress,
         address: describeNlscHit(item),
         location: item.location,
       }));
+
+    if (doorplate && nlscHits.length) {
       const checked = parsed
         ? await Promise.all(
             nlscHits.map(async (hit) => {
@@ -265,23 +278,34 @@ export async function GET(request: Request) {
       }
     }
 
-    const variants = expandTaiwanGeocodeQueries(query);
-    let remote: GeocodeHit[] = [];
-    let matchedQuery = query;
-    for (const [index, variant] of variants.entries()) {
-      if (index > 0) await sleep(1100);
-      const rows = await searchNominatim(variant, bias);
-      if (!rows.length) continue;
-      matchedQuery = variant;
-      remote = toHits(rows, query, variant);
-      break;
-    }
+    const keywordVariants = expandKeywordQueries(query);
+    const variants = doorplate
+      ? expandTaiwanGeocodeQueries(query)
+      : keywordVariants;
+    const poiQuery = keywordVariants[1] ?? keywordVariants[0] ?? query;
+
+    const overpassPromise = doorplate
+      ? Promise.resolve([] as GeocodeHit[])
+      : searchOverpassPois(poiQuery, bias);
+    const [nominatimRows, photonHits] = await Promise.all([
+      searchNominatim(variants[0] ?? query, bias),
+      searchPhoton(poiQuery, query, bias),
+    ]);
+    const overpassHits = await Promise.race([
+      overpassPromise,
+      sleep(1600).then(() => [] as GeocodeHit[]),
+    ]);
+
+    let remote = toHits(nominatimRows, query, variants[0] ?? query);
+    let matchedQuery = variants[0] ?? query;
 
     if (!remote.length) {
-      for (const variant of variants.slice(0, 3)) {
-        remote = await searchPhoton(variant, query, bias);
-        if (!remote.length) continue;
+      for (const variant of variants.slice(1, 3)) {
+        await sleep(400);
+        const rows = await searchNominatim(variant, bias);
+        if (!rows.length) continue;
         matchedQuery = variant;
+        remote = toHits(rows, query, variant);
         break;
       }
     }
@@ -294,15 +318,29 @@ export async function GET(request: Request) {
       );
     }
 
+    const pooled = rankSearchHits(
+      filterWithinSearchRadius(
+        mergeHits(
+          [...local, ...nlscHits, ...remote, ...photonHits, ...overpassHits],
+          48,
+        ),
+        bias,
+      ),
+      query,
+      bias,
+    );
+
     return Response.json({
-      results: mergeHits([...local, ...remote]),
-      source: remote.length
-        ? parsed
-          ? "open-map+land-check"
-          : "nominatim"
-        : local.length
-          ? "landmark"
-          : "empty",
+      results: pooled.slice(0, SEARCH_RESULT_LIMIT),
+      source: overpassHits.length
+        ? "poi+overpass"
+        : remote.length || photonHits.length
+          ? "poi"
+          : nlscHits.length
+            ? "nlsc"
+            : local.length
+              ? "landmark"
+              : "empty",
       matchedQuery,
     });
   } catch {

@@ -63,6 +63,7 @@ type DrivingMapProps = {
   onDisasterSelect: (alertId: string) => void;
   onUserPan: () => void;
   onViewportChange: (viewport: MapViewport) => void;
+  onLongPress?: (location: { lng: number; lat: number }) => void;
 };
 
 function isCompactViewport(width: number) {
@@ -183,6 +184,7 @@ export function DrivingMap({
   onDisasterSelect,
   onUserPan,
   onViewportChange,
+  onLongPress,
 }: DrivingMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
@@ -193,6 +195,7 @@ export function DrivingMap({
   const onDisasterSelectRef = useRef(onDisasterSelect);
   const onUserPanRef = useRef(onUserPan);
   const onViewportChangeRef = useRef(onViewportChange);
+  const onLongPressRef = useRef(onLongPress);
   const modeRef = useRef(cameraMode);
   const vehicleRef = useRef(vehicle);
   const routeRef = useRef(route);
@@ -222,6 +225,7 @@ export function DrivingMap({
     onDisasterSelectRef.current = onDisasterSelect;
     onUserPanRef.current = onUserPan;
     onViewportChangeRef.current = onViewportChange;
+    onLongPressRef.current = onLongPress;
     modeRef.current = cameraMode;
     vehicleRef.current = vehicle;
     routeRef.current = route;
@@ -240,6 +244,7 @@ export function DrivingMap({
     onDisasterSelect,
     onUserPan,
     onViewportChange,
+    onLongPress,
     cameraMode,
     vehicle,
     route,
@@ -428,26 +433,84 @@ export function DrivingMap({
     const rememberZoom = () => {
       userZoomRef.current = map.getZoom();
     };
+    let pressTimer = 0;
+    let pressX = 0;
+    let pressY = 0;
+    const cancelPress = () => {
+      if (pressTimer) window.clearTimeout(pressTimer);
+      pressTimer = 0;
+    };
+    const fireLongPress = (lng: number, lat: number) => {
+      if (navigatingRef.current) return;
+      onLongPressRef.current?.({ lng, lat });
+    };
+    const schedulePress = (clientX: number, clientY: number) => {
+      cancelPress();
+      pressX = clientX;
+      pressY = clientY;
+      const rect = canvas.getBoundingClientRect();
+      const point = map.unproject([clientX - rect.left, clientY - rect.top]);
+      pressTimer = window.setTimeout(() => {
+        pressTimer = 0;
+        fireLongPress(point.lng, point.lat);
+      }, 560);
+    };
     const onTouchStart = (event: TouchEvent) => {
       if (event.touches.length >= 2) {
         pinchingRef.current = true;
+        cancelPress();
         return;
       }
+      const touch = event.touches[0];
+      if (touch) schedulePress(touch.clientX, touch.clientY);
       detachFollow();
     };
+    const onTouchMove = (event: TouchEvent) => {
+      const touch = event.touches[0];
+      if (!touch || !pressTimer) return;
+      const dx = touch.clientX - pressX;
+      const dy = touch.clientY - pressY;
+      if (Math.hypot(dx, dy) > 14) cancelPress();
+    };
     const onTouchEnd = () => {
+      cancelPress();
       if (pinchingRef.current) rememberZoom();
       pinchingRef.current = false;
     };
     const onPointerDown = (event: PointerEvent) => {
       if (event.pointerType === "touch") return;
+      if (event.button === 2) return;
       if (event.button !== 0) return;
+      schedulePress(event.clientX, event.clientY);
       detachFollow();
     };
+    const onPointerMove = (event: PointerEvent) => {
+      if (event.pointerType === "touch" || !pressTimer) return;
+      const dx = event.clientX - pressX;
+      const dy = event.clientY - pressY;
+      if (Math.hypot(dx, dy) > 14) cancelPress();
+    };
+    const onPointerUp = () => {
+      if (pressTimer) cancelPress();
+    };
+    const onContextMenu = (event: MouseEvent) => {
+      event.preventDefault();
+      cancelPress();
+      const rect = canvas.getBoundingClientRect();
+      const point = map.unproject([
+        event.clientX - rect.left,
+        event.clientY - rect.top,
+      ]);
+      fireLongPress(point.lng, point.lat);
+    };
     canvas.addEventListener("touchstart", onTouchStart, { passive: true });
+    canvas.addEventListener("touchmove", onTouchMove, { passive: true });
     canvas.addEventListener("touchend", onTouchEnd, { passive: true });
     canvas.addEventListener("touchcancel", onTouchEnd, { passive: true });
     canvas.addEventListener("pointerdown", onPointerDown);
+    canvas.addEventListener("pointermove", onPointerMove);
+    canvas.addEventListener("pointerup", onPointerUp);
+    canvas.addEventListener("contextmenu", onContextMenu);
     map.on("zoomstart", (event) => {
       if (event.originalEvent) pinchingRef.current = true;
     });
@@ -485,9 +548,13 @@ export function DrivingMap({
     return () => {
       window.removeEventListener("resize", onResize);
       canvas.removeEventListener("touchstart", onTouchStart);
+      canvas.removeEventListener("touchmove", onTouchMove);
       canvas.removeEventListener("touchend", onTouchEnd);
       canvas.removeEventListener("touchcancel", onTouchEnd);
       canvas.removeEventListener("pointerdown", onPointerDown);
+      canvas.removeEventListener("pointermove", onPointerMove);
+      canvas.removeEventListener("pointerup", onPointerUp);
+      canvas.removeEventListener("contextmenu", onContextMenu);
       cancelAnimationFrame(rafRef.current);
       readyRef.current = false;
       vehicleMarkerRef.current?.remove();
