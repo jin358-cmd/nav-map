@@ -49,7 +49,7 @@ export async function GET(request: Request) {
       error instanceof Error ? error.message : "unknown error",
     );
     return Response.json(
-      { error: "TGOS 測速執法資料暫時無法載入" },
+      { error: "測速執法公開資料暫時無法載入" },
       { status: 502 },
     );
   }

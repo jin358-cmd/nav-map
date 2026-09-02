@@ -319,8 +319,11 @@ async function loadFromPublicDataset({
   ) {
     const response = await fetch(PUBLIC_DATASET_ENDPOINT, {
       headers: { Accept: "text/csv" },
-      cache: "no-store",
-      signal: AbortSignal.timeout(15_000),
+      cache: "force-cache",
+      next: {
+        revalidate: Math.floor(SPEED_ENFORCEMENT_PUBLIC_CACHE_MS / 1_000),
+      },
+      signal: AbortSignal.timeout(25_000),
     });
     if (!response.ok) {
       throw new Error(`Public speed dataset request failed (${response.status})`);

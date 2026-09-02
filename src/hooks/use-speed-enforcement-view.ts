@@ -36,7 +36,7 @@ async function fetchSpeedEnforcement(
   if (force) params.set("fresh", "1");
 
   const controller = new AbortController();
-  const timer = window.setTimeout(() => controller.abort(), 14_000);
+  const timer = window.setTimeout(() => controller.abort(), 30_000);
   try {
     const response = await fetch(`/api/speed-enforcement?${params}`, {
       cache: "no-store",
@@ -46,7 +46,7 @@ async function fetchSpeedEnforcement(
       error?: string;
     };
     if (!response.ok) {
-      throw new Error(data.error || "TGOS 測速執法資料載入失敗");
+      throw new Error(data.error || "測速執法公開資料載入失敗");
     }
     return data;
   } finally {
@@ -101,7 +101,7 @@ export function useSpeedEnforcementView({
         setError(
           reason instanceof Error
             ? reason.message
-            : "TGOS 測速執法資料載入失敗",
+            : "測速執法公開資料載入失敗",
         );
       });
     return () => {
@@ -114,7 +114,7 @@ export function useSpeedEnforcementView({
       setError(
         reason instanceof Error
           ? reason.message
-          : "TGOS 測速執法資料載入失敗",
+          : "測速執法公開資料載入失敗",
       );
     });
   }, [load]);
