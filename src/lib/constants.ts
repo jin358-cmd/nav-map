@@ -60,7 +60,8 @@ export type YoutubePlaylist = {
   id: string;
   label: string;
   hint: string;
-  videoIds: readonly string[];
+  videoIds?: readonly string[];
+  youtubeListId?: string;
 };
 
 /** 車用聆聽播放清單（可嵌入的 YouTube 24h 電台） */

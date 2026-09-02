@@ -18,7 +18,12 @@ export type YouTubePlayer = {
   pauseVideo: () => void;
   nextVideo: () => void;
   previousVideo: () => void;
-  loadPlaylist: (playlist: string | string[] | { playlist: string; index?: number }) => void;
+  loadPlaylist: (
+    playlist:
+      | string
+      | string[]
+      | { playlist?: string; list?: string; listType?: string; index?: number },
+  ) => void;
   getPlayerState: () => number;
   getVideoData: () => { title?: string; author?: string; video_id?: string };
   destroy: () => void;

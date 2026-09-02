@@ -37,9 +37,18 @@ function readTrackMeta(player: YouTubePlayer) {
 }
 
 function loadMix(player: YouTubePlayer, playlist: YoutubePlaylist) {
-  const ids = [...playlist.videoIds];
   try {
-    player.loadPlaylist(ids);
+    if (playlist.youtubeListId) {
+      player.loadPlaylist({
+        list: playlist.youtubeListId,
+        listType: "playlist",
+        index: 0,
+      });
+    } else if (playlist.videoIds && playlist.videoIds.length > 0) {
+      player.loadPlaylist([...playlist.videoIds]);
+    } else {
+      return;
+    }
     player.playVideo();
   } catch {
     /* 瀏覽器可能擋住自動播放 */
@@ -48,14 +57,26 @@ function loadMix(player: YouTubePlayer, playlist: YoutubePlaylist) {
 
 export function YouTubeMusicPlayer({
   compact = false,
+  hidden = false,
+  playlists = YOUTUBE_PLAYLISTS,
+  libraryStatus = "idle",
+  signedIn = false,
   onClose,
   onExpand,
   onPlaying,
+  onPaused,
+  onConnectLibrary,
 }: {
   compact?: boolean;
+  hidden?: boolean;
+  playlists?: readonly YoutubePlaylist[];
+  libraryStatus?: "idle" | "loading" | "ready" | "error";
+  signedIn?: boolean;
   onClose: () => void;
   onExpand?: () => void;
   onPlaying?: () => void;
+  onPaused?: () => void;
+  onConnectLibrary?: () => void;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<YouTubePlayer | null>(null);
@@ -69,10 +90,15 @@ export function YouTubeMusicPlayer({
   const [artist, setArtist] = useState("駕駛聆聽");
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
-  const [playlistId, setPlaylistId] = useState(YOUTUBE_PLAYLISTS[0].id);
+  const catalog = playlists.length > 0 ? playlists : YOUTUBE_PLAYLISTS;
+  const [playlistId, setPlaylistId] = useState(catalog[0].id);
   const playlist =
-    YOUTUBE_PLAYLISTS.find((item) => item.id === playlistId) ??
-    YOUTUBE_PLAYLISTS[0];
+    catalog.find((item) => item.id === playlistId) ?? catalog[0];
+  const onPausedRef = useRef(onPaused);
+
+  useEffect(() => {
+    onPausedRef.current = onPaused;
+  }, [onPaused]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -83,7 +109,8 @@ export function YouTubeMusicPlayer({
     void loadYouTubeIframeApi()
       .then((Player) => {
         if (cancelled || !hostRef.current) return;
-        const mix = [...initial.videoIds];
+        const mix = [...(initial.videoIds ?? [])];
+        if (!mix[0]) return;
         const player = new Player(hostRef.current, {
           width: "100%",
           height: "100%",
@@ -122,6 +149,7 @@ export function YouTubeMusicPlayer({
               const nowPlaying = event.data === YT_PLAYING;
               setPlaying(nowPlaying);
               if (nowPlaying) onPlayingRef.current?.();
+              if (event.data === YT_PAUSED) onPausedRef.current?.();
               if (event.data === YT_PLAYING || event.data === YT_PAUSED) {
                 const meta = readTrackMeta(event.target);
                 if (meta) {
@@ -189,11 +217,13 @@ export function YouTubeMusicPlayer({
 
   return (
     <div
-      className={
-        compact
-          ? "pointer-events-auto w-fit max-w-[15.25rem] overflow-hidden rounded-2xl border border-red-400/20 bg-black/78 shadow-[0_12px_40px_rgba(0,0,0,0.5)] backdrop-blur-xl"
-          : "pointer-events-auto w-fit max-w-[20rem] overflow-hidden rounded-2xl border border-red-400/20 bg-black/78 shadow-[0_12px_40px_rgba(0,0,0,0.5)] backdrop-blur-xl"
-      }
+      className={cn(
+        hidden
+          ? "pointer-events-none invisible absolute h-px w-px overflow-hidden opacity-0"
+          : compact
+            ? "pointer-events-auto w-fit max-w-[15.25rem] overflow-hidden rounded-2xl border border-red-400/20 bg-black/78 shadow-[0_12px_40px_rgba(0,0,0,0.5)] backdrop-blur-xl"
+            : "pointer-events-auto w-fit max-w-[20rem] overflow-hidden rounded-2xl border border-red-400/20 bg-black/78 shadow-[0_12px_40px_rgba(0,0,0,0.5)] backdrop-blur-xl",
+      )}
     >
       <div className={compact ? "flex items-center gap-2 px-2 py-1.5" : "flex items-start gap-2.5 px-2.5 py-2"}>
         <div
@@ -267,7 +297,7 @@ export function YouTubeMusicPlayer({
           {compact ? null : (
             <>
               <div className="mt-1.5 flex flex-wrap gap-1">
-                {YOUTUBE_PLAYLISTS.map((item) => (
+                {catalog.map((item) => (
                   <button
                     key={item.id}
                     type="button"
@@ -284,6 +314,31 @@ export function YouTubeMusicPlayer({
                   </button>
                 ))}
               </div>
+              {signedIn && libraryStatus === "loading" ? (
+                <p className="mt-1 text-[11px] text-zinc-400">正在同步 YouTube Music 歌單…</p>
+              ) : null}
+              {signedIn && libraryStatus === "ready" && playlists.length === 0 ? (
+                <p className="mt-1 text-[11px] text-zinc-400">
+                  這個帳號還沒有可讀取的已儲存歌單。
+                </p>
+              ) : null}
+              {!signedIn ? (
+                <button
+                  type="button"
+                  onClick={() => onConnectLibrary?.()}
+                  className="mt-1.5 w-full rounded-lg border border-white/10 bg-white/6 px-2 py-1 text-left text-[11px] text-zinc-200 hover:bg-white/10 touch-manipulation"
+                >
+                  登入 Google，同步 YouTube Music 歌單
+                </button>
+              ) : libraryStatus === "idle" || libraryStatus === "error" ? (
+                <button
+                  type="button"
+                  onClick={() => onConnectLibrary?.()}
+                  className="mt-1.5 w-full rounded-lg border border-white/10 bg-white/6 px-2 py-1 text-left text-[11px] text-zinc-200 hover:bg-white/10 touch-manipulation"
+                >
+                  同步 YouTube Music 已儲存歌單
+                </button>
+              ) : null}
               {error ? (
                 <p className="mt-1 text-[11px] text-amber-200">{error}</p>
               ) : null}

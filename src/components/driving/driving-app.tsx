@@ -23,6 +23,7 @@ import { useCctvView } from "@/hooks/use-cctv-view";
 import { useDisasterView } from "@/hooks/use-disaster-view";
 import { useGoogleAccount } from "@/hooks/use-google-account";
 import { useLandscape } from "@/hooks/use-landscape";
+import { useYoutubeLibrary } from "@/hooks/use-youtube-library";
 import { useNavigationVoice } from "@/hooks/use-navigation-voice";
 import { useSpeedEnforcementView } from "@/hooks/use-speed-enforcement-view";
 import { useTrafficView } from "@/hooks/use-traffic-view";
@@ -42,7 +43,11 @@ import {
 import { pinSelected } from "@/lib/map-visibility";
 import { destinationToHit } from "@/lib/poi-search";
 import { CITY_TRAFFIC_FOCUS_KM } from "@/lib/traffic-constants";
-import { DEMO_VEHICLE, INTERSECTION_APPROACH_METERS } from "@/lib/constants";
+import {
+  DEMO_VEHICLE,
+  INTERSECTION_APPROACH_METERS,
+  YOUTUBE_PLAYLISTS,
+} from "@/lib/constants";
 import { distanceKm } from "@/lib/geo";
 import { nextIntersectionStep } from "@/lib/osrm-maneuver";
 import {
@@ -128,6 +133,8 @@ export function DrivingApp() {
   const [trafficFocus5km, setTrafficFocus5km] = useState(true);
   const landscape = useLandscape();
   const googleAccount = useGoogleAccount();
+  const youtubeLibrary = useYoutubeLibrary(googleAccount.youtubeAccessToken);
+  const [musicPlaying, setMusicPlaying] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [rerouting, setRerouting] = useState(false);
   const [navigationProgress, setNavigationProgress] =
@@ -645,9 +652,27 @@ export function DrivingApp() {
         {musicMode !== "off" ? (
           <YouTubeMusicPlayer
             compact={musicMode === "mini"}
-            onClose={() => setMusicMode("off")}
+            hidden={landscape && musicPlaying}
+            playlists={
+              youtubeLibrary.playlists.length > 0
+                ? youtubeLibrary.playlists
+                : YOUTUBE_PLAYLISTS
+            }
+            libraryStatus={youtubeLibrary.status}
+            signedIn={Boolean(googleAccount.account)}
+            onClose={() => {
+              setMusicPlaying(false);
+              setMusicMode("off");
+            }}
             onExpand={() => setMusicMode("open")}
-            onPlaying={() => setMusicMode("mini")}
+            onPlaying={() => {
+              setMusicPlaying(true);
+              setMusicMode("mini");
+            }}
+            onPaused={() => setMusicPlaying(false)}
+            onConnectLibrary={() => {
+              void googleAccount.connectYoutube();
+            }}
           />
         ) : null}
         <RoadInformationCard
@@ -691,6 +716,7 @@ export function DrivingApp() {
             setSelectedCctv(null);
             setSelectedDisaster(null);
             setIntelCollapse((value) => value + 1);
+            setMusicPlaying(false);
             setMusicMode((mode) => (mode === "off" ? "mini" : "off"));
           }}
         />

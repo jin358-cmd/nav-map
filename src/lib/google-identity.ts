@@ -12,6 +12,15 @@ export const GOOGLE_CLIENT_ID =
 
 export const GOOGLE_ACCOUNT_STORAGE_KEY = "navpilot.google.v1";
 export const GOOGLE_ACCOUNT_EVENT = "navpilot-google-account";
+export const YOUTUBE_TOKEN_STORAGE_KEY = "navpilot.youtube-token.v1";
+export const YOUTUBE_TOKEN_EVENT = "navpilot-youtube-token";
+export const YOUTUBE_READONLY_SCOPE =
+  "https://www.googleapis.com/auth/youtube.readonly";
+
+export type YoutubeAccess = {
+  accessToken: string;
+  exp: number;
+};
 
 type JwtPayload = {
   sub?: string;
@@ -76,9 +85,45 @@ export function writeStoredAccount(account: GoogleAccount | null) {
   window.dispatchEvent(new Event(GOOGLE_ACCOUNT_EVENT));
 }
 
+export function isYoutubeAccessFresh(access: YoutubeAccess, skewMs = 60_000) {
+  return access.exp > Date.now() + skewMs;
+}
+
+export function readYoutubeAccess(): YoutubeAccess | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.sessionStorage.getItem(YOUTUBE_TOKEN_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as YoutubeAccess;
+    if (!parsed?.accessToken || !parsed.exp) return null;
+    return isYoutubeAccessFresh(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+export function writeYoutubeAccess(access: YoutubeAccess | null) {
+  if (typeof window === "undefined") return;
+  try {
+    if (!access) {
+      window.sessionStorage.removeItem(YOUTUBE_TOKEN_STORAGE_KEY);
+    } else {
+      window.sessionStorage.setItem(
+        YOUTUBE_TOKEN_STORAGE_KEY,
+        JSON.stringify(access),
+      );
+    }
+  } catch {
+    /* 私人模式可能擋 sessionStorage */
+  }
+  window.dispatchEvent(new Event(YOUTUBE_TOKEN_EVENT));
+}
+
 export function loadGoogleIdentityScript(): Promise<void> {
   if (typeof window === "undefined") return Promise.resolve();
-  if (window.google?.accounts?.id) return Promise.resolve();
+  if (window.google?.accounts?.id && window.google.accounts.oauth2) {
+    return Promise.resolve();
+  }
   const existing = document.querySelector<HTMLScriptElement>(
     'script[src="https://accounts.google.com/gsi/client"]',
   );
@@ -128,6 +173,21 @@ declare global {
           ) => void;
           disableAutoSelect: () => void;
           revoke: (hint: string, done: () => void) => void;
+        };
+        oauth2?: {
+          initTokenClient: (config: {
+            client_id: string;
+            scope: string;
+            callback: (response: {
+              access_token?: string;
+              expires_in?: number;
+              error?: string;
+            }) => void;
+            error_callback?: (error: { type?: string; message?: string }) => void;
+          }) => {
+            requestAccessToken: (override?: { prompt?: "" | "consent" | "select_account" }) => void;
+          };
+          revoke: (token: string, done?: () => void) => void;
         };
       };
     };
