@@ -129,7 +129,7 @@ export function AddressSearch({
       {open ? (
         <div className="mt-1.5 overflow-hidden rounded-2xl border border-white/10 bg-black/78 shadow-xl backdrop-blur-xl">
           <p className="px-3 pt-2 text-[11px] text-zinc-500">
-            從目前位置出發 · OpenStreetMap
+            從目前位置出發 · 台灣地址（巷弄門牌會對到最近道路）
           </p>
           {needle.length < 2 ? (
             <ul className="flex flex-wrap gap-1.5 px-3 py-2">
