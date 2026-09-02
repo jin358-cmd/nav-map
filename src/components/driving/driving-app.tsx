@@ -461,7 +461,7 @@ export function DrivingApp() {
 
       {!navigating ? (
         <div className="pointer-events-none absolute top-[max(0.45rem,env(safe-area-inset-top))] left-3 z-10 max-w-[42%] rounded-2xl border border-white/10 bg-black/45 px-2.5 py-1.5 backdrop-blur-md sm:max-w-none sm:px-3 sm:py-2">
-          <p className="hidden text-[10px] tracking-[0.18em] text-cyan-200/80 sm:block">
+          <p className="text-[10px] tracking-[0.18em] text-cyan-200/80">
             NavPilot
           </p>
           <p className="text-xs font-semibold sm:text-sm">
