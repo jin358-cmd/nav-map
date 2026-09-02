@@ -348,9 +348,7 @@ export function DrivingMap({
         const center = mapNow.getCenter();
         const zoomTarget = pinchingRef.current
           ? mapNow.getZoom()
-          : approachingRef.current
-            ? wanted.zoom
-            : (userZoomRef.current ?? wanted.zoom);
+          : (userZoomRef.current ?? wanted.zoom);
         mapNow.jumpTo({
           center: [
             lerp(center.lng, wanted.center[0], t),
@@ -405,25 +403,40 @@ export function DrivingMap({
     };
     window.addEventListener("resize", onResize);
     const canvas = map.getCanvas();
+    const detachFollow = () => {
+      followVehicleRef.current = false;
+      onUserPanRef.current();
+    };
+    const rememberZoom = () => {
+      userZoomRef.current = map.getZoom();
+    };
     const onTouchStart = (event: TouchEvent) => {
-      if (event.touches.length >= 2) pinchingRef.current = true;
+      if (event.touches.length >= 2) {
+        pinchingRef.current = true;
+        return;
+      }
+      detachFollow();
     };
     const onTouchEnd = () => {
-      if (pinchingRef.current) {
-        userZoomRef.current = map.getZoom();
-        pinchingRef.current = false;
-      }
+      if (pinchingRef.current) rememberZoom();
+      pinchingRef.current = false;
+    };
+    const onPointerDown = (event: PointerEvent) => {
+      if (event.pointerType === "touch") return;
+      if (event.button !== 0) return;
+      detachFollow();
     };
     canvas.addEventListener("touchstart", onTouchStart, { passive: true });
     canvas.addEventListener("touchend", onTouchEnd, { passive: true });
     canvas.addEventListener("touchcancel", onTouchEnd, { passive: true });
+    canvas.addEventListener("pointerdown", onPointerDown);
     map.on("zoomstart", (event) => {
       if (event.originalEvent) pinchingRef.current = true;
     });
     map.on("wheel", () => {
       pinchingRef.current = true;
       window.setTimeout(() => {
-        userZoomRef.current = map.getZoom();
+        rememberZoom();
         pinchingRef.current = false;
       }, 180);
     });
@@ -433,13 +446,13 @@ export function DrivingMap({
         pinchingRef.current = true;
         return;
       }
-      onUserPanRef.current();
+      detachFollow();
     });
     map.on("rotatestart", (event) => {
-      if (event.originalEvent && !pinchingRef.current) onUserPanRef.current();
+      if (event.originalEvent && !pinchingRef.current) detachFollow();
     });
     map.on("zoomend", () => {
-      if (pinchingRef.current) userZoomRef.current = map.getZoom();
+      if (pinchingRef.current) rememberZoom();
     });
     map.on("moveend", () => {
       if (followVehicleRef.current) return;
@@ -455,6 +468,7 @@ export function DrivingMap({
       canvas.removeEventListener("touchstart", onTouchStart);
       canvas.removeEventListener("touchend", onTouchEnd);
       canvas.removeEventListener("touchcancel", onTouchEnd);
+      canvas.removeEventListener("pointerdown", onPointerDown);
       cancelAnimationFrame(rafRef.current);
       readyRef.current = false;
       vehicleMarkerRef.current?.remove();
