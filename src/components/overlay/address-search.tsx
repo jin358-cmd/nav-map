@@ -7,28 +7,20 @@ import { Input } from "@/components/ui/input";
 import { TAIWAN_LANDMARKS } from "@/data/landmarks";
 import { cn } from "@/lib/utils";
 import { searchAddresses } from "@/services/routing";
-import type { GeocodeHit, LngLat, RouteDestination } from "@/types/domain";
+import type { GeocodeHit, LngLat } from "@/types/domain";
 
 type AddressSearchProps = {
   bias: LngLat;
-  destination: RouteDestination | null;
   busy: boolean;
   error: string | null;
   onSelect: (hit: GeocodeHit) => void;
-  onClear: () => void;
-  onPreviewRoute: () => void;
-  onStartNav: () => void;
 };
 
 export function AddressSearch({
   bias,
-  destination,
   busy,
   error,
   onSelect,
-  onClear,
-  onPreviewRoute,
-  onStartNav,
 }: AddressSearchProps) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -60,9 +52,7 @@ export function AddressSearch({
   const visibleHits = needle.length < 2 ? [] : hits;
   const chips = useMemo(() => TAIWAN_LANDMARKS.slice(0, 5), []);
   const emptyHint =
-    needle.length >= 2 && !searching && !busy
-      ? searchError
-      : null;
+    needle.length >= 2 && !searching && !busy ? searchError : null;
 
   return (
     <div className="pointer-events-auto w-full max-w-xl">
@@ -80,7 +70,7 @@ export function AddressSearch({
             aria-label="目的地地址"
             className="h-10 border-0 bg-transparent px-1 text-sm text-white shadow-none placeholder:text-zinc-500 focus-visible:ring-0"
           />
-          {query || destination ? (
+          {query ? (
             <Button
               type="button"
               variant="ghost"
@@ -91,7 +81,6 @@ export function AddressSearch({
                 setHits([]);
                 setSearchError(null);
                 setOpen(false);
-                onClear();
               }}
               className="size-9 text-zinc-300 hover:bg-white/10 hover:text-white"
             >
@@ -99,31 +88,6 @@ export function AddressSearch({
             </Button>
           ) : null}
         </div>
-
-        {destination && !open ? (
-          <div className="flex items-center justify-between gap-2 border-t border-white/8 px-3 py-2">
-            <p className="min-w-0 truncate text-xs text-zinc-300">
-              前往 {destination.label}
-            </p>
-            <div className="flex shrink-0 gap-1.5">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={onPreviewRoute}
-                className="h-8 rounded-lg px-2 text-[11px] text-cyan-100 hover:bg-white/10"
-              >
-                檢視全線
-              </Button>
-              <Button
-                type="button"
-                onClick={onStartNav}
-                className="h-8 rounded-lg bg-cyan-400/20 px-2 text-[11px] text-cyan-100 hover:bg-cyan-400/30"
-              >
-                開始導航
-              </Button>
-            </div>
-          </div>
-        ) : null}
       </div>
 
       {open ? (
@@ -187,20 +151,16 @@ export function AddressSearch({
           ) : null}
 
           {!searching && !busy && (emptyHint || error) ? (
-            <p className={cn("px-3 py-3 text-sm", error ? "text-amber-200" : "text-zinc-400")}>
+            <p
+              className={cn(
+                "px-3 py-3 text-sm",
+                error ? "text-amber-200" : "text-zinc-400",
+              )}
+            >
               {error ?? emptyHint}
             </p>
           ) : null}
         </div>
-      ) : null}
-
-      {destination ? (
-        <p className="mt-1 px-1 text-[11px] text-zinc-500">
-          目的地 {destination.label}
-          {destination.address && destination.address !== destination.label
-            ? ` · ${destination.address}`
-            : ""}
-        </p>
       ) : null}
     </div>
   );

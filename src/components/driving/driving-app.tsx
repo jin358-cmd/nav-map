@@ -5,8 +5,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { MapControls } from "@/components/map/map-controls";
 import { AddressSearch } from "@/components/overlay/address-search";
 import { CctvDetailCard } from "@/components/overlay/cctv-detail-card";
-import { NavigationBanner } from "@/components/overlay/navigation-banner";
 import { RoadInformationCard } from "@/components/overlay/road-information-card";
+import { RoutePreview } from "@/components/overlay/route-preview";
 import { useCctvView } from "@/hooks/use-cctv-view";
 import { useTrafficView } from "@/hooks/use-traffic-view";
 import { roadIntelFromCameras } from "@/lib/cctv-intel";
@@ -34,6 +34,7 @@ import type {
   NavigationManeuver,
   RoadIntelItem,
   RouteDestination,
+  RouteStep,
   VehiclePose,
 } from "@/types/domain";
 
@@ -67,6 +68,7 @@ export function DrivingApp() {
     null,
   );
   const [destination, setDestination] = useState<RouteDestination | null>(null);
+  const [routeSteps, setRouteSteps] = useState<RouteStep[]>([]);
   const [fitRouteKey, setFitRouteKey] = useState(0);
   const [routing, setRouting] = useState(false);
   const [routeError, setRouteError] = useState<string | null>(null);
@@ -193,6 +195,7 @@ export function DrivingApp() {
       setRoute(plan.coordinates);
       setDestination(plan.destination);
       setManeuver(plan.maneuver);
+      setRouteSteps(plan.steps ?? []);
       setFollowVehicle(false);
       setNavigating(false);
       setFitRouteKey((value) => value + 1);
@@ -208,6 +211,7 @@ export function DrivingApp() {
     setRouteError(null);
     setRoute(demoRoute);
     setManeuver(demoManeuver);
+    setRouteSteps([]);
     setFollowVehicle(true);
     setNavigating(false);
   }, [demoManeuver, demoRoute]);
@@ -235,6 +239,7 @@ export function DrivingApp() {
     setRouteError(null);
     setRoute(demoRoute);
     setManeuver(demoManeuver);
+    setRouteSteps([]);
     setRefreshNonce((value) => value + 1);
   }, [demoManeuver, demoRoute]);
 
@@ -284,27 +289,23 @@ export function DrivingApp() {
       </div>
 
       <div className="absolute top-[max(2.85rem,calc(env(safe-area-inset-top)+2.35rem))] right-[4.4rem] left-3 z-20 sm:top-[max(0.55rem,env(safe-area-inset-top))] sm:right-24 sm:left-44">
-        <AddressSearch
-          bias={searchBias}
-          destination={destination}
-          busy={routing}
-          error={routeError}
-          onSelect={(hit) => void applyRoute(hit)}
-          onClear={clearRoute}
-          onPreviewRoute={() => {
-            setNavigating(false);
-            setFollowVehicle(false);
-            setFitRouteKey((value) => value + 1);
-          }}
-          onStartNav={startNavigation}
-        />
-      </div>
-
-      <div className="pointer-events-none absolute top-[max(7.6rem,calc(env(safe-area-inset-top)+7.1rem))] right-[4.4rem] left-3 z-10 flex justify-center sm:top-[max(5.4rem,calc(env(safe-area-inset-top)+4.7rem))] sm:right-24 sm:left-44">
-        <NavigationBanner
-          maneuver={maneuver}
-          destinationLabel={destination?.label}
-        />
+        {destination ? (
+          <RoutePreview
+            destination={destination}
+            maneuver={maneuver}
+            steps={routeSteps}
+            navigating={navigating}
+            onStartNav={startNavigation}
+            onClear={clearRoute}
+          />
+        ) : (
+          <AddressSearch
+            bias={searchBias}
+            busy={routing}
+            error={routeError}
+            onSelect={(hit) => void applyRoute(hit)}
+          />
+        )}
       </div>
 
       <div className="pointer-events-auto absolute top-[42%] right-[max(0.65rem,env(safe-area-inset-right))] z-20 -translate-y-1/2 sm:top-28 sm:translate-y-0">

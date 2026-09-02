@@ -35,6 +35,7 @@ export async function planDrivingRoute(
   }
   return {
     ...data,
+    steps: data.steps ?? [],
     destination: {
       ...data.destination,
       address: to.address,

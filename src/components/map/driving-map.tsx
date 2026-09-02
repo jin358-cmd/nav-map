@@ -394,7 +394,7 @@ export function DrivingMap({
     const compact = isCompactViewport(map.getContainer().clientWidth);
     map.fitBounds(bounds, {
       padding: {
-        top: compact ? 170 : 140,
+        top: compact ? 260 : 240,
         bottom: compact ? 160 : 150,
         left: 36,
         right: compact ? 72 : 48,

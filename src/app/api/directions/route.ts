@@ -1,4 +1,4 @@
-import { maneuverFromOsrm } from "@/lib/osrm-maneuver";
+import { maneuverFromOsrm, stepsFromOsrm, type OsrmStep } from "@/lib/osrm-maneuver";
 
 const OSRM = "https://router.project-osrm.org/route/v1/driving";
 
@@ -37,7 +37,7 @@ export async function GET(request: Request) {
         distance: number;
         duration: number;
         geometry?: { coordinates?: [number, number][] };
-        legs?: Array<{ steps?: Array<{ name?: string; distance?: number; maneuver?: { type?: string; modifier?: string } }> }>;
+        legs?: Array<{ steps?: OsrmStep[] }>;
       }>;
     };
     const route = data.routes?.[0];
@@ -46,7 +46,7 @@ export async function GET(request: Request) {
       return Response.json({ error: "找不到可開車路線" }, { status: 404 });
     }
 
-    const steps = route?.legs?.[0]?.steps ?? [];
+    const rawSteps = (route?.legs ?? []).flatMap((leg) => leg.steps ?? []);
     const distanceMeters = route?.distance ?? 0;
     const durationSeconds = route?.duration ?? 0;
 
@@ -59,7 +59,8 @@ export async function GET(request: Request) {
         address: label,
         location: { lng: toLng, lat: toLat },
       },
-      maneuver: maneuverFromOsrm(steps, label, distanceMeters, durationSeconds),
+      maneuver: maneuverFromOsrm(rawSteps, label, distanceMeters, durationSeconds),
+      steps: stepsFromOsrm(rawSteps, label),
     });
   } catch {
     return Response.json({ error: "路線規劃失敗" }, { status: 502 });

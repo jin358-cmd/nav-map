@@ -129,6 +129,20 @@
   }
 }
 
+.route-preview-list {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(62, 224, 255, 0.35) transparent;
+}
+
+.route-preview-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.route-preview-list::-webkit-scrollbar-thumb {
+  background: rgba(62, 224, 255, 0.35);
+  border-radius: 999px;
+}
+
 .driving-vignette {
   background:
     radial-gradient(ellipse at 50% 72%, transparent 38%, rgba(0, 0, 0, 0.42) 100%),

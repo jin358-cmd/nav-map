@@ -118,6 +118,20 @@ export type NavigationManeuver = {
   etaMinutes: number;
 };
 
+export type RouteStep = {
+  id: string;
+  action: string;
+  roadName: string;
+  /** 此分段本身要行駛的距離 */
+  distanceMeters: number;
+  /** 到達此路口／轉向前回轉的距離 */
+  cueMeters: number;
+  cumulativeMeters: number;
+  type: string;
+  modifier?: string;
+  location?: LngLat;
+};
+
 export type GeocodeHit = {
   id: string;
   name: string;
@@ -137,4 +151,5 @@ export type RoutePlan = {
   durationSeconds: number;
   destination: RouteDestination;
   maneuver: NavigationManeuver;
+  steps: RouteStep[];
 };
