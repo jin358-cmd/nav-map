@@ -45,3 +45,6 @@ export const OPENFREEMAP_DARK_STYLE =
   "https://tiles.openfreemap.org/styles/dark";
 
 export const YOUTUBE_MUSIC_URL = "https://music.youtube.com/";
+
+/** 車用聆聽預設混音（可嵌入的 YouTube 音樂台／lofi） */
+export const YOUTUBE_DRIVE_MIX_IDS = ["jfKfPfyJRdk", "4xDzrJKXOOY"] as const;

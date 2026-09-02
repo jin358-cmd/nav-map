@@ -1,0 +1,211 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import {
+  ExternalLink,
+  Loader2,
+  Pause,
+  Play,
+  SkipBack,
+  SkipForward,
+  X,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { YOUTUBE_DRIVE_MIX_IDS, YOUTUBE_MUSIC_URL } from "@/lib/constants";
+import {
+  loadYouTubeIframeApi,
+  YT_PAUSED,
+  YT_PLAYING,
+  type YouTubePlayer,
+} from "@/lib/youtube-iframe";
+
+function readTrackMeta(player: YouTubePlayer) {
+  try {
+    const data = player.getVideoData();
+    return {
+      title: data.title?.trim() || "YouTube Music",
+      artist: data.author?.trim() || "駕駛聆聽",
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function YouTubeMusicPlayer({ onClose }: { onClose: () => void }) {
+  const hostRef = useRef<HTMLDivElement>(null);
+  const playerRef = useRef<YouTubePlayer | null>(null);
+  const [playing, setPlaying] = useState(false);
+  const [title, setTitle] = useState("YouTube Music");
+  const [artist, setArtist] = useState("駕駛聆聽");
+  const [error, setError] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host) return;
+    let cancelled = false;
+
+    void loadYouTubeIframeApi()
+      .then((Player) => {
+        if (cancelled || !hostRef.current) return;
+        const mix = [...YOUTUBE_DRIVE_MIX_IDS];
+        const player = new Player(hostRef.current, {
+          width: "100%",
+          height: "100%",
+          videoId: mix[0],
+          playerVars: {
+            autoplay: 1,
+            controls: 0,
+            disablekb: 1,
+            fs: 0,
+            iv_load_policy: 3,
+            modestbranding: 1,
+            playsinline: 1,
+            rel: 0,
+            playlist: mix.slice(1).join(","),
+            origin: window.location.origin,
+            enablejsapi: 1,
+          },
+          events: {
+            onReady: (event) => {
+              if (cancelled) return;
+              setReady(true);
+              setError(null);
+              try {
+                event.target.playVideo();
+              } catch {
+                /* 瀏覽器可能擋住自動播放，使用者再按播放即可 */
+              }
+              const meta = readTrackMeta(event.target);
+              if (meta) {
+                setTitle(meta.title);
+                setArtist(meta.artist);
+              }
+            },
+            onStateChange: (event) => {
+              if (cancelled) return;
+              setPlaying(event.data === YT_PLAYING);
+              if (event.data === YT_PLAYING || event.data === YT_PAUSED) {
+                const meta = readTrackMeta(event.target);
+                if (meta) {
+                  setTitle(meta.title);
+                  setArtist(meta.artist);
+                }
+              }
+            },
+            onError: () => {
+              if (cancelled) return;
+              setError("無法在小窗播放，請改開 YouTube Music。");
+              setReady(true);
+            },
+          },
+        });
+        playerRef.current = player;
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setError("無法載入播放器，請改開 YouTube Music。");
+          setReady(true);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+      try {
+        playerRef.current?.destroy();
+      } catch {
+        /* YouTube 在快速卸載時可能已銷毀 */
+      }
+      playerRef.current = null;
+    };
+  }, []);
+
+  function togglePlay() {
+    const player = playerRef.current;
+    if (!player) return;
+    try {
+      const state = player.getPlayerState();
+      if (state === YT_PLAYING) player.pauseVideo();
+      else player.playVideo();
+    } catch {
+      setError("無法控制播放，請改開 YouTube Music。");
+    }
+  }
+
+  return (
+    <div className="pointer-events-auto w-full max-w-xl overflow-hidden rounded-2xl border border-red-400/20 bg-black/78 shadow-[0_12px_40px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+      <div className="flex items-start gap-2.5 px-2.5 py-2">
+        <div className="yt-music-mini relative size-[4.25rem] shrink-0 overflow-hidden rounded-xl bg-zinc-900 sm:size-20">
+          <div ref={hostRef} className="h-full w-full" />
+          {!ready ? (
+            <div className="absolute inset-0 grid place-items-center bg-black/50">
+              <Loader2 className="size-5 animate-spin text-red-300" />
+            </div>
+          ) : null}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start gap-1">
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] tracking-wide text-red-300/90">YouTube Music</p>
+              <p className="truncate text-sm font-medium text-white">{title}</p>
+              <p className="truncate text-[11px] text-zinc-400">{artist}</p>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label="關閉播放器"
+              onClick={onClose}
+              className="size-8 text-zinc-300 hover:bg-white/10 hover:text-white"
+            >
+              <X className="size-4" />
+            </Button>
+          </div>
+          {error ? (
+            <p className="mt-1 text-[11px] text-amber-200">{error}</p>
+          ) : null}
+          <div className="mt-1.5 flex items-center gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label="上一首"
+              onClick={() => playerRef.current?.previousVideo()}
+              className="size-8 text-zinc-200 hover:bg-white/10"
+            >
+              <SkipBack className="size-4" />
+            </Button>
+            <Button
+              type="button"
+              size="icon-sm"
+              aria-label={playing ? "暫停" : "播放"}
+              onClick={togglePlay}
+              className="size-9 rounded-full bg-[#ff0033] text-white hover:bg-[#ff3357]"
+            >
+              {playing ? <Pause className="size-4" /> : <Play className="size-4 fill-white" />}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label="下一首"
+              onClick={() => playerRef.current?.nextVideo()}
+              className="size-8 text-zinc-200 hover:bg-white/10"
+            >
+              <SkipForward className="size-4" />
+            </Button>
+            <a
+              href={YOUTUBE_MUSIC_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-auto inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] text-zinc-400 hover:bg-white/8 hover:text-zinc-200"
+            >
+              完整版
+              <ExternalLink className="size-3" />
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

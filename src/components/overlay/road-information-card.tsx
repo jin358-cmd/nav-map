@@ -8,7 +8,6 @@ import {
   TrafficCone,
   X,
 } from "lucide-react";
-import { YOUTUBE_MUSIC_URL } from "@/lib/constants";
 import { cctvOriginLabel, formatDistance, trafficOriginLabel } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type {
@@ -68,12 +67,16 @@ export function RoadInformationCard({
   trafficOrigin,
   emptyHint,
   onSelectCctv,
+  musicOpen = false,
+  onToggleMusic,
 }: {
   items: RoadIntelItem[];
   origin: CctvDataOrigin;
   trafficOrigin: TrafficDataOrigin;
   emptyHint?: string;
   onSelectCctv?: (cameraId: string) => void;
+  musicOpen?: boolean;
+  onToggleMusic?: () => void;
 }) {
   const [openKind, setOpenKind] = useState<RoadIntelKind | null>(null);
 
@@ -185,24 +188,41 @@ export function RoadInformationCard({
             );
           })
         )}
-        <YouTubeMusicLink />
+        <YouTubeMusicButton
+          pressed={musicOpen}
+          onToggle={() => {
+            setOpenKind(null);
+            onToggleMusic?.();
+          }}
+        />
       </div>
     </section>
   );
 }
 
-function YouTubeMusicLink() {
+function YouTubeMusicButton({
+  pressed,
+  onToggle,
+}: {
+  pressed: boolean;
+  onToggle: () => void;
+}) {
   return (
-    <a
-      href={YOUTUBE_MUSIC_URL}
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label="開啟 YouTube Music"
+    <button
+      type="button"
+      aria-label={pressed ? "關閉 YouTube Music 播放器" : "開啟 YouTube Music 播放器"}
+      aria-pressed={pressed}
       title="YouTube Music"
-      className="relative flex size-11 items-center justify-center rounded-full border border-red-400/35 bg-[#ff0033]/20 touch-manipulation hover:bg-[#ff0033]/35"
+      onClick={onToggle}
+      className={cn(
+        "relative flex size-11 items-center justify-center rounded-full border touch-manipulation",
+        pressed
+          ? "border-red-300/70 bg-[#ff0033]/40"
+          : "border-red-400/35 bg-[#ff0033]/20 hover:bg-[#ff0033]/35",
+      )}
     >
       <YouTubeMusicMark />
-    </a>
+    </button>
   );
 }
 

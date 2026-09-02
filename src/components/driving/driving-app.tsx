@@ -8,6 +8,7 @@ import { CctvDetailCard } from "@/components/overlay/cctv-detail-card";
 import { NextIntersectionHud } from "@/components/overlay/navigation-banner";
 import { RoadInformationCard } from "@/components/overlay/road-information-card";
 import { RoutePreview } from "@/components/overlay/route-preview";
+import { YouTubeMusicPlayer } from "@/components/overlay/youtube-music-player";
 import { useCctvView } from "@/hooks/use-cctv-view";
 import { useTrafficView } from "@/hooks/use-traffic-view";
 import { roadIntelFromCameras } from "@/lib/cctv-intel";
@@ -78,6 +79,7 @@ export function DrivingApp() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [navigating, setNavigating] = useState(false);
   const [intelCollapse, setIntelCollapse] = useState(0);
+  const [musicOpen, setMusicOpen] = useState(false);
 
   const {
     origin,
@@ -358,6 +360,9 @@ export function DrivingApp() {
             onClose={() => setSelectedCctv(null)}
           />
         ) : null}
+        {musicOpen ? (
+          <YouTubeMusicPlayer onClose={() => setMusicOpen(false)} />
+        ) : null}
         <RoadInformationCard
           key={intelCollapse}
           items={intel}
@@ -365,6 +370,11 @@ export function DrivingApp() {
           trafficOrigin={trafficOrigin}
           emptyHint="附近 8 公里內尚無路況或 CCTV 情報。"
           onSelectCctv={selectCamera}
+          musicOpen={musicOpen}
+          onToggleMusic={() => {
+            setSelectedCctv(null);
+            setMusicOpen((open) => !open);
+          }}
         />
       </footer>
 

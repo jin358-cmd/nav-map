@@ -129,6 +129,11 @@
   }
 }
 
+.yt-music-mini iframe {
+  width: 100% !important;
+  height: 100% !important;
+}
+
 .route-preview-list {
   scrollbar-width: thin;
   scrollbar-color: rgba(62, 224, 255, 0.35) transparent;
