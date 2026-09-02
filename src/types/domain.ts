@@ -92,6 +92,26 @@ export type TrafficCatalog = {
   fetchedAt: string;
 };
 
+export type SpeedEnforcementPoint = {
+  id: string;
+  city: string;
+  district: string;
+  address: string;
+  department: string;
+  branch: string;
+  direction: string;
+  speedLimit?: number;
+  note?: string;
+  location: LngLat;
+  dataOrigin: "tgos";
+};
+
+export type SpeedEnforcementCatalog = {
+  origin: "tgos";
+  points: SpeedEnforcementPoint[];
+  fetchedAt: string;
+};
+
 export type DisasterKind = "flood" | "closure" | "quake" | "typhoon";
 
 export type DisasterAlert = {

@@ -15,11 +15,11 @@
 
 資料流維持分離：
 
-`components`（UI）→ `services`（資料存取）→ `data`（mock／CCTV snapshot）或 TDX／防災 API。
+`components`（UI）→ `services`（資料存取）→ `data`（mock／CCTV snapshot）或 TDX／TGOS／防災 API。
 
 ```
 src/
-  app/                      App Router、MapLibre worker、/api/traffic
+  app/                      App Router、MapLibre worker、/api/traffic、/api/speed-enforcement
   components/
     driving/                全螢幕駕駛 HUD 組合
     map/                    MapLibre、Vehicle Marker、控制鈕
@@ -31,13 +31,14 @@ src/
     cctv.ts                 TDX → snapshot → mock
     tdx-client.ts           MOTC TDX token 與 GET
     traffic.ts              即時路況 live → mock
+    speed-enforcement.ts    TGOS 鄰近測速執法設置點
     disaster-api.ts         預留防災 API（Phase 4）
     geolocation.ts          瀏覽器 GPS
   lib/                      地圖樣式、CCTV／路況圖層與評分
   types/                    領域型別
 ```
 
-Dark Driving Mode：石墨黑底、灰藍道路、青綠路線；CCTV 紫、事故紅、壅塞橘紅、災害琥珀橘。
+Dark Driving Mode：石墨黑底、灰藍道路、青綠路線；CCTV 紫、測速黃、事故紅、壅塞橘紅、災害琥珀橘。
 
 ## 安裝方式
 
@@ -82,6 +83,7 @@ npm start
 - 自訂 Vehicle Marker（不是 Google 藍點）
 - CCTV：獨立 `cctv-source` / `cctv-layer`，依 1 km／8 km／zoom 顯示，點擊底部 HUD
 - 即時路況：獨立 `traffic-source` / `traffic-layer`，TDX live 或 MOCK 後備
+- 測速執法：內政部 TGOS「測速執法設置點」環域 API，依地圖中心載入 3–10 公里內點位與速限
 - Mock Disaster / 事故標記
 - 頂部地址搜尋：戶政門牌優先、地政資料交叉比對，並保留最近 6 筆目的地
 - 點確認後進入駕駛畫面，最上方只顯示下一個路口距離
@@ -90,6 +92,8 @@ npm start
 - Android 直式優先的 Responsive HUD（資訊卡不遮住主要駕駛視野）
 
 未設定 TDX 金鑰時：CCTV 走本地 SNAPSHOT（來自 weather 的 city／freeway JSON），路況走臺南示範線，HUD 顯示「示範路況」。金鑰請放伺服器端 `TDX_CLIENT_ID` / `TDX_CLIENT_SECRET`（不可用 `NEXT_PUBLIC_`），由 `/api/traffic` 伺服器端打 TDX。憑證有效時 HUD 顯示「TDX 即時路況」。live cache 與前端輪詢約 **60 秒**；拖曳／縮放地圖不會重打 TDX。token 失敗、timeout、401／429／500 或資料異常時自動 fallback mock，不把密鑰或堆疊傳給瀏覽器。
+
+測速點使用[內政部主題 API](https://data.tgos.tw/)的「測速執法設置點」（主題 ID `kJqZSMsB`），資料由警政署提供。`TGOS_THEME_API_KEY` 放在伺服器端；未設定時會嘗試沿用 `TGOS_API_KEY`。環域查詢半徑依縮放層級為 3、6 或 10 公里，並以 10 分鐘伺服器快取避免頻繁呼叫。
 
 詳見 [`docs/PHASE-3-TRAFFIC.md`](docs/PHASE-3-TRAFFIC.md)。
 
@@ -123,7 +127,7 @@ NCDR 或地方防災 API 取代 mock 積水／封路／強風標記。
 - Framework Preset：Next.js
 - Build Command：`npm run build`
 - Output：Next.js 預設
-- 環境變數：正式路況用 `TDX_CLIENT_ID` / `TDX_CLIENT_SECRET`；正式戶政門牌定位用 `TGOS_APP_ID` / `TGOS_API_KEY`
+- 環境變數：正式路況用 `TDX_CLIENT_ID` / `TDX_CLIENT_SECRET`；正式戶政門牌定位用 `TGOS_APP_ID` / `TGOS_API_KEY`；TGOS 測速主題可另設 `TGOS_THEME_API_KEY`
 
 MapLibre worker 由 `src/app/maplibre/[file]/route.ts` 提供，`next.config.ts` 已列入 tracing，避免 serverless 漏檔。
 

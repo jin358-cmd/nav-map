@@ -1,0 +1,7 @@
+export const TGOS_SPEED_THEME_ID = "kJqZSMsB";
+export const SPEED_ENFORCEMENT_SOURCE_ID = "speed-enforcement-source";
+export const SPEED_ENFORCEMENT_LAYER_ID = "speed-enforcement-layer";
+export const SPEED_ENFORCEMENT_LABEL_LAYER_ID = "speed-enforcement-label-layer";
+export const SPEED_ENFORCEMENT_CACHE_MS = 10 * 60 * 1000;
+export const SPEED_ENFORCEMENT_MAX_RADIUS_METERS = 10_000;
+export const SPEED_ENFORCEMENT_MIN_RADIUS_METERS = 1_000;

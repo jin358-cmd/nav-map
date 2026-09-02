@@ -21,6 +21,7 @@ import { upsertIntelligenceLayers } from "@/lib/map-layers";
 import { configureMapLibreWorker } from "@/lib/maplibre-worker";
 import { applyDarkDrivingTheme } from "@/lib/map-style";
 import { damp, distanceKm, lerp, lerpAngle } from "@/lib/geo";
+import { upsertSpeedEnforcementLayer } from "@/lib/speed-enforcement-layer";
 import type {
   AccidentReport,
   CameraMode,
@@ -28,6 +29,7 @@ import type {
   DisasterAlert,
   MapViewport,
   RouteDestination,
+  SpeedEnforcementPoint,
   TrafficSegment,
   VehiclePose,
 } from "@/types/domain";
@@ -39,6 +41,7 @@ type DrivingMapProps = {
   navigating: boolean;
   selectedCctvId: string | null;
   cameras: CctvCamera[];
+  speedEnforcement: SpeedEnforcementPoint[];
   traffic: TrafficSegment[];
   disasters: DisasterAlert[];
   accidents: AccidentReport[];
@@ -131,6 +134,7 @@ export function DrivingMap({
   navigating,
   selectedCctvId,
   cameras,
+  speedEnforcement,
   traffic,
   disasters,
   accidents,
@@ -154,6 +158,7 @@ export function DrivingMap({
   const routeRef = useRef(route);
   const trafficRef = useRef(traffic);
   const camerasRef = useRef(cameras);
+  const speedEnforcementRef = useRef(speedEnforcement);
   const selectedRef = useRef(selectedCctvId);
   const followVehicleRef = useRef(followVehicle);
   const navigatingRef = useRef(navigating);
@@ -171,6 +176,7 @@ export function DrivingMap({
     routeRef.current = route;
     trafficRef.current = traffic;
     camerasRef.current = cameras;
+    speedEnforcementRef.current = speedEnforcement;
     selectedRef.current = selectedCctvId;
     followVehicleRef.current = followVehicle;
     navigatingRef.current = navigating;
@@ -183,6 +189,7 @@ export function DrivingMap({
     route,
     traffic,
     cameras,
+    speedEnforcement,
     selectedCctvId,
     followVehicle,
     navigating,
@@ -278,6 +285,7 @@ export function DrivingMap({
     const onLoad = () => {
       applyDarkDrivingTheme(map);
       upsertIntelligenceLayers(map, routeRef.current, trafficRef.current);
+      upsertSpeedEnforcementLayer(map, speedEnforcementRef.current);
       try {
         upsertCctvLayer(map, camerasRef.current, selectedRef.current);
         bindCctvLayerClicks(map, (id) => onCctvSelectRef.current(id));
@@ -345,6 +353,12 @@ export function DrivingMap({
       console.error("CCTV layer update skipped", error);
     }
   }, [cameras, selectedCctvId]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !readyRef.current) return;
+    upsertSpeedEnforcementLayer(map, speedEnforcement);
+  }, [speedEnforcement]);
 
   useEffect(() => {
     const map = mapRef.current;

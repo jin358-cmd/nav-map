@@ -10,6 +10,7 @@ import { RoadInformationCard } from "@/components/overlay/road-information-card"
 import { RoutePreview } from "@/components/overlay/route-preview";
 import { YouTubeMusicPlayer } from "@/components/overlay/youtube-music-player";
 import { useCctvView } from "@/hooks/use-cctv-view";
+import { useSpeedEnforcementView } from "@/hooks/use-speed-enforcement-view";
 import { useTrafficView } from "@/hooks/use-traffic-view";
 import { roadIntelFromCameras } from "@/lib/cctv-intel";
 import { DEMO_VEHICLE } from "@/lib/constants";
@@ -148,6 +149,16 @@ export function DrivingApp() {
     gpsStatus,
     viewport,
     route,
+    refreshNonce,
+  });
+
+  const {
+    points: speedEnforcement,
+    error: speedEnforcementError,
+    reload: reloadSpeedEnforcement,
+  } = useSpeedEnforcementView({
+    vehicle,
+    viewport,
     refreshNonce,
   });
 
@@ -333,7 +344,8 @@ export function DrivingApp() {
     setRefreshNonce((value) => value + 1);
     reload();
     reloadTraffic();
-  }, [reload, reloadTraffic]);
+    reloadSpeedEnforcement();
+  }, [reload, reloadSpeedEnforcement, reloadTraffic]);
 
   return (
     <div className="relative h-dvh w-full overflow-hidden overscroll-none bg-[#0b0d11] text-zinc-100">
@@ -344,6 +356,7 @@ export function DrivingApp() {
         navigating={navigating}
         selectedCctvId={selectedCctv?.id ?? null}
         cameras={visible}
+        speedEnforcement={speedEnforcement}
         traffic={traffic}
         disasters={disasters}
         accidents={accidents}
@@ -453,9 +466,9 @@ export function DrivingApp() {
           {loadError}
         </div>
       ) : null}
-      {cctvError || trafficError ? (
+      {cctvError || trafficError || speedEnforcementError ? (
         <div className="pointer-events-none absolute top-[max(11rem,calc(env(safe-area-inset-top)+10rem))] left-1/2 z-20 -translate-x-1/2 rounded-xl border border-amber-300/25 bg-black/65 px-3 py-2 text-xs text-amber-100">
-          {cctvError ?? trafficError}
+          {cctvError ?? trafficError ?? speedEnforcementError}
         </div>
       ) : null}
     </div>
@@ -471,6 +484,7 @@ function Legend() {
     { color: "bg-[#ef4444]", label: "嚴重壅塞" },
     { color: "bg-[#7f1d1d]", label: "接近停止" },
     { color: "bg-[#c084fc]", label: "CCTV" },
+    { color: "bg-[#fbbf24]", label: "測速執法" },
     { color: "bg-[#ff3b3b]", label: "事故" },
     { color: "bg-[#ff9f1c]", label: "災害" },
   ];
