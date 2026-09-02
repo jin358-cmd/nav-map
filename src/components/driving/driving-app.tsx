@@ -16,6 +16,7 @@ import { useSpeedEnforcementView } from "@/hooks/use-speed-enforcement-view";
 import { useTrafficView } from "@/hooks/use-traffic-view";
 import { roadIntelFromCameras } from "@/lib/cctv-intel";
 import { deriveDisasterIntel } from "@/lib/disaster-intel";
+import { CITY_TRAFFIC_FOCUS_KM } from "@/lib/traffic-constants";
 import { DEMO_VEHICLE } from "@/lib/constants";
 import { distanceKm } from "@/lib/geo";
 import { nextIntersectionStep } from "@/lib/osrm-maneuver";
@@ -92,6 +93,7 @@ export function DrivingApp() {
   const [navigating, setNavigating] = useState(false);
   const [intelCollapse, setIntelCollapse] = useState(0);
   const [musicMode, setMusicMode] = useState<"off" | "open" | "mini">("off");
+  const [trafficFocus5km, setTrafficFocus5km] = useState(true);
   const [rerouting, setRerouting] = useState(false);
   const [navigationProgress, setNavigationProgress] =
     useState<NavigationProgress | null>(null);
@@ -161,6 +163,7 @@ export function DrivingApp() {
     viewport,
     route,
     refreshNonce,
+    nearbyFocusKm: trafficFocus5km ? CITY_TRAFFIC_FOCUS_KM : null,
   });
 
   const {
@@ -232,7 +235,10 @@ export function DrivingApp() {
 
   const intel = useMemo(() => {
     const cameras = roadIntelFromCameras(preview, [], 2);
-    const trafficItem = deriveTrafficIntel(trafficScored);
+    const trafficItem = deriveTrafficIntel(
+      trafficScored,
+      trafficFocus5km ? CITY_TRAFFIC_FOCUS_KM : undefined,
+    );
     const extras = baseIntel.filter(
       (item) =>
         item.kind !== "cctv" &&
@@ -249,7 +255,15 @@ export function DrivingApp() {
       ...disasterItems,
       ...extras,
     ];
-  }, [baseIntel, disasters, preview, trafficScored, vehicle.lat, vehicle.lng]);
+  }, [
+    baseIntel,
+    disasters,
+    preview,
+    trafficFocus5km,
+    trafficScored,
+    vehicle.lat,
+    vehicle.lng,
+  ]);
 
   const searchBias = useMemo(
     () => ({ lng: vehicle.lng, lat: vehicle.lat }),
@@ -471,11 +485,15 @@ export function DrivingApp() {
         <MapControls
           cameraMode={cameraMode}
           gpsStatus={gpsStatus}
+          trafficFocus5km={trafficFocus5km}
           onLocate={() => void locate()}
           onToggleCamera={() =>
             setCameraMode((mode) => (mode === "3d" ? "2d" : "3d"))
           }
           onRefreshIntel={refreshIntel}
+          onToggleTrafficFocus={() =>
+            setTrafficFocus5km((value) => !value)
+          }
         />
       </div>
 
@@ -512,7 +530,11 @@ export function DrivingApp() {
           origin={origin}
           trafficOrigin={trafficOrigin}
           disasterOrigin={disasterOrigin}
-          emptyHint="附近 8 公里內尚無路況或 CCTV 情報。"
+          emptyHint={
+            trafficFocus5km
+              ? "附近 5 公里內尚無路況或 CCTV 情報。"
+              : "附近 8 公里內尚無路況或 CCTV 情報。"
+          }
           onSelectCctv={selectCamera}
           musicOpen={musicMode !== "off"}
           onPreviewOpen={() => {

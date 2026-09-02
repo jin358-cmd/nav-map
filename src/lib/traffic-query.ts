@@ -96,12 +96,21 @@ export function scoreTraffic(
 export function mapVisibleTraffic(
   scored: ScoredTrafficSegment[],
   viewport: MapViewport | null,
+  maxDistanceKm?: number,
 ): ScoredTrafficSegment[] {
   const zoom = viewport?.zoom ?? 16;
   const limit =
     zoom < 13 ? 16 : zoom < 15 ? 24 : zoom < 17 ? 32 : CITY_TRAFFIC_MAP_CAP;
 
-  const nearby = scored.filter(
+  const focused =
+    maxDistanceKm == null
+      ? scored
+      : scored.filter(
+          (segment) =>
+            segment.distanceKm <= maxDistanceKm || segment.alongRoute,
+        );
+
+  const nearby = focused.filter(
     (segment) =>
       segment.nearby ||
       segment.alongRoute ||

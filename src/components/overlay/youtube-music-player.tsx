@@ -11,7 +11,12 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { YOUTUBE_DRIVE_MIX_IDS, YOUTUBE_MUSIC_URL } from "@/lib/constants";
+import {
+  YOUTUBE_MUSIC_URL,
+  YOUTUBE_PLAYLISTS,
+  type YoutubePlaylist,
+} from "@/lib/constants";
+import { cn } from "@/lib/utils";
 import {
   loadYouTubeIframeApi,
   YT_PAUSED,
@@ -31,6 +36,16 @@ function readTrackMeta(player: YouTubePlayer) {
   }
 }
 
+function loadMix(player: YouTubePlayer, playlist: YoutubePlaylist) {
+  const ids = [...playlist.videoIds];
+  try {
+    player.loadPlaylist(ids);
+    player.playVideo();
+  } catch {
+    /* 瀏覽器可能擋住自動播放 */
+  }
+}
+
 export function YouTubeMusicPlayer({
   compact = false,
   onClose,
@@ -45,16 +60,21 @@ export function YouTubeMusicPlayer({
   const [artist, setArtist] = useState("駕駛聆聽");
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [playlistId, setPlaylistId] = useState(YOUTUBE_PLAYLISTS[0].id);
+  const playlist =
+    YOUTUBE_PLAYLISTS.find((item) => item.id === playlistId) ??
+    YOUTUBE_PLAYLISTS[0];
 
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
     let cancelled = false;
+    const initial = YOUTUBE_PLAYLISTS[0];
 
     void loadYouTubeIframeApi()
       .then((Player) => {
         if (cancelled || !hostRef.current) return;
-        const mix = [...YOUTUBE_DRIVE_MIX_IDS];
+        const mix = [...initial.videoIds];
         const player = new Player(hostRef.current, {
           width: "100%",
           height: "100%",
@@ -138,6 +158,18 @@ export function YouTubeMusicPlayer({
     }
   }
 
+  function selectPlaylist(next: YoutubePlaylist) {
+    setPlaylistId(next.id);
+    const player = playerRef.current;
+    if (!player || !ready) return;
+    try {
+      loadMix(player, next);
+      setError(null);
+    } catch {
+      setError("無法切換播放清單，請改開 YouTube Music。");
+    }
+  }
+
   return (
     <div
       className={
@@ -165,7 +197,9 @@ export function YouTubeMusicPlayer({
           <div className="flex items-center gap-1">
             <div className="min-w-0 flex-1">
               {compact ? null : (
-                <p className="text-[10px] tracking-wide text-red-300/90">YouTube Music</p>
+                <p className="text-[10px] tracking-wide text-red-300/90">
+                  YouTube Music · {playlist.hint}
+                </p>
               )}
               <p className="truncate text-sm font-medium text-white">{title}</p>
               {compact ? null : (
@@ -196,6 +230,24 @@ export function YouTubeMusicPlayer({
           </div>
           {compact ? null : (
             <>
+              <div className="mt-1.5 flex flex-wrap gap-1">
+                {YOUTUBE_PLAYLISTS.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    aria-pressed={item.id === playlist.id}
+                    onClick={() => selectPlaylist(item)}
+                    className={cn(
+                      "rounded-full border px-2 py-0.5 text-[10px] touch-manipulation",
+                      item.id === playlist.id
+                        ? "border-red-300/70 bg-[#ff0033]/35 text-white"
+                        : "border-white/10 bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-zinc-200",
+                    )}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
               {error ? (
                 <p className="mt-1 text-[11px] text-amber-200">{error}</p>
               ) : null}

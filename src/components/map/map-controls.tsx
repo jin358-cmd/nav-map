@@ -9,17 +9,21 @@ import type { CameraMode, GpsStatus } from "@/types/domain";
 type MapControlsProps = {
   cameraMode: CameraMode;
   gpsStatus: GpsStatus;
+  trafficFocus5km: boolean;
   onLocate: () => void;
   onToggleCamera: () => void;
   onRefreshIntel: () => void;
+  onToggleTrafficFocus: () => void;
 };
 
 export function MapControls({
   cameraMode,
   gpsStatus,
+  trafficFocus5km,
   onLocate,
   onToggleCamera,
   onRefreshIntel,
+  onToggleTrafficFocus,
 }: MapControlsProps) {
   const locating = gpsStatus === "locating";
 
@@ -42,6 +46,15 @@ export function MapControls({
         ) : (
           <Compass className="size-5" />
         )}
+      </ControlButton>
+      <ControlButton
+        label={trafficFocus5km ? "顯示全部路況" : "只看附近 5 公里路況"}
+        onClick={onToggleTrafficFocus}
+        active={trafficFocus5km}
+      >
+        <span className="text-[11px] font-semibold leading-none tracking-tight">
+          5km
+        </span>
       </ControlButton>
       <ControlButton label="重新整理情報" onClick={onRefreshIntel}>
         <RefreshCw className="size-5" />

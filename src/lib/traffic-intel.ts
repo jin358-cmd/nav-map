@@ -13,12 +13,13 @@ const LEVEL_WEIGHT: Record<TrafficLevel, number> = {
 
 export function deriveTrafficIntel(
   scored: ScoredTrafficSegment[],
+  maxDistanceKm = CITY_TRAFFIC_NEARBY_KM,
 ): RoadIntelItem | null {
   const alerts = scored.filter(
     (segment) =>
       segment.level !== "smooth" &&
       (segment.nearby || segment.alongRoute) &&
-      segment.distanceKm <= CITY_TRAFFIC_NEARBY_KM,
+      (segment.alongRoute || segment.distanceKm <= maxDistanceKm),
   );
   if (!alerts.length) return null;
 

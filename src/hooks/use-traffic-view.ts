@@ -62,12 +62,14 @@ export function useTrafficView({
   viewport,
   route,
   refreshNonce,
+  nearbyFocusKm,
 }: {
   vehicle: VehiclePose;
   gpsStatus: GpsStatus;
   viewport: MapViewport | null;
   route: [number, number][];
   refreshNonce: number;
+  nearbyFocusKm?: number | null;
 }) {
   const [catalog, setCatalog] = useState<TrafficSegment[]>([]);
   const [origin, setOrigin] = useState<TrafficDataOrigin>("mock");
@@ -132,8 +134,8 @@ export function useTrafficView({
   }, [viewport, zoom]);
 
   const visible = useMemo(
-    () => mapVisibleTraffic(scored, visibleViewport),
-    [scored, visibleViewport],
+    () => mapVisibleTraffic(scored, visibleViewport, nearbyFocusKm ?? undefined),
+    [nearbyFocusKm, scored, visibleViewport],
   );
 
   const reload = useCallback(() => {

@@ -88,7 +88,8 @@ npm start
 - Mock 事故標記
 - 頂部地址搜尋：戶政門牌優先、地政資料交叉比對，並保留最近 6 筆目的地
 - 點確認後進入駕駛畫面，最上方只顯示下一個路口距離
-- 底部狀態列可開啟 YouTube Music 簡易播放器
+- 右側「5km」開關：開啟時只畫車輛 5 公里內與路線沿線路況
+- 底部狀態列可開啟 YouTube Music 簡易播放器，並切換開車／Lo-fi／夜車／Chill 清單
 - 底部半透明 Road Information Card
 - Android 直式優先的 Responsive HUD（資訊卡不遮住主要駕駛視野）
 

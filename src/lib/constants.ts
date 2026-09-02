@@ -49,5 +49,39 @@ export const OPENFREEMAP_DARK_STYLE =
 
 export const YOUTUBE_MUSIC_URL = "https://music.youtube.com/";
 
-/** 車用聆聽預設混音（可嵌入的 YouTube 音樂台／lofi） */
-export const YOUTUBE_DRIVE_MIX_IDS = ["jfKfPfyJRdk", "4xDzrJKXOOY"] as const;
+export type YoutubePlaylist = {
+  id: string;
+  label: string;
+  hint: string;
+  videoIds: readonly string[];
+};
+
+/** 車用聆聽播放清單（可嵌入的 YouTube 24h 電台） */
+export const YOUTUBE_PLAYLISTS: readonly YoutubePlaylist[] = [
+  {
+    id: "drive",
+    label: "開車",
+    hint: "駕駛混音",
+    videoIds: ["jfKfPfyJRdk", "4xDzrJKXOOY"],
+  },
+  {
+    id: "lofi",
+    label: "Lo-fi",
+    hint: "專注路況",
+    videoIds: ["jfKfPfyJRdk"],
+  },
+  {
+    id: "night",
+    label: "夜車",
+    hint: "Synthwave",
+    videoIds: ["4xDzrJKXOOY"],
+  },
+  {
+    id: "chill",
+    label: "Chill",
+    hint: "Chillhop",
+    videoIds: ["5yx6BWlEVcY"],
+  },
+] as const;
+
+export const YOUTUBE_DRIVE_MIX_IDS = YOUTUBE_PLAYLISTS[0].videoIds;

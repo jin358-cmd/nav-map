@@ -1,5 +1,7 @@
 /** City live traffic search / draw limits. Freeway types are reserved. */
 export const CITY_TRAFFIC_NEARBY_KM = 8;
+/** HUD「5km」開關：只畫車輛附近與路線沿線路況 */
+export const CITY_TRAFFIC_FOCUS_KM = 5;
 export const CITY_TRAFFIC_PRIORITY_KM = 1;
 export const CITY_TRAFFIC_ROUTE_BUFFER_KM = 0.4;
 export const CITY_TRAFFIC_MAP_CAP = 40;
