@@ -20,7 +20,7 @@ import type { GeocodeHit } from "@/types/domain";
 const NOMINATIM = "https://nominatim.openstreetmap.org/search";
 const PHOTON = "https://photon.komoot.io/api/";
 const USER_AGENT =
-  "SmartRoadTaiwan/0.1 (https://github.com/jin358-cmd/nav-map)";
+  "NavPilot/0.1 (https://github.com/jin358-cmd/nav-map)";
 
 type NominatimRow = {
   place_id: number;

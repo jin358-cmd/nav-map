@@ -1,6 +1,6 @@
 # Phase 2 CCTV — 實作與 weather 對照報告
 
-Smart Road Taiwan 已把 `jin358-cmd/weather` 的 **CCTV 資料與互動邏輯**移植到 MapLibre + Driving HUD。沒有複製 Leaflet UI、popup、`cameraPane`，也沒有複製災害圖層。
+智駕NavPilot 已把 `jin358-cmd/weather` 的 **CCTV 資料與互動邏輯**移植到 MapLibre + Driving HUD。沒有複製 Leaflet UI、popup、`cameraPane`，也沒有複製災害圖層。
 
 目前 **沒有 push、沒有 deploy**，供你先檢查。
 
@@ -23,7 +23,7 @@ Fallback 範圍：臺南市區 333 支 + 鄰近國道 160 支，共 493。來源
 
 ## A. 從 weather 參考了哪些 CCTV 邏輯
 
-| weather（`V1/app.js`） | Smart Road 對應 |
+| weather（`V1/app.js`） | 智駕NavPilot 對應 |
 | --- | --- |
 | `CITY_CCTV_RADIUS_KM = 1` | 同值：1 km 優先圈 |
 | `CITY_CCTV_NEARBY_KM = 8` | 同值：8 km 可顯示圈 |
@@ -50,7 +50,7 @@ Fallback 範圍：臺南市區 333 支 + 鄰近國道 160 支，共 493。來源
 - zoom / viewport 上限，避免駕駛畫面被鏡頭塞滿。
 - 移動／viewport／手動／cache 的節流，而不是 weather 的定位關鍵字重算。
 - `TDX LIVE` / `SNAPSHOT` / `MOCK` 來源標籤。
-- 紫色攝影機 canvas icon（延續智路視覺，不是 weather 的青藍點）。
+- 紫色攝影機 canvas icon（延續智駕視覺，不是 weather 的青藍點）。
 
 ## C. 哪些 weather 邏輯不適合 Driving Map，因此沒有採用
 
@@ -64,13 +64,13 @@ Fallback 範圍：臺南市區 333 支 + 鄰近國道 160 支，共 493。來源
 
 ## D. 資料來源是否一致
 
-| | weather | Smart Road Taiwan |
+| | weather | 智駕NavPilot |
 | --- | --- | --- |
 | 執行期主來源 | 打包的 `V1/data/*.json`（當初由 TDX 市區 API + 公路總局國道 CCTV 抓下） | 預留 TDX live；**尚未串真實 token** |
 | 目前實際畫面 | 上述 JSON | 從 weather JSON **複製並精簡**成 `src/data/cctv-fallback.json` |
 | 標籤 | 快照時間字串 | `SNAPSHOT`（有 TDX credentials 且 live 成功才會是 `TDX LIVE`；再失敗才 `MOCK`） |
 
-**血緣一致，不是同一條 runtime 管線。** weather 的 city 快照時間 `2026-07-09`、freeway `2026-06-26`。Smart Road 沒有在執行期去抓 `github.com/jin358-cmd/weather`。
+**血緣一致，不是同一條 runtime 管線。** weather 的 city 快照時間 `2026-07-09`、freeway `2026-06-26`。智駕NavPilot 沒有在執行期去抓 `github.com/jin358-cmd/weather`。
 
 市區原始 API：`https://traffic.transportdata.tw/MOTC/v2/Road/Traffic/CCTV/City/{City}`  
 國道原始 API：`https://thbapp.thb.gov.tw/services/cctv/freeway`

@@ -9,4 +9,4 @@ export const NCDR_PUBLIC_JSON_FEED =
 export const NCDR_MEMBER_JSON_FEED =
   "https://alerts.ncdr.nat.gov.tw/webapi/JsonAtomFeed.ashx";
 
-export const NCDR_USER_AGENT = "smart-road-taiwan/0.1 (ncdr disaster alerts)";
+export const NCDR_USER_AGENT = "navpilot/0.1 (ncdr disaster alerts)";

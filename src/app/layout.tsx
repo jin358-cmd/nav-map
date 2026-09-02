@@ -14,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "智路臺灣 Smart Road Taiwan",
-  description: "台灣智慧駕駛地圖與即時道路情報 Prototype · 臺南示範",
-  applicationName: "Smart Road Taiwan",
+  title: "智駕NavPilot",
+  description: "智駕NavPilot｜台灣智慧駕駛地圖與即時道路情報 · 臺南示範",
+  applicationName: "智駕NavPilot",
 };
 
 export const viewport: Viewport = {

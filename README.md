@@ -1,4 +1,4 @@
-# 智路臺灣 Smart Road Taiwan
+# 智駕NavPilot
 
 台灣智慧駕駛地圖＋即時道路情報平台。產品定位是 **駕駛視角的道路情報**，不是 Google Maps 克隆。
 
@@ -46,7 +46,7 @@ Dark Driving Mode：石墨黑底、灰藍道路、青綠路線；CCTV 紫、測�
 
 ```bash
 git clone <repo-url>
-cd taiwan-pilot
+cd navpilot
 npm install
 ```
 

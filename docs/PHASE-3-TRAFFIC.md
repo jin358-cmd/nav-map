@@ -1,6 +1,6 @@
 # Phase 3 Traffic — TDX 即時路況
 
-Smart Road Taiwan 已接上 MOTC TDX 臺南市區即時路況，並保留 mock fallback。沒有重做 CCTV、地址搜尋或 OSRM 路線。
+智駕NavPilot 已接上 MOTC TDX 臺南市區即時路況，並保留 mock fallback。沒有重做 CCTV、地址搜尋或 OSRM 路線。
 
 未設定 `TDX_CLIENT_ID` / `TDX_CLIENT_SECRET`（或 live 失敗）時，地圖與 HUD 走臺南示意路段。
 
