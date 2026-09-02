@@ -217,7 +217,10 @@ export function YouTubeMusicPlayer({
 
   return (
     <div
+      data-playing={playing ? "true" : "false"}
       className={cn(
+        "yt-music-hud",
+        playing && "yt-music-hud--playing",
         hidden
           ? "pointer-events-none invisible absolute h-px w-px overflow-hidden opacity-0"
           : compact

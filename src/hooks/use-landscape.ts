@@ -2,18 +2,20 @@
 
 import { useSyncExternalStore } from "react";
 
-const QUERY = "(orientation: landscape)";
-
-function subscribe(onChange: () => void) {
-  const media = window.matchMedia(QUERY);
-  media.addEventListener("change", onChange);
-  return () => media.removeEventListener("change", onChange);
+function isLandscapeViewport() {
+  return window.innerWidth > window.innerHeight;
 }
 
-function getSnapshot() {
-  return window.matchMedia(QUERY).matches;
+function subscribe(onChange: () => void) {
+  const media = window.matchMedia("(orientation: landscape)");
+  media.addEventListener("change", onChange);
+  window.addEventListener("resize", onChange);
+  return () => {
+    media.removeEventListener("change", onChange);
+    window.removeEventListener("resize", onChange);
+  };
 }
 
 export function useLandscape() {
-  return useSyncExternalStore(subscribe, getSnapshot, () => false);
+  return useSyncExternalStore(subscribe, isLandscapeViewport, () => false);
 }

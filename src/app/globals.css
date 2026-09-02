@@ -134,6 +134,19 @@
   height: 100% !important;
 }
 
+@media (orientation: landscape), (min-aspect-ratio: 5/4) {
+  .yt-music-hud--playing {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+}
+
 .route-preview-list {
   scrollbar-width: thin;
   scrollbar-color: rgba(62, 224, 255, 0.35) transparent;
