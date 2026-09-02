@@ -417,6 +417,9 @@ export function DrivingMap({
     canvas.addEventListener("touchstart", onTouchStart, { passive: true });
     canvas.addEventListener("touchend", onTouchEnd, { passive: true });
     canvas.addEventListener("touchcancel", onTouchEnd, { passive: true });
+    map.on("zoomstart", (event) => {
+      if (event.originalEvent) pinchingRef.current = true;
+    });
     map.on("wheel", () => {
       pinchingRef.current = true;
       window.setTimeout(() => {
