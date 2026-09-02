@@ -77,6 +77,8 @@ export async function searchHouseholdAddresses(
   const apiKey = process.env.TGOS_API_KEY;
   if (!appId || !apiKey) return [];
 
+  const lockCounty = /[縣市]/.test(address);
+  const lockTown = /[區鎮鄉]/.test(address);
   const body = new URLSearchParams({
     oAPPId: appId,
     oAPIKey: apiKey,
@@ -86,12 +88,12 @@ export async function searchHouseholdAddresses(
     oResultDataType: "JSON",
     oFuzzyBuffer: "50",
     oIsOnlyFullMatch: "false",
-    oIsLockCounty: "true",
-    oIsLockTown: "true",
+    oIsLockCounty: lockCounty ? "true" : "false",
+    oIsLockTown: lockTown ? "true" : "false",
     oIsLockVillage: "false",
-    oIsLockRoadSection: "true",
-    oIsLockLane: "true",
-    oIsLockAlley: "true",
+    oIsLockRoadSection: "false",
+    oIsLockLane: "false",
+    oIsLockAlley: "false",
     oIsLockArea: "false",
     oIsSameNumber_SubNumber: "true",
     oCanIgnoreVillage: "true",

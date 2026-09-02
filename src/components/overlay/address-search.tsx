@@ -36,6 +36,7 @@ export function AddressSearch({
   onSelect,
 }: AddressSearchProps) {
   const [query, setQuery] = useState("");
+  const [composing, setComposing] = useState(false);
   const [open, setOpen] = useState(false);
   const [hits, setHits] = useState<GeocodeHit[]>([]);
   const [searching, setSearching] = useState(false);
@@ -46,6 +47,13 @@ export function AddressSearch({
     getServerAddressHistorySnapshot,
   );
   const needle = query.trim();
+  const biasBucket = useMemo(
+    () => ({
+      lng: Math.round(bias.lng * 50) / 50,
+      lat: Math.round(bias.lat * 50) / 50,
+    }),
+    [bias.lat, bias.lng],
+  );
 
   const selectHit = useCallback(
     (hit: GeocodeHit) => {
@@ -58,24 +66,32 @@ export function AddressSearch({
   );
 
   useEffect(() => {
-    if (needle.length < 2) return;
+    if (composing || needle.length < 2) return;
 
+    let cancelled = false;
     const timer = window.setTimeout(() => {
       setSearching(true);
-      void searchAddresses(needle, bias)
+      void searchAddresses(needle, biasBucket)
         .then((rows) => {
+          if (cancelled) return;
           setHits(rows);
           setSearchError(rows.length ? null : "找不到這個地址，請換個關鍵字。");
         })
         .catch(() => {
+          if (cancelled) return;
           setHits([]);
           setSearchError("地址搜尋失敗，請稍後再試。");
         })
-        .finally(() => setSearching(false));
-    }, 320);
+        .finally(() => {
+          if (!cancelled) setSearching(false);
+        });
+    }, 420);
 
-    return () => window.clearTimeout(timer);
-  }, [bias, needle]);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [biasBucket, composing, needle]);
 
   const visibleHits = needle.length < 2 ? [] : hits;
   const chips = useMemo(() => TAIWAN_LANDMARKS.slice(0, 5), []);
@@ -120,6 +136,12 @@ export function AddressSearch({
             value={query}
             onChange={(event) => {
               setQuery(event.target.value);
+              setOpen(true);
+            }}
+            onCompositionStart={() => setComposing(true)}
+            onCompositionEnd={(event) => {
+              setComposing(false);
+              setQuery(event.currentTarget.value);
               setOpen(true);
             }}
             onFocus={() => setOpen(true)}
