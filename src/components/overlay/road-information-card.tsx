@@ -127,17 +127,19 @@ export function RoadInformationCard({
   const previewItem = openItems[0] ?? null;
 
   return (
-    <section className="pointer-events-auto inline-flex flex-col items-center text-white">
+    <section className="pointer-events-auto relative inline-flex flex-col items-center text-white">
       {favoritesOpen ? (
-        <FavoritesPanel
-          favorites={favorites}
-          canFavorite={canFavorite}
-          isCurrentFavorite={isCurrentFavorite}
-          onAddCurrent={onAddFavorite}
-          onSelect={onSelectFavorite}
-          onRemove={onRemoveFavorite}
-          onClose={() => onCloseFavorites?.()}
-        />
+        <div className="absolute bottom-full left-1/2 z-30 mb-2 w-[min(20rem,calc(100vw-1.25rem))] -translate-x-1/2">
+          <FavoritesPanel
+            favorites={favorites}
+            canFavorite={canFavorite}
+            isCurrentFavorite={isCurrentFavorite}
+            onAddCurrent={onAddFavorite}
+            onSelect={onSelectFavorite}
+            onRemove={onRemoveFavorite}
+            onClose={() => onCloseFavorites?.()}
+          />
+        </div>
       ) : previewItem ? (
         <div className="mb-2 w-fit max-w-[17.5rem] rounded-2xl border border-white/10 bg-black/70 px-2.5 py-2 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl">
           <div className="mb-1 flex items-center justify-between gap-2">
@@ -303,7 +305,7 @@ function FavoritesPanel({
   onClose?: () => void;
 }) {
   return (
-    <div className="mb-2 w-fit max-w-[19rem] rounded-2xl border border-white/10 bg-black/70 px-2.5 py-2 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl">
+    <div className="w-full rounded-2xl border border-rose-300/25 bg-black/82 px-2.5 py-2 shadow-[0_12px_40px_rgba(0,0,0,0.55)] backdrop-blur-xl">
       <div className="mb-1 flex items-center justify-between gap-2">
         <p className="text-[11px] tracking-wide text-rose-200/90">最愛書籤</p>
         <button
@@ -326,8 +328,8 @@ function FavoritesPanel({
         </button>
       ) : null}
       {favorites.length === 0 ? (
-        <p className="px-1 py-2 text-[12px] text-zinc-400">
-          搜尋或長按地圖後，可把已輸入的位置存成書籤。
+        <p className="px-1 py-2 text-sm text-zinc-300">
+          還沒有書籤。搜尋店家或長按地圖後，再點紅心即可加入最愛。
         </p>
       ) : (
         <ul className="max-h-44 overflow-y-auto">
