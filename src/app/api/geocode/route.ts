@@ -10,8 +10,10 @@ import {
 import {
   crossCheckLandArea,
   describeLandCrossCheck,
+  describeNlscHit,
   householdAddressConfigured,
   searchHouseholdAddresses,
+  searchNlscMapHits,
 } from "@/services/official-address";
 import type { GeocodeHit } from "@/types/domain";
 
@@ -209,8 +211,40 @@ export async function GET(request: Request) {
 
   try {
     const parsed = parseTaiwanAddress(query);
+    const officialQuery = officialAddressQuery(query);
+    const nlsc = await searchNlscMapHits(officialQuery, bias);
+    if (nlsc.length) {
+      const ranked = [...nlsc].sort((a, b) => {
+        const rank = (kind: typeof a.kind) =>
+          kind === "ADDRESS" ? 0 : kind === "CROSSROAD" ? 1 : kind === "LANDGOAL" ? 2 : 3;
+        return rank(a.kind) - rank(b.kind);
+      });
+      const nlscHits: GeocodeHit[] = ranked.map((item, index) => ({
+        id: `nlsc-${item.kind}-${index}-${item.location.lng.toFixed(6)}-${item.location.lat.toFixed(6)}`,
+        name: item.fullAddress,
+        address: describeNlscHit(item),
+        location: item.location,
+      }));
+      const checked = parsed
+        ? await Promise.all(
+            nlscHits.map(async (hit) => {
+              const check = await crossCheckLandArea(hit.location, parsed);
+              return {
+                ...hit,
+                address: `${hit.address} · ${describeLandCrossCheck(check)}`,
+              };
+            }),
+          )
+        : nlscHits;
+      return Response.json({
+        results: mergeHits([...checked, ...local]),
+        source: "nlsc-doorplate",
+        matchedQuery: officialQuery,
+      });
+    }
+
     if (parsed?.number && householdAddressConfigured()) {
-      const official = await searchHouseholdAddresses(officialAddressQuery(query));
+      const official = await searchHouseholdAddresses(officialQuery);
       if (official.length) {
         const officialHits: GeocodeHit[] = official.map((item, index) => ({
           id: `tgos-${index}-${item.location.lng.toFixed(6)}-${item.location.lat.toFixed(6)}`,

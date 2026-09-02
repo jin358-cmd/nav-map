@@ -6,6 +6,18 @@ const TGOS_ENDPOINT =
   "https://addr.tgos.tw/addrws/v30/QueryAddr.asmx/QueryAddr";
 const NLSC_LAND_ENDPOINT =
   "https://api.nlsc.gov.tw/other/TownVillagePointQuery";
+const NLSC_MAP_SEARCH =
+  "https://api.nlsc.gov.tw/idc/TextQueryMap";
+const NLSC_MAP_REFERER = "https://maps.nlsc.gov.tw/T09/";
+
+export type NlscMapKind = "ADDRESS" | "CROSSROAD" | "LANDGOAL" | "other";
+
+export type NlscMapHit = {
+  fullAddress: string;
+  location: LngLat;
+  kind: NlscMapKind;
+  remark: string;
+};
 
 export type HouseholdAddressCandidate = {
   fullAddress: string;
@@ -68,6 +80,89 @@ function normalizeArea(value: string) {
 
 export function householdAddressConfigured() {
   return Boolean(process.env.TGOS_APP_ID && process.env.TGOS_API_KEY);
+}
+
+function kindFromNlscKey(key: string): NlscMapKind {
+  if (key.includes(",ADDRESS,")) return "ADDRESS";
+  if (key.includes(",CROSSROAD,")) return "CROSSROAD";
+  if (key.includes(",LANDGOAL,")) return "LANDGOAL";
+  return "other";
+}
+
+function parseNlscLocation(value: string): LngLat | null {
+  const [lngRaw, latRaw] = value.split(",");
+  const lng = Number(lngRaw);
+  const lat = Number(latRaw);
+  if (
+    !Number.isFinite(lng) ||
+    !Number.isFinite(lat) ||
+    lng < 118 ||
+    lng > 123 ||
+    lat < 20 ||
+    lat > 27
+  ) {
+    return null;
+  }
+  return { lng, lat };
+}
+
+/** 國土測繪圖資服務雲公開模糊檢索（門牌／路口／地標），免申請金鑰。 */
+export async function searchNlscMapHits(
+  address: string,
+  bias?: LngLat,
+): Promise<NlscMapHit[]> {
+  const query = address.replace(/[\\/]/g, "").trim();
+  if (query.length < 2) return [];
+  const center = bias ?? { lng: 120.2049, lat: 22.9878 };
+  const url = `${NLSC_MAP_SEARCH}/${encodeURIComponent(query)}/10/${center.lng}/${center.lat}`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8_000);
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        Accept: "application/xml, text/xml",
+        Referer: NLSC_MAP_REFERER,
+      },
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    if (!response.ok) return [];
+    const xml = await response.text();
+    const items = [...xml.matchAll(/<ITEM>([\s\S]*?)<\/ITEM>/gi)];
+    return items.flatMap((match) => {
+      const block = match[1];
+      const content = xmlValue(block, "CONTENT");
+      const key = xmlValue(block, "KEY");
+      const remark = xmlValue(block, "REMARK");
+      const location = parseNlscLocation(xmlValue(block, "LOCATION"));
+      if (!content || !location) return [];
+      if (!/臺南|台南/.test(`${content}${remark}`) && !key.startsWith("D,")) {
+        return [];
+      }
+      return [
+        {
+          fullAddress: content.replace(/[０-９]/g, (digit) =>
+            String.fromCharCode(digit.charCodeAt(0) - 0xfee0),
+          ),
+          location,
+          kind: kindFromNlscKey(key),
+          remark,
+        },
+      ];
+    });
+  } catch {
+    return [];
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export function describeNlscHit(hit: NlscMapHit) {
+  if (hit.kind === "ADDRESS") return "國土測量雲 · 建物門牌";
+  if (hit.kind === "CROSSROAD") return "國土測量雲 · 交叉路口";
+  if (hit.kind === "LANDGOAL") return "國土測量雲 · 地標";
+  return "國土測量雲 · 定位";
 }
 
 export async function searchHouseholdAddresses(

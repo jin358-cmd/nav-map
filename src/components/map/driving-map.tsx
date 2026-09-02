@@ -135,6 +135,17 @@ function markerEl(
   return el;
 }
 
+function createDestinationBeacon(label: string): HTMLDivElement {
+  const el = document.createElement("div");
+  el.className = "destination-beacon";
+  el.title = label;
+  el.innerHTML =
+    '<span class="destination-beacon__ring"></span>' +
+    '<span class="destination-beacon__ring destination-beacon__ring--delay"></span>' +
+    '<span class="destination-beacon__dot"></span>';
+  return el;
+}
+
 function readViewport(map: MapLibreMap): MapViewport {
   const center = map.getCenter();
   const bounds = map.getBounds();
@@ -541,8 +552,10 @@ export function DrivingMap({
     destMarkerRef.current?.remove();
     destMarkerRef.current = null;
     if (!destination) return;
-    const el = markerEl("intel-marker--destination", "終", destination.label);
-    destMarkerRef.current = new Marker({ element: el, anchor: "bottom" })
+    destMarkerRef.current = new Marker({
+      element: createDestinationBeacon(destination.label),
+      anchor: "center",
+    })
       .setLngLat([destination.location.lng, destination.location.lat])
       .addTo(map);
   }, [destination]);

@@ -237,10 +237,53 @@
 }
 
 .intel-marker--destination {
-  background: #3ee0ff;
-  color: #062026;
-  box-shadow: 0 0 0 6px rgba(62, 224, 255, 0.22), 0 8px 18px rgba(0, 0, 0, 0.45);
+  background: #facc15;
+  color: #422006;
+  box-shadow: 0 0 0 6px rgba(250, 204, 21, 0.22), 0 8px 18px rgba(0, 0, 0, 0.45);
   pointer-events: none;
+}
+
+.destination-beacon {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  pointer-events: none;
+}
+
+.destination-beacon__dot {
+  position: absolute;
+  inset: 8px;
+  border-radius: 999px;
+  background: #facc15;
+  border: 2px solid #fff7c2;
+  box-shadow: 0 0 12px rgba(250, 204, 21, 0.75);
+}
+
+.destination-beacon__ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  border: 2px solid rgba(250, 204, 21, 0.95);
+  box-shadow: 0 0 0 1px rgba(253, 224, 71, 0.25);
+  animation: destination-ripple 2.1s ease-out infinite;
+}
+
+.destination-beacon__ring--delay {
+  animation-delay: 1.05s;
+}
+
+@keyframes destination-ripple {
+  0% {
+    transform: scale(0.35);
+    opacity: 0.9;
+  }
+  70% {
+    opacity: 0.28;
+  }
+  100% {
+    transform: scale(2.8);
+    opacity: 0;
+  }
 }
 
 .cctv-scan {

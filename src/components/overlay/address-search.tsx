@@ -187,7 +187,7 @@ export function AddressSearch({
       {open ? (
         <div className="mt-1.5 overflow-hidden rounded-2xl border border-white/10 bg-black/78 shadow-xl backdrop-blur-xl">
           <p className="px-3 pt-2 text-[11px] text-zinc-500">
-            從目前位置出發 · 戶政門牌優先，地政資料交叉比對
+            從目前位置出發 · 國土測量雲建物門牌定位
           </p>
           {needle.length < 2 ? (
             <ul className="flex flex-wrap gap-1.5 px-3 py-2">
