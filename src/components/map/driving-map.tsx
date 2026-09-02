@@ -12,6 +12,9 @@ import {
   DRIVING_PITCH,
   DRIVING_ZOOM,
   DRIVING_ZOOM_MOBILE,
+  INTERSECTION_PITCH,
+  INTERSECTION_ZOOM,
+  INTERSECTION_ZOOM_MOBILE,
   NAVIGATION_PITCH,
   OPENFREEMAP_DARK_STYLE,
   OVERHEAD_ZOOM,
@@ -20,6 +23,7 @@ import {
 } from "@/lib/constants";
 import { bindCctvLayerClicks, upsertCctvLayer } from "@/lib/cctv-layer";
 import { bindDisasterLayerClicks, upsertDisasterLayer } from "@/lib/disaster-layer";
+import { upsertGuidanceArrows } from "@/lib/guidance-arrows";
 import { upsertIntelligenceLayers } from "@/lib/map-layers";
 import { configureMapLibreWorker } from "@/lib/maplibre-worker";
 import { applyDarkDrivingTheme } from "@/lib/map-style";
@@ -50,6 +54,9 @@ type DrivingMapProps = {
   disasters: DisasterAlert[];
   accidents: AccidentReport[];
   route: [number, number][];
+  routeMeters: number;
+  distanceToNextMeters: number;
+  approachingIntersection: boolean;
   destination: RouteDestination | null;
   fitRouteKey: number;
   onCctvSelect: (cameraId: string) => void;
@@ -88,20 +95,30 @@ function cameraOptions(
   vehicle: VehiclePose,
   mode: CameraMode,
   navigating = false,
+  approaching = false,
 ) {
   const height = map.getContainer().clientHeight;
   const width = map.getContainer().clientWidth;
   const compact = isCompactViewport(width);
+  const navZoom = approaching
+    ? compact
+      ? INTERSECTION_ZOOM_MOBILE
+      : INTERSECTION_ZOOM
+    : compact
+      ? DRIVING_ZOOM_MOBILE
+      : DRIVING_ZOOM;
   return {
     center: [vehicle.lng, vehicle.lat] as [number, number],
     bearing: mode === "3d" ? vehicle.heading : 0,
-    pitch: mode === "3d" ? (navigating ? NAVIGATION_PITCH : DRIVING_PITCH) : 0,
-    zoom:
+    pitch:
       mode === "3d"
-        ? compact
-          ? DRIVING_ZOOM_MOBILE
-          : DRIVING_ZOOM
-        : OVERHEAD_ZOOM,
+        ? approaching
+          ? INTERSECTION_PITCH
+          : navigating
+            ? NAVIGATION_PITCH
+            : DRIVING_PITCH
+        : 0,
+    zoom: mode === "3d" ? navZoom : OVERHEAD_ZOOM,
     padding: drivingPadding(height, width, mode),
   };
 }
@@ -146,6 +163,9 @@ export function DrivingMap({
   disasters,
   accidents,
   route,
+  routeMeters,
+  distanceToNextMeters,
+  approachingIntersection,
   destination,
   fitRouteKey,
   onCctvSelect,
@@ -173,6 +193,13 @@ export function DrivingMap({
   const selectedDisasterRef = useRef(selectedDisasterId);
   const followVehicleRef = useRef(followVehicle);
   const navigatingRef = useRef(navigating);
+  const approachingRef = useRef(approachingIntersection);
+  const routeMetersRef = useRef(routeMeters);
+  const distanceToNextRef = useRef(distanceToNextMeters);
+  const pinchingRef = useRef(false);
+  const userZoomRef = useRef<number | null>(null);
+  const arrowPhaseRef = useRef(0);
+  const lastArrowUpdateRef = useRef(0);
   const readyRef = useRef(false);
   const lastFrameRef = useRef(0);
   const lastViewportEmitRef = useRef(0);
@@ -194,6 +221,9 @@ export function DrivingMap({
     selectedDisasterRef.current = selectedDisasterId;
     followVehicleRef.current = followVehicle;
     navigatingRef.current = navigating;
+    approachingRef.current = approachingIntersection;
+    routeMetersRef.current = routeMeters;
+    distanceToNextRef.current = distanceToNextMeters;
   }, [
     onCctvSelect,
     onDisasterSelect,
@@ -210,6 +240,9 @@ export function DrivingMap({
     disasters,
     followVehicle,
     navigating,
+    approachingIntersection,
+    routeMeters,
+    distanceToNextMeters,
   ]);
 
   useEffect(() => {
@@ -227,6 +260,11 @@ export function DrivingMap({
       maxPitch: 80,
       attributionControl: { compact: true },
       fadeDuration: 0,
+      dragPan: true,
+      scrollZoom: true,
+      touchZoomRotate: true,
+      doubleClickZoom: true,
+      cooperativeGestures: false,
     });
 
     mapRef.current = map;
@@ -280,14 +318,39 @@ export function DrivingMap({
       setVehicleMarkerNavigating(marker.getElement(), navigatingRef.current);
       marker.setRotation(headingUp ? 0 : target.heading);
 
+      if (navigatingRef.current) {
+        arrowPhaseRef.current = (arrowPhaseRef.current + dt * 0.55) % 1;
+        if (now - lastArrowUpdateRef.current > 70) {
+          lastArrowUpdateRef.current = now;
+          try {
+            upsertGuidanceArrows(
+              mapNow,
+              routeRef.current,
+              routeMetersRef.current,
+              distanceToNextRef.current,
+              true,
+              arrowPhaseRef.current,
+            );
+          } catch {
+            /* style may still be swapping */
+          }
+        }
+      }
+
       if (followVehicleRef.current) {
         const wanted = cameraOptions(
           mapNow,
           target,
           modeRef.current,
           navigatingRef.current,
+          approachingRef.current,
         );
         const center = mapNow.getCenter();
+        const zoomTarget = pinchingRef.current
+          ? mapNow.getZoom()
+          : approachingRef.current
+            ? wanted.zoom
+            : (userZoomRef.current ?? wanted.zoom);
         mapNow.jumpTo({
           center: [
             lerp(center.lng, wanted.center[0], t),
@@ -295,7 +358,7 @@ export function DrivingMap({
           ],
           bearing: lerpAngle(mapNow.getBearing(), wanted.bearing, t),
           pitch: lerp(mapNow.getPitch(), wanted.pitch, t),
-          zoom: lerp(mapNow.getZoom(), wanted.zoom, t),
+          zoom: lerp(mapNow.getZoom(), zoomTarget, pinchingRef.current ? 0 : t),
           padding: wanted.padding,
         });
         emitViewport();
@@ -323,6 +386,7 @@ export function DrivingMap({
           vehicleRef.current,
           modeRef.current,
           navigatingRef.current,
+          approachingRef.current,
         ),
       );
       emitViewport(true);
@@ -340,9 +404,39 @@ export function DrivingMap({
       emitViewport(true);
     };
     window.addEventListener("resize", onResize);
-    map.on("dragstart", () => onUserPanRef.current());
+    const canvas = map.getCanvas();
+    const onTouchStart = (event: TouchEvent) => {
+      if (event.touches.length >= 2) pinchingRef.current = true;
+    };
+    const onTouchEnd = () => {
+      if (pinchingRef.current) {
+        userZoomRef.current = map.getZoom();
+        pinchingRef.current = false;
+      }
+    };
+    canvas.addEventListener("touchstart", onTouchStart, { passive: true });
+    canvas.addEventListener("touchend", onTouchEnd, { passive: true });
+    canvas.addEventListener("touchcancel", onTouchEnd, { passive: true });
+    map.on("wheel", () => {
+      pinchingRef.current = true;
+      window.setTimeout(() => {
+        userZoomRef.current = map.getZoom();
+        pinchingRef.current = false;
+      }, 180);
+    });
+    map.on("dragstart", (event) => {
+      if (pinchingRef.current) return;
+      if (event.originalEvent instanceof TouchEvent && event.originalEvent.touches.length >= 2) {
+        pinchingRef.current = true;
+        return;
+      }
+      onUserPanRef.current();
+    });
     map.on("rotatestart", (event) => {
-      if (event.originalEvent) onUserPanRef.current();
+      if (event.originalEvent && !pinchingRef.current) onUserPanRef.current();
+    });
+    map.on("zoomend", () => {
+      if (pinchingRef.current) userZoomRef.current = map.getZoom();
     });
     map.on("moveend", () => {
       if (followVehicleRef.current) return;
@@ -355,6 +449,9 @@ export function DrivingMap({
 
     return () => {
       window.removeEventListener("resize", onResize);
+      canvas.removeEventListener("touchstart", onTouchStart);
+      canvas.removeEventListener("touchend", onTouchEnd);
+      canvas.removeEventListener("touchcancel", onTouchEnd);
       cancelAnimationFrame(rafRef.current);
       readyRef.current = false;
       vehicleMarkerRef.current?.remove();
@@ -373,7 +470,14 @@ export function DrivingMap({
     const map = mapRef.current;
     if (!map || !readyRef.current) return;
     upsertIntelligenceLayers(map, route, traffic);
-  }, [route, traffic]);
+    if (!navigating) {
+      upsertGuidanceArrows(map, route, 0, 0, false, 0);
+    }
+  }, [navigating, route, traffic]);
+
+  useEffect(() => {
+    if (followVehicle) userZoomRef.current = null;
+  }, [followVehicle]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -450,5 +554,5 @@ export function DrivingMap({
     });
   }, [cameraMode, fitRouteKey, route]);
 
-  return <div ref={containerRef} className="absolute inset-0 h-full w-full" />;
+  return <div ref={containerRef} className="absolute inset-0 h-full w-full touch-none" />;
 }

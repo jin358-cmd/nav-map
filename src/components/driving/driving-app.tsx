@@ -12,12 +12,13 @@ import { RouteConfirmBar } from "@/components/overlay/route-preview";
 import { YouTubeMusicPlayer } from "@/components/overlay/youtube-music-player";
 import { useCctvView } from "@/hooks/use-cctv-view";
 import { useDisasterView } from "@/hooks/use-disaster-view";
+import { useNavigationVoice } from "@/hooks/use-navigation-voice";
 import { useSpeedEnforcementView } from "@/hooks/use-speed-enforcement-view";
 import { useTrafficView } from "@/hooks/use-traffic-view";
 import { roadIntelFromCameras } from "@/lib/cctv-intel";
 import { deriveDisasterIntel } from "@/lib/disaster-intel";
 import { CITY_TRAFFIC_FOCUS_KM } from "@/lib/traffic-constants";
-import { DEMO_VEHICLE } from "@/lib/constants";
+import { DEMO_VEHICLE, INTERSECTION_APPROACH_METERS } from "@/lib/constants";
 import { distanceKm } from "@/lib/geo";
 import { nextIntersectionStep } from "@/lib/osrm-maneuver";
 import {
@@ -94,6 +95,7 @@ export function DrivingApp() {
   const [intelCollapse, setIntelCollapse] = useState(0);
   const [musicMode, setMusicMode] = useState<"off" | "open" | "mini">("off");
   const [trafficFocus5km, setTrafficFocus5km] = useState(true);
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [rerouting, setRerouting] = useState(false);
   const [navigationProgress, setNavigationProgress] =
     useState<NavigationProgress | null>(null);
@@ -135,6 +137,17 @@ export function DrivingApp() {
     : activeNavigationStep?.cueMeters && activeNavigationStep.cueMeters > 0
       ? activeNavigationStep.cueMeters
       : (maneuver?.distanceMeters ?? activeNavigationStep?.distanceMeters ?? 0);
+  const approachingIntersection =
+    navigating && distanceToNextMeters <= INTERSECTION_APPROACH_METERS;
+
+  useNavigationVoice({
+    enabled: voiceEnabled,
+    navigating,
+    step: activeNavigationStep,
+    distanceMeters: distanceToNextMeters,
+    offRoute: navigationProgress?.offRoute ?? false,
+    destinationLabel: destination?.label ?? "",
+  });
 
   const {
     origin,
@@ -425,6 +438,9 @@ export function DrivingApp() {
         disasters={disasters}
         accidents={accidents}
         route={route}
+        routeMeters={navigationProgress?.routeMeters ?? 0}
+        distanceToNextMeters={distanceToNextMeters}
+        approachingIntersection={approachingIntersection}
         destination={destination}
         fitRouteKey={fitRouteKey}
         onCctvSelect={selectCamera}
@@ -457,6 +473,8 @@ export function DrivingApp() {
             distanceMeters={distanceToNextMeters}
             offRoute={navigationProgress?.offRoute ?? false}
             rerouting={rerouting}
+            voiceEnabled={voiceEnabled}
+            onToggleVoice={() => setVoiceEnabled((value) => !value)}
             onExit={exitNavigation}
           />
         </div>
