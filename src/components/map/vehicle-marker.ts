@@ -3,6 +3,20 @@ export function createVehicleMarkerElement(): HTMLDivElement {
   root.className = "vehicle-marker";
   root.innerHTML = `
     <div class="vehicle-marker__halo"></div>
+    <div class="vehicle-marker__arrow" aria-hidden="true">
+      <svg viewBox="0 0 72 88" width="46" height="56">
+        <defs>
+          <linearGradient id="nav-arrow" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stop-color="#9af4ff"/>
+            <stop offset="55%" stop-color="#3ee0ff"/>
+            <stop offset="100%" stop-color="#1494b8"/>
+          </linearGradient>
+        </defs>
+        <ellipse cx="36" cy="78" rx="14" ry="5" fill="#3ee0ff" opacity="0.32"/>
+        <path d="M36 6 L62 70 L36 56 L10 70 Z" fill="url(#nav-arrow)" stroke="#e7fbff" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M36 22 L46 52 L36 46 L26 52 Z" fill="#062026" opacity="0.28"/>
+      </svg>
+    </div>
     <div class="vehicle-marker__car" aria-hidden="true">
       <svg viewBox="0 0 72 96" width="54" height="72">
         <defs>
@@ -27,4 +41,11 @@ export function createVehicleMarkerElement(): HTMLDivElement {
     </div>
   `;
   return root;
+}
+
+export function setVehicleMarkerNavigating(
+  element: HTMLElement,
+  navigating: boolean,
+) {
+  element.classList.toggle("vehicle-marker--nav", navigating);
 }

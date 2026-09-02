@@ -33,6 +33,20 @@ export function headingDelta(a: number, b: number): number {
   return raw;
 }
 
+export function lerp(a: number, b: number, t: number): number {
+  return a + (b - a) * t;
+}
+
+/** Shortest-arc interpolation, result in 0–360. */
+export function lerpAngle(a: number, b: number, t: number): number {
+  const delta = ((b - a + 540) % 360) - 180;
+  return (a + delta * t + 360) % 360;
+}
+
+export function damp(dtSeconds: number, tau: number): number {
+  return 1 - Math.exp(-dtSeconds / Math.max(tau, 0.016));
+}
+
 export function isPointInBounds(
   point: LngLat,
   bounds: { west: number; south: number; east: number; north: number },

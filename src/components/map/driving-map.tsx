@@ -3,7 +3,10 @@
 import { useEffect, useRef } from "react";
 import { LngLatBounds, Map as MapLibreMap, Marker } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { createVehicleMarkerElement } from "@/components/map/vehicle-marker";
+import {
+  createVehicleMarkerElement,
+  setVehicleMarkerNavigating,
+} from "@/components/map/vehicle-marker";
 import {
   DRIVING_PADDING_RATIO,
   DRIVING_PITCH,
@@ -17,6 +20,7 @@ import { bindCctvLayerClicks, upsertCctvLayer } from "@/lib/cctv-layer";
 import { upsertIntelligenceLayers } from "@/lib/map-layers";
 import { configureMapLibreWorker } from "@/lib/maplibre-worker";
 import { applyDarkDrivingTheme } from "@/lib/map-style";
+import { damp, distanceKm, lerp, lerpAngle } from "@/lib/geo";
 import type {
   AccidentReport,
   CameraMode,
@@ -32,6 +36,7 @@ type DrivingMapProps = {
   vehicle: VehiclePose;
   cameraMode: CameraMode;
   followVehicle: boolean;
+  navigating: boolean;
   selectedCctvId: string | null;
   cameras: CctvCamera[];
   traffic: TrafficSegment[];
@@ -51,7 +56,7 @@ function isCompactViewport(width: number) {
 
 function drivingPadding(height: number, width: number, mode: CameraMode) {
   const compact = isCompactViewport(width);
-  const bottomPad = compact ? 158 : 196;
+  const bottomPad = compact ? 96 : 118;
   const rightPad = compact ? 58 : 20;
   if (mode !== "3d") {
     return {
@@ -123,6 +128,7 @@ export function DrivingMap({
   vehicle,
   cameraMode,
   followVehicle,
+  navigating,
   selectedCctvId,
   cameras,
   traffic,
@@ -150,7 +156,11 @@ export function DrivingMap({
   const camerasRef = useRef(cameras);
   const selectedRef = useRef(selectedCctvId);
   const followVehicleRef = useRef(followVehicle);
+  const navigatingRef = useRef(navigating);
   const readyRef = useRef(false);
+  const lastFrameRef = useRef(0);
+  const lastViewportEmitRef = useRef(0);
+  const rafRef = useRef(0);
 
   useEffect(() => {
     onCctvSelectRef.current = onCctvSelect;
@@ -163,6 +173,7 @@ export function DrivingMap({
     camerasRef.current = cameras;
     selectedRef.current = selectedCctvId;
     followVehicleRef.current = followVehicle;
+    navigatingRef.current = navigating;
   }, [
     onCctvSelect,
     onUserPan,
@@ -174,6 +185,7 @@ export function DrivingMap({
     cameras,
     selectedCctvId,
     followVehicle,
+    navigating,
   ]);
 
   useEffect(() => {
@@ -205,6 +217,64 @@ export function DrivingMap({
       .setLngLat([vehicle.lng, vehicle.lat])
       .addTo(map);
 
+    const emitViewport = (force = false) => {
+      if (!readyRef.current) return;
+      const now = performance.now();
+      if (!force && followVehicleRef.current && now - lastViewportEmitRef.current < 450) {
+        return;
+      }
+      lastViewportEmitRef.current = now;
+      onViewportChangeRef.current(readViewport(map));
+    };
+
+    const tick = (now: number) => {
+      const mapNow = mapRef.current;
+      const marker = vehicleMarkerRef.current;
+      if (!mapNow || !marker || !readyRef.current) {
+        rafRef.current = requestAnimationFrame(tick);
+        return;
+      }
+
+      const last = lastFrameRef.current || now;
+      const dt = Math.min(0.05, (now - last) / 1000);
+      lastFrameRef.current = now;
+
+      const target = vehicleRef.current;
+      const here = marker.getLngLat();
+      const jumpKm = distanceKm(
+        { lng: here.lng, lat: here.lat },
+        { lng: target.lng, lat: target.lat },
+      );
+      const tau = jumpKm > 0.35 ? 0.14 : 0.26;
+      const t = damp(dt, tau);
+
+      const nextLng = lerp(here.lng, target.lng, t);
+      const nextLat = lerp(here.lat, target.lat, t);
+      marker.setLngLat([nextLng, nextLat]);
+
+      const headingUp = modeRef.current === "3d";
+      setVehicleMarkerNavigating(marker.getElement(), navigatingRef.current);
+      marker.setRotation(headingUp ? 0 : target.heading);
+
+      if (followVehicleRef.current) {
+        const wanted = cameraOptions(mapNow, target, modeRef.current);
+        const center = mapNow.getCenter();
+        mapNow.jumpTo({
+          center: [
+            lerp(center.lng, wanted.center[0], t),
+            lerp(center.lat, wanted.center[1], t),
+          ],
+          bearing: lerpAngle(mapNow.getBearing(), wanted.bearing, t),
+          pitch: lerp(mapNow.getPitch(), wanted.pitch, t),
+          zoom: lerp(mapNow.getZoom(), wanted.zoom, t),
+          padding: wanted.padding,
+        });
+        emitViewport();
+      }
+
+      rafRef.current = requestAnimationFrame(tick);
+    };
+
     const onLoad = () => {
       applyDarkDrivingTheme(map);
       upsertIntelligenceLayers(map, routeRef.current, trafficRef.current);
@@ -216,35 +286,37 @@ export function DrivingMap({
       }
       readyRef.current = true;
       map.jumpTo(cameraOptions(map, vehicleRef.current, modeRef.current));
-      onViewportChangeRef.current(readViewport(map));
+      emitViewport(true);
+      lastFrameRef.current = performance.now();
+      rafRef.current = requestAnimationFrame(tick);
     };
 
     map.on("load", onLoad);
     map.on("error", (event) => {
       console.error("MapLibre error", event.error);
     });
-    const emitViewport = () => {
-      if (!readyRef.current) return;
-      onViewportChangeRef.current(readViewport(map));
-    };
     const onResize = () => {
       if (!readyRef.current) return;
       map.resize();
-      if (followVehicleRef.current) {
-        map.jumpTo(cameraOptions(map, vehicleRef.current, modeRef.current));
-      }
-      emitViewport();
+      emitViewport(true);
     };
     window.addEventListener("resize", onResize);
     map.on("dragstart", () => onUserPanRef.current());
     map.on("rotatestart", (event) => {
       if (event.originalEvent) onUserPanRef.current();
     });
-    map.on("moveend", emitViewport);
-    map.on("zoomend", emitViewport);
+    map.on("moveend", () => {
+      if (followVehicleRef.current) return;
+      emitViewport(true);
+    });
+    map.on("zoomend", () => {
+      if (followVehicleRef.current) return;
+      emitViewport(true);
+    });
 
     return () => {
       window.removeEventListener("resize", onResize);
+      cancelAnimationFrame(rafRef.current);
       readyRef.current = false;
       vehicleMarkerRef.current?.remove();
       vehicleMarkerRef.current = null;
@@ -323,7 +395,7 @@ export function DrivingMap({
     map.fitBounds(bounds, {
       padding: {
         top: compact ? 170 : 140,
-        bottom: compact ? 220 : 210,
+        bottom: compact ? 160 : 150,
         left: 36,
         right: compact ? 72 : 48,
       },
@@ -334,24 +406,6 @@ export function DrivingMap({
       essential: true,
     });
   }, [cameraMode, fitRouteKey, route]);
-
-  useEffect(() => {
-    const marker = vehicleMarkerRef.current;
-    const map = mapRef.current;
-    if (!marker || !map) return;
-
-    marker.setLngLat([vehicle.lng, vehicle.lat]);
-    marker.setRotation(cameraMode === "3d" ? 0 : vehicle.heading);
-
-    if (!followVehicle || !readyRef.current) return;
-
-    const duration = vehicle.source === "gps" ? 450 : 700;
-    map.easeTo({
-      ...cameraOptions(map, vehicle, cameraMode),
-      duration,
-      essential: true,
-    });
-  }, [vehicle, cameraMode, followVehicle]);
 
   return <div ref={containerRef} className="absolute inset-0 h-full w-full" />;
 }

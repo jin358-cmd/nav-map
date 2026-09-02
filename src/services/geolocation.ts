@@ -1,3 +1,4 @@
+import { bearingDegrees, distanceKm } from "@/lib/geo";
 import type { GpsStatus, VehiclePose } from "@/types/domain";
 
 export type GeoWatchHandlers = {
@@ -7,7 +8,7 @@ export type GeoWatchHandlers = {
 
 function toHeading(value: number | null): number | null {
   if (value === null || Number.isNaN(value)) return null;
-  return value;
+  return (value + 360) % 360;
 }
 
 /** Browser GPS. Returns an unsubscribe function. */
@@ -22,13 +23,30 @@ export function watchVehiclePosition({
 
   onStatus("locating");
 
+  let last: { lng: number; lat: number; heading: number } | null = null;
+
   const watchId = navigator.geolocation.watchPosition(
     (position) => {
-      const heading = toHeading(position.coords.heading);
+      const lng = position.coords.longitude;
+      const lat = position.coords.latitude;
+      const gpsHeading = toHeading(position.coords.heading);
+      let heading = gpsHeading ?? last?.heading ?? 0;
+
+      if (last) {
+        const movedKm = distanceKm(last, { lng, lat });
+        const fromMove = bearingDegrees(last, { lng, lat });
+        if (gpsHeading === null && movedKm > 0.004) {
+          heading = fromMove;
+        } else if (gpsHeading !== null && movedKm < 0.002) {
+          heading = last.heading;
+        }
+      }
+
+      last = { lng, lat, heading };
       onFix({
-        lng: position.coords.longitude,
-        lat: position.coords.latitude,
-        heading: heading ?? 0,
+        lng,
+        lat,
+        heading,
         accuracy: position.coords.accuracy,
         source: "gps",
       });
@@ -43,8 +61,8 @@ export function watchVehiclePosition({
     },
     {
       enableHighAccuracy: true,
-      maximumAge: 4_000,
-      timeout: 12_000,
+      maximumAge: 400,
+      timeout: 10_000,
     },
   );
 
@@ -69,7 +87,7 @@ export function requestCurrentPosition(): Promise<VehiclePose> {
         });
       },
       (error) => reject(error),
-      { enableHighAccuracy: true, timeout: 10_000, maximumAge: 2_000 },
+      { enableHighAccuracy: true, timeout: 10_000, maximumAge: 800 },
     );
   });
 }

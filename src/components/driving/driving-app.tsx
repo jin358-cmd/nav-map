@@ -73,6 +73,8 @@ export function DrivingApp() {
   const [baseIntel, setBaseIntel] = useState<RoadIntelItem[]>([]);
   const [selectedCctv, setSelectedCctv] = useState<CctvCamera | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [navigating, setNavigating] = useState(false);
+  const [intelCollapse, setIntelCollapse] = useState(0);
 
   const {
     origin,
@@ -192,6 +194,7 @@ export function DrivingApp() {
       setDestination(plan.destination);
       setManeuver(plan.maneuver);
       setFollowVehicle(false);
+      setNavigating(false);
       setFitRouteKey((value) => value + 1);
     } catch (error) {
       setRouteError(error instanceof Error ? error.message : "路線規劃失敗");
@@ -206,6 +209,7 @@ export function DrivingApp() {
     setRoute(demoRoute);
     setManeuver(demoManeuver);
     setFollowVehicle(true);
+    setNavigating(false);
   }, [demoManeuver, demoRoute]);
 
   const locate = useCallback(async () => {
@@ -224,6 +228,7 @@ export function DrivingApp() {
   const goDemoDrive = useCallback(() => {
     setVehicle(DEMO_VEHICLE);
     setFollowVehicle(true);
+    setNavigating(false);
     setSelectedCctv(null);
     setCameraMode("3d");
     setDestination(null);
@@ -232,6 +237,14 @@ export function DrivingApp() {
     setManeuver(demoManeuver);
     setRefreshNonce((value) => value + 1);
   }, [demoManeuver, demoRoute]);
+
+  const startNavigation = useCallback(() => {
+    setNavigating(true);
+    setCameraMode("3d");
+    setFollowVehicle(true);
+    setSelectedCctv(null);
+    setIntelCollapse((value) => value + 1);
+  }, []);
 
   const refreshIntel = useCallback(() => {
     setRefreshNonce((value) => value + 1);
@@ -245,6 +258,7 @@ export function DrivingApp() {
         vehicle={vehicle}
         cameraMode={cameraMode}
         followVehicle={followVehicle}
+        navigating={navigating}
         selectedCctvId={selectedCctv?.id ?? null}
         cameras={visible}
         traffic={traffic}
@@ -254,7 +268,9 @@ export function DrivingApp() {
         destination={destination}
         fitRouteKey={fitRouteKey}
         onCctvSelect={selectCamera}
-        onUserPan={() => setFollowVehicle(false)}
+        onUserPan={() => {
+          setFollowVehicle(false);
+        }}
         onViewportChange={setViewport}
       />
 
@@ -276,10 +292,11 @@ export function DrivingApp() {
           onSelect={(hit) => void applyRoute(hit)}
           onClear={clearRoute}
           onPreviewRoute={() => {
+            setNavigating(false);
             setFollowVehicle(false);
             setFitRouteKey((value) => value + 1);
           }}
-          onStartNav={() => setFollowVehicle(true)}
+          onStartNav={startNavigation}
         />
       </div>
 
@@ -299,7 +316,10 @@ export function DrivingApp() {
           onToggleCamera={() =>
             setCameraMode((mode) => (mode === "3d" ? "2d" : "3d"))
           }
-          onRecenter={() => setFollowVehicle(true)}
+          onRecenter={() => {
+            setFollowVehicle(true);
+            if (navigating) setCameraMode("3d");
+          }}
           onDemoDrive={goDemoDrive}
           onRefreshIntel={refreshIntel}
         />
@@ -318,6 +338,7 @@ export function DrivingApp() {
           />
         ) : (
           <RoadInformationCard
+            key={intelCollapse}
             items={intel}
             origin={origin}
             trafficOrigin={trafficOrigin}
