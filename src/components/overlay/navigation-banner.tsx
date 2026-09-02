@@ -1,52 +1,69 @@
 "use client";
 
-import { CornerUpRight, Navigation } from "lucide-react";
+import {
+  ArrowUp,
+  CornerUpLeft,
+  CornerUpRight,
+  Flag,
+  RotateCw,
+  Undo2,
+  X,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { formatDistance } from "@/lib/format";
-import type { NavigationManeuver } from "@/types/domain";
+import { nextIntersectionStep } from "@/lib/osrm-maneuver";
+import type { NavigationManeuver, RouteStep } from "@/types/domain";
 
-export function NavigationBanner({
-  maneuver,
-  destinationLabel,
-}: {
-  maneuver: NavigationManeuver | null;
-  destinationLabel?: string | null;
-}) {
-  if (!maneuver) {
-    return (
-      <div className="pointer-events-none rounded-2xl border border-white/10 bg-black/45 px-3 py-2 text-sm text-zinc-300 backdrop-blur-md">
-        輸入地址後顯示導航路線
-      </div>
-    );
+function TurnGlyph({ step }: { step: RouteStep | null }) {
+  const type = step?.type ?? "";
+  const modifier = step?.modifier ?? "";
+  const className = "size-6 text-cyan-200";
+  if (type === "arrive") return <Flag className={className} />;
+  if (type.includes("roundabout") || type.includes("rotary")) {
+    return <RotateCw className={className} />;
   }
+  if (modifier.includes("uturn")) return <Undo2 className={className} />;
+  if (modifier.includes("left")) return <CornerUpLeft className={className} />;
+  if (modifier.includes("right")) return <CornerUpRight className={className} />;
+  return <ArrowUp className={className} />;
+}
+
+export function NextIntersectionHud({
+  steps,
+  maneuver,
+  onExit,
+}: {
+  steps: RouteStep[];
+  maneuver: NavigationManeuver | null;
+  onExit: () => void;
+}) {
+  const next = nextIntersectionStep(steps);
+  const meters =
+    next?.cueMeters && next.cueMeters > 0
+      ? next.cueMeters
+      : (maneuver?.distanceMeters ?? next?.distanceMeters ?? 0);
 
   return (
-    <div className="pointer-events-none w-full max-w-xl rounded-2xl border border-cyan-300/20 bg-black/55 px-3 py-2 text-white shadow-[0_8px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:px-4 sm:py-3">
-      <div className="flex items-center gap-2.5 sm:gap-3">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-cyan-400/15 text-cyan-300 sm:size-12 sm:rounded-2xl">
-          <CornerUpRight className="size-5 sm:size-6" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="hidden text-[11px] tracking-wide text-cyan-200/80 uppercase sm:block">
-            {destinationLabel ? `前往 ${destinationLabel}` : "智慧導航 · 示範路線"}
-          </p>
-          <p className="truncate text-base font-semibold tracking-tight sm:text-lg">
-            {formatDistance(maneuver.distanceMeters)}後{maneuver.action}
-          </p>
-          <p className="truncate text-xs text-zinc-300 sm:text-sm">
-            {maneuver.roadName}
-            <span className="text-zinc-500"> · {maneuver.hint}</span>
-          </p>
-        </div>
-        <div className="hidden shrink-0 text-right sm:block">
-          <p className="flex items-center justify-end gap-1 text-sm text-cyan-100">
-            <Navigation className="size-3.5" />
-            {maneuver.remainingKm >= 10
-              ? `${maneuver.remainingKm.toFixed(0)} 公里`
-              : `${maneuver.remainingKm.toFixed(1)} 公里`}
-          </p>
-          <p className="text-xs text-zinc-400">約 {maneuver.etaMinutes} 分鐘</p>
-        </div>
+    <div className="pointer-events-auto flex w-full max-w-md items-center gap-3 rounded-2xl border border-cyan-300/25 bg-black/70 px-3 py-2 text-white shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl sm:px-4">
+      <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-cyan-400/15">
+        <TurnGlyph step={next} />
       </div>
+      <div className="min-w-0 flex-1 text-center sm:text-left">
+        <p className="text-[11px] tracking-wide text-cyan-200/85">下一個路口</p>
+        <p className="truncate text-xl font-semibold tabular-nums tracking-tight sm:text-2xl">
+          {formatDistance(meters)}
+        </p>
+      </div>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        aria-label="返回路線預覽"
+        onClick={onExit}
+        className="size-8 shrink-0 text-zinc-300 hover:bg-white/10 hover:text-white"
+      >
+        <X className="size-4" />
+      </Button>
     </div>
   );
 }

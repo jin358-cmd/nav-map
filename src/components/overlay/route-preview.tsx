@@ -15,7 +15,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { formatDistance } from "@/lib/format";
 import { instructionForStep } from "@/lib/osrm-maneuver";
-import { cn } from "@/lib/utils";
 import type { NavigationManeuver, RouteDestination, RouteStep } from "@/types/domain";
 
 function stepIcon(step: RouteStep): LucideIcon {
@@ -40,14 +39,12 @@ export function RoutePreview({
   destination,
   maneuver,
   steps,
-  navigating,
   onStartNav,
   onClear,
 }: {
   destination: RouteDestination;
   maneuver: NavigationManeuver | null;
   steps: RouteStep[];
-  navigating: boolean;
   onStartNav: () => void;
   onClear: () => void;
 }) {
@@ -58,16 +55,13 @@ export function RoutePreview({
         : `${maneuver.remainingKm.toFixed(1)} 公里`
       : null;
   const eta = maneuver?.etaMinutes;
-  const nextIndex = steps.findIndex(
-    (step) => step.type !== "depart" && step.type !== "arrive",
-  );
 
   return (
     <div className="pointer-events-auto w-full max-w-xl rounded-2xl border border-cyan-300/20 bg-black/70 shadow-[0_10px_40px_rgba(0,0,0,0.5)] backdrop-blur-xl">
       <div className="flex items-start gap-2 px-3 py-2.5 sm:px-3.5">
         <div className="min-w-0 flex-1">
           <p className="text-[11px] tracking-wide text-cyan-200/85">
-            {navigating ? "導航中 · 全線路口" : "全線路線預覽"}
+            全線路線預覽
           </p>
           <p className="truncate text-base font-semibold tracking-tight text-white">
             {destination.label}
@@ -79,19 +73,13 @@ export function RoutePreview({
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          {navigating ? (
-            <span className="rounded-lg border border-cyan-300/25 bg-cyan-400/15 px-2 py-1 text-[11px] text-cyan-100">
-              跟隨中
-            </span>
-          ) : (
-            <Button
-              type="button"
-              onClick={onStartNav}
-              className="h-8 rounded-lg bg-cyan-400/20 px-2.5 text-[12px] text-cyan-50 hover:bg-cyan-400/30"
-            >
-              開始導航
-            </Button>
-          )}
+          <Button
+            type="button"
+            onClick={onStartNav}
+            className="h-8 rounded-lg bg-cyan-400 px-3 text-[12px] font-semibold text-[#041016] hover:bg-cyan-300"
+          >
+            確認
+          </Button>
           <Button
             type="button"
             variant="ghost"
@@ -111,39 +99,18 @@ export function RoutePreview({
         </p>
       ) : (
         <ol className="route-preview-list max-h-40 overflow-y-auto overscroll-contain border-t border-white/8 sm:max-h-52">
-          {steps.map((step, index) => {
+          {steps.map((step) => {
             const Icon = stepIcon(step);
-            const active = navigating && (index === nextIndex || (nextIndex < 0 && index === 0));
             return (
               <li
                 key={step.id}
-                className={cn(
-                  "flex items-start gap-2.5 px-3 py-2 text-sm",
-                  active ? "bg-cyan-400/12" : "odd:bg-white/[0.03]",
-                )}
+                className="flex items-start gap-2.5 px-3 py-2 text-sm odd:bg-white/[0.03]"
               >
-                <span
-                  className={cn(
-                    "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg",
-                    active
-                      ? "bg-cyan-400/25 text-cyan-100"
-                      : "bg-white/8 text-zinc-300",
-                  )}
-                >
+                <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-white/8 text-zinc-300">
                   <Icon className="size-3.5" />
                 </span>
                 <span className="min-w-0 flex-1">
-                  {active ? (
-                    <span className="mb-0.5 block text-[10px] tracking-wide text-cyan-200/90">
-                      下一步
-                    </span>
-                  ) : null}
-                  <span
-                    className={cn(
-                      "block leading-snug",
-                      active ? "font-semibold text-white" : "text-zinc-100",
-                    )}
-                  >
+                  <span className="block leading-snug text-zinc-100">
                     {instructionForStep(step, destination.label)}
                   </span>
                   {step.type !== "depart" && step.type !== "arrive" && step.distanceMeters >= 80 ? (

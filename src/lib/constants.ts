@@ -43,3 +43,5 @@ export const MAP_COLORS = {
 
 export const OPENFREEMAP_DARK_STYLE =
   "https://tiles.openfreemap.org/styles/dark";
+
+export const YOUTUBE_MUSIC_URL = "https://music.youtube.com/";

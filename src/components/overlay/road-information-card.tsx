@@ -8,6 +8,7 @@ import {
   TrafficCone,
   X,
 } from "lucide-react";
+import { YOUTUBE_MUSIC_URL } from "@/lib/constants";
 import { cctvOriginLabel, formatDistance, trafficOriginLabel } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type {
@@ -152,7 +153,7 @@ export function RoadInformationCard({
 
       <div className="flex items-center justify-center gap-2 rounded-full border border-white/10 bg-black/55 px-2 py-1.5 shadow-[0_10px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl">
         {groups.length === 0 ? (
-          <p className="px-3 py-1 text-[11px] text-zinc-500">
+          <p className="px-2 py-1 text-[11px] text-zinc-500">
             {emptyHint ?? "前方暫無通報"}
           </p>
         ) : (
@@ -184,7 +185,32 @@ export function RoadInformationCard({
             );
           })
         )}
+        <YouTubeMusicLink />
       </div>
     </section>
+  );
+}
+
+function YouTubeMusicLink() {
+  return (
+    <a
+      href={YOUTUBE_MUSIC_URL}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="開啟 YouTube Music"
+      title="YouTube Music"
+      className="relative flex size-11 items-center justify-center rounded-full border border-red-400/35 bg-[#ff0033]/20 touch-manipulation hover:bg-[#ff0033]/35"
+    >
+      <YouTubeMusicMark />
+    </a>
+  );
+}
+
+function YouTubeMusicMark() {
+  return (
+    <svg viewBox="0 0 24 24" className="size-6" aria-hidden>
+      <circle cx="12" cy="12" r="10" fill="#FF0033" />
+      <path d="M10 8.2v7.6L17 12 10 8.2z" fill="#fff" />
+    </svg>
   );
 }

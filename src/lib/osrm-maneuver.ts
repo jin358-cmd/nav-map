@@ -157,6 +157,10 @@ export function instructionForStep(
   return `${cue}後${step.action}`;
 }
 
+export function nextIntersectionStep(steps: RouteStep[]): RouteStep | null {
+  return steps.find((step) => step.type !== "depart") ?? null;
+}
+
 export function maneuverFromOsrm(
   steps: OsrmStep[],
   destinationLabel: string,

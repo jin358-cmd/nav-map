@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { MapControls } from "@/components/map/map-controls";
 import { AddressSearch } from "@/components/overlay/address-search";
 import { CctvDetailCard } from "@/components/overlay/cctv-detail-card";
+import { NextIntersectionHud } from "@/components/overlay/navigation-banner";
 import { RoadInformationCard } from "@/components/overlay/road-information-card";
 import { RoutePreview } from "@/components/overlay/route-preview";
 import { useCctvView } from "@/hooks/use-cctv-view";
@@ -251,6 +252,12 @@ export function DrivingApp() {
     setIntelCollapse((value) => value + 1);
   }, []);
 
+  const exitNavigation = useCallback(() => {
+    setNavigating(false);
+    setFollowVehicle(false);
+    setFitRouteKey((value) => value + 1);
+  }, []);
+
   const refreshIntel = useCallback(() => {
     setRefreshNonce((value) => value + 1);
     reload();
@@ -281,32 +288,43 @@ export function DrivingApp() {
 
       <div className="driving-vignette pointer-events-none absolute inset-0" />
 
-      <div className="pointer-events-none absolute top-[max(0.45rem,env(safe-area-inset-top))] left-3 z-10 max-w-[42%] rounded-2xl border border-white/10 bg-black/45 px-2.5 py-1.5 backdrop-blur-md sm:max-w-none sm:px-3 sm:py-2">
-        <p className="hidden text-[10px] tracking-[0.18em] text-cyan-200/80 sm:block">
-          SMART ROAD
-        </p>
-        <p className="text-xs font-semibold sm:text-sm">智路臺灣 · 臺南</p>
-      </div>
+      {!navigating ? (
+        <div className="pointer-events-none absolute top-[max(0.45rem,env(safe-area-inset-top))] left-3 z-10 max-w-[42%] rounded-2xl border border-white/10 bg-black/45 px-2.5 py-1.5 backdrop-blur-md sm:max-w-none sm:px-3 sm:py-2">
+          <p className="hidden text-[10px] tracking-[0.18em] text-cyan-200/80 sm:block">
+            SMART ROAD
+          </p>
+          <p className="text-xs font-semibold sm:text-sm">智路臺灣 · 臺南</p>
+        </div>
+      ) : null}
 
-      <div className="absolute top-[max(2.85rem,calc(env(safe-area-inset-top)+2.35rem))] right-[4.4rem] left-3 z-20 sm:top-[max(0.55rem,env(safe-area-inset-top))] sm:right-24 sm:left-44">
-        {destination ? (
-          <RoutePreview
-            destination={destination}
-            maneuver={maneuver}
+      {destination && navigating ? (
+        <div className="absolute top-[max(0.45rem,env(safe-area-inset-top))] right-3 left-3 z-20 flex justify-center sm:right-24">
+          <NextIntersectionHud
             steps={routeSteps}
-            navigating={navigating}
-            onStartNav={startNavigation}
-            onClear={clearRoute}
+            maneuver={maneuver}
+            onExit={exitNavigation}
           />
-        ) : (
-          <AddressSearch
-            bias={searchBias}
-            busy={routing}
-            error={routeError}
-            onSelect={(hit) => void applyRoute(hit)}
-          />
-        )}
-      </div>
+        </div>
+      ) : (
+        <div className="absolute top-[max(2.85rem,calc(env(safe-area-inset-top)+2.35rem))] right-[4.4rem] left-3 z-20 sm:top-[max(0.55rem,env(safe-area-inset-top))] sm:right-24 sm:left-44">
+          {destination ? (
+            <RoutePreview
+              destination={destination}
+              maneuver={maneuver}
+              steps={routeSteps}
+              onStartNav={startNavigation}
+              onClear={clearRoute}
+            />
+          ) : (
+            <AddressSearch
+              bias={searchBias}
+              busy={routing}
+              error={routeError}
+              onSelect={(hit) => void applyRoute(hit)}
+            />
+          )}
+        </div>
+      )}
 
       <div className="pointer-events-auto absolute top-[42%] right-[max(0.65rem,env(safe-area-inset-right))] z-20 -translate-y-1/2 sm:top-28 sm:translate-y-0">
         <MapControls
@@ -326,27 +344,28 @@ export function DrivingApp() {
         />
       </div>
 
-      <div className="pointer-events-none absolute bottom-28 left-2 z-10 hidden max-w-[11rem] sm:bottom-36 sm:left-3 sm:block">
-        <Legend />
-      </div>
+      {!navigating ? (
+        <div className="pointer-events-none absolute bottom-28 left-2 z-10 hidden max-w-[11rem] sm:bottom-36 sm:left-3 sm:block">
+          <Legend />
+        </div>
+      ) : null}
 
-      <footer className="absolute inset-x-0 bottom-0 z-10 flex justify-center px-2 pb-[max(0.45rem,env(safe-area-inset-bottom))] sm:p-4 sm:pt-0">
+      <footer className="absolute inset-x-0 bottom-0 z-10 flex flex-col items-center gap-2 px-2 pb-[max(0.45rem,env(safe-area-inset-bottom))] sm:p-4 sm:pt-0">
         {selectedCctv ? (
           <CctvDetailCard
             key={selectedCctv.id}
             camera={selectedCctv}
             onClose={() => setSelectedCctv(null)}
           />
-        ) : (
-          <RoadInformationCard
-            key={intelCollapse}
-            items={intel}
-            origin={origin}
-            trafficOrigin={trafficOrigin}
-            emptyHint="附近 8 公里內尚無路況或 CCTV 情報。"
-            onSelectCctv={selectCamera}
-          />
-        )}
+        ) : null}
+        <RoadInformationCard
+          key={intelCollapse}
+          items={intel}
+          origin={origin}
+          trafficOrigin={trafficOrigin}
+          emptyHint="附近 8 公里內尚無路況或 CCTV 情報。"
+          onSelectCctv={selectCamera}
+        />
       </footer>
 
       {loadError ? (
