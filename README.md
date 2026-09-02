@@ -71,7 +71,7 @@ npm start
 
 定位權限可拒絕；拒絕後仍停留在臺南示範路線。GPS 授權成功則車輛標記移到目前位置。
 
-頂部可輸入地址或地標。選定後搜尋列會收起，改顯示全線路線預覽與每一個路口提示。點 **確認** 後進入駕駛畫面：全線清單與其他路徑提示會收起，最上方只留下一個路口的剩餘距離。底部狀態列可開啟 YouTube Music 簡易播放器。
+頂部可輸入地址或地標。成功選定的目的地會保存在搜尋列上方（最多 6 筆，可點選重用或清除）。建物門牌在設定 TGOS 金鑰後優先使用內政部全國門牌地址定位服務，再以國土測繪中心的地政行政區、管轄地政事務所與地段資料交叉比對；官方門牌服務未設定或暫時失敗時保留 OpenStreetMap 後備定位。選定後搜尋列會收起，改顯示全線路線預覽與每一個路口提示。點 **確認** 後進入駕駛畫面：全線清單與其他路徑提示會收起，最上方只留下一個路口的剩餘距離。底部狀態列可開啟 YouTube Music 簡易播放器。
 
 ## 第一階段已完成功能
 
@@ -83,7 +83,7 @@ npm start
 - CCTV：獨立 `cctv-source` / `cctv-layer`，依 1 km／8 km／zoom 顯示，點擊底部 HUD
 - 即時路況：獨立 `traffic-source` / `traffic-layer`，TDX live 或 MOCK 後備
 - Mock Disaster / 事故標記
-- 頂部地址搜尋：確認目的地後收起搜尋列，改顯示全線預覽與路口分段
+- 頂部地址搜尋：戶政門牌優先、地政資料交叉比對，並保留最近 6 筆目的地
 - 點確認後進入駕駛畫面，最上方只顯示下一個路口距離
 - 底部狀態列可開啟 YouTube Music 簡易播放器
 - 底部半透明 Road Information Card
@@ -123,7 +123,7 @@ NCDR 或地方防災 API 取代 mock 積水／封路／強風標記。
 - Framework Preset：Next.js
 - Build Command：`npm run build`
 - Output：Next.js 預設
-- 環境變數：可先不設。正式路況用 `TDX_CLIENT_ID` / `TDX_CLIENT_SECRET`
+- 環境變數：正式路況用 `TDX_CLIENT_ID` / `TDX_CLIENT_SECRET`；正式戶政門牌定位用 `TGOS_APP_ID` / `TGOS_API_KEY`
 
 MapLibre worker 由 `src/app/maplibre/[file]/route.ts` 提供，`next.config.ts` 已列入 tracing，避免 serverless 漏檔。
 

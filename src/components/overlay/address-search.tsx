@@ -1,10 +1,23 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Loader2, MapPin, Search, X } from "lucide-react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from "react";
+import { History, Loader2, MapPin, Search, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TAIWAN_LANDMARKS } from "@/data/landmarks";
+import {
+  clearAddressHistory,
+  getAddressHistorySnapshot,
+  getServerAddressHistorySnapshot,
+  rememberAddress,
+  subscribeAddressHistory,
+} from "@/lib/address-history";
 import { cn } from "@/lib/utils";
 import { searchAddresses } from "@/services/routing";
 import type { GeocodeHit, LngLat } from "@/types/domain";
@@ -27,7 +40,22 @@ export function AddressSearch({
   const [hits, setHits] = useState<GeocodeHit[]>([]);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const history = useSyncExternalStore(
+    subscribeAddressHistory,
+    getAddressHistorySnapshot,
+    getServerAddressHistorySnapshot,
+  );
   const needle = query.trim();
+
+  const selectHit = useCallback(
+    (hit: GeocodeHit) => {
+      setQuery(hit.name);
+      setOpen(false);
+      rememberAddress(hit);
+      onSelect(hit);
+    },
+    [onSelect],
+  );
 
   useEffect(() => {
     if (needle.length < 2) return;
@@ -56,6 +84,35 @@ export function AddressSearch({
 
   return (
     <div className="pointer-events-auto w-full max-w-xl">
+      {history.length ? (
+        <div className="mb-1.5 flex items-center gap-1.5 overflow-hidden rounded-2xl border border-white/10 bg-black/55 px-2 py-1.5 shadow-lg backdrop-blur-xl">
+          <History className="ml-1 size-3.5 shrink-0 text-cyan-300/80" />
+          <span className="shrink-0 text-[10px] text-zinc-500">搜尋紀錄</span>
+          <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
+            {history.map((hit) => (
+              <button
+                key={`${hit.id}-${hit.location.lng}-${hit.location.lat}`}
+                type="button"
+                title={hit.name}
+                onClick={() => selectHit(hit)}
+                className="max-w-40 shrink-0 truncate rounded-full border border-white/10 bg-white/6 px-2 py-1 text-[10px] text-zinc-200 hover:bg-white/10 touch-manipulation"
+              >
+                {hit.name}
+              </button>
+            ))}
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label="清除搜尋紀錄"
+            onClick={clearAddressHistory}
+            className="size-7 shrink-0 text-zinc-500 hover:bg-white/10 hover:text-white"
+          >
+            <Trash2 className="size-3.5" />
+          </Button>
+        </div>
+      ) : null}
       <div className="rounded-2xl border border-white/12 bg-black/60 shadow-[0_10px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl">
         <div className="flex items-center gap-2 px-2.5 py-2">
           <Search className="ml-1 size-4 shrink-0 text-cyan-300" />
@@ -93,7 +150,7 @@ export function AddressSearch({
       {open ? (
         <div className="mt-1.5 overflow-hidden rounded-2xl border border-white/10 bg-black/78 shadow-xl backdrop-blur-xl">
           <p className="px-3 pt-2 text-[11px] text-zinc-500">
-            從目前位置出發 · 台灣地址（巷弄門牌會對到最近道路）
+            從目前位置出發 · 戶政門牌優先，地政資料交叉比對
           </p>
           {needle.length < 2 ? (
             <ul className="flex flex-wrap gap-1.5 px-3 py-2">
@@ -102,9 +159,7 @@ export function AddressSearch({
                   <button
                     type="button"
                     onClick={() => {
-                      setQuery(chip.name);
-                      setOpen(false);
-                      onSelect(chip);
+                      selectHit(chip);
                     }}
                     className="rounded-full border border-white/10 bg-white/6 px-2.5 py-1 text-[11px] text-zinc-200 hover:bg-white/10 touch-manipulation"
                   >
@@ -129,9 +184,7 @@ export function AddressSearch({
                   <button
                     type="button"
                     onClick={() => {
-                      setQuery(hit.name);
-                      setOpen(false);
-                      onSelect(hit);
+                      selectHit(hit);
                     }}
                     className="flex w-full items-start gap-2.5 px-3 py-2.5 text-left hover:bg-white/8 touch-manipulation"
                   >

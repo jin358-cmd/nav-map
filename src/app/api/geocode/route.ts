@@ -2,7 +2,14 @@ import { matchLandmarks } from "@/data/landmarks";
 import {
   describeRelaxedMatch,
   expandTaiwanGeocodeQueries,
+  parseTaiwanAddress,
 } from "@/lib/taiwan-address";
+import {
+  crossCheckLandArea,
+  describeLandCrossCheck,
+  householdAddressConfigured,
+  searchHouseholdAddresses,
+} from "@/services/official-address";
 import type { GeocodeHit } from "@/types/domain";
 
 const NOMINATIM = "https://nominatim.openstreetmap.org/search";
@@ -90,6 +97,22 @@ function toHits(
     );
 }
 
+async function withLandCrossCheck(
+  hits: GeocodeHit[],
+  expected: { city: string; town: string },
+  sourceLabel: string,
+) {
+  return Promise.all(
+    hits.map(async (hit) => {
+      const check = await crossCheckLandArea(hit.location, expected);
+      return {
+        ...hit,
+        address: `${hit.address} · ${sourceLabel} · ${describeLandCrossCheck(check)}`,
+      };
+    }),
+  );
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const query = url.searchParams.get("q")?.trim() ?? "";
@@ -106,6 +129,29 @@ export async function GET(request: Request) {
   }
 
   try {
+    const parsed = parseTaiwanAddress(query);
+    if (parsed?.number && householdAddressConfigured()) {
+      const official = await searchHouseholdAddresses(query);
+      if (official.length) {
+        const officialHits: GeocodeHit[] = official.map((item, index) => ({
+          id: `tgos-${index}-${item.location.lng.toFixed(6)}-${item.location.lat.toFixed(6)}`,
+          name: item.fullAddress,
+          address: `戶政門牌 · ${item.matchType}`,
+          location: item.location,
+        }));
+        const checked = await withLandCrossCheck(
+          officialHits,
+          parsed,
+          "內政部全國門牌",
+        );
+        return Response.json({
+          results: mergeHits([...checked, ...local]),
+          source: "household-doorplate+land-check",
+          matchedQuery: query,
+        });
+      }
+    }
+
     const variants = expandTaiwanGeocodeQueries(query);
     let remote: GeocodeHit[] = [];
     let matchedQuery = query;
@@ -117,9 +163,23 @@ export async function GET(request: Request) {
       break;
     }
 
+    if (parsed && remote.length) {
+      remote = await withLandCrossCheck(
+        remote,
+        parsed,
+        "開放地圖後備定位",
+      );
+    }
+
     return Response.json({
       results: mergeHits([...local, ...remote]),
-      source: remote.length ? "nominatim" : local.length ? "landmark" : "empty",
+      source: remote.length
+        ? parsed
+          ? "open-map+land-check"
+          : "nominatim"
+        : local.length
+          ? "landmark"
+          : "empty",
       matchedQuery,
     });
   } catch {
