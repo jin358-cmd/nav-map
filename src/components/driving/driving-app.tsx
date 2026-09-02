@@ -8,16 +8,17 @@ import { CctvDetailCard } from "@/components/overlay/cctv-detail-card";
 import { NavigationBanner } from "@/components/overlay/navigation-banner";
 import { RoadInformationCard } from "@/components/overlay/road-information-card";
 import { useCctvView } from "@/hooks/use-cctv-view";
+import { useTrafficView } from "@/hooks/use-traffic-view";
 import { roadIntelFromCameras } from "@/lib/cctv-intel";
 import { DEMO_VEHICLE } from "@/lib/constants";
 import { distanceKm } from "@/lib/geo";
+import { deriveTrafficIntel } from "@/lib/traffic-intel";
 import {
   fetchAccidentReports,
   fetchAheadIntel,
   fetchDemoRoute,
   fetchDisasterAlerts,
   fetchNavigationManeuver,
-  fetchTainanTraffic,
   planDrivingRoute,
   requestCurrentPosition,
   watchVehiclePosition,
@@ -33,7 +34,6 @@ import type {
   NavigationManeuver,
   RoadIntelItem,
   RouteDestination,
-  TrafficSegment,
   VehiclePose,
 } from "@/types/domain";
 
@@ -58,7 +58,6 @@ export function DrivingApp() {
   const [gpsStatus, setGpsStatus] = useState<GpsStatus>("idle");
   const [viewport, setViewport] = useState<MapViewport | null>(null);
   const [refreshNonce, setRefreshNonce] = useState(0);
-  const [traffic, setTraffic] = useState<TrafficSegment[]>([]);
   const [disasters, setDisasters] = useState<DisasterAlert[]>([]);
   const [accidents, setAccidents] = useState<AccidentReport[]>([]);
   const [route, setRoute] = useState<[number, number][]>([]);
@@ -90,14 +89,27 @@ export function DrivingApp() {
     refreshNonce,
   });
 
+  const {
+    origin: trafficOrigin,
+    scored: trafficScored,
+    visible: traffic,
+    error: trafficError,
+    reload: reloadTraffic,
+  } = useTrafficView({
+    vehicle,
+    gpsStatus,
+    viewport,
+    route,
+    refreshNonce,
+  });
+
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
       try {
-        const [trafficRows, disasterRows, accidentRows, routeLine, nav, ahead] =
+        const [disasterRows, accidentRows, routeLine, nav, ahead] =
           await Promise.all([
-            fetchTainanTraffic(),
             fetchDisasterAlerts(),
             fetchAccidentReports(),
             fetchDemoRoute(),
@@ -105,7 +117,6 @@ export function DrivingApp() {
             fetchAheadIntel(),
           ]);
         if (cancelled) return;
-        setTraffic(trafficRows);
         setDisasters(disasterRows);
         setAccidents(accidentRows);
         setDemoRoute(routeLine);
@@ -134,10 +145,18 @@ export function DrivingApp() {
     return stop;
   }, []);
 
-  const intel = useMemo(
-    () => roadIntelFromCameras(preview, baseIntel, 2),
-    [baseIntel, preview],
-  );
+  const intel = useMemo(() => {
+    const cameras = roadIntelFromCameras(preview, [], 2);
+    const trafficItem = deriveTrafficIntel(trafficScored);
+    const extras = baseIntel.filter(
+      (item) => item.kind !== "cctv" && item.kind !== "congestion",
+    );
+    return [
+      ...(trafficItem ? [trafficItem] : []),
+      ...cameras,
+      ...extras,
+    ];
+  }, [baseIntel, preview, trafficScored]);
 
   const searchBias = useMemo(
     () => ({ lng: vehicle.lng, lat: vehicle.lat }),
@@ -214,10 +233,11 @@ export function DrivingApp() {
     setRefreshNonce((value) => value + 1);
   }, [demoManeuver, demoRoute]);
 
-  const refreshCctv = useCallback(() => {
+  const refreshIntel = useCallback(() => {
     setRefreshNonce((value) => value + 1);
     reload();
-  }, [reload]);
+    reloadTraffic();
+  }, [reload, reloadTraffic]);
 
   return (
     <div className="relative h-dvh w-full overflow-hidden overscroll-none bg-[#0b0d11] text-zinc-100">
@@ -281,7 +301,7 @@ export function DrivingApp() {
           }
           onRecenter={() => setFollowVehicle(true)}
           onDemoDrive={goDemoDrive}
-          onRefreshCctv={refreshCctv}
+          onRefreshIntel={refreshIntel}
         />
       </div>
 
@@ -300,7 +320,8 @@ export function DrivingApp() {
           <RoadInformationCard
             items={intel}
             origin={origin}
-            emptyHint="附近 8 公里內尚無可用 CCTV。"
+            trafficOrigin={trafficOrigin}
+            emptyHint="附近 8 公里內尚無路況或 CCTV 情報。"
             onSelectCctv={selectCamera}
           />
         )}
@@ -311,9 +332,9 @@ export function DrivingApp() {
           {loadError}
         </div>
       ) : null}
-      {cctvError ? (
+      {cctvError || trafficError ? (
         <div className="pointer-events-none absolute top-[max(11rem,calc(env(safe-area-inset-top)+10rem))] left-1/2 z-20 -translate-x-1/2 rounded-xl border border-amber-300/25 bg-black/65 px-3 py-2 text-xs text-amber-100">
-          {cctvError}
+          {cctvError ?? trafficError}
         </div>
       ) : null}
     </div>
@@ -323,9 +344,10 @@ export function DrivingApp() {
 function Legend() {
   const items = [
     { color: "bg-[#3ee0ff]", label: "導航路線" },
+    { color: "bg-[#ffb020]", label: "車多" },
+    { color: "bg-[#ff6b35]", label: "壅塞" },
     { color: "bg-[#c084fc]", label: "CCTV" },
     { color: "bg-[#ff3b3b]", label: "事故" },
-    { color: "bg-[#ff6b35]", label: "壅塞" },
     { color: "bg-[#ff9f1c]", label: "災害" },
   ];
 

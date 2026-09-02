@@ -58,12 +58,26 @@ export type MapViewport = {
 };
 
 export type TrafficLevel = "smooth" | "slow" | "congested" | "blocked";
+export type TrafficSourceType = "city" | "freeway";
+export type TrafficDataOrigin = "tdx-live" | "mock";
 
 export type TrafficSegment = {
   id: string;
   name: string;
   level: TrafficLevel;
   coordinates: [number, number][];
+  sourceType: TrafficSourceType;
+  dataOrigin: TrafficDataOrigin;
+  speedKmh?: number;
+  travelTimeSec?: number;
+  congestionLabel?: string;
+  updatedAt?: string;
+};
+
+export type TrafficCatalog = {
+  origin: TrafficDataOrigin;
+  segments: TrafficSegment[];
+  fetchedAt: string;
 };
 
 export type DisasterKind = "flood" | "closure" | "quake" | "typhoon";

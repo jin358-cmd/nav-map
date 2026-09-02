@@ -6,9 +6,14 @@ import {
   Construction,
   TrafficCone,
 } from "lucide-react";
-import { cctvOriginLabel, formatDistance } from "@/lib/format";
+import { cctvOriginLabel, formatDistance, trafficOriginLabel } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import type { CctvDataOrigin, RoadIntelItem, RoadIntelKind } from "@/types/domain";
+import type {
+  CctvDataOrigin,
+  RoadIntelItem,
+  RoadIntelKind,
+  TrafficDataOrigin,
+} from "@/types/domain";
 
 const KIND_META: Record<
   RoadIntelKind,
@@ -44,21 +49,25 @@ const KIND_META: Record<
 export function RoadInformationCard({
   items,
   origin,
+  trafficOrigin,
   emptyHint,
   onSelectCctv,
 }: {
   items: RoadIntelItem[];
   origin: CctvDataOrigin;
+  trafficOrigin: TrafficDataOrigin;
   emptyHint?: string;
   onSelectCctv?: (cameraId: string) => void;
 }) {
   return (
     <section className="pointer-events-auto w-full max-w-xl rounded-2xl border border-white/10 bg-black/55 p-3 text-white shadow-[0_12px_50px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:rounded-3xl sm:p-4">
-      <div className="mb-2 flex items-baseline justify-between sm:mb-3">
+      <div className="mb-2 flex items-baseline justify-between gap-3 sm:mb-3">
         <h2 className="text-sm font-medium tracking-wide text-zinc-200">
           前方道路情報
         </h2>
-        <p className="text-[11px] text-zinc-500">{cctvOriginLabel(origin)}</p>
+        <p className="shrink-0 text-[11px] text-zinc-500">
+          CCTV {cctvOriginLabel(origin)} · 路況 {trafficOriginLabel(trafficOrigin)}
+        </p>
       </div>
       {items.length === 0 ? (
         <p className="text-sm text-zinc-400">

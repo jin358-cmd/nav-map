@@ -5,6 +5,9 @@ export const TAINAN_TRAFFIC: TrafficSegment[] = [
     id: "tr-zz-smooth",
     name: "中正路南段",
     level: "smooth",
+    sourceType: "city",
+    dataOrigin: "mock",
+    speedKmh: 42,
     coordinates: [
       [120.2047, 22.9846],
       [120.20486, 22.9878],
@@ -15,6 +18,9 @@ export const TAINAN_TRAFFIC: TrafficSegment[] = [
     id: "tr-zz-slow",
     name: "中正路近民生",
     level: "slow",
+    sourceType: "city",
+    dataOrigin: "mock",
+    speedKmh: 22,
     coordinates: [
       [120.20495, 22.991],
       [120.20478, 22.9946],
@@ -25,6 +31,9 @@ export const TAINAN_TRAFFIC: TrafficSegment[] = [
     id: "tr-ms-smooth",
     name: "民生路一段",
     level: "smooth",
+    sourceType: "city",
+    dataOrigin: "mock",
+    speedKmh: 38,
     coordinates: [
       [120.2047, 22.995],
       [120.2082, 22.99532],
@@ -35,6 +44,9 @@ export const TAINAN_TRAFFIC: TrafficSegment[] = [
     id: "tr-dongmen",
     name: "東門圓環",
     level: "congested",
+    sourceType: "city",
+    dataOrigin: "mock",
+    speedKmh: 12,
     coordinates: [
       [120.2092, 22.9898],
       [120.211, 22.9886],
@@ -46,6 +58,9 @@ export const TAINAN_TRAFFIC: TrafficSegment[] = [
     id: "tr-hua",
     name: "中華東路",
     level: "slow",
+    sourceType: "city",
+    dataOrigin: "mock",
+    speedKmh: 24,
     coordinates: [
       [120.2168, 22.992],
       [120.2184, 22.9884],
@@ -56,6 +71,9 @@ export const TAINAN_TRAFFIC: TrafficSegment[] = [
     id: "tr-ic",
     name: "臺南交流道南下",
     level: "blocked",
+    sourceType: "freeway",
+    dataOrigin: "mock",
+    speedKmh: 6,
     coordinates: [
       [120.2248, 23.0442],
       [120.2268, 23.0408],

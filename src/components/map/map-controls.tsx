@@ -20,7 +20,7 @@ type MapControlsProps = {
   onToggleCamera: () => void;
   onRecenter: () => void;
   onDemoDrive: () => void;
-  onRefreshCctv: () => void;
+  onRefreshIntel: () => void;
 };
 
 export function MapControls({
@@ -31,7 +31,7 @@ export function MapControls({
   onToggleCamera,
   onRecenter,
   onDemoDrive,
-  onRefreshCctv,
+  onRefreshIntel,
 }: MapControlsProps) {
   const locating = gpsStatus === "locating";
 
@@ -62,7 +62,7 @@ export function MapControls({
       >
         <MapPinned className="size-5" />
       </ControlButton>
-      <ControlButton label="重新整理 CCTV" onClick={onRefreshCctv}>
+      <ControlButton label="重新整理情報" onClick={onRefreshIntel}>
         <RefreshCw className="size-5" />
       </ControlButton>
       <Button

@@ -2,7 +2,7 @@
 
 台灣智慧駕駛地圖＋即時道路情報平台。產品定位是 **駕駛視角的道路情報**，不是 Google Maps 克隆。
 
-第一階段 Prototype 以 **臺南市區** 為示範範圍（中正路北上，民生路口右轉往臺南火車站）。Phase 2 已把 weather 專案的 CCTV 篩選／距離／city+freeway 模型移植到 MapLibre Driving HUD；交通與災害仍是 mock。尚未串接真實 TDX live。
+第一階段 Prototype 以 **臺南市區** 為示範範圍（中正路北上，民生路口右轉往臺南火車站）。Phase 2 已把 weather 專案的 CCTV 篩選／距離／city+freeway 模型移植到 MapLibre Driving HUD。Phase 3 已接 TDX 臺南市區即時路況，無憑證或 live 失敗時走 mock。災害標記仍是 mock。
 
 ## 技術架構
 
@@ -15,24 +15,25 @@
 
 資料流維持分離：
 
-`components`（UI）→ `services`（資料存取）→ `data`（Phase 1 mock）或未來的 TDX／防災 API。
+`components`（UI）→ `services`（資料存取）→ `data`（mock／CCTV snapshot）或 TDX／防災 API。
 
 ```
 src/
-  app/                      App Router、MapLibre worker 路由
+  app/                      App Router、MapLibre worker、/api/traffic
   components/
     driving/                全螢幕駕駛 HUD 組合
     map/                    MapLibre、Vehicle Marker、控制鈕
     overlay/                導航列、道路情報卡、CCTV 卡
     ui/                     shadcn 元件
   data/                     mock 交通／災害、CCTV snapshot（cctv-fallback.json）
-  hooks/                    useCctvView（距離、viewport、節流）
+  hooks/                    useCctvView、useTrafficView
   services/
     cctv.ts                 TDX → snapshot → mock
-    tdx.ts                  預留 MOTC TDX live
+    tdx-client.ts           MOTC TDX token 與 GET
+    traffic.ts              即時路況 live → mock
     disaster-api.ts         預留防災 API（Phase 4）
     geolocation.ts          瀏覽器 GPS
-  lib/                      地圖樣式、CCTV 圖層／評分、常數
+  lib/                      地圖樣式、CCTV／路況圖層與評分
   types/                    領域型別
 ```
 
@@ -80,23 +81,25 @@ npm start
 - 2D / 3D 切換、GPS 定位、居中、回臺南示範
 - 自訂 Vehicle Marker（不是 Google 藍點）
 - CCTV：獨立 `cctv-source` / `cctv-layer`，依 1 km／8 km／zoom 顯示，點擊底部 HUD
-- Mock Traffic 圖層、Mock Disaster / 事故標記
+- 即時路況：獨立 `traffic-source` / `traffic-layer`，TDX live 或 MOCK 後備
+- Mock Disaster / 事故標記
 - 頂部地址搜尋：規劃開車路線並在地圖顯示青綠路徑
 - 頂部導航資訊 UI（八百公尺後右轉／前往目的地）
 - 底部半透明 Road Information Card
 - Android 直式優先的 Responsive HUD（資訊卡不遮住主要駕駛視野）
 
-目前 **不要** 填入真實 TDX 金鑰。未設定時 CCTV 走本地 SNAPSHOT（來自 weather 的 city／freeway JSON），再不行才用 8 支 MOCK。
+未設定 TDX 金鑰時：CCTV 走本地 SNAPSHOT（來自 weather 的 city／freeway JSON），路況走臺南 MOCK 線。金鑰請放 `TDX_CLIENT_ID` / `TDX_CLIENT_SECRET`，由 `/api/traffic` 伺服器端打 TDX。
 
-Phase 2 對照報告：[`docs/PHASE-2-CCTV.md`](docs/PHASE-2-CCTV.md)。
+Phase 2 對照報告：[`docs/PHASE-2-CCTV.md`](docs/PHASE-2-CCTV.md)。  
+Phase 3 路況說明：[`docs/PHASE-3-TRAFFIC.md`](docs/PHASE-3-TRAFFIC.md)。
 
 ## Future Roadmap
 
-**Phase 2：CCTV 顯示（本階段）**  
-已完成 weather 邏輯移植與 Driving HUD。TDX live token 仍是 stub，下一步才是真實認證與影像 URL。
+**Phase 2：CCTV 顯示**  
+已完成 weather 邏輯移植與 Driving HUD。CCTV 的 TDX live token 仍是 stub。
 
-**Phase 3：即時交通**  
-TDX Live Traffic 取代 mock 壅塞線，依真實車速上色。
+**Phase 3：即時交通（本階段）**  
+TDX 臺南市區 Live + Section + SectionShape，依壅塞級別／時速上色；無憑證或失敗時保留 mock。
 
 **Phase 4：災害資訊**  
 NCDR 或地方防災 API 取代 mock 積水／封路／強風標記。
@@ -117,7 +120,7 @@ NCDR 或地方防災 API 取代 mock 積水／封路／強風標記。
 - Framework Preset：Next.js
 - Build Command：`npm run build`
 - Output：Next.js 預設
-- 環境變數：可先不設 `NEXT_PUBLIC_TDX_*`
+- 環境變數：可先不設。正式路況用 `TDX_CLIENT_ID` / `TDX_CLIENT_SECRET`
 
 MapLibre worker 由 `src/app/maplibre/[file]/route.ts` 提供，`next.config.ts` 已列入 tracing，避免 serverless 漏檔。
 

@@ -14,7 +14,7 @@ export async function fetchAheadIntel(): Promise<RoadIntelItem[]> {
   return AHEAD_INTEL;
 }
 
-export { fetchTainanCctv, fetchTainanTraffic, isTdxConfigured } from "./tdx";
+export { fetchTainanCctv, isTdxConfigured } from "./tdx";
 export { fetchCctvCatalog } from "./cctv";
 export {
   fetchAccidentReports,

@@ -1,4 +1,9 @@
-import type { CctvDataOrigin, CctvStatus } from "@/types/domain";
+import type {
+  CctvDataOrigin,
+  CctvStatus,
+  TrafficDataOrigin,
+  TrafficLevel,
+} from "@/types/domain";
 
 export function formatDistance(meters: number): string {
   if (meters >= 1000) {
@@ -25,6 +30,18 @@ export function cctvOriginLabel(origin: CctvDataOrigin) {
   if (origin === "tdx-live") return "TDX LIVE";
   if (origin === "snapshot") return "SNAPSHOT";
   return "MOCK";
+}
+
+export function trafficOriginLabel(origin: TrafficDataOrigin) {
+  if (origin === "tdx-live") return "TDX LIVE";
+  return "MOCK";
+}
+
+export function trafficLevelLabel(level: TrafficLevel) {
+  if (level === "smooth") return "順暢";
+  if (level === "slow") return "車多";
+  if (level === "congested") return "壅塞";
+  return "阻塞";
 }
 
 export function formatUpdatedAt(iso: string) {
