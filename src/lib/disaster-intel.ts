@@ -30,7 +30,5 @@ export function deriveDisasterIntel(
       distanceMeters: Math.round(km * 1000),
     });
   }
-  return items
-    .sort((a, b) => a.distanceMeters - b.distanceMeters)
-    .slice(0, 6);
+  return items.sort((a, b) => a.distanceMeters - b.distanceMeters);
 }

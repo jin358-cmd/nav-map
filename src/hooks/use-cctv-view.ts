@@ -1,10 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  CCTV_MOVE_REFRESH_KM,
-  CCTV_ZOOM_REFRESH_DELTA,
-} from "@/lib/cctv-constants";
+import { CCTV_MOVE_REFRESH_KM } from "@/lib/cctv-constants";
 import {
   mapVisibleCameras,
   previewCameras,
@@ -26,10 +23,6 @@ function quantizeCenter(point: LngLat, km = CCTV_MOVE_REFRESH_KM): LngLat {
     lng: Math.round(point.lng / step) * step,
     lat: Math.round(point.lat / step) * step,
   };
-}
-
-function quantizeZoom(zoom: number) {
-  return Math.round(zoom / CCTV_ZOOM_REFRESH_DELTA) * CCTV_ZOOM_REFRESH_DELTA;
 }
 
 function quantizeHeading(heading: number) {
@@ -61,7 +54,6 @@ export function useCctvView({
     () => quantizeCenter({ lng: centerLng, lat: centerLat }),
     [centerLat, centerLng],
   );
-  const zoom = quantizeZoom(viewport?.zoom ?? 16.5);
   const heading = quantizeHeading(vehicle.heading);
 
   useEffect(() => {
@@ -89,15 +81,10 @@ export function useCctvView({
     [catalog, heading, route, searchCenter],
   );
 
-  const visibleViewport = useMemo<MapViewport | null>(() => {
-    if (!viewport) return null;
-    return { ...viewport, zoom };
-  }, [viewport, zoom]);
-
   const preview = useMemo(() => previewCameras(scored), [scored]);
   const visible = useMemo(
-    () => mapVisibleCameras(scored, visibleViewport),
-    [scored, visibleViewport],
+    () => mapVisibleCameras(scored, viewport),
+    [scored, viewport],
   );
 
   const cameraById = useCallback(

@@ -17,7 +17,10 @@ import { useNavigationVoice } from "@/hooks/use-navigation-voice";
 import { useSpeedEnforcementView } from "@/hooks/use-speed-enforcement-view";
 import { useTrafficView } from "@/hooks/use-traffic-view";
 import { roadIntelFromCameras } from "@/lib/cctv-intel";
+import { deriveAccidentIntel, mapVisibleAccidents } from "@/lib/accident-query";
 import { deriveDisasterIntel } from "@/lib/disaster-intel";
+import { mapVisibleDisasters } from "@/lib/disaster-query";
+import { pinSelected } from "@/lib/map-visibility";
 import { CITY_TRAFFIC_FOCUS_KM } from "@/lib/traffic-constants";
 import { DEMO_VEHICLE, INTERSECTION_APPROACH_METERS } from "@/lib/constants";
 import { distanceKm } from "@/lib/geo";
@@ -152,7 +155,6 @@ export function DrivingApp() {
 
   const {
     origin,
-    preview,
     visible,
     error: cctvError,
     cameraById,
@@ -247,8 +249,40 @@ export function DrivingApp() {
     return stop;
   }, []);
 
+  const visibleAccidents = useMemo(
+    () =>
+      mapVisibleAccidents(accidents, viewport, {
+        lng: vehicle.lng,
+        lat: vehicle.lat,
+      }),
+    [accidents, vehicle.lat, vehicle.lng, viewport],
+  );
+
+  const visibleDisasters = useMemo(
+    () =>
+      pinSelected(
+        mapVisibleDisasters(disasters, viewport, {
+          lng: vehicle.lng,
+          lat: vehicle.lat,
+        }),
+        selectedDisaster?.id ?? null,
+        disasters,
+      ),
+    [disasters, selectedDisaster?.id, vehicle.lat, vehicle.lng, viewport],
+  );
+
+  const mapCameras = useMemo(
+    () =>
+      pinSelected(
+        visible,
+        selectedCctv?.id ?? null,
+        selectedCctv ? [selectedCctv] : [],
+      ),
+    [selectedCctv, visible],
+  );
+
   const intel = useMemo(() => {
-    const cameras = roadIntelFromCameras(preview, [], 2);
+    const cameras = roadIntelFromCameras(visible);
     const trafficItem = deriveTrafficIntel(
       trafficScored,
       trafficFocus5km ? CITY_TRAFFIC_FOCUS_KM : undefined,
@@ -257,26 +291,26 @@ export function DrivingApp() {
       (item) =>
         item.kind !== "cctv" &&
         item.kind !== "congestion" &&
-        item.kind !== "disaster",
+        item.kind !== "disaster" &&
+        item.kind !== "accident",
     );
-    const disasterItems = deriveDisasterIntel(disasters, {
-      lng: vehicle.lng,
-      lat: vehicle.lat,
-    });
+    const origin = { lng: vehicle.lng, lat: vehicle.lat };
     return [
       ...(trafficItem ? [trafficItem] : []),
       ...cameras,
-      ...disasterItems,
+      ...deriveAccidentIntel(visibleAccidents, origin),
+      ...deriveDisasterIntel(visibleDisasters, origin),
       ...extras,
     ];
   }, [
     baseIntel,
-    disasters,
-    preview,
     trafficFocus5km,
     trafficScored,
     vehicle.lat,
     vehicle.lng,
+    visible,
+    visibleAccidents,
+    visibleDisasters,
   ]);
 
   const searchBias = useMemo(
@@ -434,11 +468,11 @@ export function DrivingApp() {
         navigating={navigating}
         selectedCctvId={selectedCctv?.id ?? null}
         selectedDisasterId={selectedDisaster?.id ?? null}
-        cameras={visible}
+        cameras={mapCameras}
         speedEnforcement={speedEnforcement}
         traffic={traffic}
-        disasters={disasters}
-        accidents={accidents}
+        disasters={visibleDisasters}
+        accidents={visibleAccidents}
         route={route}
         routeMeters={navigationProgress?.routeMeters ?? 0}
         distanceToNextMeters={distanceToNextMeters}
@@ -552,11 +586,7 @@ export function DrivingApp() {
           origin={origin}
           trafficOrigin={trafficOrigin}
           disasterOrigin={disasterOrigin}
-          emptyHint={
-            trafficFocus5km
-              ? "附近 5 公里內尚無路況或 CCTV 情報。"
-              : "附近 8 公里內尚無路況或 CCTV 情報。"
-          }
+          emptyHint="目前畫面內尚無 CCTV、事故或災害情報。"
           onSelectCctv={selectCamera}
           musicOpen={musicMode !== "off"}
           onPreviewOpen={() => {

@@ -5,11 +5,15 @@ import {
   CITY_CCTV_RADIUS_KM,
   CCTV_AHEAD_MAX_ANGLE,
   CCTV_MOVE_REFRESH_KM,
-  CCTV_VISIBLE_LIMIT,
   CCTV_ZOOM_REFRESH_DELTA,
   FREEWAY_CCTV_RADIUS_KM,
 } from "@/lib/cctv-constants";
-import { bearingDegrees, distanceKm, headingDelta, isPointInBounds } from "@/lib/geo";
+import { bearingDegrees, distanceKm, headingDelta } from "@/lib/geo";
+import {
+  CCTV_ZOOM_COUNT,
+  pickVisiblePoints,
+  zoomVisibleLimit,
+} from "@/lib/map-visibility";
 import type { CctvCamera, LngLat, MapViewport } from "@/types/domain";
 
 export function isCameraAhead(
@@ -102,29 +106,20 @@ export function mapVisibleCameras(
   scored: CctvCamera[],
   viewport: MapViewport | null,
 ): CctvCamera[] {
-  const nearby = nearbyCameras(scored);
   const zoom = viewport?.zoom ?? 16;
-  const limit =
-    zoom < 13 ? 4 : zoom < 15 ? CCTV_VISIBLE_LIMIT : zoom < 17 ? 12 : 16;
-
-  const inView = viewport
-    ? nearby.filter(
-        (camera) =>
-          camera.withinLocateRadius ||
-          camera.alongRoute ||
-          isPointInBounds(camera.location, viewport.bounds),
-      )
-    : nearby.filter(
-        (camera) =>
-          camera.withinLocateRadius || camera.ahead || camera.alongRoute,
-      );
-
-  const pool = inView.length ? inView : nearby;
-  const preferred = pool.filter(
-    (camera) => camera.alongRoute || camera.ahead || camera.withinLocateRadius,
-  );
-  const rest = pool.filter((camera) => !preferred.includes(camera));
-  return [...preferred, ...rest].slice(0, limit);
+  const limit = zoomVisibleLimit(zoom, CCTV_ZOOM_COUNT);
+  const nearby = nearbyCameras(scored);
+  const picked = pickVisiblePoints(nearby, {
+    location: (camera) => camera.location,
+    viewport,
+    limit,
+    prefer: (camera) =>
+      Boolean(
+        camera.alongRoute || camera.ahead || camera.withinLocateRadius,
+      ),
+  });
+  if (picked.length || !viewport) return picked;
+  return nearby.slice(0, limit);
 }
 
 export function shouldRefreshCctvView(

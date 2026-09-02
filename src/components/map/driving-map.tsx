@@ -214,6 +214,7 @@ export function DrivingMap({
   const readyRef = useRef(false);
   const lastFrameRef = useRef(0);
   const lastViewportEmitRef = useRef(0);
+  const lastEmittedZoomRef = useRef(0);
   const rafRef = useRef(0);
 
   useEffect(() => {
@@ -291,10 +292,18 @@ export function DrivingMap({
     const emitViewport = (force = false) => {
       if (!readyRef.current) return;
       const now = performance.now();
-      if (!force && followVehicleRef.current && now - lastViewportEmitRef.current < 450) {
+      const currentZoom = map.getZoom();
+      const zoomJump = Math.abs(currentZoom - lastEmittedZoomRef.current);
+      if (
+        !force &&
+        followVehicleRef.current &&
+        zoomJump < 0.18 &&
+        now - lastViewportEmitRef.current < 450
+      ) {
         return;
       }
       lastViewportEmitRef.current = now;
+      lastEmittedZoomRef.current = currentZoom;
       onViewportChangeRef.current(readViewport(map));
     };
 
@@ -463,12 +472,13 @@ export function DrivingMap({
     map.on("zoomend", () => {
       if (pinchingRef.current) rememberZoom();
     });
+    map.on("zoom", () => {
+      emitViewport();
+    });
     map.on("moveend", () => {
-      if (followVehicleRef.current) return;
       emitViewport(true);
     });
     map.on("zoomend", () => {
-      if (followVehicleRef.current) return;
       emitViewport(true);
     });
 

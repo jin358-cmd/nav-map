@@ -81,11 +81,10 @@ npm start
 - 駕駛視角 3D：pitch 約 60°，車子在可見駕駛區下方約 30%，前方視野拉長
 - 2D / 3D 切換、GPS 定位、居中、回臺南示範
 - 自訂 Vehicle Marker（不是 Google 藍點）
-- CCTV：獨立 `cctv-source` / `cctv-layer`，依 1 km／8 km／zoom 顯示，點擊底部 HUD
+- CCTV、交通事故、災害：只畫目前畫面內的標記，可見數量隨放大縮小自動增減，底部情報列徽章同步
 - 即時路況：獨立 `traffic-source` / `traffic-layer`，TDX live 或 MOCK 後備
 - 測速執法：警政署政府開放資料免金鑰 CSV，亦支援 TGOS 環域 API，依地圖中心載入 3–10 公里內點位與速限
-- NCDR 即時災害 GeoJSON 圖層（CAP 幾何中心）／事故標記
-- Mock 事故標記
+- NCDR 即時災害 GeoJSON 圖層（CAP 幾何中心）
 - 頂部地址搜尋：國土測量雲建物門牌定位、地政交叉比對，並保留最近 6 筆目的地
 - 導航終點：黃色圓點＋圈線擴散特效
 - 點確認後進入駕駛畫面，最上方只顯示下一個路口距離（字級加大）；接近路口會自動放大，並以黃色立體走馬燈箭頭指引

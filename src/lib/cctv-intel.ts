@@ -2,8 +2,8 @@ import type { CctvCamera, RoadIntelItem } from "@/types/domain";
 
 export function roadIntelFromCameras(
   cameras: CctvCamera[],
-  extras: RoadIntelItem[],
-  limit = 2,
+  extras: RoadIntelItem[] = [],
+  limit = cameras.length,
 ): RoadIntelItem[] {
   const cctvItems = cameras.slice(0, limit).map((camera) => {
     const meters = Math.round((camera.distanceKm ?? 0) * 1000);

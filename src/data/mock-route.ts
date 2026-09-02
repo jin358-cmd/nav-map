@@ -19,9 +19,39 @@ export const DEMO_ROUTE: [number, number][] = [
 
 export const TAINAN_ACCIDENTS: AccidentReport[] = [
   {
+    id: "acc-zhongzheng",
+    title: "中正路機車擦撞",
+    description: "北側外側兩車輕碰，占用機車待轉區。",
+    location: { lng: 120.2051, lat: 22.9882 },
+  },
+  {
+    id: "acc-minsheng",
+    title: "民生路口追撞",
+    description: "右轉車道三車追撞，請改走公園路。",
+    location: { lng: 120.2088, lat: 22.9953 },
+  },
+  {
     id: "acc-dongmen",
     title: "東門路追撞",
     description: "外側車道兩車擦撞，占用一線，請提早改道。",
     location: { lng: 120.2146, lat: 22.9904 },
+  },
+  {
+    id: "acc-station",
+    title: "火車站前減速看齊",
+    description: "接送臨停占用外側，車速偏慢。",
+    location: { lng: 120.2127, lat: 22.9969 },
+  },
+  {
+    id: "acc-gongyuan",
+    title: "公園路擦撞",
+    description: "路口未減速，占用機車道。",
+    location: { lng: 120.1982, lat: 22.9918 },
+  },
+  {
+    id: "acc-anping",
+    title: "安平路側撞",
+    description: "外側車道輕碰，請靠內側通過。",
+    location: { lng: 120.1854, lat: 22.9974 },
   },
 ];
