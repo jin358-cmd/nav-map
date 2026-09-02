@@ -5,7 +5,6 @@ import {
   normalizeFallbackCamera,
   type CctvFallbackRecord,
 } from "@/lib/cctv-normalize";
-import { isTdxConfigured } from "@/services/tdx";
 import type { CctvCamera, CctvDataOrigin } from "@/types/domain";
 
 type CatalogCache = {
@@ -28,19 +27,8 @@ function fromSnapshot(): CctvCamera[] {
 }
 
 async function fromTdxLive(): Promise<CctvCamera[] | null> {
-  if (!isTdxConfigured()) return null;
-
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 8000);
-  try {
-    // Reserved: MOTC TDX City + Freeway CCTV.
-    void controller;
-    return null;
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timer);
-  }
+  // Reserved: MOTC TDX City + Freeway CCTV. Credentials stay on /api only.
+  return null;
 }
 
 export async function fetchCctvCatalog(force = false): Promise<{

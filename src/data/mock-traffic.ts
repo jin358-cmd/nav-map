@@ -1,6 +1,10 @@
+import {
+  finalizeTrafficSegment,
+  type TrafficSegmentSeed,
+} from "@/lib/traffic-normalize";
 import type { TrafficSegment } from "@/types/domain";
 
-export const TAINAN_TRAFFIC: TrafficSegment[] = [
+const SEEDS: TrafficSegmentSeed[] = [
   {
     id: "tr-zz-smooth",
     name: "中正路南段",
@@ -57,10 +61,10 @@ export const TAINAN_TRAFFIC: TrafficSegment[] = [
   {
     id: "tr-hua",
     name: "中華東路",
-    level: "slow",
+    level: "severe",
     sourceType: "city",
     dataOrigin: "mock",
-    speedKmh: 24,
+    speedKmh: 7,
     coordinates: [
       [120.2168, 22.992],
       [120.2184, 22.9884],
@@ -73,7 +77,7 @@ export const TAINAN_TRAFFIC: TrafficSegment[] = [
     level: "blocked",
     sourceType: "freeway",
     dataOrigin: "mock",
-    speedKmh: 6,
+    speedKmh: 3,
     coordinates: [
       [120.2248, 23.0442],
       [120.2268, 23.0408],
@@ -81,3 +85,5 @@ export const TAINAN_TRAFFIC: TrafficSegment[] = [
     ],
   },
 ];
+
+export const TAINAN_TRAFFIC: TrafficSegment[] = SEEDS.map(finalizeTrafficSegment);

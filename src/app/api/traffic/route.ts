@@ -6,7 +6,24 @@ export async function GET(request: Request) {
 
   try {
     const catalog = await loadTainanTraffic(fresh);
-    return Response.json(catalog);
+    const source = catalog.origin === "tdx-live" ? "tdx" : "mock";
+    return Response.json(
+      {
+        source,
+        updatedAt: catalog.fetchedAt,
+        traffic: catalog.segments,
+        origin: catalog.origin,
+        segments: catalog.segments,
+        fetchedAt: catalog.fetchedAt,
+      },
+      {
+        headers: {
+          "Cache-Control": fresh
+            ? "no-store"
+            : "private, max-age=30, stale-while-revalidate=60",
+        },
+      },
+    );
   } catch {
     return Response.json(
       { error: "路況資料載入失敗" },

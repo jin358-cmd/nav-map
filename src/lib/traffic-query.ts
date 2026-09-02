@@ -8,7 +8,8 @@ import { distanceKm } from "@/lib/geo";
 import type { LngLat, MapViewport, TrafficLevel, TrafficSegment } from "@/types/domain";
 
 const LEVEL_WEIGHT: Record<TrafficLevel, number> = {
-  blocked: 4,
+  blocked: 5,
+  severe: 4,
   congested: 3,
   slow: 2,
   smooth: 0,
@@ -75,6 +76,7 @@ export function scoreTraffic(
         (segment.nearby ||
           segment.alongRoute ||
           segment.level === "blocked" ||
+          segment.level === "severe" ||
           segment.level === "congested"),
     )
     .sort((a, b) => {
@@ -104,6 +106,7 @@ export function mapVisibleTraffic(
       segment.nearby ||
       segment.alongRoute ||
       segment.level === "blocked" ||
+      segment.level === "severe" ||
       segment.level === "congested",
   );
   const inView = viewport
@@ -123,6 +126,7 @@ export function mapVisibleTraffic(
     (segment) =>
       segment.alongRoute ||
       segment.level === "blocked" ||
+      segment.level === "severe" ||
       segment.level === "congested" ||
       segment.distanceKm <= CITY_TRAFFIC_PRIORITY_KM,
   );

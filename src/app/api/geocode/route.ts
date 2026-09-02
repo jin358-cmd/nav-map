@@ -47,17 +47,26 @@ async function searchNominatim(
     );
   }
 
-  const response = await fetch(nominatim, {
-    headers: {
-      Accept: "application/json",
-      "Accept-Language": "zh-TW",
-      "User-Agent": USER_AGENT,
-    },
-    cache: "no-store",
-  });
-  if (!response.ok) return [];
-  const raw = (await response.json()) as NominatimRow[];
-  return Array.isArray(raw) ? raw : [];
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8_000);
+  try {
+    const response = await fetch(nominatim, {
+      headers: {
+        Accept: "application/json",
+        "Accept-Language": "zh-TW",
+        "User-Agent": USER_AGENT,
+      },
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    if (!response.ok) return [];
+    const raw = (await response.json()) as NominatimRow[];
+    return Array.isArray(raw) ? raw : [];
+  } catch {
+    return [];
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function toHits(

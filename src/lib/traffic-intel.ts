@@ -4,7 +4,8 @@ import type { RoadIntelItem, TrafficLevel } from "@/types/domain";
 import type { ScoredTrafficSegment } from "@/lib/traffic-query";
 
 const LEVEL_WEIGHT: Record<TrafficLevel, number> = {
-  blocked: 4,
+  blocked: 5,
+  severe: 4,
   congested: 3,
   slow: 2,
   smooth: 0,

@@ -1,3 +1,4 @@
+import "server-only";
 import {
   TDX_API_BASE,
   TDX_PAGE_SIZE,
@@ -27,14 +28,8 @@ export function getTdxCredentials(): {
   clientId: string;
   clientSecret: string;
 } | null {
-  const clientId =
-    process.env.TDX_CLIENT_ID?.trim() ||
-    process.env.NEXT_PUBLIC_TDX_CLIENT_ID?.trim() ||
-    "";
-  const clientSecret =
-    process.env.TDX_CLIENT_SECRET?.trim() ||
-    process.env.NEXT_PUBLIC_TDX_CLIENT_SECRET?.trim() ||
-    "";
+  const clientId = process.env.TDX_CLIENT_ID?.trim() || "";
+  const clientSecret = process.env.TDX_CLIENT_SECRET?.trim() || "";
   if (!clientId || !clientSecret) return null;
   return { clientId, clientSecret };
 }

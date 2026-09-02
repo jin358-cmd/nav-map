@@ -7,12 +7,12 @@ Smart Road Taiwan 已接上 MOTC TDX 臺南市區即時路況，並保留 mock f
 ## Phase 3 做了什麼
 
 - 資料鏈：TDX live（有憑證且三支 API 都成功）→ **MOCK**。沒有 weather 路況 snapshot。
-- 密鑰只在伺服器：`GET /api/traffic`。優先讀 `TDX_CLIENT_*`，`NEXT_PUBLIC_TDX_*` 當別名。
-- 來源標籤：`TDX LIVE` / `MOCK`。HUD 顯示 `CCTV {origin} · 路況 {origin}`。
+- 密鑰只在伺服器：`GET /api/traffic` 讀 `TDX_CLIENT_ID` / `TDX_CLIENT_SECRET`。不可用 `NEXT_PUBLIC_`。
+- 來源標籤：`TDX 即時路況` / `示範路況`。HUD 顯示 `CCTV {origin} · 路況 {origin}`。
 - 獨立圖層：`traffic-source` / `traffic-layer`。舊的 `mock-traffic` 會在 upsert 時清掉。
 - 圖層順序（下→上）：底圖 → 路況線 → CCTV → 青綠路線 → HTML 車輛／事故／災害。
 - 不一次畫全市：附近 8 km、沿線 400 m、壅塞／阻塞優先，zoom cap 約 16／24／32／40。
-- 更新：live cache 90 秒、形狀 cache 15 分鐘、手動「重新整理情報」、可選 90 秒輪詢。不每秒打 TDX。
+- 更新：live cache 60 秒、形狀 cache 15 分鐘、手動「重新整理情報」、60 秒輪詢。拖曳／縮放不重打 TDX。
 - HUD：沿線優先，再取最近的車多／壅塞／阻塞；6 km 外的交流道不會壓過前方路段。
 - 型別：`TrafficSourceType = "city" | "freeway"`。本階段只抓臺南 **city** live。
 
@@ -42,11 +42,12 @@ Join key：`SectionID`。沒有 WKT、少於兩個點、或壅塞級別未知且
 | 1 | 順暢 | smooth |
 | 2 | 車多 | slow |
 | 3 | 壅塞 | congested |
-| 4 / 5 | 嚴重／極度壅塞 | blocked |
+| 4 | 嚴重壅塞 | severe |
+| 5 / -1 | 極度壅塞／封閉 | blocked |
 
-中文名稱（順暢、車多、壅塞、阻塞、封閉）也會對上。時速：≥40 順暢、≥25 車多、≥10 壅塞、更低阻塞。
+中文名稱（順暢、車多、壅塞、嚴重壅塞、阻塞、封閉）也會對上。時速：≥40 順暢、≥25 車多、≥10 壅塞、≥5 嚴重壅塞、更低接近停止。
 
-顏色沿用：順暢青綠、車多琥珀、壅塞橘紅、阻塞紅。
+顏色：順暢綠、車多黃、壅塞橘、嚴重壅塞紅、接近停止深紅。
 
 ## 預留、本階段不做
 

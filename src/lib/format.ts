@@ -33,15 +33,16 @@ export function cctvOriginLabel(origin: CctvDataOrigin) {
 }
 
 export function trafficOriginLabel(origin: TrafficDataOrigin) {
-  if (origin === "tdx-live") return "TDX LIVE";
-  return "MOCK";
+  if (origin === "tdx-live") return "TDX 即時路況";
+  return "示範路況";
 }
 
 export function trafficLevelLabel(level: TrafficLevel) {
   if (level === "smooth") return "順暢";
   if (level === "slow") return "車多";
   if (level === "congested") return "壅塞";
-  return "阻塞";
+  if (level === "severe") return "嚴重壅塞";
+  return "接近停止";
 }
 
 export function formatUpdatedAt(iso: string) {

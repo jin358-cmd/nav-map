@@ -395,8 +395,11 @@ export function DrivingApp() {
 function Legend() {
   const items = [
     { color: "bg-[#3ee0ff]", label: "導航路線" },
-    { color: "bg-[#ffb020]", label: "車多" },
-    { color: "bg-[#ff6b35]", label: "壅塞" },
+    { color: "bg-[#22c55e]", label: "順暢" },
+    { color: "bg-[#facc15]", label: "車多" },
+    { color: "bg-[#f97316]", label: "壅塞" },
+    { color: "bg-[#ef4444]", label: "嚴重壅塞" },
+    { color: "bg-[#7f1d1d]", label: "接近停止" },
     { color: "bg-[#c084fc]", label: "CCTV" },
     { color: "bg-[#ff3b3b]", label: "事故" },
     { color: "bg-[#ff9f1c]", label: "災害" },

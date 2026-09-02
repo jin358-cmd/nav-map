@@ -1,7 +1,5 @@
 import type { CctvCamera, TrafficSegment } from "@/types/domain";
 
-export { isTdxConfigured } from "./tdx-client";
-
 export async function fetchTainanCctv(): Promise<CctvCamera[]> {
   const { fetchCctvCatalog } = await import("@/services/cctv");
   const catalog = await fetchCctvCatalog();

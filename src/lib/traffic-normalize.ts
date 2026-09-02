@@ -19,7 +19,36 @@ export type TdxSectionRow = {
   SectionID?: string;
   SectionName?: string;
   RoadName?: string;
+  Direction?: string;
+  RoadDirection?: string;
 };
+
+export type TrafficSegmentSeed = {
+  id: string;
+  name: string;
+  level: TrafficLevel;
+  coordinates: [number, number][];
+  sourceType: TrafficSourceType;
+  dataOrigin: TrafficDataOrigin;
+  speedKmh?: number;
+  travelTimeSec?: number;
+  congestionLabel?: string;
+  updatedAt?: string;
+  direction?: string;
+};
+
+export function finalizeTrafficSegment(
+  seed: TrafficSegmentSeed,
+): TrafficSegment {
+  return {
+    ...seed,
+    roadName: seed.name,
+    direction: seed.direction?.trim() || "",
+    congestionLevel: seed.level,
+    source: seed.dataOrigin === "tdx-live" ? "tdx" : "mock",
+    averageSpeed: seed.speedKmh,
+  };
+}
 
 export type TdxShapeRow = {
   SectionID?: string;
@@ -71,6 +100,7 @@ export function classifyBySpeed(speed: number | undefined): TrafficLevel | null 
   if ((speed as number) >= 40) return "smooth";
   if ((speed as number) >= 25) return "slow";
   if ((speed as number) >= 10) return "congested";
+  if ((speed as number) >= 5) return "severe";
   return "blocked";
 }
 
@@ -125,18 +155,22 @@ export function joinTrafficSegments({
         ? Number(live.TravelTime)
         : undefined;
 
-    segments.push({
-      id,
-      name,
-      level,
-      coordinates,
-      sourceType,
-      dataOrigin: origin,
-      speedKmh: speed,
-      travelTimeSec: travelTime,
-      congestionLabel: String(live.CongestionLevel ?? "").trim() || undefined,
-      updatedAt: live.DataCollectTime,
-    });
+    segments.push(
+      finalizeTrafficSegment({
+        id,
+        name,
+        level,
+        coordinates,
+        sourceType,
+        dataOrigin: origin,
+        speedKmh: speed,
+        travelTimeSec: travelTime,
+        congestionLabel: String(live.CongestionLevel ?? "").trim() || undefined,
+        updatedAt: live.DataCollectTime,
+        direction:
+          meta?.Direction?.trim() || meta?.RoadDirection?.trim() || "",
+      }),
+    );
   }
   return segments;
 }
@@ -146,8 +180,10 @@ function classifyByName(value: string | number | undefined): TrafficLevel | null
   const text = String(value).trim();
   if (!text) return null;
   if (/封閉|中斷/.test(text)) return "blocked";
-  if (/極度|阻塞/.test(text)) return "blocked";
-  if (/嚴重壅塞|壅塞|回堵/.test(text)) return "congested";
+  if (/極度|接近停止|停止/.test(text)) return "blocked";
+  if (/阻塞/.test(text)) return "blocked";
+  if (/嚴重壅塞/.test(text)) return "severe";
+  if (/壅塞|回堵/.test(text)) return "congested";
   if (/車多|緩慢|遲滯/.test(text)) return "slow";
   if (/順暢|暢通/.test(text)) return "smooth";
   return null;
@@ -155,7 +191,8 @@ function classifyByName(value: string | number | undefined): TrafficLevel | null
 
 function classifyByCode(value: number | null): TrafficLevel | null {
   if (value === null) return null;
-  if (value === -1 || value >= 4) return "blocked";
+  if (value === -1 || value >= 5) return "blocked";
+  if (value === 4) return "severe";
   if (value === 1) return "smooth";
   if (value === 2) return "slow";
   if (value === 3) return "congested";

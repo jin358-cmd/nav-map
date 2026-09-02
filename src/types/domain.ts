@@ -57,18 +57,29 @@ export type MapViewport = {
   };
 };
 
-export type TrafficLevel = "smooth" | "slow" | "congested" | "blocked";
+export type TrafficLevel =
+  | "smooth"
+  | "slow"
+  | "congested"
+  | "severe"
+  | "blocked";
 export type TrafficSourceType = "city" | "freeway";
 export type TrafficDataOrigin = "tdx-live" | "mock";
+export type TrafficPublishSource = "tdx" | "mock";
 
 export type TrafficSegment = {
   id: string;
   name: string;
+  roadName: string;
+  direction: string;
   level: TrafficLevel;
+  congestionLevel: TrafficLevel;
   coordinates: [number, number][];
   sourceType: TrafficSourceType;
   dataOrigin: TrafficDataOrigin;
+  source: TrafficPublishSource;
   speedKmh?: number;
+  averageSpeed?: number;
   travelTimeSec?: number;
   congestionLabel?: string;
   updatedAt?: string;

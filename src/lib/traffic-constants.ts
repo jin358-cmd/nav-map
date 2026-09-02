@@ -7,7 +7,7 @@ export const CITY_TRAFFIC_MOVE_REFRESH_KM = 0.35;
 export const CITY_TRAFFIC_ZOOM_REFRESH_DELTA = 0.55;
 
 /** Live TravelSpeed / CongestionLevel refresh. */
-export const TRAFFIC_LIVE_CACHE_MS = 90 * 1000;
+export const TRAFFIC_LIVE_CACHE_MS = 60 * 1000;
 /** Section metadata + WKT shapes change slowly. */
 export const TRAFFIC_SHAPE_CACHE_MS = 15 * 60 * 1000;
 

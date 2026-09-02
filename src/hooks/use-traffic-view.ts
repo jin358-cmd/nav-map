@@ -31,14 +31,29 @@ function quantizeZoom(zoom: number) {
 }
 
 async function fetchTrafficCatalog(force = false): Promise<TrafficCatalog> {
-  const response = await fetch(
-    force ? "/api/traffic?fresh=1" : "/api/traffic",
-    { cache: "no-store" },
-  );
-  if (!response.ok) {
-    throw new Error("traffic catalog failed");
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), 12_000);
+  try {
+    const response = await fetch(
+      force ? "/api/traffic?fresh=1" : "/api/traffic",
+      { cache: "no-store", signal: controller.signal },
+    );
+    if (!response.ok) {
+      throw new Error("traffic catalog failed");
+    }
+    const data = (await response.json()) as TrafficCatalog & {
+      source?: string;
+      updatedAt?: string;
+      traffic?: TrafficCatalog["segments"];
+    };
+    return {
+      origin: data.origin,
+      segments: data.segments ?? data.traffic ?? [],
+      fetchedAt: data.fetchedAt ?? data.updatedAt ?? new Date().toISOString(),
+    };
+  } finally {
+    window.clearTimeout(timer);
   }
-  return (await response.json()) as TrafficCatalog;
 }
 
 export function useTrafficView({

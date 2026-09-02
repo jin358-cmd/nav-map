@@ -1,9 +1,13 @@
+import "server-only";
 import { TAINAN_TRAFFIC } from "@/data/mock-traffic";
 import {
   TRAFFIC_LIVE_CACHE_MS,
   TRAFFIC_SHAPE_CACHE_MS,
 } from "@/lib/traffic-constants";
-import { joinTrafficSegments } from "@/lib/traffic-normalize";
+import {
+  finalizeTrafficSegment,
+  joinTrafficSegments,
+} from "@/lib/traffic-normalize";
 import {
   fetchTainanCityLive,
   fetchTainanCitySections,
@@ -47,13 +51,17 @@ export async function loadTainanTraffic(
 }
 
 function fromMock(): TrafficCatalog {
+  const now = new Date().toISOString();
   return {
     origin: "mock",
-    segments: TAINAN_TRAFFIC.map((segment) => ({
-      ...segment,
-      dataOrigin: "mock",
-    })),
-    fetchedAt: new Date().toISOString(),
+    segments: TAINAN_TRAFFIC.map((segment) =>
+      finalizeTrafficSegment({
+        ...segment,
+        dataOrigin: "mock",
+        updatedAt: now,
+      }),
+    ),
+    fetchedAt: now,
   };
 }
 
@@ -82,7 +90,10 @@ async function fromTdxLive(force: boolean): Promise<TrafficCatalog | null> {
       fetchedAt: new Date().toISOString(),
     };
   } catch (error) {
-    console.warn("TDX live traffic fallback to mock", error);
+    console.warn(
+      "TDX live traffic fallback to mock",
+      error instanceof Error ? error.message : "unknown error",
+    );
     return null;
   }
 }

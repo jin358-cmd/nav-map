@@ -14,10 +14,11 @@ import {
 import type { TrafficSegment } from "@/types/domain";
 
 const TRAFFIC_COLOR: Record<string, string> = {
-  smooth: "#4ad4a8",
-  slow: "#ffb020",
-  congested: MAP_COLORS.congestion,
-  blocked: MAP_COLORS.accident,
+  smooth: "#22c55e",
+  slow: "#facc15",
+  congested: "#f97316",
+  severe: "#ef4444",
+  blocked: "#7f1d1d",
 };
 
 const TRAFFIC_WIDTH: ExpressionSpecification = [
@@ -25,9 +26,33 @@ const TRAFFIC_WIDTH: ExpressionSpecification = [
   ["linear"],
   ["zoom"],
   12,
-  ["match", ["get", "level"], "blocked", 4.4, "congested", 4, "slow", 3.5, 2],
+  [
+    "match",
+    ["get", "level"],
+    "blocked",
+    4.6,
+    "severe",
+    4.3,
+    "congested",
+    4,
+    "slow",
+    3.5,
+    2,
+  ],
   17,
-  ["match", ["get", "level"], "blocked", 11, "congested", 10, "slow", 8.5, 5],
+  [
+    "match",
+    ["get", "level"],
+    "blocked",
+    11,
+    "severe",
+    10.4,
+    "congested",
+    10,
+    "slow",
+    8.5,
+    5,
+  ],
 ];
 
 const TRAFFIC_OPACITY: ExpressionSpecification = [
@@ -47,6 +72,8 @@ const TRAFFIC_COLOR_EXPR: ExpressionSpecification = [
   TRAFFIC_COLOR.slow,
   "congested",
   TRAFFIC_COLOR.congested,
+  "severe",
+  TRAFFIC_COLOR.severe,
   "blocked",
   TRAFFIC_COLOR.blocked,
   TRAFFIC_COLOR.slow,
