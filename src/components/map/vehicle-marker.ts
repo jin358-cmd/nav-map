@@ -4,17 +4,8 @@ export function createVehicleMarkerElement(): HTMLDivElement {
   root.innerHTML = `
     <div class="vehicle-marker__halo"></div>
     <div class="vehicle-marker__triangle" aria-hidden="true">
-      <svg viewBox="0 0 36 40" width="22" height="24">
-        <defs>
-          <linearGradient id="loc-tri" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stop-color="#fff3a1"/>
-            <stop offset="42%" stop-color="#facc15"/>
-            <stop offset="100%" stop-color="#ca8a04"/>
-          </linearGradient>
-        </defs>
-        <ellipse cx="18" cy="36" rx="7" ry="2.4" fill="#facc15" opacity="0.35"/>
-        <path d="M18 3 L32 34 L18 26 L4 34 Z" fill="url(#loc-tri)" stroke="#fef08a" stroke-width="1.6" stroke-linejoin="round"/>
-        <path d="M18 10 L22 24 L18 21 L14 24 Z" fill="#fff7c2" opacity="0.7"/>
+      <svg viewBox="0 0 24 28" width="16" height="19">
+        <path d="M12 2 L22 25 L12 19 L2 25 Z" fill="#facc15" stroke="#fef08a" stroke-width="1.8" stroke-linejoin="round"/>
       </svg>
     </div>
   `;

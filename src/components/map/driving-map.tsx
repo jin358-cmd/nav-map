@@ -144,6 +144,7 @@ function createDestinationPin(label: string): HTMLDivElement {
     <span class="destination-beacon" aria-hidden="true">
       <span class="destination-beacon__ring"></span>
       <span class="destination-beacon__ring"></span>
+      <span class="destination-beacon__ring"></span>
       <span class="destination-beacon__dot"></span>
     </span>
     <span class="destination-pin__glow"></span>

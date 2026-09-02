@@ -1,4 +1,8 @@
-import type { GeoJSONSource, Map as MapLibreMap } from "maplibre-gl";
+import type {
+  ExpressionSpecification,
+  GeoJSONSource,
+  Map as MapLibreMap,
+} from "maplibre-gl";
 import {
   approachLookaheadMeters,
   guidanceArrowsAlong,
@@ -11,7 +15,7 @@ export const GUIDANCE_PATH_SOURCE_ID = "guidance-path";
 export const GUIDANCE_LAYER_ID = "guidance-arrows-layer";
 export const GUIDANCE_PATH_LAYER_ID = "guidance-path-layer";
 export const GUIDANCE_PATH_GLOW_ID = "guidance-path-glow";
-const SIGN_IMAGE_ID = "guidance-signboard-3d-v1";
+const ARROW_IMAGE_ID = "guidance-hover-arrow-3d-v2";
 
 function emptyCollection() {
   return { type: "FeatureCollection" as const, features: [] };
@@ -25,8 +29,30 @@ function emptyLine() {
   };
 }
 
-function createDirectionSignImage() {
-  const size = 192;
+function drawPolygon(
+  ctx: CanvasRenderingContext2D,
+  points: [number, number][],
+  fill: string,
+  stroke?: string,
+  lineWidth = 3,
+) {
+  ctx.beginPath();
+  ctx.moveTo(points[0][0], points[0][1]);
+  for (const point of points.slice(1)) ctx.lineTo(point[0], point[1]);
+  ctx.closePath();
+  ctx.fillStyle = fill;
+  ctx.fill();
+  if (stroke) {
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = lineWidth;
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+    ctx.stroke();
+  }
+}
+
+function createHoverArrowImage() {
+  const size = 256;
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
@@ -37,74 +63,132 @@ function createDirectionSignImage() {
   ctx.translate(size / 2, size / 2);
 
   ctx.save();
-  ctx.fillStyle = "rgba(120, 53, 15, 0.28)";
+  ctx.fillStyle = "rgba(120, 53, 15, 0.32)";
   ctx.beginPath();
-  ctx.ellipse(0, 78, 34, 10, 0, 0, Math.PI * 2);
+  ctx.ellipse(8, 98, 46, 12, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 
-  ctx.save();
-  ctx.fillStyle = "#3f3f46";
-  ctx.fillRect(-5, 46, 10, 34);
-  ctx.fillStyle = "#71717a";
-  ctx.fillRect(-3.5, 46, 7, 34);
-  ctx.restore();
+  const depth: [number, number] = [14, 16];
+  const front: [number, number][] = [
+    [0, -92],
+    [78, 18],
+    [32, 18],
+    [32, 58],
+    [-32, 58],
+    [-32, 18],
+    [-78, 18],
+  ];
+  const back = front.map(([x, y]) => [x + depth[0], y + depth[1]] as [number, number]);
 
-  const drawBoard = (
-    offsetX: number,
-    offsetY: number,
-    fill: string,
-    stroke: string,
-    lineWidth: number,
-  ) => {
-    ctx.beginPath();
-    ctx.moveTo(offsetX, -78 + offsetY);
-    ctx.lineTo(58 + offsetX, 8 + offsetY);
-    ctx.lineTo(26 + offsetX, 8 + offsetY);
-    ctx.lineTo(26 + offsetX, 44 + offsetY);
-    ctx.lineTo(-26 + offsetX, 44 + offsetY);
-    ctx.lineTo(-26 + offsetX, 8 + offsetY);
-    ctx.lineTo(-58 + offsetX, 8 + offsetY);
-    ctx.closePath();
-    ctx.fillStyle = fill;
-    ctx.fill();
-    ctx.strokeStyle = stroke;
-    ctx.lineWidth = lineWidth;
-    ctx.lineJoin = "round";
-    ctx.stroke();
-  };
+  drawPolygon(ctx, [
+    back[0],
+    back[1],
+    front[1],
+    front[0],
+  ], "#92400e");
+  drawPolygon(ctx, [
+    back[1],
+    back[2],
+    front[2],
+    front[1],
+  ], "#a16207");
+  drawPolygon(ctx, [
+    back[2],
+    back[3],
+    front[3],
+    front[2],
+  ], "#854d0e");
+  drawPolygon(ctx, [
+    back[3],
+    back[4],
+    front[4],
+    front[3],
+  ], "#713f12");
+  drawPolygon(ctx, [
+    back[0],
+    back[6],
+    front[6],
+    front[0],
+  ], "#ca8a04");
 
-  drawBoard(6, 8, "rgba(69, 26, 3, 0.55)", "rgba(41, 16, 5, 0.4)", 3);
-  drawBoard(0, 0, "#facc15", "#fef08a", 4);
+  drawPolygon(ctx, front, "#facc15", "#fff7c2", 5);
+
+  drawPolygon(
+    ctx,
+    [
+      [0, -70],
+      [28, -2],
+      [12, -2],
+      [12, 38],
+      [-12, 38],
+      [-12, -2],
+      [-28, -2],
+    ],
+    "rgba(254, 249, 195, 0.92)",
+  );
 
   ctx.beginPath();
-  ctx.moveTo(0, -66);
-  ctx.lineTo(18, -10);
-  ctx.lineTo(8, -10);
-  ctx.lineTo(8, 30);
-  ctx.lineTo(-8, 30);
-  ctx.lineTo(-8, -10);
-  ctx.lineTo(-18, -10);
-  ctx.closePath();
-  ctx.fillStyle = "rgba(254, 249, 195, 0.92)";
-  ctx.fill();
-
-  ctx.beginPath();
-  ctx.moveTo(-22, 8);
-  ctx.lineTo(-22, 40);
-  ctx.lineTo(22, 40);
-  ctx.strokeStyle = "rgba(161, 98, 7, 0.45)";
-  ctx.lineWidth = 2;
+  ctx.moveTo(0, -88);
+  ctx.lineTo(14, -28);
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.55)";
+  ctx.lineWidth = 4;
+  ctx.lineCap = "round";
   ctx.stroke();
 
   return ctx.getImageData(0, 0, size, size);
 }
 
 function ensureImages(map: MapLibreMap) {
-  if (map.hasImage(SIGN_IMAGE_ID)) return;
-  const image = createDirectionSignImage();
+  if (map.hasImage(ARROW_IMAGE_ID)) return;
+  const image = createHoverArrowImage();
   if (!image) return;
-  map.addImage(SIGN_IMAGE_ID, image, { pixelRatio: 2 });
+  map.addImage(ARROW_IMAGE_ID, image, { pixelRatio: 2 });
+}
+
+function ensureArrowLayer(map: MapLibreMap) {
+  const size = [
+    "interpolate",
+    ["linear"],
+    ["zoom"],
+    14,
+    1.35,
+    17,
+    2.05,
+    19,
+    2.7,
+  ] as ExpressionSpecification;
+
+  if (!map.getLayer(GUIDANCE_LAYER_ID)) {
+    map.addLayer({
+      id: GUIDANCE_LAYER_ID,
+      type: "symbol",
+      source: GUIDANCE_SOURCE_ID,
+      layout: {
+        "icon-image": ARROW_IMAGE_ID,
+        "icon-size": size,
+        "icon-anchor": "bottom",
+        "icon-offset": [0, -18],
+        "icon-rotate": ["get", "bearing"],
+        "icon-rotation-alignment": "map",
+        "icon-pitch-alignment": "viewport",
+        "icon-allow-overlap": true,
+        "icon-ignore-placement": true,
+      },
+      paint: {
+        "icon-opacity": ["get", "opacity"],
+        "icon-halo-color": "#fef08a",
+        "icon-halo-width": 2,
+      },
+    });
+    return;
+  }
+
+  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-image", ARROW_IMAGE_ID);
+  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-size", size);
+  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-anchor", "bottom");
+  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-offset", [0, -18]);
+  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-pitch-alignment", "viewport");
 }
 
 export function upsertGuidanceArrows(
@@ -121,7 +205,7 @@ export function upsertGuidanceArrows(
   const ahead = show
     ? sliceRouteAhead(route, routeMeters, approachLookaheadMeters(distanceToNext))
     : [];
-  const arrows = show ? guidanceArrowsAlong(ahead, 16, phase) : [];
+  const arrows = show ? guidanceArrowsAlong(ahead, 22, phase) : [];
 
   const pathData = ahead.length >= 2
     ? {
@@ -138,7 +222,7 @@ export function upsertGuidanceArrows(
       id: index,
       properties: {
         bearing: arrow.bearing,
-        opacity: arrow.opacity,
+        opacity: 0.55 + arrow.opacity * 0.45,
       },
       geometry: {
         type: "Point" as const,
@@ -190,27 +274,7 @@ export function upsertGuidanceArrows(
     });
   }
 
-  if (!map.getLayer(GUIDANCE_LAYER_ID)) {
-    map.addLayer({
-      id: GUIDANCE_LAYER_ID,
-      type: "symbol",
-      source: GUIDANCE_SOURCE_ID,
-      layout: {
-        "icon-image": SIGN_IMAGE_ID,
-        "icon-size": ["interpolate", ["linear"], ["zoom"], 15, 0.72, 19, 1.35],
-        "icon-rotate": ["get", "bearing"],
-        "icon-rotation-alignment": "map",
-        "icon-pitch-alignment": "viewport",
-        "icon-allow-overlap": true,
-        "icon-ignore-placement": true,
-      },
-      paint: {
-        "icon-opacity": ["get", "opacity"],
-        "icon-halo-color": "#fef08a",
-        "icon-halo-width": 1.4,
-      },
-    });
-  }
+  ensureArrowLayer(map);
 
   for (const id of ["demo-route-glow", "demo-route-line"]) {
     if (map.getLayer(id)) map.moveLayer(id);
