@@ -8,7 +8,7 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
-import { Heart, History, Loader2, MapPin, Search, Trash2, X } from "lucide-react";
+import { Heart, History, Loader2, MapPin, Mic, Search, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TAIWAN_LANDMARKS } from "@/data/landmarks";
@@ -27,6 +27,7 @@ import {
   removeFavorite,
   subscribeFavorites,
 } from "@/lib/favorites";
+import { useSpeechToText } from "@/hooks/use-speech-to-text";
 import { cn } from "@/lib/utils";
 import { searchAddresses } from "@/services/routing";
 import type { GeocodeHit, LngLat } from "@/types/domain";
@@ -62,6 +63,7 @@ export function AddressSearch({
   );
   const needle = query.trim();
   const submitFirstHitRef = useRef(false);
+  const speechStopRef = useRef<() => void>(() => undefined);
   const biasBucket = useMemo(
     () => ({
       lng: Math.round(bias.lng * 50) / 50,
@@ -72,6 +74,7 @@ export function AddressSearch({
 
   const selectHit = useCallback(
     (hit: GeocodeHit) => {
+      speechStopRef.current();
       setQuery(hit.name);
       setOpen(false);
       rememberAddress(hit);
@@ -79,6 +82,18 @@ export function AddressSearch({
     },
     [onSelect],
   );
+
+  const handleVoiceTranscript = useCallback((text: string, isFinal: boolean) => {
+    setQuery(text);
+    setOpen(true);
+    setComposing(!isFinal);
+  }, []);
+
+  const speech = useSpeechToText(handleVoiceTranscript);
+
+  useEffect(() => {
+    speechStopRef.current = speech.stop;
+  }, [speech.stop]);
 
   useEffect(() => {
     if (composing || needle.length < 2) return;
@@ -146,10 +161,30 @@ export function AddressSearch({
               }
               if (needle.length >= 2) submitFirstHitRef.current = true;
             }}
-            placeholder="地址、店家、公司、品牌或縮寫"
+            placeholder={speech.listening ? "正在聽…請說出目的地" : "地址、店家、公司、品牌或縮寫"}
             aria-label="目的地搜尋"
             className="h-10 border-0 bg-transparent px-1 text-sm text-white shadow-none placeholder:text-zinc-500 focus-visible:ring-0"
           />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label={speech.listening ? "停止語音輸入" : "語音搜尋"}
+            aria-pressed={speech.listening}
+            title={speech.supported ? "語音轉文字" : "此瀏覽器不支援語音輸入"}
+            onClick={() => {
+              setOpen(true);
+              speech.toggle();
+            }}
+            className={cn(
+              "size-9 shrink-0 touch-manipulation",
+              speech.listening
+                ? "bg-cyan-400/20 text-cyan-200 hover:bg-cyan-400/30 hover:text-white"
+                : "text-zinc-300 hover:bg-white/10 hover:text-white",
+            )}
+          >
+            <Mic className={cn("size-4", speech.listening && "animate-pulse")} />
+          </Button>
           {query ? (
             <Button
               type="button"
@@ -157,6 +192,7 @@ export function AddressSearch({
               size="icon-sm"
               aria-label="清除"
               onClick={() => {
+                speech.stop();
                 setQuery("");
                 setHits([]);
                 setSearchError(null);
@@ -173,8 +209,13 @@ export function AddressSearch({
       {open ? (
         <div className="mt-1.5 overflow-hidden rounded-2xl border border-white/10 bg-black/78 shadow-xl backdrop-blur-xl">
           <p className="px-3 pt-2 text-[11px] text-zinc-500">
-            全市約 20 公里 · 店家／公司／品牌／縮寫 · 長按地圖自訂位置
+            {speech.listening
+              ? "正在聽取語音…說完後會自動搜尋"
+              : "全市約 20 公里 · 店家／公司／品牌／縮寫 · 長按地圖自訂位置"}
           </p>
+          {speech.error ? (
+            <p className="px-3 pt-1 text-[11px] text-amber-200">{speech.error}</p>
+          ) : null}
           {needle.length < 2 && history.length ? (
             <div className="px-1 pt-1">
               <div className="flex items-center justify-between px-2">
