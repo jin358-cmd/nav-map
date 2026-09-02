@@ -10,9 +10,11 @@ import { RoadInformationCard } from "@/components/overlay/road-information-card"
 import { RoutePreview } from "@/components/overlay/route-preview";
 import { YouTubeMusicPlayer } from "@/components/overlay/youtube-music-player";
 import { useCctvView } from "@/hooks/use-cctv-view";
+import { useDisasterView } from "@/hooks/use-disaster-view";
 import { useSpeedEnforcementView } from "@/hooks/use-speed-enforcement-view";
 import { useTrafficView } from "@/hooks/use-traffic-view";
 import { roadIntelFromCameras } from "@/lib/cctv-intel";
+import { deriveDisasterIntel } from "@/lib/disaster-intel";
 import { DEMO_VEHICLE } from "@/lib/constants";
 import { distanceKm } from "@/lib/geo";
 import { nextIntersectionStep } from "@/lib/osrm-maneuver";
@@ -27,7 +29,6 @@ import {
   fetchAccidentReports,
   fetchAheadIntel,
   fetchDemoRoute,
-  fetchDisasterAlerts,
   fetchNavigationManeuver,
   planDrivingRoute,
   requestCurrentPosition,
@@ -37,7 +38,6 @@ import type {
   AccidentReport,
   CameraMode,
   CctvCamera,
-  DisasterAlert,
   GeocodeHit,
   GpsStatus,
   MapViewport,
@@ -69,7 +69,6 @@ export function DrivingApp() {
   const [gpsStatus, setGpsStatus] = useState<GpsStatus>("idle");
   const [viewport, setViewport] = useState<MapViewport | null>(null);
   const [refreshNonce, setRefreshNonce] = useState(0);
-  const [disasters, setDisasters] = useState<DisasterAlert[]>([]);
   const [accidents, setAccidents] = useState<AccidentReport[]>([]);
   const [route, setRoute] = useState<[number, number][]>([]);
   const [demoRoute, setDemoRoute] = useState<[number, number][]>([]);
@@ -162,21 +161,26 @@ export function DrivingApp() {
     refreshNonce,
   });
 
+  const {
+    alerts: disasters,
+    origin: disasterOrigin,
+    error: disasterError,
+    reload: reloadDisasters,
+  } = useDisasterView(refreshNonce);
+
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
       try {
-        const [disasterRows, accidentRows, routeLine, nav, ahead] =
+        const [accidentRows, routeLine, nav, ahead] =
           await Promise.all([
-            fetchDisasterAlerts(),
             fetchAccidentReports(),
             fetchDemoRoute(),
             fetchNavigationManeuver(),
             fetchAheadIntel(),
           ]);
         if (cancelled) return;
-        setDisasters(disasterRows);
         setAccidents(accidentRows);
         setDemoRoute(routeLine);
         setRoute(routeLine);
@@ -218,14 +222,22 @@ export function DrivingApp() {
     const cameras = roadIntelFromCameras(preview, [], 2);
     const trafficItem = deriveTrafficIntel(trafficScored);
     const extras = baseIntel.filter(
-      (item) => item.kind !== "cctv" && item.kind !== "congestion",
+      (item) =>
+        item.kind !== "cctv" &&
+        item.kind !== "congestion" &&
+        item.kind !== "disaster",
     );
+    const disasterItems = deriveDisasterIntel(disasters, {
+      lng: vehicle.lng,
+      lat: vehicle.lat,
+    });
     return [
       ...(trafficItem ? [trafficItem] : []),
       ...cameras,
+      ...disasterItems,
       ...extras,
     ];
-  }, [baseIntel, preview, trafficScored]);
+  }, [baseIntel, disasters, preview, trafficScored, vehicle.lat, vehicle.lng]);
 
   const searchBias = useMemo(
     () => ({ lng: vehicle.lng, lat: vehicle.lat }),
@@ -345,7 +357,8 @@ export function DrivingApp() {
     reload();
     reloadTraffic();
     reloadSpeedEnforcement();
-  }, [reload, reloadSpeedEnforcement, reloadTraffic]);
+    reloadDisasters();
+  }, [reload, reloadDisasters, reloadSpeedEnforcement, reloadTraffic]);
 
   return (
     <div className="relative h-dvh w-full overflow-hidden overscroll-none bg-[#0b0d11] text-zinc-100">
@@ -451,6 +464,7 @@ export function DrivingApp() {
           items={intel}
           origin={origin}
           trafficOrigin={trafficOrigin}
+          disasterOrigin={disasterOrigin}
           emptyHint="附近 8 公里內尚無路況或 CCTV 情報。"
           onSelectCctv={selectCamera}
           musicOpen={musicOpen}
@@ -466,9 +480,9 @@ export function DrivingApp() {
           {loadError}
         </div>
       ) : null}
-      {cctvError || trafficError || speedEnforcementError ? (
+      {cctvError || trafficError || speedEnforcementError || disasterError ? (
         <div className="pointer-events-none absolute top-[max(11rem,calc(env(safe-area-inset-top)+10rem))] left-1/2 z-20 -translate-x-1/2 rounded-xl border border-amber-300/25 bg-black/65 px-3 py-2 text-xs text-amber-100">
-          {cctvError ?? trafficError ?? speedEnforcementError}
+          {cctvError ?? trafficError ?? speedEnforcementError ?? disasterError}
         </div>
       ) : null}
     </div>

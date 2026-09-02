@@ -2,7 +2,7 @@
 
 台灣智慧駕駛地圖＋即時道路情報平台。產品定位是 **駕駛視角的道路情報**，不是 Google Maps 克隆。
 
-第一階段 Prototype 以 **臺南市區** 為示範範圍（中正路北上，民生路口右轉往臺南火車站）。Phase 2 已把 weather 專案的 CCTV 篩選／距離／city+freeway 模型移植到 MapLibre Driving HUD。Phase 3 已接 TDX 臺南市區即時路況，無憑證或 live 失敗時走 mock。災害標記仍是 mock。
+第一階段 Prototype 以 **臺南市區** 為示範範圍（中正路北上，民生路口右轉往臺南火車站）。Phase 2 已把 weather 專案的 CCTV 篩選／距離／city+freeway 模型移植到 MapLibre Driving HUD。Phase 3 已接 TDX 臺南市區即時路況，無憑證或 live 失敗時走 mock。Phase 4 已接 NCDR 民生示警，feed 失敗時走 mock。
 
 ## 技術架構
 
@@ -19,20 +19,21 @@
 
 ```
 src/
-  app/                      App Router、MapLibre worker、/api/traffic、/api/speed-enforcement
+  app/                      App Router、MapLibre worker、/api/traffic、/api/disasters、/api/speed-enforcement
   components/
     driving/                全螢幕駕駛 HUD 組合
     map/                    MapLibre、Vehicle Marker、控制鈕
     overlay/                導航列、道路情報卡、CCTV 卡
     ui/                     shadcn 元件
   data/                     mock 交通／災害、CCTV snapshot（cctv-fallback.json）
-  hooks/                    useCctvView、useTrafficView
+  hooks/                    useCctvView、useTrafficView、useDisasterView
   services/
     cctv.ts                 TDX → snapshot → mock
     tdx-client.ts           MOTC TDX token 與 GET
     traffic.ts              即時路況 live → mock
     speed-enforcement.ts    TGOS 鄰近測速執法設置點
-    disaster-api.ts         預留防災 API（Phase 4）
+    disaster-api.ts         NCDR 即時示警 live → mock
+    ncdr-client.ts          民生示警公開／會員 feed
     geolocation.ts          瀏覽器 GPS
   lib/                      地圖樣式、CCTV／路況圖層與評分
   types/                    領域型別
@@ -84,7 +85,8 @@ npm start
 - CCTV：獨立 `cctv-source` / `cctv-layer`，依 1 km／8 km／zoom 顯示，點擊底部 HUD
 - 即時路況：獨立 `traffic-source` / `traffic-layer`，TDX live 或 MOCK 後備
 - 測速執法：警政署政府開放資料免金鑰 CSV，亦支援 TGOS 環域 API，依地圖中心載入 3–10 公里內點位與速限
-- Mock Disaster / 事故標記
+- 災害示警：NCDR live 或 MOCK 後備（積水／封路／地震／強風）
+- Mock 事故標記
 - 頂部地址搜尋：戶政門牌優先、地政資料交叉比對，並保留最近 6 筆目的地
 - 點確認後進入駕駛畫面，最上方只顯示下一個路口距離
 - 底部狀態列可開啟 YouTube Music 簡易播放器
@@ -93,12 +95,15 @@ npm start
 
 未設定 TDX 金鑰時：CCTV 走本地 SNAPSHOT（來自 weather 的 city／freeway JSON），路況走臺南示範線，HUD 顯示「示範路況」。金鑰請放伺服器端 `TDX_CLIENT_ID` / `TDX_CLIENT_SECRET`（不可用 `NEXT_PUBLIC_`），由 `/api/traffic` 伺服器端打 TDX。憑證有效時 HUD 顯示「TDX 即時路況」。live cache 與前端輪詢約 **60 秒**；拖曳／縮放地圖不會重打 TDX。token 失敗、timeout、401／429／500 或資料異常時自動 fallback mock，不把密鑰或堆疊傳給瀏覽器。
 
+災害示警由 `/api/disasters` 抓 NCDR 民生示警公開 JSON（免金鑰）。可選填伺服器端 `NCDR_API_KEY` 走會員 webapi。HUD 顯示「NCDR 即時災害」或「示範災害」。live cache 與前端輪詢約 **60 秒**；feed 逾時或解析失敗時 fallback mock。
+
 測速點預設使用警政署在[政府資料開放平臺](https://data.gov.tw/dataset/7320)發布的免金鑰 CSV，因此公開網站可直接顯示。專案內附官方資料快照，來源站逾時時仍可正常載入；執行 `npm run update:speed-enforcement` 可更新快照。若另有 `TGOS_THEME_API_KEY`，會優先使用[內政部主題 API](https://data.tgos.tw/)的「測速執法設置點」（主題 ID `kJqZSMsB`），失敗時自動回到公開資料。環域查詢半徑依縮放層級為 3、6 或 10 公里；查詢結果快取 10 分鐘，公開全臺清單快取 6 小時。
 
 詳見 [`docs/PHASE-3-TRAFFIC.md`](docs/PHASE-3-TRAFFIC.md)。
 
 Phase 2 對照報告：[`docs/PHASE-2-CCTV.md`](docs/PHASE-2-CCTV.md)。  
-Phase 3 路況說明：[`docs/PHASE-3-TRAFFIC.md`](docs/PHASE-3-TRAFFIC.md)。
+Phase 3 路況說明：[`docs/PHASE-3-TRAFFIC.md`](docs/PHASE-3-TRAFFIC.md)。  
+Phase 4 災害說明：[`docs/PHASE-4-DISASTERS.md`](docs/PHASE-4-DISASTERS.md)。
 
 ## Future Roadmap
 
@@ -108,8 +113,8 @@ Phase 3 路況說明：[`docs/PHASE-3-TRAFFIC.md`](docs/PHASE-3-TRAFFIC.md)。
 **Phase 3：即時交通（本階段）**  
 TDX 臺南市區 Live + Section + SectionShape，依壅塞級別／時速上色；無憑證或失敗時保留 mock。
 
-**Phase 4：災害資訊**  
-NCDR 或地方防災 API 取代 mock 積水／封路／強風標記。
+**Phase 4：災害資訊（本階段）**  
+NCDR 民生示警 JSON feed，過濾臺南駕駛相關示警；feed 失敗時保留 mock。
 
 **Phase 5：路線規劃（部分完成）**  
 已可用地址／地標規劃開車路徑。進階避開壅塞與多點停靠尚未做。
@@ -127,7 +132,7 @@ NCDR 或地方防災 API 取代 mock 積水／封路／強風標記。
 - Framework Preset：Next.js
 - Build Command：`npm run build`
 - Output：Next.js 預設
-- 環境變數：正式路況用 `TDX_CLIENT_ID` / `TDX_CLIENT_SECRET`；正式戶政門牌定位用 `TGOS_APP_ID` / `TGOS_API_KEY`；測速公開資料不需金鑰，TGOS 主題 API 可選填 `TGOS_THEME_API_KEY`
+- 環境變數：正式路況用 `TDX_CLIENT_ID` / `TDX_CLIENT_SECRET`；正式戶政門牌定位用 `TGOS_APP_ID` / `TGOS_API_KEY`；測速公開資料不需金鑰，TGOS 主題 API 可選填 `TGOS_THEME_API_KEY`；NCDR 示警免金鑰，會員資料可選填 `NCDR_API_KEY`
 
 MapLibre worker 由 `src/app/maplibre/[file]/route.ts` 提供，`next.config.ts` 已列入 tracing，避免 serverless 漏檔。
 

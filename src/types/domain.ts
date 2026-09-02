@@ -113,6 +113,8 @@ export type SpeedEnforcementCatalog = {
 };
 
 export type DisasterKind = "flood" | "closure" | "quake" | "typhoon";
+export type DisasterDataOrigin = "ncdr-live" | "mock";
+export type DisasterPublishSource = "ncdr" | "mock";
 
 export type DisasterAlert = {
   id: string;
@@ -121,6 +123,19 @@ export type DisasterAlert = {
   description: string;
   location: LngLat;
   severity: "watch" | "warning";
+  dataOrigin: DisasterDataOrigin;
+  source: DisasterPublishSource;
+  category?: string;
+  areaDesc?: string;
+  issuedAt?: string;
+  expiresAt?: string;
+  updatedAt?: string;
+};
+
+export type DisasterCatalog = {
+  origin: DisasterDataOrigin;
+  alerts: DisasterAlert[];
+  fetchedAt: string;
 };
 
 export type AccidentReport = {

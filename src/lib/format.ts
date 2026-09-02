@@ -1,6 +1,7 @@
 import type {
   CctvDataOrigin,
   CctvStatus,
+  DisasterDataOrigin,
   TrafficDataOrigin,
   TrafficLevel,
 } from "@/types/domain";
@@ -35,6 +36,11 @@ export function cctvOriginLabel(origin: CctvDataOrigin) {
 export function trafficOriginLabel(origin: TrafficDataOrigin) {
   if (origin === "tdx-live") return "TDX 即時路況";
   return "示範路況";
+}
+
+export function disasterOriginLabel(origin: DisasterDataOrigin) {
+  if (origin === "ncdr-live") return "NCDR 即時災害";
+  return "示範災害";
 }
 
 export function trafficLevelLabel(level: TrafficLevel) {

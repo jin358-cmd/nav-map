@@ -14,10 +14,7 @@ export async function fetchAheadIntel(): Promise<RoadIntelItem[]> {
   return AHEAD_INTEL;
 }
 
+export { fetchAccidentReports } from "./accidents";
 export { fetchCctvCatalog } from "./cctv";
-export {
-  fetchAccidentReports,
-  fetchDisasterAlerts,
-} from "./disaster-api";
 export { requestCurrentPosition, watchVehiclePosition } from "./geolocation";
 export { planDrivingRoute, searchAddresses } from "./routing";

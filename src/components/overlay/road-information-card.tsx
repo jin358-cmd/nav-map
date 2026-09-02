@@ -8,10 +8,16 @@ import {
   TrafficCone,
   X,
 } from "lucide-react";
-import { cctvOriginLabel, formatDistance, trafficOriginLabel } from "@/lib/format";
+import {
+  cctvOriginLabel,
+  disasterOriginLabel,
+  formatDistance,
+  trafficOriginLabel,
+} from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type {
   CctvDataOrigin,
+  DisasterDataOrigin,
   RoadIntelItem,
   RoadIntelKind,
   TrafficDataOrigin,
@@ -65,6 +71,7 @@ export function RoadInformationCard({
   items,
   origin,
   trafficOrigin,
+  disasterOrigin,
   emptyHint,
   onSelectCctv,
   musicOpen = false,
@@ -73,6 +80,7 @@ export function RoadInformationCard({
   items: RoadIntelItem[];
   origin: CctvDataOrigin;
   trafficOrigin: TrafficDataOrigin;
+  disasterOrigin: DisasterDataOrigin;
   emptyHint?: string;
   onSelectCctv?: (cameraId: string) => void;
   musicOpen?: boolean;
@@ -101,7 +109,7 @@ export function RoadInformationCard({
               {KIND_META[openGroup.kind].label}
             </h2>
             <p className="truncate text-[11px] text-zinc-500">
-              CCTV {cctvOriginLabel(origin)} · 路況 {trafficOriginLabel(trafficOrigin)}
+              CCTV {cctvOriginLabel(origin)} · 路況 {trafficOriginLabel(trafficOrigin)} · 災害 {disasterOriginLabel(disasterOrigin)}
             </p>
             <button
               type="button"
