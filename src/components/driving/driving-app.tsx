@@ -568,7 +568,13 @@ export function DrivingApp() {
           />
         </div>
       ) : (
-        <div className="absolute top-[max(2.85rem,calc(env(safe-area-inset-top)+2.35rem))] right-[4.4rem] left-3 z-20 sm:top-[max(0.55rem,env(safe-area-inset-top))] sm:right-24 sm:left-44">
+        <div
+          className={
+            destination
+              ? "absolute top-[max(2.85rem,calc(env(safe-area-inset-top)+2.35rem))] right-3 left-3 z-20 sm:top-[max(0.55rem,env(safe-area-inset-top))] sm:right-24"
+              : "absolute top-[max(2.85rem,calc(env(safe-area-inset-top)+2.35rem))] right-[4.4rem] left-3 z-20 sm:top-[max(0.55rem,env(safe-area-inset-top))] sm:right-24 sm:left-44"
+          }
+        >
           {destination ? (
             <RouteConfirmBar
               destination={destination}

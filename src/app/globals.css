@@ -243,52 +243,41 @@
   pointer-events: none;
 }
 
-.destination-beacon {
+.destination-pin {
   position: relative;
-  width: 96px;
-  height: 96px;
+  width: 36px;
+  height: 42px;
   pointer-events: none;
   overflow: visible;
+  transform-style: preserve-3d;
+  filter: drop-shadow(0 7px 10px rgba(180, 83, 9, 0.55));
 }
 
-.destination-beacon__dot {
+.destination-pin__glow {
   position: absolute;
-  top: 50%;
   left: 50%;
-  width: 18px;
-  height: 18px;
-  margin: -9px 0 0 -9px;
-  border-radius: 999px;
-  background: #facc15;
-  border: 2px solid #fffbeb;
-  box-shadow: 0 0 16px rgba(250, 204, 21, 0.95);
-}
-
-.destination-beacon__ring {
-  position: absolute;
-  top: 50%;
-  left: 50%;
+  bottom: 1px;
   width: 22px;
-  height: 22px;
-  margin: -11px 0 0 -11px;
+  height: 8px;
+  transform: translateX(-50%);
   border-radius: 999px;
-  border: 2px solid rgba(250, 204, 21, 0.95);
-  transform-origin: center;
-  animation: destination-ripple 2s ease-out infinite;
+  background: radial-gradient(circle, rgba(255, 176, 39, 0.7), transparent 72%);
 }
 
-.destination-beacon__ring--delay {
-  animation-delay: 1s;
+.destination-pin__mark {
+  position: relative;
+  display: block;
+  transform-origin: 50% 88%;
+  animation: destination-pin-float 1.8s ease-in-out infinite;
 }
 
-@keyframes destination-ripple {
-  0% {
-    transform: scale(0.6);
-    opacity: 0.95;
-  }
+@keyframes destination-pin-float {
+  0%,
   100% {
-    transform: scale(4.2);
-    opacity: 0;
+    transform: translateY(0) rotateX(8deg) rotateZ(-2deg);
+  }
+  50% {
+    transform: translateY(-3px) rotateX(16deg) rotateZ(2deg);
   }
 }
 
@@ -318,7 +307,7 @@
   touch-action: none;
 }
 
-.maplibregl-marker:has(.destination-beacon) {
+.maplibregl-marker:has(.destination-pin) {
   overflow: visible;
 }
 

@@ -136,14 +136,36 @@ function markerEl(
   return el;
 }
 
-function createDestinationBeacon(label: string): HTMLDivElement {
+function createDestinationPin(label: string): HTMLDivElement {
   const el = document.createElement("div");
-  el.className = "destination-beacon";
+  el.className = "destination-pin";
   el.title = label;
-  el.innerHTML =
-    '<span class="destination-beacon__ring"></span>' +
-    '<span class="destination-beacon__ring destination-beacon__ring--delay"></span>' +
-    '<span class="destination-beacon__dot"></span>';
+  el.innerHTML = `
+    <span class="destination-pin__glow"></span>
+    <svg class="destination-pin__mark" viewBox="0 0 48 58" width="30" height="36" aria-hidden="true">
+      <defs>
+        <linearGradient id="pin-left" x1="0" x2="1" y1="0" y2="1">
+          <stop offset="0%" stop-color="#ffe56a"/>
+          <stop offset="42%" stop-color="#ffb027"/>
+          <stop offset="100%" stop-color="#e67a10"/>
+        </linearGradient>
+        <linearGradient id="pin-right" x1="1" x2="0" y1="0" y2="1">
+          <stop offset="0%" stop-color="#ffcf4a"/>
+          <stop offset="55%" stop-color="#f08812"/>
+          <stop offset="100%" stop-color="#b45309"/>
+        </linearGradient>
+        <linearGradient id="pin-ridge" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stop-color="#fff4b8"/>
+          <stop offset="100%" stop-color="#ffd36a"/>
+        </linearGradient>
+      </defs>
+      <ellipse cx="24" cy="52" rx="9" ry="3.2" fill="#ff9a1a" opacity="0.38"/>
+      <path d="M24 3 L42 36 L24 50 Z" fill="url(#pin-right)"/>
+      <path d="M24 3 L6 36 L24 50 Z" fill="url(#pin-left)"/>
+      <path d="M24 3 L27.2 49 L20.8 49 Z" fill="url(#pin-ridge)" opacity="0.72"/>
+      <path d="M24 3 L42 36 L24 50 L6 36 Z" fill="none" stroke="#fff6d2" stroke-width="1.15" stroke-linejoin="round"/>
+    </svg>
+  `;
   return el;
 }
 
@@ -630,8 +652,8 @@ export function DrivingMap({
     destMarkerRef.current = null;
     if (!destination) return;
     destMarkerRef.current = new Marker({
-      element: createDestinationBeacon(destination.label),
-      anchor: "center",
+      element: createDestinationPin(destination.label),
+      anchor: "bottom",
     })
       .setLngLat([destination.location.lng, destination.location.lat])
       .addTo(map);

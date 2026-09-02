@@ -26,36 +26,42 @@ export function RouteConfirmBar({
   const eta = maneuver?.etaMinutes;
 
   return (
-    <div className="pointer-events-auto w-fit max-w-[min(22rem,calc(100vw-5.5rem))] rounded-2xl border border-cyan-300/20 bg-black/70 shadow-[0_10px_40px_rgba(0,0,0,0.5)] backdrop-blur-xl">
-      <div className="flex items-center gap-2 px-3 py-2">
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold tracking-tight text-white">
+    <div className="pointer-events-auto w-full rounded-2xl border border-cyan-300/20 bg-black/74 shadow-[0_10px_40px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+      <div className="flex w-full flex-col gap-3 px-3.5 py-3 sm:px-4 sm:py-3.5">
+        <div className="w-full min-w-0">
+          <p className="text-lg leading-tight font-bold tracking-tight text-white sm:text-2xl">
             {destination.label}
           </p>
-          <p className="truncate text-[11px] text-zinc-400">
+          {destination.address ? (
+            <p className="mt-1 w-full text-sm leading-snug text-zinc-300 sm:text-base">
+              {destination.address}
+            </p>
+          ) : null}
+          <p className="mt-1.5 w-full text-sm font-medium text-cyan-200 sm:text-base">
             {rerouting
               ? "正在更新路線…"
               : `${remaining ?? "計算距離中"}${eta != null ? ` · 約 ${eta} 分鐘` : ""}`}
           </p>
         </div>
-        <Button
-          type="button"
-          onClick={onStartNav}
-          disabled={rerouting}
-          className="h-8 shrink-0 rounded-lg bg-cyan-400 px-3 text-[12px] font-semibold text-[#041016] hover:bg-cyan-300"
-        >
-          確認
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          aria-label="取消路線，重新搜尋"
-          onClick={onClear}
-          className="size-8 shrink-0 text-zinc-300 hover:bg-white/10 hover:text-white"
-        >
-          <X className="size-4" />
-        </Button>
+        <div className="flex w-full items-center gap-2">
+          <Button
+            type="button"
+            onClick={onStartNav}
+            disabled={rerouting}
+            className="h-12 min-h-12 flex-1 rounded-xl bg-cyan-400 text-base font-semibold text-[#041016] hover:bg-cyan-300 sm:text-lg"
+          >
+            確認
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            aria-label="取消路線，重新搜尋"
+            onClick={onClear}
+            className="size-12 shrink-0 text-zinc-300 hover:bg-white/10 hover:text-white"
+          >
+            <X className="size-6" />
+          </Button>
+        </div>
       </div>
     </div>
   );

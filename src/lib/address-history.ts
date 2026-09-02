@@ -2,7 +2,7 @@ import type { GeocodeHit } from "@/types/domain";
 
 const STORAGE_KEY = "smart-road-taiwan.address-history.v1";
 const CHANGE_EVENT = "smart-road-address-history";
-const MAX_ITEMS = 6;
+const MAX_ITEMS = 10;
 const EMPTY_HISTORY: GeocodeHit[] = [];
 
 let cachedRaw: string | null | undefined;

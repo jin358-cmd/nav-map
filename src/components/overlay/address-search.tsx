@@ -121,35 +121,6 @@ export function AddressSearch({
 
   return (
     <div className="pointer-events-auto w-full max-w-xl">
-      {history.length ? (
-        <div className="mb-1.5 flex items-center gap-1.5 overflow-hidden rounded-2xl border border-white/10 bg-black/55 px-2 py-1.5 shadow-lg backdrop-blur-xl">
-          <History className="ml-1 size-3.5 shrink-0 text-cyan-300/80" />
-          <span className="shrink-0 text-[10px] text-zinc-500">搜尋紀錄</span>
-          <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
-            {history.map((hit) => (
-              <button
-                key={`${hit.id}-${hit.location.lng}-${hit.location.lat}`}
-                type="button"
-                title={hit.name}
-                onClick={() => selectHit(hit)}
-                className="max-w-40 shrink-0 truncate rounded-full border border-white/10 bg-white/6 px-2 py-1 text-[10px] text-zinc-200 hover:bg-white/10 touch-manipulation"
-              >
-                {hit.name}
-              </button>
-            ))}
-          </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label="清除搜尋紀錄"
-            onClick={clearAddressHistory}
-            className="size-7 shrink-0 text-zinc-500 hover:bg-white/10 hover:text-white"
-          >
-            <Trash2 className="size-3.5" />
-          </Button>
-        </div>
-      ) : null}
       <div className="rounded-2xl border border-white/12 bg-black/60 shadow-[0_10px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl">
         <div className="flex items-center gap-2 px-2.5 py-2">
           <Search className="ml-1 size-4 shrink-0 text-cyan-300" />
@@ -204,6 +175,47 @@ export function AddressSearch({
           <p className="px-3 pt-2 text-[11px] text-zinc-500">
             全市約 20 公里 · 店家／公司／品牌／縮寫 · 長按地圖自訂位置
           </p>
+          {needle.length < 2 && history.length ? (
+            <div className="px-1 pt-1">
+              <div className="flex items-center justify-between px-2">
+                <p className="flex items-center gap-1.5 text-[11px] text-cyan-200/85">
+                  <History className="size-3.5" />
+                  輸入紀錄
+                </p>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="清除搜尋紀錄"
+                  onClick={clearAddressHistory}
+                  className="size-7 text-zinc-500 hover:bg-white/10 hover:text-white"
+                >
+                  <Trash2 className="size-3.5" />
+                </Button>
+              </div>
+              <ul className="max-h-52 overflow-y-auto py-0.5">
+                {history.map((hit) => (
+                  <li key={`${hit.id}-${hit.location.lng}-${hit.location.lat}`}>
+                    <button
+                      type="button"
+                      onClick={() => selectHit(hit)}
+                      className="flex w-full items-start gap-2.5 px-2.5 py-2 text-left hover:bg-white/8 touch-manipulation"
+                    >
+                      <History className="mt-0.5 size-4 shrink-0 text-cyan-300/80" />
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm text-white">
+                          {hit.name}
+                        </span>
+                        <span className="block truncate text-[11px] text-zinc-500">
+                          {hit.address}
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           {needle.length < 2 && favorites.length ? (
             <div className="px-3 pt-1">
               <p className="mb-1 text-[10px] text-rose-200/80">最愛書籤</p>
