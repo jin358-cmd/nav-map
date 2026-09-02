@@ -14,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "智駕NavPilot",
-  description: "智駕NavPilot｜台灣智慧駕駛地圖與即時道路情報 · 臺南示範",
-  applicationName: "智駕NavPilot",
+  title: "NavPilot",
+  description: "NavPilot｜智駕台灣 · 即時道路情報",
+  applicationName: "NavPilot",
 };
 
 export const viewport: Viewport = {

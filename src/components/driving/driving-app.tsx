@@ -12,6 +12,7 @@ import { RouteConfirmBar } from "@/components/overlay/route-preview";
 import { YouTubeMusicPlayer } from "@/components/overlay/youtube-music-player";
 import { useCctvView } from "@/hooks/use-cctv-view";
 import { useDisasterView } from "@/hooks/use-disaster-view";
+import { useLocatedRegion } from "@/hooks/use-located-region";
 import { useNavigationVoice } from "@/hooks/use-navigation-voice";
 import { useSpeedEnforcementView } from "@/hooks/use-speed-enforcement-view";
 import { useTrafficView } from "@/hooks/use-traffic-view";
@@ -282,6 +283,7 @@ export function DrivingApp() {
     () => ({ lng: vehicle.lng, lat: vehicle.lat }),
     [vehicle.lat, vehicle.lng],
   );
+  const locatedCity = useLocatedRegion(searchBias);
 
   const selectCamera = useCallback(
     (id: string) => {
@@ -460,9 +462,11 @@ export function DrivingApp() {
       {!navigating ? (
         <div className="pointer-events-none absolute top-[max(0.45rem,env(safe-area-inset-top))] left-3 z-10 max-w-[42%] rounded-2xl border border-white/10 bg-black/45 px-2.5 py-1.5 backdrop-blur-md sm:max-w-none sm:px-3 sm:py-2">
           <p className="hidden text-[10px] tracking-[0.18em] text-cyan-200/80 sm:block">
-            NAVPILOT
+            NavPilot
           </p>
-          <p className="text-xs font-semibold sm:text-sm">智駕NavPilot · 臺南</p>
+          <p className="text-xs font-semibold sm:text-sm">
+            智駕台灣 · {locatedCity}
+          </p>
         </div>
       ) : null}
 

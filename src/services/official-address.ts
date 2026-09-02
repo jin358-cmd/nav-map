@@ -25,12 +25,15 @@ export type HouseholdAddressCandidate = {
   matchType: string;
 };
 
-export type LandCrossCheck = {
-  matched: boolean;
+export type NlscTownVillage = {
   city: string;
   town: string;
   officeName: string;
   sectionName: string;
+};
+
+export type LandCrossCheck = NlscTownVillage & {
+  matched: boolean;
 };
 
 type TgosInfo = {
@@ -241,10 +244,9 @@ export async function searchHouseholdAddresses(
   }
 }
 
-export async function crossCheckLandArea(
+export async function queryNlscTownVillage(
   location: LngLat,
-  expected: { city: string; town: string },
-): Promise<LandCrossCheck | null> {
+): Promise<NlscTownVillage | null> {
   const url = `${NLSC_LAND_ENDPOINT}/${location.lng}/${location.lat}/4326`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 4_000);
@@ -260,13 +262,7 @@ export async function crossCheckLandArea(
     const city = xmlValue(xml, "ctyName");
     const town = xmlValue(xml, "townName");
     if (!city && !town) return null;
-    const expectedCity = normalizeArea(expected.city);
-    const expectedTown = normalizeArea(expected.town);
-
     return {
-      matched:
-        (!expectedCity || normalizeArea(city) === expectedCity) &&
-        (!expectedTown || normalizeArea(town) === expectedTown),
       city,
       town,
       officeName: xmlValue(xml, "officeName"),
@@ -277,6 +273,23 @@ export async function crossCheckLandArea(
   } finally {
     clearTimeout(timer);
   }
+}
+
+export async function crossCheckLandArea(
+  location: LngLat,
+  expected: { city: string; town: string },
+): Promise<LandCrossCheck | null> {
+  const area = await queryNlscTownVillage(location);
+  if (!area) return null;
+  const expectedCity = normalizeArea(expected.city);
+  const expectedTown = normalizeArea(expected.town);
+
+  return {
+    ...area,
+    matched:
+      (!expectedCity || normalizeArea(area.city) === expectedCity) &&
+      (!expectedTown || normalizeArea(area.town) === expectedTown),
+  };
 }
 
 export function describeLandCrossCheck(check: LandCrossCheck | null) {
