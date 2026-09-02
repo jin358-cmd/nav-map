@@ -9,7 +9,9 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
+import { X } from "lucide-react";
 import { MapControls } from "@/components/map/map-controls";
+import { Button } from "@/components/ui/button";
 import { AddressSearch } from "@/components/overlay/address-search";
 import { CctvDetailCard } from "@/components/overlay/cctv-detail-card";
 import { DisasterDetailCard } from "@/components/overlay/disaster-detail-card";
@@ -21,7 +23,6 @@ import { useCctvView } from "@/hooks/use-cctv-view";
 import { useDisasterView } from "@/hooks/use-disaster-view";
 import { useGoogleAccount } from "@/hooks/use-google-account";
 import { useLandscape } from "@/hooks/use-landscape";
-import { useLocatedRegion } from "@/hooks/use-located-region";
 import { useNavigationVoice } from "@/hooks/use-navigation-voice";
 import { useSpeedEnforcementView } from "@/hooks/use-speed-enforcement-view";
 import { useTrafficView } from "@/hooks/use-traffic-view";
@@ -83,7 +84,7 @@ const DrivingMap = dynamic(
     loading: () => (
       <div className="absolute inset-0 bg-[#0b0d11]">
         <div className="flex h-full items-center justify-center text-sm text-zinc-400">
-          載入臺南駕駛地圖…
+          載入駕駛地圖…
         </div>
       </div>
     ),
@@ -345,7 +346,6 @@ export function DrivingApp() {
     () => ({ lng: vehicle.lng, lat: vehicle.lat }),
     [vehicle.lat, vehicle.lng],
   );
-  const locatedCity = useLocatedRegion(searchBias);
 
   const selectCamera = useCallback(
     (id: string) => {
@@ -548,42 +548,42 @@ export function DrivingApp() {
 
       <div className="driving-vignette pointer-events-none absolute inset-0" />
 
-      {!navigating ? (
-        <div className="pointer-events-none absolute top-[max(0.45rem,env(safe-area-inset-top))] left-3 z-10 max-w-[42%] rounded-2xl border border-white/10 bg-black/45 px-2.5 py-1.5 backdrop-blur-md sm:max-w-none sm:px-3 sm:py-2">
-          <p className="text-[10px] tracking-[0.18em] text-cyan-200/80">
-            NavPilot
-          </p>
-          <p className="text-xs font-semibold sm:text-sm">
-            智駕台灣 · {locatedCity}
-          </p>
-        </div>
-      ) : null}
-
       {destination && navigating ? (
-        <div
-          className={
-            landscape
-              ? "absolute top-[max(0.4rem,env(safe-area-inset-top))] left-3 z-20"
-              : "absolute top-[max(0.45rem,env(safe-area-inset-top))] right-3 left-3 z-20 flex justify-center sm:right-24"
-          }
-        >
-          <NextIntersectionHud
-            step={activeNavigationStep}
-            distanceMeters={distanceToNextMeters}
-            offRoute={navigationProgress?.offRoute ?? false}
-            rerouting={rerouting}
-            voiceEnabled={voiceEnabled}
-            compact={landscape}
-            onToggleVoice={() => setVoiceEnabled((value) => !value)}
-            onExit={exitNavigation}
-          />
-        </div>
+        <>
+          <div
+            className={
+              landscape
+                ? "absolute top-[max(0.4rem,env(safe-area-inset-top))] left-3 z-20"
+                : "absolute top-[max(0.45rem,env(safe-area-inset-top))] right-16 left-3 z-20 flex justify-center sm:right-24"
+            }
+          >
+            <NextIntersectionHud
+              step={activeNavigationStep}
+              distanceMeters={distanceToNextMeters}
+              offRoute={navigationProgress?.offRoute ?? false}
+              rerouting={rerouting}
+              voiceEnabled={voiceEnabled}
+              compact={landscape}
+              onToggleVoice={() => setVoiceEnabled((value) => !value)}
+            />
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label="結束導航"
+            onClick={exitNavigation}
+            className="pointer-events-auto absolute top-[max(0.4rem,env(safe-area-inset-top))] right-[max(0.65rem,env(safe-area-inset-right))] z-30 size-11 rounded-full border border-white/12 bg-black/72 text-zinc-200 shadow-[0_8px_24px_rgba(0,0,0,0.45)] backdrop-blur-xl hover:bg-black/85 hover:text-white"
+          >
+            <X className="size-5" />
+          </Button>
+        </>
       ) : (
         <div
           className={
             destination
-              ? "absolute top-[max(2.85rem,calc(env(safe-area-inset-top)+2.35rem))] right-3 left-3 z-20 sm:top-[max(0.55rem,env(safe-area-inset-top))] sm:right-24"
-              : "absolute top-[max(2.85rem,calc(env(safe-area-inset-top)+2.35rem))] right-[4.4rem] left-3 z-20 sm:top-[max(0.55rem,env(safe-area-inset-top))] sm:right-24 sm:left-44"
+              ? "absolute top-[max(0.5rem,env(safe-area-inset-top))] right-3 left-3 z-20 sm:right-24"
+              : "absolute top-[max(0.5rem,env(safe-area-inset-top))] right-[4.4rem] left-3 z-20 sm:right-24"
           }
         >
           {destination ? (

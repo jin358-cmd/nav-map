@@ -9,7 +9,6 @@ import {
   Undo2,
   Volume2,
   VolumeX,
-  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDistance } from "@/lib/format";
@@ -53,7 +52,6 @@ export function NextIntersectionHud({
   voiceEnabled,
   compact = false,
   onToggleVoice,
-  onExit,
 }: {
   step: RouteStep | null;
   distanceMeters: number;
@@ -62,7 +60,6 @@ export function NextIntersectionHud({
   voiceEnabled: boolean;
   compact?: boolean;
   onToggleVoice: () => void;
-  onExit: () => void;
 }) {
   return (
     <div
@@ -126,39 +123,24 @@ export function NextIntersectionHud({
           </p>
         ) : null}
       </div>
-      <div className={cn("flex shrink-0 flex-col", compact ? "gap-0.5" : "gap-1")}>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          aria-label={voiceEnabled ? "關閉 AI 語音" : "開啟 AI 語音"}
-          aria-pressed={voiceEnabled}
-          onClick={onToggleVoice}
-          className={cn(
-            "text-zinc-300 hover:bg-white/10 hover:text-white",
-            compact ? "size-8" : "size-10",
-          )}
-        >
-          {voiceEnabled ? (
-            <Volume2 className={compact ? "size-4" : "size-5"} />
-          ) : (
-            <VolumeX className={compact ? "size-4" : "size-5"} />
-          )}
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          aria-label="結束導航"
-          onClick={onExit}
-          className={cn(
-            "text-zinc-300 hover:bg-white/10 hover:text-white",
-            compact ? "size-8" : "size-10",
-          )}
-        >
-          <X className={compact ? "size-4" : "size-5"} />
-        </Button>
-      </div>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        aria-label={voiceEnabled ? "關閉 AI 語音" : "開啟 AI 語音"}
+        aria-pressed={voiceEnabled}
+        onClick={onToggleVoice}
+        className={cn(
+          "shrink-0 text-zinc-300 hover:bg-white/10 hover:text-white",
+          compact ? "size-8" : "size-10",
+        )}
+      >
+        {voiceEnabled ? (
+          <Volume2 className={compact ? "size-4" : "size-5"} />
+        ) : (
+          <VolumeX className={compact ? "size-4" : "size-5"} />
+        )}
+      </Button>
     </div>
   );
 }
