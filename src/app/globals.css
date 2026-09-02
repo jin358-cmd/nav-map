@@ -197,6 +197,13 @@
   pointer-events: none;
 }
 
+.intel-marker--destination {
+  background: #3ee0ff;
+  color: #062026;
+  box-shadow: 0 0 0 6px rgba(62, 224, 255, 0.22), 0 8px 18px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
+
 .cctv-scan {
   background: repeating-linear-gradient(
     180deg,

@@ -70,6 +70,8 @@ npm start
 
 定位權限可拒絕；拒絕後仍停留在臺南示範路線。GPS 授權成功則車輛標記移到目前位置。
 
+頂部可輸入地址或地標（OpenStreetMap Nominatim）。選定後用 OSRM 規劃開車路線，青綠線會畫在地圖上，並帶終點標記。失敗時仍可點快捷地標（臺南火車站、安平古堡等）。
+
 ## 第一階段已完成功能
 
 - 全螢幕 MapLibre 地圖，預設中心在臺南
@@ -79,7 +81,8 @@ npm start
 - 自訂 Vehicle Marker（不是 Google 藍點）
 - CCTV：獨立 `cctv-source` / `cctv-layer`，依 1 km／8 km／zoom 顯示，點擊底部 HUD
 - Mock Traffic 圖層、Mock Disaster / 事故標記
-- 頂部導航資訊 UI（八百公尺後右轉）
+- 頂部地址搜尋：規劃開車路線並在地圖顯示青綠路徑
+- 頂部導航資訊 UI（八百公尺後右轉／前往目的地）
 - 底部半透明 Road Information Card
 - Android 直式優先的 Responsive HUD（資訊卡不遮住主要駕駛視野）
 
@@ -98,8 +101,8 @@ TDX Live Traffic 取代 mock 壅塞線，依真實車速上色。
 **Phase 4：災害資訊**  
 NCDR 或地方防災 API 取代 mock 積水／封路／強風標記。
 
-**Phase 5：路線規劃**  
-真實起訖點路徑規劃，不再只走臺南示範折線。
+**Phase 5：路線規劃（部分完成）**  
+已可用地址／地標規劃開車路徑。進階避開壅塞與多點停靠尚未做。
 
 **Phase 6：Turn-by-turn Navigation**  
 依 GPS heading 對齊車頭、逐步轉向指示與語音。

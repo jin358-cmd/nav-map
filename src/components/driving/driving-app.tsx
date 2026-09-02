@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MapControls } from "@/components/map/map-controls";
+import { AddressSearch } from "@/components/overlay/address-search";
 import { CctvDetailCard } from "@/components/overlay/cctv-detail-card";
 import { NavigationBanner } from "@/components/overlay/navigation-banner";
 import { RoadInformationCard } from "@/components/overlay/road-information-card";
@@ -17,6 +18,7 @@ import {
   fetchDisasterAlerts,
   fetchNavigationManeuver,
   fetchTainanTraffic,
+  planDrivingRoute,
   requestCurrentPosition,
   watchVehiclePosition,
 } from "@/services";
@@ -25,10 +27,12 @@ import type {
   CameraMode,
   CctvCamera,
   DisasterAlert,
+  GeocodeHit,
   GpsStatus,
   MapViewport,
   NavigationManeuver,
   RoadIntelItem,
+  RouteDestination,
   TrafficSegment,
   VehiclePose,
 } from "@/types/domain";
@@ -58,7 +62,15 @@ export function DrivingApp() {
   const [disasters, setDisasters] = useState<DisasterAlert[]>([]);
   const [accidents, setAccidents] = useState<AccidentReport[]>([]);
   const [route, setRoute] = useState<[number, number][]>([]);
+  const [demoRoute, setDemoRoute] = useState<[number, number][]>([]);
   const [maneuver, setManeuver] = useState<NavigationManeuver | null>(null);
+  const [demoManeuver, setDemoManeuver] = useState<NavigationManeuver | null>(
+    null,
+  );
+  const [destination, setDestination] = useState<RouteDestination | null>(null);
+  const [fitRouteKey, setFitRouteKey] = useState(0);
+  const [routing, setRouting] = useState(false);
+  const [routeError, setRouteError] = useState<string | null>(null);
   const [baseIntel, setBaseIntel] = useState<RoadIntelItem[]>([]);
   const [selectedCctv, setSelectedCctv] = useState<CctvCamera | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -96,7 +108,9 @@ export function DrivingApp() {
         setTraffic(trafficRows);
         setDisasters(disasterRows);
         setAccidents(accidentRows);
+        setDemoRoute(routeLine);
         setRoute(routeLine);
+        setDemoManeuver(nav);
         setManeuver(nav);
         setBaseIntel(ahead);
       } catch {
@@ -114,7 +128,6 @@ export function DrivingApp() {
     const stop = watchVehiclePosition({
       onFix: (pose) => {
         setVehicle(pose);
-        setFollowVehicle(true);
       },
       onStatus: setGpsStatus,
     });
@@ -124,6 +137,11 @@ export function DrivingApp() {
   const intel = useMemo(
     () => roadIntelFromCameras(preview, baseIntel, 2),
     [baseIntel, preview],
+  );
+
+  const searchBias = useMemo(
+    () => ({ lng: vehicle.lng, lat: vehicle.lat }),
+    [vehicle.lat, vehicle.lng],
   );
 
   const selectCamera = useCallback(
@@ -141,6 +159,35 @@ export function DrivingApp() {
     },
     [cameraById, gpsStatus, vehicle.lat, vehicle.lng, viewport?.center],
   );
+
+  const applyRoute = useCallback(async (hit: GeocodeHit) => {
+    setRouting(true);
+    setRouteError(null);
+    setSelectedCctv(null);
+    try {
+      const plan = await planDrivingRoute(
+        { lng: vehicle.lng, lat: vehicle.lat },
+        hit,
+      );
+      setRoute(plan.coordinates);
+      setDestination(plan.destination);
+      setManeuver(plan.maneuver);
+      setFollowVehicle(false);
+      setFitRouteKey((value) => value + 1);
+    } catch (error) {
+      setRouteError(error instanceof Error ? error.message : "路線規劃失敗");
+    } finally {
+      setRouting(false);
+    }
+  }, [vehicle.lat, vehicle.lng]);
+
+  const clearRoute = useCallback(() => {
+    setDestination(null);
+    setRouteError(null);
+    setRoute(demoRoute);
+    setManeuver(demoManeuver);
+    setFollowVehicle(true);
+  }, [demoManeuver, demoRoute]);
 
   const locate = useCallback(async () => {
     setGpsStatus("locating");
@@ -160,8 +207,12 @@ export function DrivingApp() {
     setFollowVehicle(true);
     setSelectedCctv(null);
     setCameraMode("3d");
+    setDestination(null);
+    setRouteError(null);
+    setRoute(demoRoute);
+    setManeuver(demoManeuver);
     setRefreshNonce((value) => value + 1);
-  }, []);
+  }, [demoManeuver, demoRoute]);
 
   const refreshCctv = useCallback(() => {
     setRefreshNonce((value) => value + 1);
@@ -180,6 +231,8 @@ export function DrivingApp() {
         disasters={disasters}
         accidents={accidents}
         route={route}
+        destination={destination}
+        fitRouteKey={fitRouteKey}
         onCctvSelect={selectCamera}
         onUserPan={() => setFollowVehicle(false)}
         onViewportChange={setViewport}
@@ -187,18 +240,37 @@ export function DrivingApp() {
 
       <div className="driving-vignette pointer-events-none absolute inset-0" />
 
-      <div className="pointer-events-none absolute top-[max(0.45rem,env(safe-area-inset-top))] left-3 z-10 max-w-[58%] rounded-2xl border border-white/10 bg-black/45 px-2.5 py-1.5 backdrop-blur-md sm:max-w-none sm:px-3 sm:py-2">
+      <div className="pointer-events-none absolute top-[max(0.45rem,env(safe-area-inset-top))] left-3 z-10 max-w-[42%] rounded-2xl border border-white/10 bg-black/45 px-2.5 py-1.5 backdrop-blur-md sm:max-w-none sm:px-3 sm:py-2">
         <p className="hidden text-[10px] tracking-[0.18em] text-cyan-200/80 sm:block">
           SMART ROAD
         </p>
         <p className="text-xs font-semibold sm:text-sm">智路臺灣 · 臺南</p>
       </div>
 
-      <div className="pointer-events-none absolute top-[max(2.7rem,calc(env(safe-area-inset-top)+2.15rem))] right-[4.35rem] left-3 z-10 flex justify-center sm:top-[max(0.75rem,env(safe-area-inset-top))] sm:right-24 sm:left-44">
-        <NavigationBanner maneuver={maneuver} />
+      <div className="absolute top-[max(2.85rem,calc(env(safe-area-inset-top)+2.35rem))] right-[4.4rem] left-3 z-20 sm:top-[max(0.55rem,env(safe-area-inset-top))] sm:right-24 sm:left-44">
+        <AddressSearch
+          bias={searchBias}
+          destination={destination}
+          busy={routing}
+          error={routeError}
+          onSelect={(hit) => void applyRoute(hit)}
+          onClear={clearRoute}
+          onPreviewRoute={() => {
+            setFollowVehicle(false);
+            setFitRouteKey((value) => value + 1);
+          }}
+          onStartNav={() => setFollowVehicle(true)}
+        />
       </div>
 
-      <div className="pointer-events-auto absolute top-[38%] right-[max(0.65rem,env(safe-area-inset-right))] z-20 -translate-y-1/2 sm:top-24 sm:translate-y-0">
+      <div className="pointer-events-none absolute top-[max(7.6rem,calc(env(safe-area-inset-top)+7.1rem))] right-[4.4rem] left-3 z-10 flex justify-center sm:top-[max(5.4rem,calc(env(safe-area-inset-top)+4.7rem))] sm:right-24 sm:left-44">
+        <NavigationBanner
+          maneuver={maneuver}
+          destinationLabel={destination?.label}
+        />
+      </div>
+
+      <div className="pointer-events-auto absolute top-[42%] right-[max(0.65rem,env(safe-area-inset-right))] z-20 -translate-y-1/2 sm:top-28 sm:translate-y-0">
         <MapControls
           cameraMode={cameraMode}
           gpsStatus={gpsStatus}
@@ -240,7 +312,7 @@ export function DrivingApp() {
         </div>
       ) : null}
       {cctvError ? (
-        <div className="pointer-events-none absolute top-[max(5.5rem,calc(env(safe-area-inset-top)+4.5rem))] left-1/2 z-20 -translate-x-1/2 rounded-xl border border-amber-300/25 bg-black/65 px-3 py-2 text-xs text-amber-100">
+        <div className="pointer-events-none absolute top-[max(11rem,calc(env(safe-area-inset-top)+10rem))] left-1/2 z-20 -translate-x-1/2 rounded-xl border border-amber-300/25 bg-black/65 px-3 py-2 text-xs text-amber-100">
           {cctvError}
         </div>
       ) : null}

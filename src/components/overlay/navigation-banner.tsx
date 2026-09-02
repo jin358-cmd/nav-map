@@ -6,13 +6,15 @@ import type { NavigationManeuver } from "@/types/domain";
 
 export function NavigationBanner({
   maneuver,
+  destinationLabel,
 }: {
   maneuver: NavigationManeuver | null;
+  destinationLabel?: string | null;
 }) {
   if (!maneuver) {
     return (
       <div className="pointer-events-none rounded-2xl border border-white/10 bg-black/45 px-3 py-2 text-sm text-zinc-300 backdrop-blur-md">
-        導航資訊載入中…
+        輸入地址後顯示導航路線
       </div>
     );
   }
@@ -25,7 +27,7 @@ export function NavigationBanner({
         </div>
         <div className="min-w-0 flex-1">
           <p className="hidden text-[11px] tracking-wide text-cyan-200/80 uppercase sm:block">
-            智慧導航 · 示範路線
+            {destinationLabel ? `前往 ${destinationLabel}` : "智慧導航 · 示範路線"}
           </p>
           <p className="truncate text-base font-semibold tracking-tight sm:text-lg">
             {formatDistance(maneuver.distanceMeters)}後{maneuver.action}
@@ -38,7 +40,9 @@ export function NavigationBanner({
         <div className="hidden shrink-0 text-right sm:block">
           <p className="flex items-center justify-end gap-1 text-sm text-cyan-100">
             <Navigation className="size-3.5" />
-            {maneuver.remainingKm.toFixed(1)} 公里
+            {maneuver.remainingKm >= 10
+              ? `${maneuver.remainingKm.toFixed(0)} 公里`
+              : `${maneuver.remainingKm.toFixed(1)} 公里`}
           </p>
           <p className="text-xs text-zinc-400">約 {maneuver.etaMinutes} 分鐘</p>
         </div>

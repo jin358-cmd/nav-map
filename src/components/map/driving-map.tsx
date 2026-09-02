@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Map as MapLibreMap, Marker } from "maplibre-gl";
+import { LngLatBounds, Map as MapLibreMap, Marker } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { createVehicleMarkerElement } from "@/components/map/vehicle-marker";
 import {
@@ -23,6 +23,7 @@ import type {
   CctvCamera,
   DisasterAlert,
   MapViewport,
+  RouteDestination,
   TrafficSegment,
   VehiclePose,
 } from "@/types/domain";
@@ -37,6 +38,8 @@ type DrivingMapProps = {
   disasters: DisasterAlert[];
   accidents: AccidentReport[];
   route: [number, number][];
+  destination: RouteDestination | null;
+  fitRouteKey: number;
   onCctvSelect: (cameraId: string) => void;
   onUserPan: () => void;
   onViewportChange: (viewport: MapViewport) => void;
@@ -126,6 +129,8 @@ export function DrivingMap({
   disasters,
   accidents,
   route,
+  destination,
+  fitRouteKey,
   onCctvSelect,
   onUserPan,
   onViewportChange,
@@ -134,6 +139,7 @@ export function DrivingMap({
   const mapRef = useRef<MapLibreMap | null>(null);
   const vehicleMarkerRef = useRef<Marker | null>(null);
   const intelMarkersRef = useRef<Marker[]>([]);
+  const destMarkerRef = useRef<Marker | null>(null);
   const onCctvSelectRef = useRef(onCctvSelect);
   const onUserPanRef = useRef(onUserPan);
   const onViewportChangeRef = useRef(onViewportChange);
@@ -242,6 +248,8 @@ export function DrivingMap({
       readyRef.current = false;
       vehicleMarkerRef.current?.remove();
       vehicleMarkerRef.current = null;
+      destMarkerRef.current?.remove();
+      destMarkerRef.current = null;
       for (const marker of intelMarkersRef.current) marker.remove();
       intelMarkersRef.current = [];
       map.remove();
@@ -291,6 +299,41 @@ export function DrivingMap({
       );
     }
   }, [accidents, disasters]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    destMarkerRef.current?.remove();
+    destMarkerRef.current = null;
+    if (!destination) return;
+    const el = markerEl("intel-marker--destination", "終", destination.label);
+    destMarkerRef.current = new Marker({ element: el, anchor: "bottom" })
+      .setLngLat([destination.location.lng, destination.location.lat])
+      .addTo(map);
+  }, [destination]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !readyRef.current || !fitRouteKey || route.length < 2) return;
+    const bounds = route.reduce(
+      (box, coord) => box.extend(coord),
+      new LngLatBounds(route[0], route[0]),
+    );
+    const compact = isCompactViewport(map.getContainer().clientWidth);
+    map.fitBounds(bounds, {
+      padding: {
+        top: compact ? 170 : 140,
+        bottom: compact ? 220 : 210,
+        left: 36,
+        right: compact ? 72 : 48,
+      },
+      duration: 900,
+      pitch: cameraMode === "3d" ? 38 : 0,
+      bearing: 0,
+      maxZoom: 16.2,
+      essential: true,
+    });
+  }, [cameraMode, fitRouteKey, route]);
 
   useEffect(() => {
     const marker = vehicleMarkerRef.current;

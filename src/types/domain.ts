@@ -103,3 +103,24 @@ export type NavigationManeuver = {
   remainingKm: number;
   etaMinutes: number;
 };
+
+export type GeocodeHit = {
+  id: string;
+  name: string;
+  address: string;
+  location: LngLat;
+};
+
+export type RouteDestination = {
+  label: string;
+  address: string;
+  location: LngLat;
+};
+
+export type RoutePlan = {
+  coordinates: [number, number][];
+  distanceMeters: number;
+  durationSeconds: number;
+  destination: RouteDestination;
+  maneuver: NavigationManeuver;
+};

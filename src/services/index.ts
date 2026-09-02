@@ -21,3 +21,4 @@ export {
   fetchDisasterAlerts,
 } from "./disaster-api";
 export { requestCurrentPosition, watchVehiclePosition } from "./geolocation";
+export { planDrivingRoute, searchAddresses } from "./routing";
