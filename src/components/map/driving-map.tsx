@@ -219,7 +219,6 @@ export function DrivingMap({
     selectedRef.current = selectedCctvId;
     disastersRef.current = disasters;
     selectedDisasterRef.current = selectedDisasterId;
-    followVehicleRef.current = followVehicle;
     navigatingRef.current = navigating;
     approachingRef.current = approachingIntersection;
     routeMetersRef.current = routeMeters;
@@ -238,7 +237,6 @@ export function DrivingMap({
     selectedCctvId,
     selectedDisasterId,
     disasters,
-    followVehicle,
     navigating,
     approachingIntersection,
     routeMeters,
@@ -493,6 +491,7 @@ export function DrivingMap({
   }, [navigating, route, traffic]);
 
   useEffect(() => {
+    followVehicleRef.current = followVehicle;
     if (followVehicle) userZoomRef.current = null;
   }, [followVehicle]);
 
