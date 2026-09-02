@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   useSyncExternalStore,
 } from "react";
@@ -47,6 +48,7 @@ export function AddressSearch({
     getServerAddressHistorySnapshot,
   );
   const needle = query.trim();
+  const submitFirstHitRef = useRef(false);
   const biasBucket = useMemo(
     () => ({
       lng: Math.round(bias.lng * 50) / 50,
@@ -76,6 +78,10 @@ export function AddressSearch({
           if (cancelled) return;
           setHits(rows);
           setSearchError(rows.length ? null : "找不到這個地址，請換個關鍵字。");
+          if (submitFirstHitRef.current && rows[0]) {
+            submitFirstHitRef.current = false;
+            selectHit(rows[0]);
+          }
         })
         .catch(() => {
           if (cancelled) return;
@@ -91,7 +97,7 @@ export function AddressSearch({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [biasBucket, composing, needle]);
+  }, [biasBucket, composing, needle, selectHit]);
 
   const visibleHits = needle.length < 2 ? [] : hits;
   const chips = useMemo(() => TAIWAN_LANDMARKS.slice(0, 5), []);
@@ -145,6 +151,15 @@ export function AddressSearch({
               setOpen(true);
             }}
             onFocus={() => setOpen(true)}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter" || composing) return;
+              event.preventDefault();
+              if (hits[0]) {
+                selectHit(hits[0]);
+                return;
+              }
+              if (needle.length >= 2) submitFirstHitRef.current = true;
+            }}
             placeholder="輸入地址、路口或地標"
             aria-label="目的地地址"
             className="h-10 border-0 bg-transparent px-1 text-sm text-white shadow-none placeholder:text-zinc-500 focus-visible:ring-0"

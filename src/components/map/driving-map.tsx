@@ -12,8 +12,10 @@ import {
   DRIVING_PITCH,
   DRIVING_ZOOM,
   DRIVING_ZOOM_MOBILE,
+  NAVIGATION_PITCH,
   OPENFREEMAP_DARK_STYLE,
   OVERHEAD_ZOOM,
+  OVERVIEW_PITCH,
   TAINAN_CENTER,
 } from "@/lib/constants";
 import { bindCctvLayerClicks, upsertCctvLayer } from "@/lib/cctv-layer";
@@ -82,6 +84,7 @@ function cameraOptions(
   map: MapLibreMap,
   vehicle: VehiclePose,
   mode: CameraMode,
+  navigating = false,
 ) {
   const height = map.getContainer().clientHeight;
   const width = map.getContainer().clientWidth;
@@ -89,7 +92,7 @@ function cameraOptions(
   return {
     center: [vehicle.lng, vehicle.lat] as [number, number],
     bearing: mode === "3d" ? vehicle.heading : 0,
-    pitch: mode === "3d" ? DRIVING_PITCH : 0,
+    pitch: mode === "3d" ? (navigating ? NAVIGATION_PITCH : DRIVING_PITCH) : 0,
     zoom:
       mode === "3d"
         ? compact
@@ -264,7 +267,12 @@ export function DrivingMap({
       marker.setRotation(headingUp ? 0 : target.heading);
 
       if (followVehicleRef.current) {
-        const wanted = cameraOptions(mapNow, target, modeRef.current);
+        const wanted = cameraOptions(
+          mapNow,
+          target,
+          modeRef.current,
+          navigatingRef.current,
+        );
         const center = mapNow.getCenter();
         mapNow.jumpTo({
           center: [
@@ -293,7 +301,14 @@ export function DrivingMap({
         console.error("CCTV layer skipped", error);
       }
       readyRef.current = true;
-      map.jumpTo(cameraOptions(map, vehicleRef.current, modeRef.current));
+      map.jumpTo(
+        cameraOptions(
+          map,
+          vehicleRef.current,
+          modeRef.current,
+          navigatingRef.current,
+        ),
+      );
       emitViewport(true);
       lastFrameRef.current = performance.now();
       rafRef.current = requestAnimationFrame(tick);
@@ -408,13 +423,13 @@ export function DrivingMap({
     const compact = isCompactViewport(map.getContainer().clientWidth);
     map.fitBounds(bounds, {
       padding: {
-        top: compact ? 260 : 240,
-        bottom: compact ? 160 : 150,
+        top: compact ? 120 : 110,
+        bottom: compact ? 140 : 130,
         left: 36,
         right: compact ? 72 : 48,
       },
       duration: 900,
-      pitch: cameraMode === "3d" ? 38 : 0,
+      pitch: OVERVIEW_PITCH,
       bearing: 0,
       maxZoom: 16.2,
       essential: true,

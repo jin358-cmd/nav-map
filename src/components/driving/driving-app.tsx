@@ -7,7 +7,7 @@ import { AddressSearch } from "@/components/overlay/address-search";
 import { CctvDetailCard } from "@/components/overlay/cctv-detail-card";
 import { NextIntersectionHud } from "@/components/overlay/navigation-banner";
 import { RoadInformationCard } from "@/components/overlay/road-information-card";
-import { RoutePreview } from "@/components/overlay/route-preview";
+import { RouteConfirmBar } from "@/components/overlay/route-preview";
 import { YouTubeMusicPlayer } from "@/components/overlay/youtube-music-player";
 import { useCctvView } from "@/hooks/use-cctv-view";
 import { useDisasterView } from "@/hooks/use-disaster-view";
@@ -86,10 +86,15 @@ export function DrivingApp() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [navigating, setNavigating] = useState(false);
   const [intelCollapse, setIntelCollapse] = useState(0);
-  const [musicOpen, setMusicOpen] = useState(false);
+  const [musicMode, setMusicMode] = useState<"off" | "open" | "mini">("off");
+  const [rerouting, setRerouting] = useState(false);
   const [navigationProgress, setNavigationProgress] =
     useState<NavigationProgress | null>(null);
   const navigationTrackerRef = useRef<NavigationTrackerState | null>(null);
+  const reroutingRef = useRef(false);
+  const lastRerouteAtRef = useRef(0);
+  const destinationRef = useRef<RouteDestination | null>(null);
+  const vehicleRef = useRef(vehicle);
 
   const routeProgressModel = useMemo(
     () => createRouteProgressModel(route, routeSteps),
@@ -107,7 +112,9 @@ export function DrivingApp() {
       routeProgressModel,
       routeSteps,
     };
-  }, [navigating, routeProgressModel, routeSteps]);
+    destinationRef.current = destination;
+    vehicleRef.current = vehicle;
+  }, [destination, navigating, routeProgressModel, routeSteps, vehicle]);
 
   const fallbackStep = useMemo(
     () => nextIntersectionStep(routeSteps),
@@ -310,22 +317,6 @@ export function DrivingApp() {
     }
   }, []);
 
-  const goDemoDrive = useCallback(() => {
-    setVehicle(DEMO_VEHICLE);
-    setFollowVehicle(true);
-    setNavigating(false);
-    navigationTrackerRef.current = null;
-    setNavigationProgress(null);
-    setSelectedCctv(null);
-    setCameraMode("3d");
-    setDestination(null);
-    setRouteError(null);
-    setRoute(demoRoute);
-    setManeuver(demoManeuver);
-    setRouteSteps([]);
-    setRefreshNonce((value) => value + 1);
-  }, [demoManeuver, demoRoute]);
-
   const startNavigation = useCallback(() => {
     const next = routeProgressModel
       ? updateNavigationProgress({
@@ -359,6 +350,43 @@ export function DrivingApp() {
     reloadSpeedEnforcement();
     reloadDisasters();
   }, [reload, reloadDisasters, reloadSpeedEnforcement, reloadTraffic]);
+
+  const rerouteFromHere = useCallback(async () => {
+    const dest = destinationRef.current;
+    const here = vehicleRef.current;
+    if (!dest || reroutingRef.current) return;
+    if (Date.now() - lastRerouteAtRef.current < 8000) return;
+    reroutingRef.current = true;
+    lastRerouteAtRef.current = Date.now();
+    setRerouting(true);
+    try {
+      const plan = await planDrivingRoute(
+        { lng: here.lng, lat: here.lat },
+        {
+          id: "reroute",
+          name: dest.label,
+          address: dest.address,
+          location: dest.location,
+        },
+      );
+      setRoute(plan.coordinates);
+      setDestination(plan.destination);
+      setManeuver(plan.maneuver);
+      setRouteSteps(plan.steps ?? []);
+      navigationTrackerRef.current = null;
+      setNavigationProgress(null);
+    } catch (error) {
+      setRouteError(error instanceof Error ? error.message : "重新規劃路線失敗");
+    } finally {
+      reroutingRef.current = false;
+      setRerouting(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!navigating || !navigationProgress?.offRoute) return;
+    void rerouteFromHere();
+  }, [navigating, navigationProgress?.offRoute, rerouteFromHere]);
 
   return (
     <div className="relative h-dvh w-full overflow-hidden overscroll-none bg-[#0b0d11] text-zinc-100">
@@ -400,16 +428,17 @@ export function DrivingApp() {
             step={activeNavigationStep}
             distanceMeters={distanceToNextMeters}
             offRoute={navigationProgress?.offRoute ?? false}
+            rerouting={rerouting}
             onExit={exitNavigation}
           />
         </div>
       ) : (
         <div className="absolute top-[max(2.85rem,calc(env(safe-area-inset-top)+2.35rem))] right-[4.4rem] left-3 z-20 sm:top-[max(0.55rem,env(safe-area-inset-top))] sm:right-24 sm:left-44">
           {destination ? (
-            <RoutePreview
+            <RouteConfirmBar
               destination={destination}
               maneuver={maneuver}
-              steps={routeSteps}
+              rerouting={rerouting}
               onStartNav={startNavigation}
               onClear={clearRoute}
             />
@@ -428,16 +457,10 @@ export function DrivingApp() {
         <MapControls
           cameraMode={cameraMode}
           gpsStatus={gpsStatus}
-          followVehicle={followVehicle}
           onLocate={() => void locate()}
           onToggleCamera={() =>
             setCameraMode((mode) => (mode === "3d" ? "2d" : "3d"))
           }
-          onRecenter={() => {
-            setFollowVehicle(true);
-            if (navigating) setCameraMode("3d");
-          }}
-          onDemoDrive={goDemoDrive}
           onRefreshIntel={refreshIntel}
         />
       </div>
@@ -456,8 +479,11 @@ export function DrivingApp() {
             onClose={() => setSelectedCctv(null)}
           />
         ) : null}
-        {musicOpen ? (
-          <YouTubeMusicPlayer onClose={() => setMusicOpen(false)} />
+        {musicMode !== "off" ? (
+          <YouTubeMusicPlayer
+            compact={musicMode === "mini"}
+            onClose={() => setMusicMode("off")}
+          />
         ) : null}
         <RoadInformationCard
           key={intelCollapse}
@@ -467,10 +493,19 @@ export function DrivingApp() {
           disasterOrigin={disasterOrigin}
           emptyHint="附近 8 公里內尚無路況或 CCTV 情報。"
           onSelectCctv={selectCamera}
-          musicOpen={musicOpen}
+          musicOpen={musicMode !== "off"}
+          onPreviewOpen={() => {
+            setSelectedCctv(null);
+            setMusicMode((mode) => (mode === "open" ? "mini" : mode));
+          }}
           onToggleMusic={() => {
             setSelectedCctv(null);
-            setMusicOpen((open) => !open);
+            setIntelCollapse((value) => value + 1);
+            setMusicMode((mode) => {
+              if (mode === "off") return "open";
+              if (mode === "open") return "mini";
+              return "open";
+            });
           }}
         />
       </footer>

@@ -76,6 +76,7 @@ export function RoadInformationCard({
   onSelectCctv,
   musicOpen = false,
   onToggleMusic,
+  onPreviewOpen,
 }: {
   items: RoadIntelItem[];
   origin: CctvDataOrigin;
@@ -85,6 +86,7 @@ export function RoadInformationCard({
   onSelectCctv?: (cameraId: string) => void;
   musicOpen?: boolean;
   onToggleMusic?: () => void;
+  onPreviewOpen?: () => void;
 }) {
   const [openKind, setOpenKind] = useState<RoadIntelKind | null>(null);
 
@@ -100,69 +102,69 @@ export function RoadInformationCard({
   const openGroup = groups.find((group) => group.kind === openKind);
   const openItems = openGroup?.items ?? [];
 
+  const previewItem = openItems[0] ?? null;
+
   return (
-    <section className="pointer-events-auto w-full max-w-xl text-white">
-      {openGroup && openItems.length ? (
-        <div className="mb-2 rounded-2xl border border-white/10 bg-black/60 p-3 shadow-[0_12px_50px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:rounded-3xl sm:p-4">
-          <div className="mb-2 flex items-center justify-between gap-3">
-            <h2 className="text-sm font-medium tracking-wide text-zinc-200">
-              {KIND_META[openGroup.kind].label}
-            </h2>
-            <p className="truncate text-[11px] text-zinc-500">
-              CCTV {cctvOriginLabel(origin)} · 路況 {trafficOriginLabel(trafficOrigin)} · 災害 {disasterOriginLabel(disasterOrigin)}
+    <section className="pointer-events-auto inline-flex flex-col items-center text-white">
+      {previewItem ? (
+        <div className="mb-2 w-fit max-w-[17.5rem] rounded-2xl border border-white/10 bg-black/70 px-2.5 py-2 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl">
+          <div className="mb-1 flex items-center justify-between gap-2">
+            <p className="text-[11px] tracking-wide text-zinc-400">
+              {KIND_META[previewItem.kind].label}
             </p>
             <button
               type="button"
               aria-label="收合情報"
               onClick={() => setOpenKind(null)}
-              className="flex size-8 shrink-0 items-center justify-center rounded-lg text-zinc-400 hover:bg-white/10 hover:text-white touch-manipulation"
+              className="flex size-7 shrink-0 items-center justify-center rounded-lg text-zinc-400 hover:bg-white/10 hover:text-white touch-manipulation"
             >
-              <X className="size-4" />
+              <X className="size-3.5" />
             </button>
           </div>
-          <ul className="max-h-44 space-y-1.5 overflow-y-auto sm:max-h-52 sm:space-y-2">
-            {openItems.map((item) => {
-              const meta = KIND_META[item.kind];
-              const Icon = meta.icon;
-              const clickable = item.kind === "cctv" && item.cameraId;
-              return (
-                <li key={item.id}>
-                  <button
-                    type="button"
-                    disabled={!clickable}
-                    onClick={() => {
-                      if (item.cameraId) onSelectCctv?.(item.cameraId);
-                    }}
-                    className={cn(
-                      "flex min-h-11 w-full items-center gap-2.5 rounded-xl bg-white/4 px-2.5 py-1.5 text-left sm:gap-3 sm:rounded-2xl sm:px-3 sm:py-2",
-                      clickable && "hover:bg-white/8 touch-manipulation",
-                      !clickable && "cursor-default",
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "flex size-8 shrink-0 items-center justify-center rounded-lg sm:size-9 sm:rounded-xl",
-                        meta.className,
-                      )}
-                    >
-                      <Icon className="size-4" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{item.title}</p>
-                      <p className="truncate text-xs text-zinc-400">{item.detail}</p>
-                    </div>
-                    <span className="shrink-0 text-xs text-zinc-400">
-                      {formatDistance(item.distanceMeters)}
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+          {(() => {
+            const meta = KIND_META[previewItem.kind];
+            const Icon = meta.icon;
+            const clickable = previewItem.kind === "cctv" && previewItem.cameraId;
+            return (
+              <button
+                type="button"
+                disabled={!clickable}
+                onClick={() => {
+                  if (previewItem.cameraId) onSelectCctv?.(previewItem.cameraId);
+                }}
+                className={cn(
+                  "flex w-full items-center gap-2 text-left",
+                  clickable && "touch-manipulation",
+                  !clickable && "cursor-default",
+                )}
+              >
+                <span
+                  className={cn(
+                    "flex size-8 shrink-0 items-center justify-center rounded-lg",
+                    meta.className,
+                  )}
+                >
+                  <Icon className="size-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{previewItem.title}</p>
+                  <p className="truncate text-[11px] text-zinc-400">
+                    {previewItem.detail}
+                  </p>
+                </div>
+                <span className="shrink-0 text-[11px] text-zinc-400">
+                  {formatDistance(previewItem.distanceMeters)}
+                </span>
+              </button>
+            );
+          })()}
+          <p className="mt-1 truncate text-[10px] text-zinc-600">
+            CCTV {cctvOriginLabel(origin)} · 路況 {trafficOriginLabel(trafficOrigin)} · 災害 {disasterOriginLabel(disasterOrigin)}
+          </p>
         </div>
       ) : null}
 
-      <div className="flex items-center justify-center gap-2 rounded-full border border-white/10 bg-black/55 px-2 py-1.5 shadow-[0_10px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl">
+      <div className="inline-flex w-fit items-center justify-center gap-1.5 rounded-full border border-white/10 bg-black/55 px-1.5 py-1 shadow-[0_10px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl">
         {groups.length === 0 ? (
           <p className="px-2 py-1 text-[11px] text-zinc-500">
             {emptyHint ?? "前方暫無通報"}
@@ -179,12 +181,14 @@ export function RoadInformationCard({
                 aria-label={`${meta.label}${group.items.length}則`}
                 aria-pressed={active}
                 onClick={() =>
-                  setOpenKind((current) =>
-                    current === group.kind ? null : group.kind,
-                  )
+                  setOpenKind((current) => {
+                    const next = current === group.kind ? null : group.kind;
+                    if (next) onPreviewOpen?.();
+                    return next;
+                  })
                 }
                 className={cn(
-                  "relative flex size-11 items-center justify-center rounded-full border touch-manipulation",
+                  "relative flex size-10 items-center justify-center rounded-full border touch-manipulation",
                   active ? meta.activeClass : meta.className,
                 )}
               >
@@ -223,7 +227,7 @@ function YouTubeMusicButton({
       title="YouTube Music"
       onClick={onToggle}
       className={cn(
-        "relative flex size-11 items-center justify-center rounded-full border touch-manipulation",
+        "relative flex size-10 items-center justify-center rounded-full border touch-manipulation",
         pressed
           ? "border-red-300/70 bg-[#ff0033]/40"
           : "border-red-400/35 bg-[#ff0033]/20 hover:bg-[#ff0033]/35",

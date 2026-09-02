@@ -31,11 +31,13 @@ export function NextIntersectionHud({
   step,
   distanceMeters,
   offRoute,
+  rerouting = false,
   onExit,
 }: {
   step: RouteStep | null;
   distanceMeters: number;
   offRoute: boolean;
+  rerouting?: boolean;
   onExit: () => void;
 }) {
   return (
@@ -48,15 +50,17 @@ export function NextIntersectionHud({
         <p className="truncate text-xl font-semibold tabular-nums tracking-tight sm:text-2xl">
           {formatDistance(distanceMeters)}
         </p>
-        {offRoute ? (
-          <p className="text-[11px] font-medium text-amber-300">偏離路線</p>
+        {rerouting ? (
+          <p className="text-[11px] font-medium text-amber-300">正在更新路線…</p>
+        ) : offRoute ? (
+          <p className="text-[11px] font-medium text-amber-300">偏離路線，即將重算</p>
         ) : null}
       </div>
       <Button
         type="button"
         variant="ghost"
         size="icon-sm"
-        aria-label="返回路線預覽"
+        aria-label="結束導航"
         onClick={onExit}
         className="size-8 shrink-0 text-zinc-300 hover:bg-white/10 hover:text-white"
       >

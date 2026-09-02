@@ -13,7 +13,10 @@ export const DEMO_VEHICLE: VehiclePose = {
   source: "demo",
 };
 
-export const DRIVING_PITCH = 60;
+export const DRIVING_PITCH = 48;
+/** 開始導航後鏡頭壓低，多看路面、少看天空 */
+export const NAVIGATION_PITCH = 32;
+export const OVERVIEW_PITCH = 0;
 export const DRIVING_ZOOM = 17.15;
 export const DRIVING_ZOOM_MOBILE = 16.7;
 export const OVERHEAD_ZOOM = 15.4;

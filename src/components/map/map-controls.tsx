@@ -1,13 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import {
-  Compass,
-  LocateFixed,
-  MapPinned,
-  Mountain,
-  RefreshCw,
-} from "lucide-react";
+import { Compass, LocateFixed, Mountain, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { CameraMode, GpsStatus } from "@/types/domain";
@@ -15,22 +9,16 @@ import type { CameraMode, GpsStatus } from "@/types/domain";
 type MapControlsProps = {
   cameraMode: CameraMode;
   gpsStatus: GpsStatus;
-  followVehicle: boolean;
   onLocate: () => void;
   onToggleCamera: () => void;
-  onRecenter: () => void;
-  onDemoDrive: () => void;
   onRefreshIntel: () => void;
 };
 
 export function MapControls({
   cameraMode,
   gpsStatus,
-  followVehicle,
   onLocate,
   onToggleCamera,
-  onRecenter,
-  onDemoDrive,
   onRefreshIntel,
 }: MapControlsProps) {
   const locating = gpsStatus === "locating";
@@ -55,23 +43,9 @@ export function MapControls({
           <Compass className="size-5" />
         )}
       </ControlButton>
-      <ControlButton
-        label="居中"
-        onClick={onRecenter}
-        active={followVehicle}
-      >
-        <MapPinned className="size-5" />
-      </ControlButton>
       <ControlButton label="重新整理情報" onClick={onRefreshIntel}>
         <RefreshCw className="size-5" />
       </ControlButton>
-      <Button
-        variant="outline"
-        onClick={onDemoDrive}
-        className="mt-0.5 h-11 min-w-11 rounded-full border-white/15 bg-black/50 px-3 text-xs text-cyan-100 shadow-lg backdrop-blur-md hover:bg-black/70 touch-manipulation"
-      >
-        臺南示範
-      </Button>
     </div>
   );
 }
