@@ -85,9 +85,17 @@ export function intersectionRoads(record: {
   push(record.stake);
   push(record.crossRoad);
 
-  if (!parts.length) return ["未提供路名", "交叉路名待補"];
-  if (parts.length === 1) return [parts[0], "交叉路名待補"];
+  if (!parts.length) return ["未提供路名", ""];
+  if (parts.length === 1) return [parts[0], ""];
   return [parts[0], parts[1]];
+}
+
+export function formatIntersection(roadA: string, roadB?: string) {
+  const a = normalizeRoadToken(roadA);
+  const b = normalizeRoadToken(roadB || "");
+  if (!a && !b) return "未提供路名";
+  if (!b) return a;
+  return `${a} × ${b}`;
 }
 
 export function inferAvailability(record: CctvFallbackRecord): CctvStatus {
@@ -107,15 +115,14 @@ export function normalizeFallbackCamera(
   const [roadA, roadB] = intersectionRoads(record);
   const dirLabel = directionLabel(record.direction);
   const location: LngLat = { lng: record.lng, lat: record.lat };
+  const intersection = formatIntersection(roadA, roadB);
   const name =
-    record.sourceType === "freeway"
-      ? record.stake || record.id
-      : `${roadA}${roadB === "交叉路名待補" ? "" : ` × ${roadB}`}`;
+    record.sourceType === "freeway" ? record.stake || record.id : intersection;
 
   return {
     id: record.id,
     name,
-    intersection: `${roadA} × ${roadB}`,
+    intersection,
     roadName: record.roadName || roadA,
     crossRoad: record.crossRoad || roadB,
     direction: record.direction,
