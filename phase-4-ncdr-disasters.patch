@@ -1,0 +1,713 @@
+From 301971fdcbe4a7da7ceb7d727a7ccd5f3eed25c8 Mon Sep 17 00:00:00 2001
+From: Codex <codex@openai.com>
+Date: Thu, 3 Sep 2026 02:27:49 +0900
+Subject: [PATCH] feat: add NCDR live disaster alerts with fallback
+
+---
+ .env.example                                  |   3 +
+ README.md                                     |  11 +-
+ docs/PHASE-4-DISASTERS.md                     |   8 ++
+ src/app/api/disasters/route.ts                |  12 ++
+ src/components/driving/driving-app.tsx        |  41 ++++--
+ src/components/map/driving-map.tsx            |  32 +++--
+ .../overlay/disaster-detail-card.tsx          |  21 +++
+ src/hooks/use-disaster-view.ts                |  33 +++++
+ src/lib/disaster-layer.ts                     |  59 ++++++++
+ src/services/disasters.ts                     | 133 ++++++++++++++++++
+ src/types/domain.ts                           |  27 +++-
+ 11 files changed, 355 insertions(+), 25 deletions(-)
+ create mode 100644 docs/PHASE-4-DISASTERS.md
+ create mode 100644 src/app/api/disasters/route.ts
+ create mode 100644 src/components/overlay/disaster-detail-card.tsx
+ create mode 100644 src/hooks/use-disaster-view.ts
+ create mode 100644 src/lib/disaster-layer.ts
+ create mode 100644 src/services/disasters.ts
+
+diff --git a/.env.example b/.env.example
+index 2b17ac5..3b5e606 100644
+--- a/.env.example
++++ b/.env.example
+@@ -12,3 +12,6 @@ TDX_CLIENT_SECRET=
+ # 並仍以國土測繪中心的公開地政行政區 API 交叉比對。
+ TGOS_APP_ID=
+ TGOS_API_KEY=
++
++# NCDR 民生示警 JSON Atom Feed（可留空使用官方預設網址）
++NCDR_ALERT_FEED_URL=
+diff --git a/README.md b/README.md
+index 497a6a4..5c3d8db 100644
+--- a/README.md
++++ b/README.md
+@@ -2,7 +2,7 @@
+ 
+ 台灣智慧駕駛地圖＋即時道路情報平台。產品定位是 **駕駛視角的道路情報**，不是 Google Maps 克隆。
+ 
+-第一階段 Prototype 以 **臺南市區** 為示範範圍（中正路北上，民生路口右轉往臺南火車站）。Phase 2 已把 weather 專案的 CCTV 篩選／距離／city+freeway 模型移植到 MapLibre Driving HUD。Phase 3 已接 TDX 臺南市區即時路況，無憑證或 live 失敗時走 mock。災害標記仍是 mock。
++第一階段 Prototype 以 **臺南市區** 為示範範圍（中正路北上，民生路口右轉往臺南火車站）。Phase 2 已完成 CCTV；Phase 3 已接 TDX 即時路況；Phase 4 已接 NCDR 民生示警與 CAP 災害範圍，來源失敗時保留 mock fallback。
+ 
+ ## 技術架構
+ 
+@@ -31,7 +31,7 @@ src/
+     cctv.ts                 TDX → snapshot → mock
+     tdx-client.ts           MOTC TDX token 與 GET
+     traffic.ts              即時路況 live → mock
+-    disaster-api.ts         預留防災 API（Phase 4）
++    disasters.ts            NCDR JSON Atom + CAP 正規化與 fallback
+     geolocation.ts          瀏覽器 GPS
+   lib/                      地圖樣式、CCTV／路況圖層與評分
+   types/                    領域型別
+@@ -82,7 +82,7 @@ npm start
+ - 自訂 Vehicle Marker（不是 Google 藍點）
+ - CCTV：獨立 `cctv-source` / `cctv-layer`，依 1 km／8 km／zoom 顯示，點擊底部 HUD
+ - 即時路況：獨立 `traffic-source` / `traffic-layer`，TDX live 或 MOCK 後備
+-- Mock Disaster / 事故標記
++- NCDR 即時災害 GeoJSON 圖層／事故標記
+ - 頂部地址搜尋：戶政門牌優先、地政資料交叉比對，並保留最近 6 筆目的地
+ - 點確認後進入駕駛畫面，最上方只顯示下一個路口距離
+ - 底部狀態列可開啟 YouTube Music 簡易播放器
+@@ -95,6 +95,7 @@ npm start
+ 
+ Phase 2 對照報告：[`docs/PHASE-2-CCTV.md`](docs/PHASE-2-CCTV.md)。  
+ Phase 3 路況說明：[`docs/PHASE-3-TRAFFIC.md`](docs/PHASE-3-TRAFFIC.md)。
++Phase 4 災害說明：[`docs/PHASE-4-DISASTERS.md`](docs/PHASE-4-DISASTERS.md)。
+ 
+ ## Future Roadmap
+ 
+@@ -104,8 +105,8 @@ Phase 3 路況說明：[`docs/PHASE-3-TRAFFIC.md`](docs/PHASE-3-TRAFFIC.md)。
+ **Phase 3：即時交通（本階段）**  
+ TDX 臺南市區 Live + Section + SectionShape，依壅塞級別／時速上色；無憑證或失敗時保留 mock。
+ 
+-**Phase 4：災害資訊**  
+-NCDR 或地方防災 API 取代 mock 積水／封路／強風標記。
++**Phase 4：災害資訊（已完成）**
++NCDR JSON Atom + CAP 取代 mock 積水／封路／強風標記；MapLibre 圖層、點擊詳情、120 秒快取與失敗 fallback。
+ 
+ **Phase 5：路線規劃（部分完成）**  
+ 已可用地址／地標規劃開車路徑。進階避開壅塞與多點停靠尚未做。
+diff --git a/docs/PHASE-4-DISASTERS.md b/docs/PHASE-4-DISASTERS.md
+new file mode 100644
+index 0000000..3468e23
+--- /dev/null
++++ b/docs/PHASE-4-DISASTERS.md
+@@ -0,0 +1,8 @@
++# Phase 4 — NCDR 即時災害資訊
++
++- 來源：NCDR 民生示警 `JSONAtomFeed.ashx` 與各示警 CAP 文件。
++- 範圍：只保留摘要或 CAP `areaDesc` 涵蓋臺南市的有效示警。
++- 定位：使用 CAP `polygon`／`circle` 的幾何中心；無座標示警不臆測位置。
++- 顯示：MapLibre `disaster-source`、circle layer 與透明 hit layer，不使用 DOM 災害 Marker。
++- 更新：server cache 與瀏覽器輪詢均為 120 秒。
++- fallback：官方 feed 請求或解析失敗才顯示 mock；live 成功但臺南 0 則時維持 0 則。
+diff --git a/src/app/api/disasters/route.ts b/src/app/api/disasters/route.ts
+new file mode 100644
+index 0000000..ab8c6fb
+--- /dev/null
++++ b/src/app/api/disasters/route.ts
+@@ -0,0 +1,12 @@
++import { NextResponse } from "next/server";
++import { fetchDisasterCatalog } from "@/services/disasters";
++
++export const runtime = "nodejs";
++export const revalidate = 120;
++
++export async function GET() {
++  const catalog = await fetchDisasterCatalog();
++  return NextResponse.json(catalog, {
++    headers: { "Cache-Control": "public, s-maxage=120, stale-while-revalidate=300" },
++  });
++}
+diff --git a/src/components/driving/driving-app.tsx b/src/components/driving/driving-app.tsx
+index 6819870..f910ddf 100644
+--- a/src/components/driving/driving-app.tsx
++++ b/src/components/driving/driving-app.tsx
+@@ -5,12 +5,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+ import { MapControls } from "@/components/map/map-controls";
+ import { AddressSearch } from "@/components/overlay/address-search";
+ import { CctvDetailCard } from "@/components/overlay/cctv-detail-card";
++import { DisasterDetailCard } from "@/components/overlay/disaster-detail-card";
+ import { NextIntersectionHud } from "@/components/overlay/navigation-banner";
+ import { RoadInformationCard } from "@/components/overlay/road-information-card";
+ import { RoutePreview } from "@/components/overlay/route-preview";
+ import { YouTubeMusicPlayer } from "@/components/overlay/youtube-music-player";
+ import { useCctvView } from "@/hooks/use-cctv-view";
+ import { useTrafficView } from "@/hooks/use-traffic-view";
++import { useDisasterView } from "@/hooks/use-disaster-view";
+ import { roadIntelFromCameras } from "@/lib/cctv-intel";
+ import { DEMO_VEHICLE } from "@/lib/constants";
+ import { distanceKm } from "@/lib/geo";
+@@ -26,7 +28,6 @@ import {
+   fetchAccidentReports,
+   fetchAheadIntel,
+   fetchDemoRoute,
+-  fetchDisasterAlerts,
+   fetchNavigationManeuver,
+   planDrivingRoute,
+   requestCurrentPosition,
+@@ -68,7 +69,6 @@ export function DrivingApp() {
+   const [gpsStatus, setGpsStatus] = useState<GpsStatus>("idle");
+   const [viewport, setViewport] = useState<MapViewport | null>(null);
+   const [refreshNonce, setRefreshNonce] = useState(0);
+-  const [disasters, setDisasters] = useState<DisasterAlert[]>([]);
+   const [accidents, setAccidents] = useState<AccidentReport[]>([]);
+   const [route, setRoute] = useState<[number, number][]>([]);
+   const [demoRoute, setDemoRoute] = useState<[number, number][]>([]);
+@@ -83,6 +83,7 @@ export function DrivingApp() {
+   const [routeError, setRouteError] = useState<string | null>(null);
+   const [baseIntel, setBaseIntel] = useState<RoadIntelItem[]>([]);
+   const [selectedCctv, setSelectedCctv] = useState<CctvCamera | null>(null);
++  const [selectedDisaster, setSelectedDisaster] = useState<DisasterAlert | null>(null);
+   const [loadError, setLoadError] = useState<string | null>(null);
+   const [navigating, setNavigating] = useState(false);
+   const [intelCollapse, setIntelCollapse] = useState(0);
+@@ -151,21 +152,26 @@ export function DrivingApp() {
+     refreshNonce,
+   });
+ 
++  const {
++    alerts: disasters,
++    origin: disasterOrigin,
++    error: disasterError,
++    reload: reloadDisasters,
++  } = useDisasterView(refreshNonce);
++
+   useEffect(() => {
+     let cancelled = false;
+ 
+     async function load() {
+       try {
+-        const [disasterRows, accidentRows, routeLine, nav, ahead] =
++        const [accidentRows, routeLine, nav, ahead] =
+           await Promise.all([
+-            fetchDisasterAlerts(),
+             fetchAccidentReports(),
+             fetchDemoRoute(),
+             fetchNavigationManeuver(),
+             fetchAheadIntel(),
+           ]);
+         if (cancelled) return;
+-        setDisasters(disasterRows);
+         setAccidents(accidentRows);
+         setDemoRoute(routeLine);
+         setRoute(routeLine);
+@@ -209,12 +215,20 @@ export function DrivingApp() {
+     const extras = baseIntel.filter(
+       (item) => item.kind !== "cctv" && item.kind !== "congestion",
+     );
++    const disasterItems: RoadIntelItem[] = disasters.slice(0, 3).map((alert) => ({
++      id: alert.id,
++      kind: "disaster",
++      title: alert.title,
++      detail: alert.area || alert.description,
++      distanceMeters: Math.round(distanceKm(vehicle, alert.location) * 1000),
++    }));
+     return [
+       ...(trafficItem ? [trafficItem] : []),
+       ...cameras,
++      ...disasterItems,
+       ...extras,
+     ];
+-  }, [baseIntel, preview, trafficScored]);
++  }, [baseIntel, disasters, preview, trafficScored, vehicle]);
+ 
+   const searchBias = useMemo(
+     () => ({ lng: vehicle.lng, lat: vehicle.lat }),
+@@ -333,7 +347,8 @@ export function DrivingApp() {
+     setRefreshNonce((value) => value + 1);
+     reload();
+     reloadTraffic();
+-  }, [reload, reloadTraffic]);
++    reloadDisasters();
++  }, [reload, reloadDisasters, reloadTraffic]);
+ 
+   return (
+     <div className="relative h-dvh w-full overflow-hidden overscroll-none bg-[#0b0d11] text-zinc-100">
+@@ -343,6 +358,7 @@ export function DrivingApp() {
+         followVehicle={followVehicle}
+         navigating={navigating}
+         selectedCctvId={selectedCctv?.id ?? null}
++        selectedDisasterId={selectedDisaster?.id ?? null}
+         cameras={visible}
+         traffic={traffic}
+         disasters={disasters}
+@@ -351,6 +367,10 @@ export function DrivingApp() {
+         destination={destination}
+         fitRouteKey={fitRouteKey}
+         onCctvSelect={selectCamera}
++        onDisasterSelect={(id) => {
++          setSelectedCctv(null);
++          setSelectedDisaster(disasters.find((alert) => alert.id === id) ?? null);
++        }}
+         onUserPan={() => {
+           setFollowVehicle(false);
+         }}
+@@ -430,6 +450,9 @@ export function DrivingApp() {
+             onClose={() => setSelectedCctv(null)}
+           />
+         ) : null}
++        {selectedDisaster ? (
++          <DisasterDetailCard alert={selectedDisaster} origin={disasterOrigin} onClose={() => setSelectedDisaster(null)} />
++        ) : null}
+         {musicOpen ? (
+           <YouTubeMusicPlayer onClose={() => setMusicOpen(false)} />
+         ) : null}
+@@ -453,9 +476,9 @@ export function DrivingApp() {
+           {loadError}
+         </div>
+       ) : null}
+-      {cctvError || trafficError ? (
++      {cctvError || trafficError || disasterError ? (
+         <div className="pointer-events-none absolute top-[max(11rem,calc(env(safe-area-inset-top)+10rem))] left-1/2 z-20 -translate-x-1/2 rounded-xl border border-amber-300/25 bg-black/65 px-3 py-2 text-xs text-amber-100">
+-          {cctvError ?? trafficError}
++          {cctvError ?? trafficError ?? disasterError}
+         </div>
+       ) : null}
+     </div>
+diff --git a/src/components/map/driving-map.tsx b/src/components/map/driving-map.tsx
+index 69bed39..6c12745 100644
+--- a/src/components/map/driving-map.tsx
++++ b/src/components/map/driving-map.tsx
+@@ -17,6 +17,7 @@ import {
+   TAINAN_CENTER,
+ } from "@/lib/constants";
+ import { bindCctvLayerClicks, upsertCctvLayer } from "@/lib/cctv-layer";
++import { bindDisasterLayerClicks, upsertDisasterLayer } from "@/lib/disaster-layer";
+ import { upsertIntelligenceLayers } from "@/lib/map-layers";
+ import { configureMapLibreWorker } from "@/lib/maplibre-worker";
+ import { applyDarkDrivingTheme } from "@/lib/map-style";
+@@ -38,6 +39,7 @@ type DrivingMapProps = {
+   followVehicle: boolean;
+   navigating: boolean;
+   selectedCctvId: string | null;
++  selectedDisasterId: string | null;
+   cameras: CctvCamera[];
+   traffic: TrafficSegment[];
+   disasters: DisasterAlert[];
+@@ -46,6 +48,7 @@ type DrivingMapProps = {
+   destination: RouteDestination | null;
+   fitRouteKey: number;
+   onCctvSelect: (cameraId: string) => void;
++  onDisasterSelect: (alertId: string) => void;
+   onUserPan: () => void;
+   onViewportChange: (viewport: MapViewport) => void;
+ };
+@@ -130,6 +133,7 @@ export function DrivingMap({
+   followVehicle,
+   navigating,
+   selectedCctvId,
++  selectedDisasterId,
+   cameras,
+   traffic,
+   disasters,
+@@ -138,6 +142,7 @@ export function DrivingMap({
+   destination,
+   fitRouteKey,
+   onCctvSelect,
++  onDisasterSelect,
+   onUserPan,
+   onViewportChange,
+ }: DrivingMapProps) {
+@@ -147,6 +152,7 @@ export function DrivingMap({
+   const intelMarkersRef = useRef<Marker[]>([]);
+   const destMarkerRef = useRef<Marker | null>(null);
+   const onCctvSelectRef = useRef(onCctvSelect);
++  const onDisasterSelectRef = useRef(onDisasterSelect);
+   const onUserPanRef = useRef(onUserPan);
+   const onViewportChangeRef = useRef(onViewportChange);
+   const modeRef = useRef(cameraMode);
+@@ -155,6 +161,8 @@ export function DrivingMap({
+   const trafficRef = useRef(traffic);
+   const camerasRef = useRef(cameras);
+   const selectedRef = useRef(selectedCctvId);
++  const disastersRef = useRef(disasters);
++  const selectedDisasterRef = useRef(selectedDisasterId);
+   const followVehicleRef = useRef(followVehicle);
+   const navigatingRef = useRef(navigating);
+   const readyRef = useRef(false);
+@@ -164,6 +172,7 @@ export function DrivingMap({
+ 
+   useEffect(() => {
+     onCctvSelectRef.current = onCctvSelect;
++    onDisasterSelectRef.current = onDisasterSelect;
+     onUserPanRef.current = onUserPan;
+     onViewportChangeRef.current = onViewportChange;
+     modeRef.current = cameraMode;
+@@ -172,10 +181,13 @@ export function DrivingMap({
+     trafficRef.current = traffic;
+     camerasRef.current = cameras;
+     selectedRef.current = selectedCctvId;
++    disastersRef.current = disasters;
++    selectedDisasterRef.current = selectedDisasterId;
+     followVehicleRef.current = followVehicle;
+     navigatingRef.current = navigating;
+   }, [
+     onCctvSelect,
++    onDisasterSelect,
+     onUserPan,
+     onViewportChange,
+     cameraMode,
+@@ -184,6 +196,8 @@ export function DrivingMap({
+     traffic,
+     cameras,
+     selectedCctvId,
++    selectedDisasterId,
++    disasters,
+     followVehicle,
+     navigating,
+   ]);
+@@ -281,6 +295,8 @@ export function DrivingMap({
+       try {
+         upsertCctvLayer(map, camerasRef.current, selectedRef.current);
+         bindCctvLayerClicks(map, (id) => onCctvSelectRef.current(id));
++        upsertDisasterLayer(map, disastersRef.current, selectedDisasterRef.current);
++        bindDisasterLayerClicks(map, (id) => onDisasterSelectRef.current(id));
+       } catch (error) {
+         console.error("CCTV layer skipped", error);
+       }
+@@ -346,6 +362,12 @@ export function DrivingMap({
+     }
+   }, [cameras, selectedCctvId]);
+ 
++  useEffect(() => {
++    const map = mapRef.current;
++    if (!map || !readyRef.current) return;
++    upsertDisasterLayer(map, disasters, selectedDisasterId);
++  }, [disasters, selectedDisasterId]);
++
+   useEffect(() => {
+     const map = mapRef.current;
+     if (!map) return;
+@@ -362,15 +384,7 @@ export function DrivingMap({
+       );
+     }
+ 
+-    for (const disaster of disasters) {
+-      const el = markerEl("intel-marker--disaster", "▲", disaster.title);
+-      intelMarkersRef.current.push(
+-        new Marker({ element: el, anchor: "bottom" })
+-          .setLngLat([disaster.location.lng, disaster.location.lat])
+-          .addTo(map),
+-      );
+-    }
+-  }, [accidents, disasters]);
++  }, [accidents]);
+ 
+   useEffect(() => {
+     const map = mapRef.current;
+diff --git a/src/components/overlay/disaster-detail-card.tsx b/src/components/overlay/disaster-detail-card.tsx
+new file mode 100644
+index 0000000..a06bf55
+--- /dev/null
++++ b/src/components/overlay/disaster-detail-card.tsx
+@@ -0,0 +1,21 @@
++"use client";
++
++import { AlertTriangle, X } from "lucide-react";
++import type { DisasterAlert, DisasterDataOrigin } from "@/types/domain";
++
++export function DisasterDetailCard({ alert, origin, onClose }: { alert: DisasterAlert; origin: DisasterDataOrigin; onClose: () => void }) {
++  return (
++    <article className="pointer-events-auto w-full max-w-xl rounded-2xl border border-orange-300/25 bg-black/75 p-3 text-white shadow-2xl backdrop-blur-xl">
++      <div className="flex items-start gap-3">
++        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-orange-500/20 text-orange-200"><AlertTriangle className="size-5" /></span>
++        <div className="min-w-0 flex-1">
++          <p className="text-[11px] text-orange-200">{origin === "ncdr-live" ? "NCDR 即時示警" : "示範災害資料"} · {alert.source ?? "災害通報"}</p>
++          <h2 className="mt-0.5 font-semibold">{alert.title}</h2>
++          <p className="mt-1 line-clamp-3 text-xs leading-5 text-zinc-300">{alert.description}</p>
++          {alert.area ? <p className="mt-1 text-xs text-zinc-400">影響區域：{alert.area}</p> : null}
++        </div>
++        <button type="button" aria-label="關閉災害資訊" onClick={onClose} className="flex size-9 shrink-0 items-center justify-center rounded-lg text-zinc-400 hover:bg-white/10"><X className="size-4" /></button>
++      </div>
++    </article>
++  );
++}
+diff --git a/src/hooks/use-disaster-view.ts b/src/hooks/use-disaster-view.ts
+new file mode 100644
+index 0000000..2aaca33
+--- /dev/null
++++ b/src/hooks/use-disaster-view.ts
+@@ -0,0 +1,33 @@
++"use client";
++
++import { useCallback, useEffect, useState } from "react";
++import type { DisasterAlert, DisasterDataOrigin } from "@/types/domain";
++
++export function useDisasterView(refreshNonce: number) {
++  const [alerts, setAlerts] = useState<DisasterAlert[]>([]);
++  const [origin, setOrigin] = useState<DisasterDataOrigin>("mock");
++  const [error, setError] = useState<string | null>(null);
++  const [reloadKey, setReloadKey] = useState(0);
++  const reload = useCallback(() => setReloadKey((value) => value + 1), []);
++
++  useEffect(() => {
++    const controller = new AbortController();
++    async function load() {
++      try {
++        const response = await fetch("/api/disasters", { signal: controller.signal });
++        if (!response.ok) throw new Error("disaster feed unavailable");
++        const data = await response.json();
++        setAlerts(Array.isArray(data.alerts) ? data.alerts : []);
++        setOrigin(data.origin === "ncdr-live" ? "ncdr-live" : "mock");
++        setError(null);
++      } catch (cause) {
++        if ((cause as Error).name !== "AbortError") setError("災害示警暫時無法更新。");
++      }
++    }
++    void load();
++    const interval = window.setInterval(load, 120_000);
++    return () => { controller.abort(); window.clearInterval(interval); };
++  }, [refreshNonce, reloadKey]);
++
++  return { alerts, origin, error, reload };
++}
+diff --git a/src/lib/disaster-layer.ts b/src/lib/disaster-layer.ts
+new file mode 100644
+index 0000000..e1c52d2
+--- /dev/null
++++ b/src/lib/disaster-layer.ts
+@@ -0,0 +1,59 @@
++import type { GeoJSONSource, Map as MapLibreMap, MapLayerMouseEvent } from "maplibre-gl";
++import type { DisasterAlert } from "@/types/domain";
++
++export const DISASTER_SOURCE_ID = "disaster-source";
++export const DISASTER_LAYER_ID = "disaster-layer";
++export const DISASTER_HIT_LAYER_ID = "disaster-hit-layer";
++
++function data(alerts: DisasterAlert[]) {
++  return {
++    type: "FeatureCollection" as const,
++    features: alerts.map((alert) => ({
++      type: "Feature" as const,
++      id: alert.id,
++      properties: { id: alert.id, kind: alert.kind, severity: alert.severity, title: alert.title },
++      geometry: { type: "Point" as const, coordinates: [alert.location.lng, alert.location.lat] },
++    })),
++  };
++}
++
++export function upsertDisasterLayer(map: MapLibreMap, alerts: DisasterAlert[], selectedId: string | null) {
++  const source = map.getSource(DISASTER_SOURCE_ID);
++  if (source?.type === "geojson") (source as GeoJSONSource).setData(data(alerts));
++  else if (!source) map.addSource(DISASTER_SOURCE_ID, { type: "geojson", data: data(alerts) });
++
++  if (!map.getLayer(DISASTER_LAYER_ID)) {
++    map.addLayer({
++      id: DISASTER_LAYER_ID,
++      type: "circle",
++      source: DISASTER_SOURCE_ID,
++      paint: {
++        "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 6, 16, 11],
++        "circle-color": ["match", ["get", "severity"], "emergency", "#dc2626", "warning", "#f97316", "#fbbf24"],
++        "circle-stroke-color": "#fff7ed",
++        "circle-stroke-width": ["case", ["==", ["get", "id"], selectedId ?? ""], 3, 1.5],
++        "circle-opacity": 0.92,
++      },
++    });
++  } else {
++    map.setPaintProperty(DISASTER_LAYER_ID, "circle-stroke-width", ["case", ["==", ["get", "id"], selectedId ?? ""], 3, 1.5]);
++  }
++  if (!map.getLayer(DISASTER_HIT_LAYER_ID)) {
++    map.addLayer({ id: DISASTER_HIT_LAYER_ID, type: "circle", source: DISASTER_SOURCE_ID, paint: { "circle-radius": 20, "circle-opacity": 0 } });
++  }
++  for (const routeLayer of ["demo-route-glow", "demo-route-line"]) {
++    if (map.getLayer(routeLayer)) map.moveLayer(routeLayer);
++  }
++}
++
++const bound = new WeakSet<MapLibreMap>();
++export function bindDisasterLayerClicks(map: MapLibreMap, select: (id: string) => void) {
++  if (bound.has(map)) return;
++  bound.add(map);
++  map.on("mouseenter", DISASTER_HIT_LAYER_ID, () => { map.getCanvas().style.cursor = "pointer"; });
++  map.on("mouseleave", DISASTER_HIT_LAYER_ID, () => { map.getCanvas().style.cursor = ""; });
++  map.on("click", DISASTER_HIT_LAYER_ID, (event: MapLayerMouseEvent) => {
++    const id = event.features?.[0]?.properties?.id;
++    if (typeof id === "string") select(id);
++  });
++}
+diff --git a/src/services/disasters.ts b/src/services/disasters.ts
+new file mode 100644
+index 0000000..5d280da
+--- /dev/null
++++ b/src/services/disasters.ts
+@@ -0,0 +1,133 @@
++import "server-only";
++
++import { TAINAN_DISASTERS } from "@/data/mock-disasters";
++import type {
++  DisasterAlert,
++  DisasterCatalog,
++  DisasterKind,
++} from "@/types/domain";
++
++const DEFAULT_FEED = "https://alerts.ncdr.nat.gov.tw/JSONAtomFeed.ashx";
++const FETCH_TIMEOUT_MS = 10_000;
++
++type NcdrEntry = {
++  id?: string;
++  title?: string;
++  updated?: string;
++  author?: { name?: string };
++  link?: { "@href"?: string };
++  summary?: { "#text"?: string } | string;
++  effective?: string;
++  expires?: string;
++  status?: string;
++};
++
++function text(value: unknown) {
++  return typeof value === "string" ? value.trim() : "";
++}
++
++function decodeXml(value: string) {
++  return value
++    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
++    .replace(/&lt;/g, "<")
++    .replace(/&gt;/g, ">")
++    .replace(/&amp;/g, "&")
++    .replace(/&quot;/g, '"')
++    .replace(/&#39;/g, "'");
++}
++
++function xmlTag(xml: string, tag: string) {
++  const match = xml.match(new RegExp(`<(?:\\w+:)?${tag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/(?:\\w+:)?${tag}>`, "i"));
++  return match ? decodeXml(match[1]).replace(/<[^>]+>/g, "").trim() : "";
++}
++
++function disasterKind(value: string): DisasterKind {
++  if (/淹水|積水|洪水|水位|水庫放流/.test(value)) return "flood";
++  if (/道路封閉|封路|交通中斷/.test(value)) return "closure";
++  if (/地震/.test(value)) return "quake";
++  if (/颱風|熱帶性低氣壓/.test(value)) return "typhoon";
++  if (/豪雨|大雨|雷雨/.test(value)) return "heavy-rain";
++  if (/強風|陸上強風/.test(value)) return "strong-wind";
++  if (/土石流|崩塌|坡地/.test(value)) return "landslide";
++  return "other";
++}
++
++function severity(value: string): DisasterAlert["severity"] {
++  if (/Extreme|非常嚴重|緊急|紅色/i.test(value)) return "emergency";
++  if (/Severe|嚴重|警報|橙色/i.test(value)) return "warning";
++  return "watch";
++}
++
++function centroid(value: string) {
++  const pairs = value
++    .split(/\s+/)
++    .map((pair) => pair.split(",").map(Number))
++    .filter((pair) => pair.length === 2 && pair.every(Number.isFinite));
++  if (!pairs.length) return null;
++  const sum = pairs.reduce((acc, pair) => ({ lat: acc.lat + pair[0], lng: acc.lng + pair[1] }), { lat: 0, lng: 0 });
++  return { lat: sum.lat / pairs.length, lng: sum.lng / pairs.length };
++}
++
++async function fetchText(url: string) {
++  const response = await fetch(url, {
++    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
++    headers: { Accept: "application/xml,text/xml,*/*" },
++    next: { revalidate: 120 },
++  });
++  if (!response.ok) throw new Error(`NCDR request failed (${response.status})`);
++  return response.text();
++}
++
++async function normalizeEntry(entry: NcdrEntry): Promise<DisasterAlert | null> {
++  const summary = text(typeof entry.summary === "string" ? entry.summary : entry.summary?.["#text"]);
++  const capUrl = text(entry.link?.["@href"]);
++  let cap = "";
++  if (capUrl.startsWith("https://alerts.ncdr.nat.gov.tw/")) {
++    try { cap = await fetchText(capUrl); } catch { /* feed summary remains usable */ }
++  }
++  const area = xmlTag(cap, "areaDesc") || summary.match(/影響範圍[:：]([^。]+)/)?.[1]?.trim() || "";
++  if (!/臺南市|台南市/.test(`${summary} ${area}`)) return null;
++  const point = centroid(xmlTag(cap, "polygon")) ?? centroid(xmlTag(cap, "circle"));
++  if (!point) return null;
++  const title = text(entry.title) || xmlTag(cap, "event") || "災害示警";
++  const description = xmlTag(cap, "description") || summary || title;
++  const combined = `${title} ${description} ${xmlTag(cap, "severity")}`;
++  return {
++    id: text(entry.id) || `ncdr-${point.lat}-${point.lng}`,
++    kind: disasterKind(combined),
++    title,
++    description,
++    location: point,
++    severity: severity(combined),
++    area,
++    source: text(entry.author?.name) || xmlTag(cap, "senderName") || "NCDR 民生示警",
++    sourceUrl: capUrl || undefined,
++    effectiveAt: xmlTag(cap, "effective") || text(entry.effective) || undefined,
++    expiresAt: xmlTag(cap, "expires") || text(entry.expires) || undefined,
++    updatedAt: text(entry.updated) || undefined,
++    dataOrigin: "ncdr-live",
++  };
++}
++
++export async function fetchDisasterCatalog(): Promise<DisasterCatalog> {
++  const fetchedAt = new Date().toISOString();
++  try {
++    const response = await fetch(process.env.NCDR_ALERT_FEED_URL || DEFAULT_FEED, {
++      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
++      headers: { Accept: "application/json" },
++      next: { revalidate: 120 },
++    });
++    if (!response.ok) throw new Error(`NCDR feed failed (${response.status})`);
++    const feed = (await response.json()) as { entry?: NcdrEntry | NcdrEntry[] };
++    const entries = Array.isArray(feed.entry) ? feed.entry : feed.entry ? [feed.entry] : [];
++    const alerts = (await Promise.all(entries.filter((item) => item.status !== "Cancel").map(normalizeEntry)))
++      .filter((item): item is DisasterAlert => Boolean(item));
++    return { origin: "ncdr-live", alerts, fetchedAt };
++  } catch {
++    return {
++      origin: "mock",
++      alerts: TAINAN_DISASTERS.map((alert) => ({ ...alert, dataOrigin: "mock" })),
++      fetchedAt,
++    };
++  }
++}
+diff --git a/src/types/domain.ts b/src/types/domain.ts
+index f0ce9a7..899e60a 100644
+--- a/src/types/domain.ts
++++ b/src/types/domain.ts
+@@ -92,7 +92,17 @@ export type TrafficCatalog = {
+   fetchedAt: string;
+ };
+ 
+-export type DisasterKind = "flood" | "closure" | "quake" | "typhoon";
++export type DisasterKind =
++  | "flood"
++  | "closure"
++  | "quake"
++  | "typhoon"
++  | "heavy-rain"
++  | "strong-wind"
++  | "landslide"
++  | "other";
++
++export type DisasterDataOrigin = "ncdr-live" | "mock";
+ 
+ export type DisasterAlert = {
+   id: string;
+@@ -100,7 +110,20 @@ export type DisasterAlert = {
+   title: string;
+   description: string;
+   location: LngLat;
+-  severity: "watch" | "warning";
++  severity: "watch" | "warning" | "emergency";
++  area?: string;
++  source?: string;
++  sourceUrl?: string;
++  effectiveAt?: string;
++  expiresAt?: string;
++  updatedAt?: string;
++  dataOrigin?: DisasterDataOrigin;
++};
++
++export type DisasterCatalog = {
++  origin: DisasterDataOrigin;
++  alerts: DisasterAlert[];
++  fetchedAt: string;
+ };
+ 
+ export type AccidentReport = {
+-- 
+2.51.1
+
