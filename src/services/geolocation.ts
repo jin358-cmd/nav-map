@@ -11,6 +11,11 @@ function toHeading(value: number | null): number | null {
   return (value + 360) % 360;
 }
 
+function toSpeed(value: number | null): number | undefined {
+  if (value === null || !Number.isFinite(value) || value < 0) return undefined;
+  return value;
+}
+
 /** Browser GPS. Returns an unsubscribe function. */
 export function watchVehiclePosition({
   onFix,
@@ -48,6 +53,7 @@ export function watchVehiclePosition({
         lat,
         heading,
         accuracy: position.coords.accuracy,
+        speedMps: toSpeed(position.coords.speed),
         source: "gps",
       });
       onStatus("active");
@@ -83,6 +89,7 @@ export function requestCurrentPosition(): Promise<VehiclePose> {
           lat: position.coords.latitude,
           heading: position.coords.heading ?? 0,
           accuracy: position.coords.accuracy,
+          speedMps: toSpeed(position.coords.speed),
           source: "gps",
         });
       },

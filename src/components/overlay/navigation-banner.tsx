@@ -11,8 +11,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDistance } from "@/lib/format";
-import { nextIntersectionStep } from "@/lib/osrm-maneuver";
-import type { NavigationManeuver, RouteStep } from "@/types/domain";
+import type { RouteStep } from "@/types/domain";
 
 function TurnGlyph({ step }: { step: RouteStep | null }) {
   const type = step?.type ?? "";
@@ -29,30 +28,29 @@ function TurnGlyph({ step }: { step: RouteStep | null }) {
 }
 
 export function NextIntersectionHud({
-  steps,
-  maneuver,
+  step,
+  distanceMeters,
+  offRoute,
   onExit,
 }: {
-  steps: RouteStep[];
-  maneuver: NavigationManeuver | null;
+  step: RouteStep | null;
+  distanceMeters: number;
+  offRoute: boolean;
   onExit: () => void;
 }) {
-  const next = nextIntersectionStep(steps);
-  const meters =
-    next?.cueMeters && next.cueMeters > 0
-      ? next.cueMeters
-      : (maneuver?.distanceMeters ?? next?.distanceMeters ?? 0);
-
   return (
     <div className="pointer-events-auto flex w-full max-w-md items-center gap-3 rounded-2xl border border-cyan-300/25 bg-black/70 px-3 py-2 text-white shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl sm:px-4">
       <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-cyan-400/15">
-        <TurnGlyph step={next} />
+        <TurnGlyph step={step} />
       </div>
       <div className="min-w-0 flex-1 text-center sm:text-left">
         <p className="text-[11px] tracking-wide text-cyan-200/85">下一個路口</p>
         <p className="truncate text-xl font-semibold tabular-nums tracking-tight sm:text-2xl">
-          {formatDistance(meters)}
+          {formatDistance(distanceMeters)}
         </p>
+        {offRoute ? (
+          <p className="text-[11px] font-medium text-amber-300">偏離路線</p>
+        ) : null}
       </div>
       <Button
         type="button"

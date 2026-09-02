@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MapControls } from "@/components/map/map-controls";
 import { AddressSearch } from "@/components/overlay/address-search";
 import { CctvDetailCard } from "@/components/overlay/cctv-detail-card";
@@ -14,6 +14,13 @@ import { useTrafficView } from "@/hooks/use-traffic-view";
 import { roadIntelFromCameras } from "@/lib/cctv-intel";
 import { DEMO_VEHICLE } from "@/lib/constants";
 import { distanceKm } from "@/lib/geo";
+import { nextIntersectionStep } from "@/lib/osrm-maneuver";
+import {
+  createRouteProgressModel,
+  updateNavigationProgress,
+  type NavigationProgress,
+  type NavigationTrackerState,
+} from "@/lib/route-progress";
 import { deriveTrafficIntel } from "@/lib/traffic-intel";
 import {
   fetchAccidentReports,
@@ -80,6 +87,40 @@ export function DrivingApp() {
   const [navigating, setNavigating] = useState(false);
   const [intelCollapse, setIntelCollapse] = useState(0);
   const [musicOpen, setMusicOpen] = useState(false);
+  const [navigationProgress, setNavigationProgress] =
+    useState<NavigationProgress | null>(null);
+  const navigationTrackerRef = useRef<NavigationTrackerState | null>(null);
+
+  const routeProgressModel = useMemo(
+    () => createRouteProgressModel(route, routeSteps),
+    [route, routeSteps],
+  );
+  const navigationContextRef = useRef({
+    navigating,
+    routeProgressModel,
+    routeSteps,
+  });
+
+  useEffect(() => {
+    navigationContextRef.current = {
+      navigating,
+      routeProgressModel,
+      routeSteps,
+    };
+  }, [navigating, routeProgressModel, routeSteps]);
+
+  const fallbackStep = useMemo(
+    () => nextIntersectionStep(routeSteps),
+    [routeSteps],
+  );
+  const activeNavigationStep = navigationProgress
+    ? (routeSteps[navigationProgress.stepIndex] ?? fallbackStep)
+    : fallbackStep;
+  const distanceToNextMeters = navigationProgress
+    ? navigationProgress.distanceToNextMeters
+    : activeNavigationStep?.cueMeters && activeNavigationStep.cueMeters > 0
+      ? activeNavigationStep.cueMeters
+      : (maneuver?.distanceMeters ?? activeNavigationStep?.distanceMeters ?? 0);
 
   const {
     origin,
@@ -146,6 +187,16 @@ export function DrivingApp() {
     const stop = watchVehiclePosition({
       onFix: (pose) => {
         setVehicle(pose);
+        const context = navigationContextRef.current;
+        if (!context.navigating || !context.routeProgressModel) return;
+        const next = updateNavigationProgress({
+          model: context.routeProgressModel,
+          steps: context.routeSteps,
+          vehicle: pose,
+          previous: navigationTrackerRef.current,
+        });
+        navigationTrackerRef.current = next;
+        setNavigationProgress(next);
       },
       onStatus: setGpsStatus,
     });
@@ -201,6 +252,8 @@ export function DrivingApp() {
       setRouteSteps(plan.steps ?? []);
       setFollowVehicle(false);
       setNavigating(false);
+      navigationTrackerRef.current = null;
+      setNavigationProgress(null);
       setFitRouteKey((value) => value + 1);
     } catch (error) {
       setRouteError(error instanceof Error ? error.message : "路線規劃失敗");
@@ -217,6 +270,8 @@ export function DrivingApp() {
     setRouteSteps([]);
     setFollowVehicle(true);
     setNavigating(false);
+    navigationTrackerRef.current = null;
+    setNavigationProgress(null);
   }, [demoManeuver, demoRoute]);
 
   const locate = useCallback(async () => {
@@ -236,6 +291,8 @@ export function DrivingApp() {
     setVehicle(DEMO_VEHICLE);
     setFollowVehicle(true);
     setNavigating(false);
+    navigationTrackerRef.current = null;
+    setNavigationProgress(null);
     setSelectedCctv(null);
     setCameraMode("3d");
     setDestination(null);
@@ -247,15 +304,27 @@ export function DrivingApp() {
   }, [demoManeuver, demoRoute]);
 
   const startNavigation = useCallback(() => {
+    const next = routeProgressModel
+      ? updateNavigationProgress({
+          model: routeProgressModel,
+          steps: routeSteps,
+          vehicle,
+          previous: null,
+        })
+      : null;
+    navigationTrackerRef.current = next;
+    setNavigationProgress(next);
     setNavigating(true);
     setCameraMode("3d");
     setFollowVehicle(true);
     setSelectedCctv(null);
     setIntelCollapse((value) => value + 1);
-  }, []);
+  }, [routeProgressModel, routeSteps, vehicle]);
 
   const exitNavigation = useCallback(() => {
     setNavigating(false);
+    navigationTrackerRef.current = null;
+    setNavigationProgress(null);
     setFollowVehicle(false);
     setFitRouteKey((value) => value + 1);
   }, []);
@@ -302,8 +371,9 @@ export function DrivingApp() {
       {destination && navigating ? (
         <div className="absolute top-[max(0.45rem,env(safe-area-inset-top))] right-3 left-3 z-20 flex justify-center sm:right-24">
           <NextIntersectionHud
-            steps={routeSteps}
-            maneuver={maneuver}
+            step={activeNavigationStep}
+            distanceMeters={distanceToNextMeters}
+            offRoute={navigationProgress?.offRoute ?? false}
             onExit={exitNavigation}
           />
         </div>

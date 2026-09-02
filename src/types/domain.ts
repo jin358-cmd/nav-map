@@ -6,6 +6,7 @@ export type LngLat = {
 export type VehiclePose = LngLat & {
   heading: number;
   accuracy?: number;
+  speedMps?: number;
   source: "demo" | "gps";
 };
 
