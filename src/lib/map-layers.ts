@@ -1,4 +1,8 @@
-import type { GeoJSONSource, Map as MapLibreMap } from "maplibre-gl";
+import type {
+  ExpressionSpecification,
+  GeoJSONSource,
+  Map as MapLibreMap,
+} from "maplibre-gl";
 import { CCTV_LAYER_HIT_ID, CCTV_LAYER_ID } from "@/lib/cctv-constants";
 import { MAP_COLORS } from "@/lib/constants";
 import {
@@ -10,11 +14,43 @@ import {
 import type { TrafficSegment } from "@/types/domain";
 
 const TRAFFIC_COLOR: Record<string, string> = {
-  smooth: "#3ee0ff",
+  smooth: "#4ad4a8",
   slow: "#ffb020",
   congested: MAP_COLORS.congestion,
   blocked: MAP_COLORS.accident,
 };
+
+const TRAFFIC_WIDTH: ExpressionSpecification = [
+  "interpolate",
+  ["linear"],
+  ["zoom"],
+  12,
+  ["match", ["get", "level"], "blocked", 4.4, "congested", 4, "slow", 3.5, 2],
+  17,
+  ["match", ["get", "level"], "blocked", 11, "congested", 10, "slow", 8.5, 5],
+];
+
+const TRAFFIC_OPACITY: ExpressionSpecification = [
+  "match",
+  ["get", "level"],
+  "smooth",
+  0.4,
+  0.96,
+];
+
+const TRAFFIC_COLOR_EXPR: ExpressionSpecification = [
+  "match",
+  ["get", "level"],
+  "smooth",
+  TRAFFIC_COLOR.smooth,
+  "slow",
+  TRAFFIC_COLOR.slow,
+  "congested",
+  TRAFFIC_COLOR.congested,
+  "blocked",
+  TRAFFIC_COLOR.blocked,
+  TRAFFIC_COLOR.slow,
+];
 
 function removeLayer(map: MapLibreMap, id: string) {
   if (map.getLayer(id)) map.removeLayer(id);
@@ -84,22 +120,10 @@ export function upsertIntelligenceLayers(
         type: "line",
         source: TRAFFIC_SOURCE_ID,
         paint: {
-          "line-color": [
-            "match",
-            ["get", "level"],
-            "smooth",
-            TRAFFIC_COLOR.smooth,
-            "slow",
-            TRAFFIC_COLOR.slow,
-            "congested",
-            TRAFFIC_COLOR.congested,
-            "blocked",
-            TRAFFIC_COLOR.blocked,
-            TRAFFIC_COLOR.slow,
-          ],
-          "line-width": ["interpolate", ["linear"], ["zoom"], 12, 2.4, 17, 7],
-          "line-opacity": 0.88,
-          "line-blur": 0.4,
+          "line-color": TRAFFIC_COLOR_EXPR,
+          "line-width": TRAFFIC_WIDTH,
+          "line-opacity": TRAFFIC_OPACITY,
+          "line-blur": 0.15,
         },
         layout: {
           "line-cap": "round",
@@ -108,6 +132,11 @@ export function upsertIntelligenceLayers(
       },
       trafficBefore,
     );
+  } else {
+    map.setPaintProperty(TRAFFIC_LAYER_ID, "line-color", TRAFFIC_COLOR_EXPR);
+    map.setPaintProperty(TRAFFIC_LAYER_ID, "line-width", TRAFFIC_WIDTH);
+    map.setPaintProperty(TRAFFIC_LAYER_ID, "line-opacity", TRAFFIC_OPACITY);
+    map.setPaintProperty(TRAFFIC_LAYER_ID, "line-blur", 0.15);
   }
 
   if (!map.getLayer("demo-route-glow")) {

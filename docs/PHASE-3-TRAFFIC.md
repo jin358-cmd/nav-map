@@ -13,7 +13,7 @@ Smart Road Taiwan 已接上 MOTC TDX 臺南市區即時路況，並保留 mock f
 - 圖層順序（下→上）：底圖 → 路況線 → CCTV → 青綠路線 → HTML 車輛／事故／災害。
 - 不一次畫全市：附近 8 km、沿線 400 m、壅塞／阻塞優先，zoom cap 約 16／24／32／40。
 - 更新：live cache 90 秒、形狀 cache 15 分鐘、手動「重新整理情報」、可選 90 秒輪詢。不每秒打 TDX。
-- HUD：最近的車多／壅塞／阻塞取代靜態「東門圓環壅塞」。
+- HUD：沿線優先，再取最近的車多／壅塞／阻塞；6 km 外的交流道不會壓過前方路段。
 - 型別：`TrafficSourceType = "city" | "freeway"`。本階段只抓臺南 **city** live。
 
 ## TDX 端點（臺南市區）
