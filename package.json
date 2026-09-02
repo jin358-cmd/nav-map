@@ -6,7 +6,8 @@
     "dev": "next dev --port 43145",
     "build": "next build",
     "start": "next start --port 43145",
-    "lint": "eslint"
+    "lint": "eslint",
+    "update:speed-enforcement": "node scripts/update-speed-enforcement-data.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

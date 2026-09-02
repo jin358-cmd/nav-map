@@ -1,4 +1,5 @@
 import "server-only";
+import publicSpeedEnforcementSnapshot from "@/data/speed-enforcement-public.json";
 import {
   SPEED_ENFORCEMENT_CACHE_MS,
   SPEED_ENFORCEMENT_MAX_RADIUS_METERS,
@@ -36,9 +37,19 @@ type CacheEntry = {
   cachedAt: number;
 };
 
+type PublicSpeedEnforcementSnapshot = {
+  source: string;
+  downloadedAt: string;
+  csv: string;
+};
+
 const catalogCache = new Map<string, CacheEntry>();
-let publicCatalogCache: SpeedEnforcementPoint[] | null = null;
-let publicCatalogCachedAt = 0;
+const bundledPublicSnapshot =
+  publicSpeedEnforcementSnapshot as PublicSpeedEnforcementSnapshot;
+let publicCatalogCache = normalizePublicCsv(bundledPublicSnapshot.csv);
+let publicCatalogFetchedAt =
+  Date.parse(bundledPublicSnapshot.downloadedAt) || Date.now();
+let publicCatalogAttemptedAt = publicCatalogFetchedAt;
 
 function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
@@ -314,22 +325,31 @@ async function loadFromPublicDataset({
 }): Promise<SpeedEnforcementCatalog> {
   if (
     force ||
-    !publicCatalogCache ||
-    Date.now() - publicCatalogCachedAt >= SPEED_ENFORCEMENT_PUBLIC_CACHE_MS
+    Date.now() - publicCatalogAttemptedAt >= SPEED_ENFORCEMENT_PUBLIC_CACHE_MS
   ) {
-    const response = await fetch(PUBLIC_DATASET_ENDPOINT, {
-      headers: { Accept: "text/csv" },
-      cache: "force-cache",
-      next: {
-        revalidate: Math.floor(SPEED_ENFORCEMENT_PUBLIC_CACHE_MS / 1_000),
-      },
-      signal: AbortSignal.timeout(25_000),
-    });
-    if (!response.ok) {
-      throw new Error(`Public speed dataset request failed (${response.status})`);
+    publicCatalogAttemptedAt = Date.now();
+    try {
+      const response = await fetch(PUBLIC_DATASET_ENDPOINT, {
+        headers: { Accept: "text/csv" },
+        cache: "force-cache",
+        next: {
+          revalidate: Math.floor(SPEED_ENFORCEMENT_PUBLIC_CACHE_MS / 1_000),
+        },
+        signal: AbortSignal.timeout(4_000),
+      });
+      if (!response.ok) {
+        throw new Error(
+          `Public speed dataset request failed (${response.status})`,
+        );
+      }
+      publicCatalogCache = normalizePublicCsv(await response.text());
+      publicCatalogFetchedAt = Date.now();
+    } catch (error) {
+      console.warn(
+        "Public speed dataset refresh kept bundled snapshot",
+        error instanceof Error ? error.message : "unknown error",
+      );
     }
-    publicCatalogCache = normalizePublicCsv(await response.text());
-    publicCatalogCachedAt = Date.now();
   }
 
   const center = { lng, lat };
@@ -338,6 +358,6 @@ async function loadFromPublicDataset({
     points: publicCatalogCache.filter(
       (point) => distanceMeters(center, point.location) <= radius,
     ),
-    fetchedAt: new Date(publicCatalogCachedAt).toISOString(),
+    fetchedAt: new Date(publicCatalogFetchedAt).toISOString(),
   };
 }
