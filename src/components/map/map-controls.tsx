@@ -6,6 +6,7 @@ import {
   LocateFixed,
   MapPinned,
   Mountain,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -19,6 +20,7 @@ type MapControlsProps = {
   onToggleCamera: () => void;
   onRecenter: () => void;
   onDemoDrive: () => void;
+  onRefreshCctv: () => void;
 };
 
 export function MapControls({
@@ -29,6 +31,7 @@ export function MapControls({
   onToggleCamera,
   onRecenter,
   onDemoDrive,
+  onRefreshCctv,
 }: MapControlsProps) {
   const locating = gpsStatus === "locating";
 
@@ -58,6 +61,9 @@ export function MapControls({
         active={followVehicle}
       >
         <MapPinned className="size-5" />
+      </ControlButton>
+      <ControlButton label="重新整理 CCTV" onClick={onRefreshCctv}>
+        <RefreshCw className="size-5" />
       </ControlButton>
       <Button
         variant="outline"

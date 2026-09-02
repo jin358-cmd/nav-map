@@ -1,4 +1,3 @@
-import { TAINAN_CCTV } from "@/data/mock-cctv";
 import { TAINAN_TRAFFIC } from "@/data/mock-traffic";
 import type { CctvCamera, TrafficSegment } from "@/types/domain";
 
@@ -15,12 +14,9 @@ export function isTdxConfigured(): boolean {
 }
 
 export async function fetchTainanCctv(): Promise<CctvCamera[]> {
-  if (!tdxEnabled) {
-    return TAINAN_CCTV;
-  }
-
-  // Reserved: GET /v2/Traffic/CCTV/City/Tainan
-  return TAINAN_CCTV;
+  const { fetchCctvCatalog } = await import("@/services/cctv");
+  const catalog = await fetchCctvCatalog();
+  return catalog.cameras;
 }
 
 export async function fetchTainanTraffic(): Promise<TrafficSegment[]> {

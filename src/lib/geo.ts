@@ -1,0 +1,46 @@
+import type { LngLat } from "@/types/domain";
+
+const EARTH_RADIUS_KM = 6371;
+
+function toRadians(value: number) {
+  return (value * Math.PI) / 180;
+}
+
+export function distanceKm(a: LngLat, b: LngLat): number {
+  const dLat = toRadians(b.lat - a.lat);
+  const dLng = toRadians(b.lng - a.lng);
+  const sinLat = Math.sin(dLat / 2);
+  const sinLng = Math.sin(dLng / 2);
+  const h =
+    sinLat * sinLat +
+    Math.cos(toRadians(a.lat)) * Math.cos(toRadians(b.lat)) * sinLng * sinLng;
+  return EARTH_RADIUS_KM * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+}
+
+export function bearingDegrees(from: LngLat, to: LngLat): number {
+  const y =
+    Math.sin(toRadians(to.lng - from.lng)) * Math.cos(toRadians(to.lat));
+  const x =
+    Math.cos(toRadians(from.lat)) * Math.sin(toRadians(to.lat)) -
+    Math.sin(toRadians(from.lat)) *
+      Math.cos(toRadians(to.lat)) *
+      Math.cos(toRadians(to.lng - from.lng));
+  return (Math.atan2(y, x) * (180 / Math.PI) + 360) % 360;
+}
+
+export function headingDelta(a: number, b: number): number {
+  const raw = Math.abs(((a - b + 540) % 360) - 180);
+  return raw;
+}
+
+export function isPointInBounds(
+  point: LngLat,
+  bounds: { west: number; south: number; east: number; north: number },
+) {
+  return (
+    point.lng >= bounds.west &&
+    point.lng <= bounds.east &&
+    point.lat >= bounds.south &&
+    point.lat <= bounds.north
+  );
+}

@@ -18,17 +18,43 @@ export type GpsStatus =
 
 export type CameraMode = "2d" | "3d";
 
-export type CctvStatus = "online" | "offline" | "maintenance";
+export type CctvStatus = "online" | "offline" | "unknown" | "unsupported";
+export type CctvSourceType = "city" | "freeway";
+export type CctvDataOrigin = "tdx-live" | "snapshot" | "mock";
 
 export type CctvCamera = {
   id: string;
   name: string;
   intersection: string;
+  roadName: string;
+  crossRoad: string;
+  direction: string;
+  directionLabel: string;
   district: string;
+  city: string;
+  sourceType: CctvSourceType;
+  dataOrigin: CctvDataOrigin;
   status: CctvStatus;
   location: LngLat;
+  url: string;
+  distanceKm?: number;
+  withinLocateRadius?: boolean;
+  withinNearby?: boolean;
+  ahead?: boolean;
+  alongRoute?: boolean;
   updatedAt: string;
   snapshotLabel: string;
+};
+
+export type MapViewport = {
+  center: LngLat;
+  zoom: number;
+  bounds: {
+    west: number;
+    south: number;
+    east: number;
+    north: number;
+  };
 };
 
 export type TrafficLevel = "smooth" | "slow" | "congested" | "blocked";
@@ -66,6 +92,7 @@ export type RoadIntelItem = {
   title: string;
   detail: string;
   distanceMeters: number;
+  cameraId?: string;
 };
 
 export type NavigationManeuver = {

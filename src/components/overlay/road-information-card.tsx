@@ -6,9 +6,9 @@ import {
   Construction,
   TrafficCone,
 } from "lucide-react";
-import { formatDistance } from "@/lib/format";
+import { cctvOriginLabel, formatDistance } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import type { RoadIntelItem, RoadIntelKind } from "@/types/domain";
+import type { CctvDataOrigin, RoadIntelItem, RoadIntelKind } from "@/types/domain";
 
 const KIND_META: Record<
   RoadIntelKind,
@@ -43,8 +43,14 @@ const KIND_META: Record<
 
 export function RoadInformationCard({
   items,
+  origin,
+  emptyHint,
+  onSelectCctv,
 }: {
   items: RoadIntelItem[];
+  origin: CctvDataOrigin;
+  emptyHint?: string;
+  onSelectCctv?: (cameraId: string) => void;
 }) {
   return (
     <section className="pointer-events-auto w-full max-w-xl rounded-2xl border border-white/10 bg-black/55 p-3 text-white shadow-[0_12px_50px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:rounded-3xl sm:p-4">
@@ -52,35 +58,48 @@ export function RoadInformationCard({
         <h2 className="text-sm font-medium tracking-wide text-zinc-200">
           前方道路情報
         </h2>
-        <p className="text-[11px] text-zinc-500">模擬資料 · TDX 未串接</p>
+        <p className="text-[11px] text-zinc-500">{cctvOriginLabel(origin)}</p>
       </div>
       {items.length === 0 ? (
-        <p className="text-sm text-zinc-400">前方暫無通報。</p>
+        <p className="text-sm text-zinc-400">
+          {emptyHint ?? "前方暫無通報。"}
+        </p>
       ) : (
         <ul className="space-y-1.5 sm:space-y-2">
           {items.map((item) => {
             const meta = KIND_META[item.kind];
             const Icon = meta.icon;
+            const clickable = item.kind === "cctv" && item.cameraId;
             return (
-              <li
-                key={item.id}
-                className="flex min-h-11 items-center gap-2.5 rounded-xl bg-white/4 px-2.5 py-1.5 sm:gap-3 sm:rounded-2xl sm:px-3 sm:py-2"
-              >
-                <span
+              <li key={item.id}>
+                <button
+                  type="button"
+                  disabled={!clickable}
+                  onClick={() => {
+                    if (item.cameraId) onSelectCctv?.(item.cameraId);
+                  }}
                   className={cn(
-                    "flex size-8 shrink-0 items-center justify-center rounded-lg sm:size-9 sm:rounded-xl",
-                    meta.className,
+                    "flex min-h-11 w-full items-center gap-2.5 rounded-xl bg-white/4 px-2.5 py-1.5 text-left sm:gap-3 sm:rounded-2xl sm:px-3 sm:py-2",
+                    clickable && "hover:bg-white/8 touch-manipulation",
+                    !clickable && "cursor-default",
                   )}
                 >
-                  <Icon className="size-4" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{item.title}</p>
-                  <p className="truncate text-xs text-zinc-400">{item.detail}</p>
-                </div>
-                <span className="shrink-0 text-xs text-zinc-400">
-                  {formatDistance(item.distanceMeters)}
-                </span>
+                  <span
+                    className={cn(
+                      "flex size-8 shrink-0 items-center justify-center rounded-lg sm:size-9 sm:rounded-xl",
+                      meta.className,
+                    )}
+                  >
+                    <Icon className="size-4" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{item.title}</p>
+                    <p className="truncate text-xs text-zinc-400">{item.detail}</p>
+                  </div>
+                  <span className="shrink-0 text-xs text-zinc-400">
+                    {formatDistance(item.distanceMeters)}
+                  </span>
+                </button>
               </li>
             );
           })}

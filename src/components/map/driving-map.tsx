@@ -13,6 +13,7 @@ import {
   OVERHEAD_ZOOM,
   TAINAN_CENTER,
 } from "@/lib/constants";
+import { bindCctvLayerClicks, upsertCctvLayer } from "@/lib/cctv-layer";
 import { upsertIntelligenceLayers } from "@/lib/map-layers";
 import { configureMapLibreWorker } from "@/lib/maplibre-worker";
 import { applyDarkDrivingTheme } from "@/lib/map-style";
@@ -21,6 +22,7 @@ import type {
   CameraMode,
   CctvCamera,
   DisasterAlert,
+  MapViewport,
   TrafficSegment,
   VehiclePose,
 } from "@/types/domain";
@@ -35,19 +37,16 @@ type DrivingMapProps = {
   disasters: DisasterAlert[];
   accidents: AccidentReport[];
   route: [number, number][];
-  onCctvSelect: (camera: CctvCamera) => void;
+  onCctvSelect: (cameraId: string) => void;
   onUserPan: () => void;
+  onViewportChange: (viewport: MapViewport) => void;
 };
 
 function isCompactViewport(width: number) {
   return width < 640;
 }
 
-function drivingPadding(
-  height: number,
-  width: number,
-  mode: CameraMode,
-) {
+function drivingPadding(height: number, width: number, mode: CameraMode) {
   const compact = isCompactViewport(width);
   const bottomPad = compact ? 158 : 196;
   const rightPad = compact ? 58 : 20;
@@ -102,6 +101,21 @@ function markerEl(
   return el;
 }
 
+function readViewport(map: MapLibreMap): MapViewport {
+  const center = map.getCenter();
+  const bounds = map.getBounds();
+  return {
+    center: { lng: center.lng, lat: center.lat },
+    zoom: map.getZoom(),
+    bounds: {
+      west: bounds.getWest(),
+      south: bounds.getSouth(),
+      east: bounds.getEast(),
+      north: bounds.getNorth(),
+    },
+  };
+}
+
 export function DrivingMap({
   vehicle,
   cameraMode,
@@ -114,6 +128,7 @@ export function DrivingMap({
   route,
   onCctvSelect,
   onUserPan,
+  onViewportChange,
 }: DrivingMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
@@ -121,28 +136,37 @@ export function DrivingMap({
   const intelMarkersRef = useRef<Marker[]>([]);
   const onCctvSelectRef = useRef(onCctvSelect);
   const onUserPanRef = useRef(onUserPan);
+  const onViewportChangeRef = useRef(onViewportChange);
   const modeRef = useRef(cameraMode);
   const vehicleRef = useRef(vehicle);
   const routeRef = useRef(route);
   const trafficRef = useRef(traffic);
+  const camerasRef = useRef(cameras);
+  const selectedRef = useRef(selectedCctvId);
   const followVehicleRef = useRef(followVehicle);
   const readyRef = useRef(false);
 
   useEffect(() => {
     onCctvSelectRef.current = onCctvSelect;
     onUserPanRef.current = onUserPan;
+    onViewportChangeRef.current = onViewportChange;
     modeRef.current = cameraMode;
     vehicleRef.current = vehicle;
     routeRef.current = route;
     trafficRef.current = traffic;
+    camerasRef.current = cameras;
+    selectedRef.current = selectedCctvId;
     followVehicleRef.current = followVehicle;
   }, [
     onCctvSelect,
     onUserPan,
+    onViewportChange,
     cameraMode,
     vehicle,
     route,
     traffic,
+    cameras,
+    selectedCctvId,
     followVehicle,
   ]);
 
@@ -178,26 +202,40 @@ export function DrivingMap({
     const onLoad = () => {
       applyDarkDrivingTheme(map);
       upsertIntelligenceLayers(map, routeRef.current, trafficRef.current);
+      try {
+        upsertCctvLayer(map, camerasRef.current, selectedRef.current);
+        bindCctvLayerClicks(map, (id) => onCctvSelectRef.current(id));
+      } catch (error) {
+        console.error("CCTV layer skipped", error);
+      }
       readyRef.current = true;
       map.jumpTo(cameraOptions(map, vehicleRef.current, modeRef.current));
+      onViewportChangeRef.current(readViewport(map));
     };
 
     map.on("load", onLoad);
     map.on("error", (event) => {
       console.error("MapLibre error", event.error);
     });
+    const emitViewport = () => {
+      if (!readyRef.current) return;
+      onViewportChangeRef.current(readViewport(map));
+    };
     const onResize = () => {
       if (!readyRef.current) return;
       map.resize();
       if (followVehicleRef.current) {
         map.jumpTo(cameraOptions(map, vehicleRef.current, modeRef.current));
       }
+      emitViewport();
     };
     window.addEventListener("resize", onResize);
     map.on("dragstart", () => onUserPanRef.current());
     map.on("rotatestart", (event) => {
       if (event.originalEvent) onUserPanRef.current();
     });
+    map.on("moveend", emitViewport);
+    map.on("zoomend", emitViewport);
 
     return () => {
       window.removeEventListener("resize", onResize);
@@ -209,7 +247,6 @@ export function DrivingMap({
       map.remove();
       mapRef.current = null;
     };
-    // Mount once; subsequent updates go through dedicated effects.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -221,27 +258,20 @@ export function DrivingMap({
 
   useEffect(() => {
     const map = mapRef.current;
+    if (!map || !readyRef.current) return;
+    try {
+      upsertCctvLayer(map, cameras, selectedCctvId);
+    } catch (error) {
+      console.error("CCTV layer update skipped", error);
+    }
+  }, [cameras, selectedCctvId]);
+
+  useEffect(() => {
+    const map = mapRef.current;
     if (!map) return;
 
     for (const marker of intelMarkersRef.current) marker.remove();
     intelMarkersRef.current = [];
-
-    for (const camera of cameras) {
-      const el = markerEl(
-        `intel-marker--cctv${selectedCctvId === camera.id ? " is-selected" : ""}`,
-        "◎",
-        camera.name,
-      );
-      el.addEventListener("click", (event) => {
-        event.stopPropagation();
-        onCctvSelectRef.current(camera);
-      });
-      intelMarkersRef.current.push(
-        new Marker({ element: el, anchor: "bottom" })
-          .setLngLat([camera.location.lng, camera.location.lat])
-          .addTo(map),
-      );
-    }
 
     for (const accident of accidents) {
       const el = markerEl("intel-marker--accident", "!", accident.title);
@@ -260,7 +290,7 @@ export function DrivingMap({
           .addTo(map),
       );
     }
-  }, [cameras, accidents, disasters, selectedCctvId]);
+  }, [accidents, disasters]);
 
   useEffect(() => {
     const marker = vehicleMarkerRef.current;

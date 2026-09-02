@@ -1,19 +1,21 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { MapControls } from "@/components/map/map-controls";
 import { CctvDetailCard } from "@/components/overlay/cctv-detail-card";
 import { NavigationBanner } from "@/components/overlay/navigation-banner";
 import { RoadInformationCard } from "@/components/overlay/road-information-card";
+import { useCctvView } from "@/hooks/use-cctv-view";
+import { roadIntelFromCameras } from "@/lib/cctv-intel";
 import { DEMO_VEHICLE } from "@/lib/constants";
+import { distanceKm } from "@/lib/geo";
 import {
   fetchAccidentReports,
   fetchAheadIntel,
   fetchDemoRoute,
   fetchDisasterAlerts,
   fetchNavigationManeuver,
-  fetchTainanCctv,
   fetchTainanTraffic,
   requestCurrentPosition,
   watchVehiclePosition,
@@ -24,6 +26,7 @@ import type {
   CctvCamera,
   DisasterAlert,
   GpsStatus,
+  MapViewport,
   NavigationManeuver,
   RoadIntelItem,
   TrafficSegment,
@@ -49,46 +52,53 @@ export function DrivingApp() {
   const [cameraMode, setCameraMode] = useState<CameraMode>("3d");
   const [followVehicle, setFollowVehicle] = useState(true);
   const [gpsStatus, setGpsStatus] = useState<GpsStatus>("idle");
-  const [cameras, setCameras] = useState<CctvCamera[]>([]);
+  const [viewport, setViewport] = useState<MapViewport | null>(null);
+  const [refreshNonce, setRefreshNonce] = useState(0);
   const [traffic, setTraffic] = useState<TrafficSegment[]>([]);
   const [disasters, setDisasters] = useState<DisasterAlert[]>([]);
   const [accidents, setAccidents] = useState<AccidentReport[]>([]);
   const [route, setRoute] = useState<[number, number][]>([]);
   const [maneuver, setManeuver] = useState<NavigationManeuver | null>(null);
-  const [intel, setIntel] = useState<RoadIntelItem[]>([]);
+  const [baseIntel, setBaseIntel] = useState<RoadIntelItem[]>([]);
   const [selectedCctv, setSelectedCctv] = useState<CctvCamera | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  const {
+    origin,
+    preview,
+    visible,
+    error: cctvError,
+    cameraById,
+    reload,
+  } = useCctvView({
+    vehicle,
+    gpsStatus,
+    viewport,
+    route,
+    refreshNonce,
+  });
 
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
       try {
-        const [
-          cctvRows,
-          trafficRows,
-          disasterRows,
-          accidentRows,
-          routeLine,
-          nav,
-          ahead,
-        ] = await Promise.all([
-          fetchTainanCctv(),
-          fetchTainanTraffic(),
-          fetchDisasterAlerts(),
-          fetchAccidentReports(),
-          fetchDemoRoute(),
-          fetchNavigationManeuver(),
-          fetchAheadIntel(),
-        ]);
+        const [trafficRows, disasterRows, accidentRows, routeLine, nav, ahead] =
+          await Promise.all([
+            fetchTainanTraffic(),
+            fetchDisasterAlerts(),
+            fetchAccidentReports(),
+            fetchDemoRoute(),
+            fetchNavigationManeuver(),
+            fetchAheadIntel(),
+          ]);
         if (cancelled) return;
-        setCameras(cctvRows);
         setTraffic(trafficRows);
         setDisasters(disasterRows);
         setAccidents(accidentRows);
         setRoute(routeLine);
         setManeuver(nav);
-        setIntel(ahead);
+        setBaseIntel(ahead);
       } catch {
         if (!cancelled) setLoadError("道路情報載入失敗，請重新整理。");
       }
@@ -111,6 +121,27 @@ export function DrivingApp() {
     return stop;
   }, []);
 
+  const intel = useMemo(
+    () => roadIntelFromCameras(preview, baseIntel, 2),
+    [baseIntel, preview],
+  );
+
+  const selectCamera = useCallback(
+    (id: string) => {
+      const camera = cameraById(id);
+      if (!camera) return;
+      const center =
+        gpsStatus === "active"
+          ? { lng: vehicle.lng, lat: vehicle.lat }
+          : (viewport?.center ?? { lng: vehicle.lng, lat: vehicle.lat });
+      setSelectedCctv({
+        ...camera,
+        distanceKm: camera.distanceKm ?? distanceKm(center, camera.location),
+      });
+    },
+    [cameraById, gpsStatus, vehicle.lat, vehicle.lng, viewport?.center],
+  );
+
   const locate = useCallback(async () => {
     setGpsStatus("locating");
     try {
@@ -118,6 +149,7 @@ export function DrivingApp() {
       setVehicle(pose);
       setFollowVehicle(true);
       setGpsStatus("active");
+      setRefreshNonce((value) => value + 1);
     } catch {
       setGpsStatus("denied");
     }
@@ -128,7 +160,13 @@ export function DrivingApp() {
     setFollowVehicle(true);
     setSelectedCctv(null);
     setCameraMode("3d");
+    setRefreshNonce((value) => value + 1);
   }, []);
+
+  const refreshCctv = useCallback(() => {
+    setRefreshNonce((value) => value + 1);
+    reload();
+  }, [reload]);
 
   return (
     <div className="relative h-dvh w-full overflow-hidden overscroll-none bg-[#0b0d11] text-zinc-100">
@@ -137,13 +175,14 @@ export function DrivingApp() {
         cameraMode={cameraMode}
         followVehicle={followVehicle}
         selectedCctvId={selectedCctv?.id ?? null}
-        cameras={cameras}
+        cameras={visible}
         traffic={traffic}
         disasters={disasters}
         accidents={accidents}
         route={route}
-        onCctvSelect={setSelectedCctv}
+        onCctvSelect={selectCamera}
         onUserPan={() => setFollowVehicle(false)}
+        onViewportChange={setViewport}
       />
 
       <div className="driving-vignette pointer-events-none absolute inset-0" />
@@ -170,6 +209,7 @@ export function DrivingApp() {
           }
           onRecenter={() => setFollowVehicle(true)}
           onDemoDrive={goDemoDrive}
+          onRefreshCctv={refreshCctv}
         />
       </div>
 
@@ -180,17 +220,28 @@ export function DrivingApp() {
       <footer className="absolute inset-x-0 bottom-0 z-10 flex justify-center px-2 pb-[max(0.45rem,env(safe-area-inset-bottom))] sm:p-4 sm:pt-0">
         {selectedCctv ? (
           <CctvDetailCard
+            key={selectedCctv.id}
             camera={selectedCctv}
             onClose={() => setSelectedCctv(null)}
           />
         ) : (
-          <RoadInformationCard items={intel} />
+          <RoadInformationCard
+            items={intel}
+            origin={origin}
+            emptyHint="附近 8 公里內尚無可用 CCTV。"
+            onSelectCctv={selectCamera}
+          />
         )}
       </footer>
 
       {loadError ? (
         <div className="absolute top-1/2 left-1/2 z-20 -translate-x-1/2 -translate-y-1/2 rounded-xl border border-red-400/30 bg-black/70 px-4 py-3 text-sm text-red-200">
           {loadError}
+        </div>
+      ) : null}
+      {cctvError ? (
+        <div className="pointer-events-none absolute top-[max(5.5rem,calc(env(safe-area-inset-top)+4.5rem))] left-1/2 z-20 -translate-x-1/2 rounded-xl border border-amber-300/25 bg-black/65 px-3 py-2 text-xs text-amber-100">
+          {cctvError}
         </div>
       ) : null}
     </div>

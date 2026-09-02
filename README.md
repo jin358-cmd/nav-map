@@ -2,7 +2,7 @@
 
 台灣智慧駕駛地圖＋即時道路情報平台。產品定位是 **駕駛視角的道路情報**，不是 Google Maps 克隆。
 
-第一階段 Prototype 以 **臺南市區** 為示範範圍（中正路北上，民生路口右轉往臺南火車站），使用 mock CCTV、交通與災害資料。尚未串接真實 TDX。
+第一階段 Prototype 以 **臺南市區** 為示範範圍（中正路北上，民生路口右轉往臺南火車站）。Phase 2 已把 weather 專案的 CCTV 篩選／距離／city+freeway 模型移植到 MapLibre Driving HUD；交通與災害仍是 mock。尚未串接真實 TDX live。
 
 ## 技術架構
 
@@ -25,12 +25,14 @@ src/
     map/                    MapLibre、Vehicle Marker、控制鈕
     overlay/                導航列、道路情報卡、CCTV 卡
     ui/                     shadcn 元件
-  data/                     臺南 mock CCTV / traffic / disaster
+  data/                     mock 交通／災害、CCTV snapshot（cctv-fallback.json）
+  hooks/                    useCctvView（距離、viewport、節流）
   services/
-    tdx.ts                  預留 MOTC TDX（Phase 2–3）
+    cctv.ts                 TDX → snapshot → mock
+    tdx.ts                  預留 MOTC TDX live
     disaster-api.ts         預留防災 API（Phase 4）
     geolocation.ts          瀏覽器 GPS
-  lib/                      地圖樣式、圖層、常數
+  lib/                      地圖樣式、CCTV 圖層／評分、常數
   types/                    領域型別
 ```
 
@@ -75,18 +77,20 @@ npm start
 - 駕駛視角 3D：pitch 約 60°，車子在可見駕駛區下方約 30%，前方視野拉長
 - 2D / 3D 切換、GPS 定位、居中、回臺南示範
 - 自訂 Vehicle Marker（不是 Google 藍點）
-- Mock CCTV Marker；點擊底部資訊卡（路口名稱、狀態、查看即時影像）
+- CCTV：獨立 `cctv-source` / `cctv-layer`，依 1 km／8 km／zoom 顯示，點擊底部 HUD
 - Mock Traffic 圖層、Mock Disaster / 事故標記
 - 頂部導航資訊 UI（八百公尺後右轉）
 - 底部半透明 Road Information Card
 - Android 直式優先的 Responsive HUD（資訊卡不遮住主要駕駛視野）
 
-目前 **不要** 填入真實 TDX 金鑰；`services/tdx.ts` 在未設定時一律回傳 mock。
+目前 **不要** 填入真實 TDX 金鑰。未設定時 CCTV 走本地 SNAPSHOT（來自 weather 的 city／freeway JSON），再不行才用 8 支 MOCK。
+
+Phase 2 對照報告：[`docs/PHASE-2-CCTV.md`](docs/PHASE-2-CCTV.md)。
 
 ## Future Roadmap
 
-**Phase 2：TDX CCTV**  
-串接 [MOTC TDX](https://tdx.transportdata.tw/) 臺南 CCTV 清單與即時影像 URL。`fetchTainanCctv` / `fetchCctvSnapshotUrl` 已預留。
+**Phase 2：CCTV 顯示（本階段）**  
+已完成 weather 邏輯移植與 Driving HUD。TDX live token 仍是 stub，下一步才是真實認證與影像 URL。
 
 **Phase 3：即時交通**  
 TDX Live Traffic 取代 mock 壅塞線，依真實車速上色。
