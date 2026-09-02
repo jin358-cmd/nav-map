@@ -32,8 +32,6 @@ const ALWAYS_INCLUDE = new Set([
   "off ramp",
   "fork",
   "end of road",
-  "roundabout",
-  "rotary",
   "roundabout turn",
   "exit roundabout",
   "exit rotary",
@@ -76,6 +74,7 @@ export function shouldIncludeOsrmStep(step: OsrmStep): boolean {
   const name = step.name?.trim() ?? "";
 
   if (type === "notification") return false;
+  if (type === "roundabout" || type === "rotary") return false;
   if (ALWAYS_INCLUDE.has(type)) return true;
   if (type === "new name") {
     if (name) return distance >= 25;
