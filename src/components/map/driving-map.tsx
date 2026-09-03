@@ -16,7 +16,6 @@ import {
   INTERSECTION_ZOOM,
   INTERSECTION_ZOOM_MOBILE,
   NAVIGATION_PITCH,
-  OPENFREEMAP_DARK_STYLE,
   OVERHEAD_ZOOM,
   OVERVIEW_PITCH,
   TAINAN_CENTER,
@@ -27,7 +26,8 @@ import { bindDisasterLayerClicks, upsertDisasterLayer } from "@/lib/disaster-lay
 import { upsertGuidanceArrows } from "@/lib/guidance-arrows";
 import { upsertIntelligenceLayers } from "@/lib/map-layers";
 import { configureMapLibreWorker } from "@/lib/maplibre-worker";
-import { applyDarkDrivingTheme } from "@/lib/map-style";
+import { applyResolvedTheme, basemapStyle } from "@/lib/map-basemap";
+import { resolveMapBasemap } from "@/lib/map-display-mode";
 import { damp, lerp, lerpAngle } from "@/lib/geo";
 import { createRouteProgressModel } from "@/lib/route-progress";
 import {
@@ -41,7 +41,9 @@ import type {
   CameraMode,
   CctvCamera,
   DisasterAlert,
+  FollowOrientation,
   LngLat,
+  MapDisplayMode,
   MapViewport,
   DisplayPose,
   RouteDestination,
@@ -54,7 +56,11 @@ type DrivingMapProps = {
   vehicle: VehiclePose;
   displayVehicle?: DisplayPose | null;
   cameraMode: CameraMode;
+  followOrientation?: FollowOrientation;
   followVehicle: boolean;
+  mapDisplayMode?: MapDisplayMode;
+  styleRevision?: number;
+  pickMode?: boolean;
   navigating: boolean;
   selectedCctvId: string | null;
   selectedDisasterId: string | null;
@@ -81,6 +87,8 @@ type DrivingMapProps = {
   onUserPan: () => void;
   onViewportChange: (viewport: MapViewport) => void;
   onLongPress?: (location: { lng: number; lat: number }) => void;
+  onPickLocation?: (location: { lng: number; lat: number }) => void;
+  onStyleFallback?: (message: string) => void;
 };
 
 function isCompactViewport(width: number) {
@@ -132,6 +140,7 @@ function cameraOptions(
   overlay?: DrivingMapProps["overlayPadding"],
   distanceToNext = Number.POSITIVE_INFINITY,
   junctionCue: LngLat | null = null,
+  followOrientation: FollowOrientation = "heading-up",
 ) {
   const height = map.getContainer().clientHeight;
   const width = map.getContainer().clientWidth;
@@ -147,7 +156,7 @@ function cameraOptions(
       lerp(vehicle.lng, junctionCue?.lng ?? vehicle.lng, towardCue),
       lerp(vehicle.lat, junctionCue?.lat ?? vehicle.lat, towardCue),
     ] as [number, number],
-    bearing: mode === "3d" ? vehicle.heading : 0,
+    bearing: followOrientation === "heading-up" ? vehicle.heading : 0,
     pitch: mode === "3d" ? lerp(cruisePitch, INTERSECTION_PITCH, blend) : 0,
     zoom: mode === "3d" ? navZoom : OVERHEAD_ZOOM,
     padding: drivingPadding(height, width, mode, navigating, overlay),
@@ -224,7 +233,11 @@ export function DrivingMap({
   vehicle,
   displayVehicle = null,
   cameraMode,
+  followOrientation = "heading-up",
   followVehicle,
+  mapDisplayMode = "dark",
+  styleRevision = 0,
+  pickMode = false,
   navigating,
   selectedCctvId,
   selectedDisasterId,
@@ -246,6 +259,8 @@ export function DrivingMap({
   onUserPan,
   onViewportChange,
   onLongPress,
+  onPickLocation,
+  onStyleFallback,
 }: DrivingMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
@@ -257,7 +272,14 @@ export function DrivingMap({
   const onUserPanRef = useRef(onUserPan);
   const onViewportChangeRef = useRef(onViewportChange);
   const onLongPressRef = useRef(onLongPress);
+  const onPickLocationRef = useRef(onPickLocation);
+  const onStyleFallbackRef = useRef(onStyleFallback);
   const modeRef = useRef(cameraMode);
+  const followOrientationRef = useRef(followOrientation);
+  const pickModeRef = useRef(pickMode);
+  const mapDisplayModeRef = useRef(mapDisplayMode);
+  const pickMarkerRef = useRef<Marker | null>(null);
+  const styleKeyRef = useRef(resolveMapBasemap(mapDisplayMode));
   const vehicleRef = useRef(vehicle);
   const displayVehicleRef = useRef(displayVehicle);
   const displayStateRef = useRef<VehicleDisplayState>(
@@ -295,7 +317,12 @@ export function DrivingMap({
     onUserPanRef.current = onUserPan;
     onViewportChangeRef.current = onViewportChange;
     onLongPressRef.current = onLongPress;
+    onPickLocationRef.current = onPickLocation;
+    onStyleFallbackRef.current = onStyleFallback;
     modeRef.current = cameraMode;
+    followOrientationRef.current = followOrientation;
+    pickModeRef.current = pickMode;
+    mapDisplayModeRef.current = mapDisplayMode;
     vehicleRef.current = vehicle;
     displayVehicleRef.current = displayVehicle;
     routeModelRef.current = createRouteProgressModel(route, []);
@@ -324,7 +351,12 @@ export function DrivingMap({
     onUserPan,
     onViewportChange,
     onLongPress,
+    onPickLocation,
+    onStyleFallback,
     cameraMode,
+    followOrientation,
+    pickMode,
+    mapDisplayMode,
     vehicle,
     displayVehicle,
     route,
@@ -349,7 +381,7 @@ export function DrivingMap({
 
     const map = new MapLibreMap({
       container: containerRef.current,
-      style: OPENFREEMAP_DARK_STYLE,
+      style: basemapStyle(resolveMapBasemap(mapDisplayMode)),
       center: [TAINAN_CENTER.lng, TAINAN_CENTER.lat],
       zoom: DRIVING_ZOOM,
       pitch: DRIVING_PITCH,
@@ -421,7 +453,7 @@ export function DrivingMap({
       const display = displayStateRef.current;
       marker.setLngLat([display.lng, display.lat]);
 
-      const headingUp = modeRef.current === "3d";
+      const headingUp = followOrientationRef.current === "heading-up";
       setVehicleMarkerNavigating(marker.getElement(), navigatingRef.current);
       marker.setRotation(headingUp ? 0 : display.heading);
 
@@ -459,6 +491,7 @@ export function DrivingMap({
           overlayPaddingRef.current,
           distanceToNextRef.current,
           junctionCueRef.current,
+          followOrientationRef.current,
         );
         const center = mapNow.getCenter();
         const zoomTarget = pinchingRef.current
@@ -481,8 +514,8 @@ export function DrivingMap({
       rafRef.current = requestAnimationFrame(tick);
     };
 
-    const onLoad = () => {
-      applyDarkDrivingTheme(map);
+    const attachCustomLayers = () => {
+      applyResolvedTheme(map, resolveMapBasemap(mapDisplayModeRef.current));
       upsertIntelligenceLayers(map, routeRef.current, trafficRef.current);
       upsertSpeedEnforcementLayer(map, speedEnforcementRef.current);
       try {
@@ -493,6 +526,10 @@ export function DrivingMap({
       } catch (error) {
         console.error("CCTV layer skipped", error);
       }
+    };
+
+    const onLoad = () => {
+      attachCustomLayers();
       readyRef.current = true;
       map.jumpTo(
         cameraOptions(
@@ -509,7 +546,17 @@ export function DrivingMap({
       rafRef.current = requestAnimationFrame(tick);
     };
 
+    const onMapClick = (event: { lngLat: { lng: number; lat: number } }) => {
+      if (!pickModeRef.current) return;
+      const { lng, lat } = event.lngLat;
+      pickMarkerRef.current?.remove();
+      pickMarkerRef.current = new Marker({ color: "#22d3ee", anchor: "bottom" })
+        .setLngLat([lng, lat])
+        .addTo(map);
+      onPickLocationRef.current?.({ lng, lat });
+    };
     map.on("load", onLoad);
+    map.on("click", onMapClick);
     map.on("error", (event) => {
       console.error("MapLibre error", event.error);
     });
@@ -651,6 +698,8 @@ export function DrivingMap({
       canvas.removeEventListener("contextmenu", onContextMenu);
       cancelAnimationFrame(rafRef.current);
       readyRef.current = false;
+      pickMarkerRef.current?.remove();
+      pickMarkerRef.current = null;
       vehicleMarkerRef.current?.remove();
       vehicleMarkerRef.current = null;
       destMarkerRef.current?.remove();
@@ -676,6 +725,49 @@ export function DrivingMap({
     followVehicleRef.current = followVehicle;
     if (followVehicle) userZoomRef.current = null;
   }, [followVehicle]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !readyRef.current) return;
+    const resolved = resolveMapBasemap(mapDisplayMode);
+    if (resolved === styleKeyRef.current) return;
+    const camera = {
+      center: map.getCenter(),
+      zoom: map.getZoom(),
+      pitch: map.getPitch(),
+      bearing: map.getBearing(),
+    };
+    const onStyle = () => {
+      styleKeyRef.current = resolved;
+      applyResolvedTheme(map, resolved);
+      try {
+        upsertIntelligenceLayers(map, routeRef.current, trafficRef.current);
+        upsertSpeedEnforcementLayer(map, speedEnforcementRef.current);
+        upsertCctvLayer(map, camerasRef.current, selectedRef.current);
+        bindCctvLayerClicks(map, (id) => onCctvSelectRef.current(id));
+        upsertDisasterLayer(map, disastersRef.current, selectedDisasterRef.current);
+        bindDisasterLayerClicks(map, (id) => onDisasterSelectRef.current(id));
+      } catch {
+        onStyleFallbackRef.current?.("地圖圖層重新掛載失敗，已保留目前畫面。");
+      }
+      map.jumpTo(camera);
+      if (vehicleMarkerRef.current) vehicleMarkerRef.current.addTo(map);
+      if (destMarkerRef.current) destMarkerRef.current.addTo(map);
+    };
+    map.once("style.load", onStyle);
+    try {
+      map.setStyle(basemapStyle(resolved), { diff: false });
+    } catch {
+      styleKeyRef.current = "dark";
+      onStyleFallbackRef.current?.("衛星或底圖載入失敗，已退回一般地圖。");
+    }
+  }, [mapDisplayMode, styleRevision]);
+
+  useEffect(() => {
+    if (pickMode) return;
+    pickMarkerRef.current?.remove();
+    pickMarkerRef.current = null;
+  }, [pickMode]);
 
   useEffect(() => {
     const map = mapRef.current;

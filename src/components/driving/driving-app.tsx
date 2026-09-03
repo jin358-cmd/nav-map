@@ -13,6 +13,8 @@ import { X } from "lucide-react";
 import { MapControls } from "@/components/map/map-controls";
 import { Button } from "@/components/ui/button";
 import { AddressSearch } from "@/components/overlay/address-search";
+import { PlaceEditor } from "@/components/overlay/place-editor";
+import { SavedPlaceBar } from "@/components/overlay/saved-place-bar";
 import { CctvDetailCard } from "@/components/overlay/cctv-detail-card";
 import { DisasterDetailCard } from "@/components/overlay/disaster-detail-card";
 import { NextIntersectionHud } from "@/components/overlay/navigation-banner";
@@ -58,6 +60,20 @@ import {
   type NavigationTrackerState,
 } from "@/lib/route-progress";
 import { snapVehicleToRoute } from "@/lib/route-snap";
+import {
+  msUntilAutoSwitch,
+  readMapDisplayMode,
+  writeMapDisplayMode,
+} from "@/lib/map-display-mode";
+import {
+  deleteSavedPlace,
+  getSavedPlacesSnapshot,
+  getServerSavedPlacesSnapshot,
+  renameSavedPlace,
+  savedPlaceToHit,
+  subscribeSavedPlaces,
+  upsertSavedPlace,
+} from "@/lib/saved-places";
 import { deriveTrafficIntel } from "@/lib/traffic-intel";
 import {
   fetchAccidentReports,
@@ -80,8 +96,11 @@ import type {
   NavigationManeuver,
   RoadIntelItem,
   DisplayPose,
+  FollowOrientation,
+  MapDisplayMode,
   RouteDestination,
   RouteStep,
+  SavedPlaceType,
   VehiclePose,
 } from "@/types/domain";
 
@@ -103,7 +122,22 @@ export function DrivingApp() {
   const [vehicle, setVehicle] = useState<VehiclePose>(DEMO_VEHICLE);
   const [displayVehicle, setDisplayVehicle] = useState<DisplayPose | null>(null);
   const [cameraMode, setCameraMode] = useState<CameraMode>("3d");
+  const [followOrientation, setFollowOrientation] =
+    useState<FollowOrientation>("heading-up");
   const [followVehicle, setFollowVehicle] = useState(true);
+  const [mapDisplayMode, setMapDisplayMode] = useState<MapDisplayMode>("dark");
+  const [styleMenuOpen, setStyleMenuOpen] = useState(false);
+  const [styleRevision, setStyleRevision] = useState(0);
+  const [styleHint, setStyleHint] = useState<string | null>(null);
+  const [editingPlaceType, setEditingPlaceType] = useState<SavedPlaceType | null>(
+    null,
+  );
+  const [pickMode, setPickMode] = useState(false);
+  const [pickLocation, setPickLocation] = useState<{
+    lng: number;
+    lat: number;
+  } | null>(null);
+  const [pickAddress, setPickAddress] = useState<string | null>(null);
   const [gpsStatus, setGpsStatus] = useState<GpsStatus>("idle");
   const [viewport, setViewport] = useState<MapViewport | null>(null);
   const [refreshNonce, setRefreshNonce] = useState(0);
@@ -134,6 +168,13 @@ export function DrivingApp() {
     getFavoritesSnapshot,
     getServerFavoritesSnapshot,
   );
+  const savedPlaces = useSyncExternalStore(
+    subscribeSavedPlaces,
+    getSavedPlacesSnapshot,
+    getServerSavedPlacesSnapshot,
+  );
+  const homePlace = savedPlaces.find((place) => place.type === "home") ?? null;
+  const workPlace = savedPlaces.find((place) => place.type === "work") ?? null;
   const trafficFocus5km = true;
   const landscape = useLandscape();
   const navCardRef = useRef<HTMLDivElement>(null);
@@ -169,6 +210,18 @@ export function DrivingApp() {
     routeProgressModel,
     routeSteps,
   });
+
+  useEffect(() => {
+    setMapDisplayMode(readMapDisplayMode());
+  }, []);
+
+  useEffect(() => {
+    if (mapDisplayMode !== "auto") return;
+    const timer = window.setTimeout(() => {
+      setStyleRevision((value) => value + 1);
+    }, msUntilAutoSwitch());
+    return () => window.clearTimeout(timer);
+  }, [mapDisplayMode, styleRevision]);
 
   useEffect(() => {
     navigationContextRef.current = {
@@ -477,13 +530,21 @@ export function DrivingApp() {
     try {
       const pose = await requestCurrentPosition();
       setVehicle(pose);
-      setFollowVehicle(true);
+      if (!followVehicle) {
+        setFollowOrientation("heading-up");
+        setFollowVehicle(true);
+      } else {
+        setFollowOrientation((current) =>
+          current === "heading-up" ? "north-up" : "heading-up",
+        );
+        setFollowVehicle(true);
+      }
       setGpsStatus("active");
       setRefreshNonce((value) => value + 1);
     } catch {
       setGpsStatus("denied");
     }
-  }, []);
+  }, [followVehicle]);
 
   const startNavigation = useCallback(() => {
     const next = routeProgressModel
@@ -632,7 +693,11 @@ export function DrivingApp() {
         vehicle={vehicle}
         displayVehicle={displayVehicle}
         cameraMode={cameraMode}
+        followOrientation={followOrientation}
         followVehicle={followVehicle}
+        mapDisplayMode={mapDisplayMode}
+        styleRevision={styleRevision}
+        pickMode={pickMode}
         navigating={navigating}
         selectedCctvId={selectedCctv?.id ?? null}
         selectedDisasterId={selectedDisaster?.id ?? null}
@@ -660,9 +725,98 @@ export function DrivingApp() {
         }}
         onViewportChange={setViewport}
         onLongPress={(location) => void handleLongPress(location)}
+        onPickLocation={(location) => {
+          setPickLocation(location);
+          setPickAddress(null);
+          void reversePlace(location).then((hit) => {
+            setPickAddress(hit.address || hit.name || null);
+          });
+        }}
+        onStyleFallback={(message) => {
+          setStyleHint(message);
+          setMapDisplayMode("dark");
+          writeMapDisplayMode("dark");
+        }}
       />
 
       <div className="driving-vignette pointer-events-none absolute inset-0" />
+
+      {styleHint ? (
+        <p className="pointer-events-none absolute top-[max(4.5rem,env(safe-area-inset-top))] left-1/2 z-30 -translate-x-1/2 rounded-full bg-black/70 px-3 py-1 text-xs text-amber-100">
+          {styleHint}
+        </p>
+      ) : null}
+
+      {editingPlaceType ? (
+        <div className="absolute top-[max(5.5rem,env(safe-area-inset-top))] left-3 right-3 z-40 sm:left-3 sm:right-auto">
+          <PlaceEditor
+            type={editingPlaceType}
+            existing={
+              savedPlaces.find((place) => place.type === editingPlaceType) ?? null
+            }
+            currentLocation={{ lng: vehicle.lng, lat: vehicle.lat }}
+            pickLocation={pickLocation}
+            pickAddress={pickAddress}
+            onStartPick={() => {
+              setPickMode(true);
+              setPickLocation(null);
+              setPickAddress(null);
+            }}
+            onConfirmPick={() => {
+              if (!pickLocation || !editingPlaceType) return;
+              const current =
+                savedPlaces.find((place) => place.type === editingPlaceType) ??
+                null;
+              upsertSavedPlace({
+                type: editingPlaceType,
+                displayName:
+                  current?.displayName ??
+                  (editingPlaceType === "home" ? "住家" : "公司"),
+                originalAddress: pickAddress ?? undefined,
+                latitude: pickLocation.lat,
+                longitude: pickLocation.lng,
+              });
+              setPickMode(false);
+              setPickLocation(null);
+              setEditingPlaceType(null);
+            }}
+            onReselect={() => {
+              setPickLocation(null);
+              setPickAddress(null);
+              setPickMode(true);
+            }}
+            onCancelPick={() => {
+              setPickMode(false);
+              setPickLocation(null);
+              setPickAddress(null);
+            }}
+            onSave={(input) => {
+              if (!editingPlaceType) return;
+              upsertSavedPlace({ type: editingPlaceType, ...input });
+              setEditingPlaceType(null);
+              setPickMode(false);
+            }}
+            onRename={(displayName) => {
+              const current = savedPlaces.find(
+                (place) => place.type === editingPlaceType,
+              );
+              if (current) renameSavedPlace(current.id, displayName);
+            }}
+            onDelete={() => {
+              const current = savedPlaces.find(
+                (place) => place.type === editingPlaceType,
+              );
+              if (current) deleteSavedPlace(current.id);
+              setEditingPlaceType(null);
+            }}
+            onClose={() => {
+              setEditingPlaceType(null);
+              setPickMode(false);
+              setPickLocation(null);
+            }}
+          />
+        </div>
+      ) : null}
 
       {destination && navigating ? (
         <>
@@ -707,12 +861,24 @@ export function DrivingApp() {
               onClear={clearRoute}
             />
           ) : (
-            <AddressSearch
-              bias={searchBias}
-              busy={routing}
-              error={routeError}
-              onSelect={(hit) => void applyRoute(hit)}
-            />
+            <>
+              <AddressSearch
+                bias={searchBias}
+                busy={routing}
+                error={routeError}
+                onSelect={(hit) => void applyRoute(hit)}
+              />
+              <SavedPlaceBar
+                home={homePlace}
+                work={workPlace}
+                onGo={(place) => void applyRoute(savedPlaceToHit(place))}
+                onEdit={(type) => {
+                  setEditingPlaceType(type);
+                  setPickMode(false);
+                  setPickLocation(null);
+                }}
+              />
+            </>
           )}
         </div>
       )}
@@ -720,11 +886,22 @@ export function DrivingApp() {
       <div className="pointer-events-auto absolute top-[42%] right-[max(0.65rem,env(safe-area-inset-right))] z-20 -translate-y-1/2 sm:top-28 sm:translate-y-0">
         <MapControls
           cameraMode={cameraMode}
+          followOrientation={followOrientation}
+          followVehicle={followVehicle}
           gpsStatus={gpsStatus}
+          mapDisplayMode={mapDisplayMode}
+          styleMenuOpen={styleMenuOpen}
           onLocate={() => void locate()}
           onToggleCamera={() =>
             setCameraMode((mode) => (mode === "3d" ? "2d" : "3d"))
           }
+          onMapDisplayMode={(mode) => {
+            writeMapDisplayMode(mode);
+            setMapDisplayMode(mode);
+            setStyleMenuOpen(false);
+            setStyleHint(null);
+          }}
+          onToggleStyleMenu={() => setStyleMenuOpen((open) => !open)}
         />
       </div>
 

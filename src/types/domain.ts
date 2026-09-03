@@ -26,6 +26,20 @@ export type GpsStatus =
   | "unavailable";
 
 export type CameraMode = "2d" | "3d";
+export type FollowOrientation = "heading-up" | "north-up";
+export type MapDisplayMode = "light" | "dark" | "auto" | "satellite";
+export type SavedPlaceType = "home" | "work" | "custom";
+
+export type SavedPlace = {
+  id: string;
+  type: SavedPlaceType;
+  displayName: string;
+  originalAddress?: string;
+  latitude: number;
+  longitude: number;
+  createdAt: string;
+  updatedAt: string;
+};
 
 export type CctvStatus = "online" | "offline" | "unknown" | "unsupported";
 export type CctvSourceType = "city" | "freeway";

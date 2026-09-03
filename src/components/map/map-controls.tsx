@@ -2,31 +2,54 @@
 
 import type { ReactNode } from "react";
 import { LocateFixed } from "lucide-react";
+import { MapStyleMenu } from "@/components/overlay/map-style-menu";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { CameraMode, GpsStatus } from "@/types/domain";
+import type {
+  CameraMode,
+  FollowOrientation,
+  GpsStatus,
+  MapDisplayMode,
+} from "@/types/domain";
 
 type MapControlsProps = {
   cameraMode: CameraMode;
+  followOrientation: FollowOrientation;
+  followVehicle: boolean;
   gpsStatus: GpsStatus;
+  mapDisplayMode: MapDisplayMode;
+  styleMenuOpen: boolean;
   onLocate: () => void;
   onToggleCamera: () => void;
+  onMapDisplayMode: (mode: MapDisplayMode) => void;
+  onToggleStyleMenu: () => void;
 };
 
 export function MapControls({
   cameraMode,
+  followOrientation,
+  followVehicle,
   gpsStatus,
+  mapDisplayMode,
+  styleMenuOpen,
   onLocate,
   onToggleCamera,
+  onMapDisplayMode,
+  onToggleStyleMenu,
 }: MapControlsProps) {
   const locating = gpsStatus === "locating";
+  const locateLabel = !followVehicle
+    ? "回到定位並車頭向上"
+    : followOrientation === "heading-up"
+      ? "切換北方朝上"
+      : "切換車頭向上";
 
   return (
     <div className="pointer-events-auto flex flex-col items-end gap-2.5">
       <ControlButton
-        label={gpsStatus === "active" ? "GPS 已鎖定" : "定位"}
+        label={locateLabel}
         onClick={onLocate}
-        active={gpsStatus === "active"}
+        active={followVehicle}
       >
         <LocateFixed className={cn("size-5", locating && "animate-pulse")} />
       </ControlButton>
@@ -35,10 +58,16 @@ export function MapControls({
         onClick={onToggleCamera}
         active={cameraMode === "3d"}
       >
-        <span className="text-[13px] font-bold leading-none tracking-tight">
-          {cameraMode === "3d" ? "3D" : "2"}
+        <span className="text-[18px] font-bold leading-none tracking-tight">
+          {cameraMode === "3d" ? "3D" : "2D"}
         </span>
       </ControlButton>
+      <MapStyleMenu
+        mode={mapDisplayMode}
+        open={styleMenuOpen}
+        onChange={onMapDisplayMode}
+        onToggle={onToggleStyleMenu}
+      />
     </div>
   );
 }
