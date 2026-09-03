@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist_Mono, Noto_Sans_TC } from "next/font/google";
+import { InstallBootstrap } from "@/components/pwa/install-bootstrap";
+import { APP_BOOKMARK_NAME, APP_TAGLINE } from "@/lib/app-brand";
 import "./globals.css";
 
 const notoSansTc = Noto_Sans_TC({
@@ -14,9 +16,18 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "NavPilot",
-  description: "NavPilot｜智駕台灣 · 即時道路情報",
-  applicationName: "NavPilot",
+  title: APP_BOOKMARK_NAME,
+  description: APP_TAGLINE,
+  applicationName: APP_BOOKMARK_NAME,
+  appleWebApp: {
+    capable: true,
+    title: APP_BOOKMARK_NAME,
+    statusBarStyle: "black-translucent",
+  },
+  icons: {
+    icon: [{ url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
+    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
+  },
 };
 
 export const viewport: Viewport = {
@@ -32,7 +43,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="zh-Hant"
       className={`dark ${notoSansTc.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="h-full overflow-hidden overscroll-none bg-[#0b0d11] text-foreground touch-manipulation">
+      <body className="min-h-full bg-[#0b0d11] text-foreground touch-manipulation">
+        <InstallBootstrap />
         {children}
       </body>
     </html>

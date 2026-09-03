@@ -64,6 +64,8 @@ npm run dev
 
 瀏覽器開啟 [http://127.0.0.1:43145](http://127.0.0.1:43145)。
 
+安裝／加入主畫面：開啟 [http://127.0.0.1:43145/install](http://127.0.0.1:43145/install) 或把正式網域的 `/install` 連結傳給使用者。安裝後桌面圖示為 NavPilot 圖，書籤與 App 名稱為 **智駕地圖NavPilot**。
+
 ```bash
 npm run lint
 npm run build
@@ -128,7 +130,7 @@ NCDR JSON Atom + CAP 取代 mock 積水／封路／強風標記；MapLibre 圖�
 依 GPS heading 對齊車頭、逐步轉向指示與語音。
 
 **Phase 7：PWA / Driving Assistant**  
-可安裝、離線底圖快取、車機／直式駕駛助理佈局。
+已可透過 `/install` 連結安裝到桌面（圖示與書籤名稱：智駕地圖NavPilot）。離線底圖快取與車機佈局仍待加強。
 
 ## Vercel 部署
 
