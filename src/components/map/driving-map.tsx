@@ -124,6 +124,14 @@ function isCompactViewport(width: number) {
   return width < 640;
 }
 
+function isStyleReady(map: MapLibreMap | null): map is MapLibreMap {
+  try {
+    return Boolean(map && map.isStyleLoaded());
+  } catch {
+    return false;
+  }
+}
+
 function drivingPadding(
   height: number,
   width: number,
@@ -559,16 +567,20 @@ export function DrivingMap({
           ? mapNow.getZoom()
           : (userZoomRef.current ?? wanted.zoom);
         const followT = damp(dt, 0.22);
-        mapNow.jumpTo({
-          center: [
-            lerp(center.lng, wanted.center[0], followT),
-            lerp(center.lat, wanted.center[1], followT),
-          ],
-          bearing: lerpAngle(mapNow.getBearing(), wanted.bearing, followT),
-          pitch: lerp(mapNow.getPitch(), wanted.pitch, followT),
-          zoom: lerp(mapNow.getZoom(), zoomTarget, pinchingRef.current ? 0 : followT),
-          padding: wanted.padding,
-        });
+        try {
+          mapNow.jumpTo({
+            center: [
+              lerp(center.lng, wanted.center[0], followT),
+              lerp(center.lat, wanted.center[1], followT),
+            ],
+            bearing: lerpAngle(mapNow.getBearing(), wanted.bearing, followT),
+            pitch: lerp(mapNow.getPitch(), wanted.pitch, followT),
+            zoom: lerp(mapNow.getZoom(), zoomTarget, pinchingRef.current ? 0 : followT),
+            padding: wanted.padding,
+          });
+        } catch {
+          /* style may still be swapping */
+        }
         emitViewport();
       }
 
@@ -576,11 +588,12 @@ export function DrivingMap({
     };
 
     const attachCustomLayers = () => {
+      if (!isStyleReady(map)) return;
       const visible = layerVisibilityRef.current;
-      applyResolvedTheme(map, resolveMapBasemap(mapDisplayModeRef.current));
-      upsertIntelligenceLayers(map, routeRef.current, trafficRef.current, visible.congestion);
-      upsertSpeedEnforcementLayer(map, speedEnforcementRef.current);
       try {
+        applyResolvedTheme(map, resolveMapBasemap(mapDisplayModeRef.current));
+        upsertIntelligenceLayers(map, routeRef.current, trafficRef.current, visible.congestion);
+        upsertSpeedEnforcementLayer(map, speedEnforcementRef.current);
         upsertCctvLayer(map, camerasRef.current, selectedRef.current, visible.cctv);
         bindCctvLayerClicks(map, (id) => onCctvSelectRef.current(id));
         upsertDisasterLayer(map, disastersRef.current, selectedDisasterRef.current, visible.disaster);
@@ -606,19 +619,24 @@ export function DrivingMap({
       }
     };
 
-    const onLoad = () => {
+    const markReady = () => {
       attachCustomLayers();
+      if (readyRef.current) return;
       readyRef.current = true;
-      map.jumpTo(
-        cameraOptions(
-          map,
-          vehicleRef.current,
-          modeRef.current,
-          navigatingRef.current,
-          approachingRef.current,
-          overlayPaddingRef.current,
-        ),
-      );
+      try {
+        map.jumpTo(
+          cameraOptions(
+            map,
+            vehicleRef.current,
+            modeRef.current,
+            navigatingRef.current,
+            approachingRef.current,
+            overlayPaddingRef.current,
+          ),
+        );
+      } catch {
+        /* camera restore is optional until the next frame */
+      }
       emitViewport(true);
       lastFrameRef.current = performance.now();
       rafRef.current = requestAnimationFrame(tick);
@@ -633,7 +651,8 @@ export function DrivingMap({
         .addTo(map);
       onPickLocationRef.current?.({ lng, lat });
     };
-    map.on("load", onLoad);
+    map.on("style.load", markReady);
+    map.on("load", markReady);
     map.on("click", onMapClick);
     map.on("error", (event) => {
       console.error("MapLibre error", event.error);
@@ -792,7 +811,7 @@ export function DrivingMap({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !readyRef.current) return;
+    if (!readyRef.current || !isStyleReady(map)) return;
     upsertIntelligenceLayers(map, route, traffic, layerVisibility.congestion);
     if (!navigating) {
       upsertGuidanceArrows(map, route, 0, 0, false, 0);
@@ -816,9 +835,10 @@ export function DrivingMap({
       bearing: map.getBearing(),
     };
     const onStyle = () => {
+      if (!isStyleReady(map)) return;
       styleKeyRef.current = resolved;
-      applyResolvedTheme(map, resolved);
       try {
+        applyResolvedTheme(map, resolved);
         const visible = layerVisibilityRef.current;
         upsertIntelligenceLayers(map, routeRef.current, trafficRef.current, visible.congestion);
         upsertSpeedEnforcementLayer(map, speedEnforcementRef.current);
@@ -845,7 +865,11 @@ export function DrivingMap({
       } catch {
         onStyleFallbackRef.current?.("地圖圖層重新掛載失敗，已保留目前畫面。");
       }
-      map.jumpTo(camera);
+      try {
+        map.jumpTo(camera);
+      } catch {
+        /* keep the newly loaded style even if camera restore fails */
+      }
       if (vehicleMarkerRef.current) vehicleMarkerRef.current.addTo(map);
       if (destMarkerRef.current) destMarkerRef.current.addTo(map);
     };
@@ -866,7 +890,7 @@ export function DrivingMap({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !readyRef.current) return;
+    if (!readyRef.current || !isStyleReady(map)) return;
     try {
       upsertCctvLayer(map, cameras, selectedCctvId, layerVisibility.cctv);
     } catch (error) {
@@ -876,26 +900,29 @@ export function DrivingMap({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !readyRef.current) return;
+    if (!readyRef.current || !isStyleReady(map)) return;
     upsertDisasterLayer(map, disasters, selectedDisasterId, layerVisibility.disaster);
   }, [disasters, layerVisibility.disaster, selectedDisasterId]);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !readyRef.current) return;
+    if (!readyRef.current || !isStyleReady(map)) return;
     upsertSpeedEnforcementLayer(map, speedEnforcement);
   }, [speedEnforcement]);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
-
-    upsertAccidentLayer(map, accidents, selectedAccidentId, layerVisibility.accident);
+    if (!readyRef.current || !isStyleReady(map)) return;
+    try {
+      upsertAccidentLayer(map, accidents, selectedAccidentId, layerVisibility.accident);
+    } catch (error) {
+      console.error("Accident layer update skipped", error);
+    }
   }, [accidents, layerVisibility.accident, selectedAccidentId]);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !readyRef.current) return;
+    if (!readyRef.current || !isStyleReady(map)) return;
     upsertConstructionLayer(
       map,
       constructions,
@@ -906,7 +933,7 @@ export function DrivingMap({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !readyRef.current) return;
+    if (!readyRef.current || !isStyleReady(map)) return;
     upsertParkingLayer(map, parkingLots, selectedParkingId, parkingVisible);
   }, [parkingLots, parkingVisible, selectedParkingId]);
 

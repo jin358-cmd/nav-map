@@ -69,28 +69,32 @@ export function applyDarkDrivingTheme(map: MapLibreMap) {
   }
 
   if (!map.getLayer("building-3d") && map.getSource("openmaptiles")) {
-    map.addLayer({
-      id: "building-3d",
-      source: "openmaptiles",
-      "source-layer": "building",
-      type: "fill-extrusion",
-      minzoom: 14,
-      paint: {
-        "fill-extrusion-color": MAP_COLORS.buildingExtrusion,
-        "fill-extrusion-height": [
-          "coalesce",
-          ["get", "render_height"],
-          ["get", "height"],
-          10,
-        ],
-        "fill-extrusion-base": [
-          "coalesce",
-          ["get", "render_min_height"],
-          0,
-        ],
-        "fill-extrusion-opacity": 0.78,
-      },
-    });
+    try {
+      map.addLayer({
+        id: "building-3d",
+        source: "openmaptiles",
+        "source-layer": "building",
+        type: "fill-extrusion",
+        minzoom: 14,
+        paint: {
+          "fill-extrusion-color": MAP_COLORS.buildingExtrusion,
+          "fill-extrusion-height": [
+            "coalesce",
+            ["get", "render_height"],
+            ["get", "height"],
+            10,
+          ],
+          "fill-extrusion-base": [
+            "coalesce",
+            ["get", "render_min_height"],
+            0,
+          ],
+          "fill-extrusion-opacity": 0.78,
+        },
+      });
+    } catch {
+      // 底圖尚未準備好 3D 建物時略過，不阻擋地圖載入。
+    }
   }
 
   try {

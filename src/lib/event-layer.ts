@@ -66,6 +66,7 @@ export function upsertAccidentLayer(
   selectedId: string | null,
   visible = true,
 ) {
+  if (!map.isStyleLoaded()) return;
   ensureIcons(map);
   const source = map.getSource(ACCIDENT_SOURCE_ID);
   if (source?.type === "geojson") (source as GeoJSONSource).setData(data(accidents));

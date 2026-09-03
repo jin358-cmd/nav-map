@@ -37,7 +37,7 @@ export function MapStyleMenu({
         <Layers className="size-5" />
       </Button>
       {open ? (
-        <div className="absolute top-0 right-14 flex flex-col gap-1 rounded-2xl border border-white/12 bg-black/80 p-1.5 shadow-xl backdrop-blur-xl">
+        <div className="absolute top-0 right-14 z-50 flex flex-col gap-1 rounded-2xl border border-white/12 bg-black/80 p-1.5 shadow-xl backdrop-blur-xl">
           {OPTIONS.map((option) => (
             <button
               key={option.id}
