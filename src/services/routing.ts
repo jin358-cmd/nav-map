@@ -39,8 +39,53 @@ export async function searchAddresses(
   if (!response.ok) {
     throw new Error("地址搜尋失敗");
   }
-  const data = (await response.json()) as { results?: GeocodeHit[] };
-  return data.results ?? [];
+  const data = (await response.json()) as {
+    results?: Array<
+      GeocodeHit & {
+        label?: string;
+        formattedAddress?: string;
+        latitude?: number;
+        longitude?: number;
+      }
+    >;
+  };
+  return (data.results ?? []).flatMap((item) => {
+    const lng = item.location?.lng ?? item.longitude;
+    const lat = item.location?.lat ?? item.latitude;
+    if (!Number.isFinite(lng) || !Number.isFinite(lat)) return [];
+    return [
+      {
+        id: item.id,
+        name: item.name || item.label || query,
+        address: item.address || item.formattedAddress || "",
+        location: { lng: Number(lng), lat: Number(lat) },
+        source: item.source,
+        exactHouseNumber: item.exactHouseNumber,
+        matchKind: item.matchKind,
+        confidence: item.confidence,
+        distanceMeters: item.distanceMeters,
+      } satisfies GeocodeHit,
+    ];
+  });
+}
+
+export async function rememberGeocodeSelection(
+  query: string,
+  bias?: LngLat,
+) {
+  try {
+    await fetch("/api/geocode", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        query,
+        lng: bias?.lng,
+        lat: bias?.lat,
+      }),
+    });
+  } catch {
+    /* 快取計數失敗不影響導航 */
+  }
 }
 
 export async function planDrivingRoute(

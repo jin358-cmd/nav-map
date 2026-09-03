@@ -58,6 +58,12 @@ type DrivingMapProps = {
   distanceToNextMeters: number;
   approachingIntersection: boolean;
   destination: RouteDestination | null;
+  overlayPadding?: {
+    top: number;
+    left: number;
+    right: number;
+    bottom: number;
+  } | null;
   fitRouteKey: number;
   onCctvSelect: (cameraId: string) => void;
   onDisasterSelect: (alertId: string) => void;
@@ -70,24 +76,39 @@ function isCompactViewport(width: number) {
   return width < 640;
 }
 
-function drivingPadding(height: number, width: number, mode: CameraMode) {
+function drivingPadding(
+  height: number,
+  width: number,
+  mode: CameraMode,
+  navigating = false,
+  overlay?: DrivingMapProps["overlayPadding"],
+) {
   const compact = isCompactViewport(width);
   const bottomPad = compact ? 96 : 118;
   const rightPad = compact ? 58 : 20;
-  if (mode !== "3d") {
-    return {
-      top: compact ? 108 : 96,
-      bottom: bottomPad,
-      left: 12,
-      right: rightPad,
-    };
-  }
-  const topPad = Math.round((height - bottomPad) * DRIVING_PADDING_RATIO);
+  const base =
+    mode !== "3d"
+      ? {
+          top: compact ? 108 : 96,
+          bottom: bottomPad,
+          left: 12,
+          right: rightPad,
+        }
+      : {
+          top: Math.max(
+            Math.round((height - bottomPad) * DRIVING_PADDING_RATIO),
+            compact ? 96 : 80,
+          ),
+          bottom: bottomPad,
+          left: 12,
+          right: rightPad,
+        };
+  if (!navigating || !overlay) return base;
   return {
-    top: Math.max(topPad, compact ? 96 : 80),
-    bottom: bottomPad,
-    left: 12,
-    right: rightPad,
+    top: Math.max(base.top, overlay.top),
+    bottom: Math.max(base.bottom, overlay.bottom),
+    left: Math.max(base.left, overlay.left),
+    right: Math.max(base.right, overlay.right),
   };
 }
 
@@ -97,6 +118,7 @@ function cameraOptions(
   mode: CameraMode,
   navigating = false,
   approaching = false,
+  overlay?: DrivingMapProps["overlayPadding"],
 ) {
   const height = map.getContainer().clientHeight;
   const width = map.getContainer().clientWidth;
@@ -120,7 +142,7 @@ function cameraOptions(
             : DRIVING_PITCH
         : 0,
     zoom: mode === "3d" ? navZoom : OVERHEAD_ZOOM,
-    padding: drivingPadding(height, width, mode),
+    padding: drivingPadding(height, width, mode, navigating, overlay),
   };
 }
 
@@ -207,6 +229,7 @@ export function DrivingMap({
   distanceToNextMeters,
   approachingIntersection,
   destination,
+  overlayPadding = null,
   fitRouteKey,
   onCctvSelect,
   onDisasterSelect,
@@ -240,6 +263,7 @@ export function DrivingMap({
   const distanceToNextRef = useRef(distanceToNextMeters);
   const pinchingRef = useRef(false);
   const userZoomRef = useRef<number | null>(null);
+  const overlayPaddingRef = useRef(overlayPadding);
   const lastArrowUpdateRef = useRef(0);
   const readyRef = useRef(false);
   const lastFrameRef = useRef(0);
@@ -266,6 +290,7 @@ export function DrivingMap({
     approachingRef.current = approachingIntersection;
     routeMetersRef.current = routeMeters;
     distanceToNextRef.current = distanceToNextMeters;
+    overlayPaddingRef.current = overlayPadding;
   }, [
     onCctvSelect,
     onDisasterSelect,
@@ -285,6 +310,7 @@ export function DrivingMap({
     approachingIntersection,
     routeMeters,
     distanceToNextMeters,
+    overlayPadding,
   ]);
 
   useEffect(() => {
@@ -393,6 +419,7 @@ export function DrivingMap({
           modeRef.current,
           navigatingRef.current,
           approachingRef.current,
+          overlayPaddingRef.current,
         );
         const center = mapNow.getCenter();
         const zoomTarget = pinchingRef.current
@@ -434,6 +461,7 @@ export function DrivingMap({
           modeRef.current,
           navigatingRef.current,
           approachingRef.current,
+          overlayPaddingRef.current,
         ),
       );
       emitViewport(true);

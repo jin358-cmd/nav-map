@@ -132,6 +132,13 @@ export function DrivingApp() {
   );
   const trafficFocus5km = true;
   const landscape = useLandscape();
+  const navCardRef = useRef<HTMLDivElement>(null);
+  const [overlayPadding, setOverlayPadding] = useState({
+    top: 90,
+    left: 24,
+    right: 88,
+    bottom: 130,
+  });
   const googleAccount = useGoogleAccount();
   const youtubeLibrary = useYoutubeLibrary(googleAccount.youtubeAccessToken);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
@@ -526,6 +533,31 @@ export function DrivingApp() {
     void rerouteFromHere();
   }, [navigating, navigationProgress?.offRoute, rerouteFromHere]);
 
+  useEffect(() => {
+    if (!navigating) return;
+    const el = navCardRef.current;
+    if (!el) return;
+    const update = () => {
+      const rect = el.getBoundingClientRect();
+      setOverlayPadding({
+        top: Math.max(90, Math.round(rect.height + 24)),
+        left: Math.max(24, Math.round(rect.width + 24)),
+        right: 88,
+        bottom: 130,
+      });
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    window.addEventListener("resize", update);
+    window.addEventListener("orientationchange", update);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", update);
+      window.removeEventListener("orientationchange", update);
+    };
+  }, [landscape, navigating]);
+
   return (
     <div className="relative h-dvh w-full overflow-hidden overscroll-none bg-[#0b0d11] text-zinc-100">
       <DrivingMap
@@ -545,6 +577,7 @@ export function DrivingApp() {
         distanceToNextMeters={distanceToNextMeters}
         approachingIntersection={approachingIntersection}
         destination={destination}
+        overlayPadding={navigating ? overlayPadding : null}
         fitRouteKey={fitRouteKey}
         onCctvSelect={selectCamera}
         onDisasterSelect={(id) => {
@@ -563,20 +596,14 @@ export function DrivingApp() {
 
       {destination && navigating ? (
         <>
-          <div
-            className={
-              landscape
-                ? "absolute top-[max(0.4rem,env(safe-area-inset-top))] left-3 z-20"
-                : "absolute top-[max(0.45rem,env(safe-area-inset-top))] right-16 left-3 z-20 flex justify-center sm:right-24"
-            }
-          >
+          <div className="absolute top-[calc(env(safe-area-inset-top,0px)+12px)] left-[calc(env(safe-area-inset-left,0px)+12px)] z-30">
             <NextIntersectionHud
+              ref={navCardRef}
               step={activeNavigationStep}
               distanceMeters={distanceToNextMeters}
               offRoute={navigationProgress?.offRoute ?? false}
               rerouting={rerouting}
               voiceEnabled={voiceEnabled}
-              compact={landscape}
               onToggleVoice={() => setVoiceEnabled((value) => !value)}
             />
           </div>
@@ -696,6 +723,7 @@ export function DrivingApp() {
           accountBusy={googleAccount.busy}
           accountHint={googleAccount.hint}
           accountConfigured={googleAccount.configured}
+          accountUnavailable={googleAccount.unavailable}
           onSignIn={googleAccount.signIn}
           onSignOut={googleAccount.signOut}
           onPreviewOpen={() => {

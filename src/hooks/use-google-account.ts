@@ -31,6 +31,8 @@ function driveToken() {
   return readYoutubeAccess()?.accessToken ?? null;
 }
 
+let warnedMissingClientId = false;
+
 export function useGoogleAccount() {
   const account = useSyncExternalStore(
     subscribeAccount,
@@ -44,11 +46,36 @@ export function useGoogleAccount() {
   );
   const [busy, setBusy] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
+  const [sdkStatus, setSdkStatus] = useState<"idle" | "loading" | "ready" | "error">(
+    GOOGLE_CLIENT_ID ? "loading" : "idle",
+  );
   const accountRef = useRef<GoogleAccount | null>(account);
+  const configured = Boolean(GOOGLE_CLIENT_ID);
 
   useEffect(() => {
     accountRef.current = account;
   }, [account]);
+
+  useEffect(() => {
+    if (!configured) {
+      if (process.env.NODE_ENV === "development" && !warnedMissingClientId) {
+        warnedMissingClientId = true;
+        console.warn("Google OAuth client ID is missing.");
+      }
+      return;
+    }
+    let cancelled = false;
+    void loadGoogleIdentityScript()
+      .then(() => {
+        if (!cancelled) setSdkStatus("ready");
+      })
+      .catch(() => {
+        if (!cancelled) setSdkStatus("error");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [configured]);
 
   const applyAccount = useCallback((next: GoogleAccount | null) => {
     accountRef.current = next;
@@ -56,13 +83,13 @@ export function useGoogleAccount() {
   }, []);
 
   const requestGoogleAccess = useCallback((prompt: "" | "consent" = "consent") => {
-    if (!GOOGLE_CLIENT_ID) return Promise.resolve(null);
+    if (!GOOGLE_CLIENT_ID) return Promise.resolve({ token: null, reason: "unconfigured" as const });
     return loadGoogleIdentityScript().then(
       () =>
-        new Promise<string | null>((resolve) => {
+        new Promise<{ token: string | null; reason: "ok" | "cancel" | "error" }>((resolve) => {
           const oauth = window.google?.accounts?.oauth2;
           if (!oauth) {
-            resolve(null);
+            resolve({ token: null, reason: "error" });
             return;
           }
           const client = oauth.initTokenClient({
@@ -70,16 +97,23 @@ export function useGoogleAccount() {
             scope: GOOGLE_LOGIN_SCOPES,
             callback: (response) => {
               if (!response.access_token) {
-                resolve(null);
+                resolve({ token: null, reason: "error" });
                 return;
               }
               writeYoutubeAccess({
                 accessToken: response.access_token,
                 exp: Date.now() + (response.expires_in ?? 3600) * 1000,
               });
-              resolve(response.access_token);
+              resolve({ token: response.access_token, reason: "ok" });
             },
-            error_callback: () => resolve(null),
+            error_callback: (error) => {
+              const type = error.type ?? "";
+              if (type.includes("popup_closed") || type.includes("popup_failed")) {
+                resolve({ token: null, reason: "cancel" });
+                return;
+              }
+              resolve({ token: null, reason: "error" });
+            },
           });
           client.requestAccessToken({ prompt });
         }),
@@ -87,36 +121,41 @@ export function useGoogleAccount() {
   }, []);
 
   const signIn = useCallback(() => {
-    if (!GOOGLE_CLIENT_ID) {
-      setHint("請在 .env.local 設定 NEXT_PUBLIC_GOOGLE_CLIENT_ID 後重新啟動。");
+    if (!configured) {
+      setHint("Google 登入尚未完成設定");
+      return;
+    }
+    if (sdkStatus === "error") {
+      setHint("目前無法連線 Google 登入，請稍後再試。");
       return;
     }
     setBusy(true);
     setHint(null);
     void requestGoogleAccess("consent")
-      .then(async (token) => {
+      .then(async ({ token, reason }) => {
         if (!token) {
-          setHint("請允許彈出視窗並授權 Google，才能把書籤存進你的帳號。");
+          if (reason === "cancel") setHint("已取消登入。");
+          else setHint("登入沒有完成，請再試一次。");
           return;
         }
         const profile = await fetchGoogleProfile(token);
         if (!profile) {
-          setHint("無法讀取 Google 帳號，請再試一次。");
+          setHint("無法確認 Google 帳號，請再試一次。");
           return;
         }
         applyAccount(profile);
         await syncDriveFavorites(token);
-        setHint("書籤已同步到你的 Google 帳號。");
+        setHint("已登入，書籤會存到你的 Google 帳號。");
       })
       .catch(() => {
-        setHint("無法載入 Google 登入。");
+        setHint("目前無法連線 Google 登入，請稍後再試。");
       })
       .finally(() => setBusy(false));
-  }, [applyAccount, requestGoogleAccess]);
+  }, [applyAccount, configured, requestGoogleAccess, sdkStatus]);
 
   const connectYoutube = useCallback(async () => {
-    if (!GOOGLE_CLIENT_ID) {
-      setHint("尚未設定 Google 登入，無法同步 YouTube Music 歌單。");
+    if (!configured) {
+      setHint("Google 登入尚未完成設定");
       return null;
     }
     if (!accountRef.current) {
@@ -125,15 +164,15 @@ export function useGoogleAccount() {
       return null;
     }
     setBusy(true);
-    const token = await requestGoogleAccess(readYoutubeAccess() ? "" : "consent");
+    const { token, reason } = await requestGoogleAccess(readYoutubeAccess() ? "" : "consent");
     setBusy(false);
     if (!token) {
-      setHint("請允許 YouTube 讀取權限，才能同步已儲存歌單。");
+      setHint(reason === "cancel" ? "已取消授權。" : "無法同步音樂歌單，請再試一次。");
       return null;
     }
     setHint(null);
     return token;
-  }, [requestGoogleAccess, signIn]);
+  }, [configured, requestGoogleAccess, signIn]);
 
   useEffect(() => {
     if (!account) return;
@@ -176,15 +215,17 @@ export function useGoogleAccount() {
     }
     writeYoutubeAccess(null);
     applyAccount(null);
-    setHint("已登出。書籤仍留在此裝置，下次登入會再同步到 Google。");
+    setHint("已登出。書籤仍留在此裝置。");
   }, [applyAccount]);
 
   return {
     account,
     ready: true,
-    busy,
+    busy: busy || sdkStatus === "loading",
     hint,
-    configured: Boolean(GOOGLE_CLIENT_ID),
+    configured,
+    unavailable: !configured || sdkStatus === "error",
+    sdkStatus,
     youtubeAccessToken: youtubeAccess?.accessToken ?? null,
     signIn,
     signOut,

@@ -9,6 +9,7 @@ export function AccountChip({
   busy,
   hint,
   configured,
+  unavailable,
   onSignIn,
   onSignOut,
 }: {
@@ -16,6 +17,7 @@ export function AccountChip({
   busy?: boolean;
   hint?: string | null;
   configured: boolean;
+  unavailable?: boolean;
   onSignIn: () => void;
   onSignOut: () => void;
 }) {
@@ -63,25 +65,30 @@ export function AccountChip({
     );
   }
 
+  const blocked = !configured || unavailable;
+
   return (
     <div className="relative">
       <button
         type="button"
-        aria-label="使用 Google 帳號登入並把書籤存進你的帳號"
-        disabled={busy}
+        aria-label={blocked ? "Google 登入尚未完成設定" : "使用 Google 帳號登入並把書籤存進你的帳號"}
+        aria-disabled={blocked || busy}
+        disabled={Boolean(busy && configured)}
         onClick={onSignIn}
         className={cn(
-          "flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] touch-manipulation",
-          configured
-            ? "border-white/15 bg-white/8 text-white hover:bg-white/12"
-            : "border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10",
+          "flex max-w-[9.5rem] items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] touch-manipulation",
+          blocked
+            ? "cursor-not-allowed border-white/8 bg-white/4 text-zinc-500"
+            : "border-white/15 bg-white/8 text-white hover:bg-white/12",
         )}
       >
         <GoogleMark />
-        <span className="font-medium">{busy ? "登入中…" : "Google 登入"}</span>
+        <span className="truncate font-medium">
+          {busy && configured ? "登入中…" : blocked ? "無法使用" : "Google 登入"}
+        </span>
       </button>
       {hint ? (
-        <p className="absolute bottom-full left-1/2 z-20 mb-1 w-48 -translate-x-1/2 rounded-lg bg-black/80 px-2 py-1 text-center text-[10px] text-amber-100">
+        <p className="absolute bottom-full left-1/2 z-20 mb-1 w-44 -translate-x-1/2 rounded-lg bg-black/80 px-2 py-1 text-center text-[10px] text-amber-100">
           {hint}
         </p>
       ) : null}

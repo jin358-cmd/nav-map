@@ -27,14 +27,16 @@ import {
   removeFavorite,
   subscribeFavorites,
 } from "@/lib/favorites";
+import { matchKindLabel } from "@/lib/geocoding/normalizeTaiwanAddress";
 import {
   instantKeywordHits,
   mergeSearchHits,
   rankSearchHits,
 } from "@/lib/poi-search";
+import { useAddressSearch } from "@/hooks/use-address-search";
 import { useSpeechToText } from "@/hooks/use-speech-to-text";
 import { cn } from "@/lib/utils";
-import { searchAddresses } from "@/services/routing";
+import { rememberGeocodeSelection } from "@/services/routing";
 import type { GeocodeHit, LngLat } from "@/types/domain";
 
 type AddressSearchProps = {
@@ -53,12 +55,6 @@ export function AddressSearch({
   const [query, setQuery] = useState("");
   const [composing, setComposing] = useState(false);
   const [open, setOpen] = useState(false);
-  const [remote, setRemote] = useState<{ q: string; hits: GeocodeHit[] }>({
-    q: "",
-    hits: [],
-  });
-  const [searchingFor, setSearchingFor] = useState<string | null>(null);
-  const [searchError, setSearchError] = useState<string | null>(null);
   const history = useSyncExternalStore(
     subscribeAddressHistory,
     getAddressHistorySnapshot,
@@ -72,7 +68,6 @@ export function AddressSearch({
   const needle = query.trim();
   const submitFirstHitRef = useRef(false);
   const speechStopRef = useRef<() => void>(() => undefined);
-  const instantRef = useRef<GeocodeHit[]>([]);
   const biasBucket = useMemo(
     () => ({
       lng: Math.round(bias.lng * 50) / 50,
@@ -88,20 +83,24 @@ export function AddressSearch({
     [bias, favorites, history, needle],
   );
 
-  useEffect(() => {
-    instantRef.current = instantHits;
-  }, [instantHits]);
-
   const selectHit = useCallback(
     (hit: GeocodeHit) => {
       speechStopRef.current();
       setQuery(hit.name);
       setOpen(false);
       rememberAddress(hit);
+      void rememberGeocodeSelection(hit.name, biasBucket);
       onSelect(hit);
     },
-    [onSelect],
+    [biasBucket, onSelect],
   );
+  const remote = useAddressSearch(needle, biasBucket, composing, (rows) => {
+    if (!submitFirstHitRef.current) return;
+    const first = rows[0];
+    if (!first) return;
+    submitFirstHitRef.current = false;
+    selectHit(first);
+  });
 
   const handleVoiceTranscript = useCallback((text: string, isFinal: boolean) => {
     setQuery(text);
@@ -115,72 +114,19 @@ export function AddressSearch({
     speechStopRef.current = speech.stop;
   }, [speech.stop]);
 
-  useEffect(() => {
-    if (composing || needle.length < 2) return;
-
-    let cancelled = false;
-    const controller = new AbortController();
-    const timer = window.setTimeout(() => {
-      setSearchingFor(needle);
-      const deadline = window.setTimeout(() => controller.abort(), 1000);
-      void searchAddresses(needle, biasBucket, controller.signal)
-        .then((rows) => {
-          if (cancelled) return;
-          setRemote({ q: needle, hits: rows });
-          const merged = rankSearchHits(
-            mergeSearchHits([...instantRef.current, ...rows], 24),
-            needle,
-            biasBucket,
-          );
-          setSearchError(
-            merged.length ? null : "找不到店家、公司或地址，請換關鍵字或縮寫。",
-          );
-          if (submitFirstHitRef.current && merged[0]) {
-            submitFirstHitRef.current = false;
-            selectHit(merged[0]);
-          }
-        })
-        .catch((error: unknown) => {
-          if (cancelled) return;
-          if (error instanceof DOMException && error.name === "AbortError") {
-            setSearchError(
-              instantRef.current.length
-                ? null
-                : "搜尋逾時，請再輸入門牌或更完整關鍵字。",
-            );
-            return;
-          }
-          setSearchError(
-            instantRef.current.length ? null : "地址搜尋失敗，請稍後再試。",
-          );
-        })
-        .finally(() => {
-          window.clearTimeout(deadline);
-          if (!cancelled) setSearchingFor(null);
-        });
-    }, 160);
-
-    return () => {
-      cancelled = true;
-      controller.abort();
-      window.clearTimeout(timer);
-    };
-  }, [biasBucket, composing, needle, selectHit]);
-
-  const remoteHits = remote.q === needle ? remote.hits : [];
-  const searching = searchingFor === needle;
+  const searching = remote.searching;
   const visibleHits =
     needle.length < 1
       ? []
       : rankSearchHits(
-          mergeSearchHits([...instantHits, ...remoteHits], 24),
+          mergeSearchHits([...instantHits, ...remote.hits], 24),
           needle,
           bias,
         );
   const chips = useMemo(() => TAIWAN_LANDMARKS.slice(0, 5), []);
   const emptyHint =
     needle.length >= 1 && !searching && !busy && visibleHits.length === 0
-      ? searchError
+      ? remote.error
       : null;
 
   return (
@@ -244,8 +190,6 @@ export function AddressSearch({
               onClick={() => {
                 speech.stop();
                 setQuery("");
-                setRemote({ q: "", hits: [] });
-                setSearchError(null);
                 setOpen(false);
               }}
               className="size-9 text-zinc-300 hover:bg-white/10 hover:text-white"
@@ -300,6 +244,18 @@ export function AddressSearch({
                         <span className="block truncate text-[11px] text-zinc-500">
                           {hit.address}
                         </span>
+                        {hit.matchKind ? (
+                          <span
+                            className={cn(
+                              "mt-0.5 inline-block rounded-full px-1.5 py-px text-[10px]",
+                              hit.exactHouseNumber
+                                ? "bg-cyan-400/15 text-cyan-200"
+                                : "bg-white/8 text-zinc-400",
+                            )}
+                          >
+                            {matchKindLabel(hit.matchKind)}
+                          </span>
+                        ) : null}
                       </span>
                     </button>
                   </li>

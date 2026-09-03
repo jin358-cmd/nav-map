@@ -355,3 +355,92 @@
 .maplibregl-ctrl-attrib a {
   color: #b8c4d4 !important;
 }
+
+.navigation-instruction-card {
+  position: relative;
+  width: min(420px, 32vw);
+  max-width: calc(100vw - 96px);
+  max-height: min(280px, 34vh);
+  padding: 14px 16px;
+  border-radius: 22px;
+  overflow: hidden;
+}
+
+.navigation-instruction-content {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) 36px;
+  align-items: center;
+  gap: 12px;
+}
+
+.navigation-turn-icon {
+  width: 72px;
+  height: 72px;
+}
+
+.navigation-distance {
+  font-size: clamp(32px, 4vw, 52px);
+  line-height: 1;
+  font-weight: 800;
+}
+
+.navigation-next-label {
+  font-size: clamp(15px, 1.6vw, 22px);
+  line-height: 1.2;
+}
+
+.navigation-street-name {
+  font-size: clamp(16px, 1.8vw, 24px);
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.navigation-audio-button {
+  width: 36px;
+  height: 36px;
+}
+
+@media (orientation: portrait) {
+  .navigation-instruction-card {
+    width: min(320px, calc(100vw - 88px));
+    max-height: 230px;
+    padding: 12px 14px;
+    border-radius: 18px;
+  }
+
+  .navigation-instruction-content {
+    grid-template-columns: 56px minmax(0, 1fr) 32px;
+    gap: 10px;
+  }
+
+  .navigation-turn-icon {
+    width: 56px;
+    height: 56px;
+  }
+
+  .navigation-distance {
+    font-size: clamp(30px, 7vw, 40px);
+  }
+
+  .navigation-next-label {
+    font-size: clamp(14px, 3.6vw, 18px);
+  }
+
+  .navigation-street-name {
+    font-size: clamp(14px, 3.8vw, 18px);
+  }
+
+  .navigation-audio-button {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+@media (max-width: 390px) {
+  .navigation-instruction-card {
+    width: min(292px, calc(100vw - 76px));
+    padding: 10px 12px;
+  }
+}

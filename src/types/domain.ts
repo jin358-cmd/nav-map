@@ -191,11 +191,23 @@ export type RouteStep = {
   location?: LngLat;
 };
 
+export type GeocodeMatchKind =
+  | "exact-house"
+  | "approximate"
+  | "lane-center"
+  | "road-center"
+  | "landmark";
+
 export type GeocodeHit = {
   id: string;
   name: string;
   address: string;
   location: LngLat;
+  source?: "cache" | "tgos" | "nlsc" | "osm" | "google" | "local";
+  exactHouseNumber?: boolean;
+  matchKind?: GeocodeMatchKind;
+  confidence?: number;
+  distanceMeters?: number;
 };
 
 export type RouteDestination = {

@@ -3,10 +3,12 @@ import "server-only";
 import type { LngLat } from "@/types/domain";
 
 const TGOS_ENDPOINT =
+  process.env.TGOS_API_URL?.trim() ||
   "https://addr.tgos.tw/addrws/v30/QueryAddr.asmx/QueryAddr";
 const NLSC_LAND_ENDPOINT =
   "https://api.nlsc.gov.tw/other/TownVillagePointQuery";
 const NLSC_MAP_SEARCH =
+  process.env.NLSC_API_URL?.trim() ||
   "https://api.nlsc.gov.tw/idc/TextQueryMap";
 const NLSC_MAP_REFERER = "https://maps.nlsc.gov.tw/T09/";
 
@@ -113,7 +115,7 @@ function parseNlscLocation(value: string): LngLat | null {
 export async function searchNlscMapHits(
   address: string,
   bias?: LngLat,
-  timeoutMs = 1_200,
+  timeoutMs = 3_000,
 ): Promise<NlscMapHit[]> {
   const query = address.replace(/[\\/]/g, "").trim();
   if (query.length < 2) return [];
@@ -197,7 +199,7 @@ export async function searchHouseholdAddresses(
     oReturnMaxCount: "6",
   });
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 8_000);
+  const timer = setTimeout(() => controller.abort(), 3_500);
 
   try {
     const response = await fetch(TGOS_ENDPOINT, {

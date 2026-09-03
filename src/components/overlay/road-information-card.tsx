@@ -96,6 +96,7 @@ export function RoadInformationCard({
   accountBusy = false,
   accountHint = null,
   accountConfigured = false,
+  accountUnavailable = false,
   onSignIn,
   onSignOut,
 }: {
@@ -121,6 +122,7 @@ export function RoadInformationCard({
   accountBusy?: boolean;
   accountHint?: string | null;
   accountConfigured?: boolean;
+  accountUnavailable?: boolean;
   onSignIn?: () => void;
   onSignOut?: () => void;
 }) {
@@ -255,6 +257,7 @@ export function RoadInformationCard({
           busy={accountBusy}
           hint={accountHint}
           configured={accountConfigured}
+          unavailable={accountUnavailable}
           onSignIn={() => onSignIn?.()}
           onSignOut={() => onSignOut?.()}
         />

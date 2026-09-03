@@ -158,31 +158,58 @@ export async function fetchGoogleProfile(
   }
 }
 
+const GSI_SRC = "https://accounts.google.com/gsi/client";
+let gsiLoadPromise: Promise<void> | null = null;
+
+function gsiReady() {
+  return Boolean(window.google?.accounts?.oauth2);
+}
+
 export function loadGoogleIdentityScript(): Promise<void> {
   if (typeof window === "undefined") return Promise.resolve();
-  if (window.google?.accounts?.id && window.google.accounts.oauth2) {
-    return Promise.resolve();
-  }
-  const existing = document.querySelector<HTMLScriptElement>(
-    'script[src="https://accounts.google.com/gsi/client"]',
-  );
-  if (existing) {
-    return new Promise((resolve, reject) => {
-      existing.addEventListener("load", () => resolve(), { once: true });
-      existing.addEventListener("error", () => reject(new Error("gsi")), {
-        once: true,
-      });
-    });
-  }
-  return new Promise((resolve, reject) => {
+  if (gsiReady()) return Promise.resolve();
+  if (gsiLoadPromise) return gsiLoadPromise;
+
+  gsiLoadPromise = new Promise((resolve, reject) => {
+    const finish = () => {
+      if (gsiReady()) {
+        resolve();
+        return;
+      }
+      gsiLoadPromise = null;
+      reject(new Error("gsi"));
+    };
+    const fail = () => {
+      gsiLoadPromise = null;
+      reject(new Error("gsi"));
+    };
+
+    const existing = document.querySelector<HTMLScriptElement>(
+      `script[src="${GSI_SRC}"]`,
+    );
+    if (existing) {
+      if (existing.dataset.loaded === "true" || gsiReady()) {
+        finish();
+        return;
+      }
+      existing.addEventListener("load", finish, { once: true });
+      existing.addEventListener("error", fail, { once: true });
+      return;
+    }
+
     const script = document.createElement("script");
-    script.src = "https://accounts.google.com/gsi/client";
+    script.src = GSI_SRC;
     script.async = true;
     script.defer = true;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error("gsi"));
+    script.onload = () => {
+      script.dataset.loaded = "true";
+      finish();
+    };
+    script.onerror = fail;
     document.head.appendChild(script);
   });
+
+  return gsiLoadPromise;
 }
 
 declare global {
