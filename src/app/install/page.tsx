@@ -10,10 +10,39 @@ import { APP_BOOKMARK_NAME, APP_TAGLINE } from "@/lib/app-brand";
 export default function InstallPage() {
   const { canInstall, installed, iosHint, install } = useAppInstall();
   const [copied, setCopied] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
   const installUrl = useMemo(() => {
     if (typeof window === "undefined") return "";
     return `${window.location.origin}/install`;
   }, []);
+
+  async function copyInstallLink() {
+    const url = installUrl || `${window.location.origin}/install`;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: APP_BOOKMARK_NAME,
+          text: `${APP_TAGLINE}。開啟連結即可安裝到桌面。`,
+          url,
+        });
+        return;
+      } catch {
+        /* 改複製連結 */
+      }
+    }
+    await navigator.clipboard.writeText(url);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1600);
+  }
+
+  async function handleInstall() {
+    if (canInstall) {
+      const accepted = await install();
+      if (!accepted) setGuideOpen(true);
+      return;
+    }
+    setGuideOpen(true);
+  }
 
   return (
     <main className="flex min-h-dvh items-center justify-center bg-[#0b0d11] px-4 py-10 text-zinc-100">
@@ -30,46 +59,32 @@ export default function InstallPage() {
           {APP_BOOKMARK_NAME}
         </h1>
         <p className="mt-1 text-center text-sm text-zinc-400">{APP_TAGLINE}</p>
+        <p className="mt-2 text-center text-xs text-zinc-500">
+          安裝後桌面圖示為此圖，網站書籤名稱為「{APP_BOOKMARK_NAME}」。
+        </p>
 
         {installed ? (
           <p className="mt-5 rounded-2xl bg-cyan-400/10 px-3 py-2 text-center text-sm text-cyan-100">
-            已安裝。桌面圖示與書籤名稱為「{APP_BOOKMARK_NAME}」。
+            已安裝。請從桌面或主畫面開啟「{APP_BOOKMARK_NAME}」。
           </p>
         ) : null}
 
         <div className="mt-6 flex flex-col gap-2.5">
-          {canInstall ? (
+          {!installed ? (
             <Button
               type="button"
-              onClick={() => void install()}
+              onClick={() => void handleInstall()}
               className="h-12 rounded-2xl bg-cyan-400 text-base font-semibold text-[#041016] hover:bg-cyan-300"
             >
               <Download className="size-4" />
-              安裝到桌面
+              {canInstall ? "安裝到桌面" : "透過連結安裝"}
             </Button>
           ) : null}
 
           <Button
             type="button"
             variant="outline"
-            onClick={async () => {
-              const url = window.location.origin;
-              if (navigator.share) {
-                try {
-                  await navigator.share({
-                    title: APP_BOOKMARK_NAME,
-                    text: APP_TAGLINE,
-                    url,
-                  });
-                  return;
-                } catch {
-                  /* 改複製連結 */
-                }
-              }
-              await navigator.clipboard.writeText(url);
-              setCopied(true);
-              window.setTimeout(() => setCopied(false), 1600);
-            }}
+            onClick={() => void copyInstallLink()}
             className="h-11 rounded-2xl border-white/15 bg-white/6"
           >
             {copied ? <Check className="size-4" /> : <Share className="size-4" />}
@@ -84,20 +99,27 @@ export default function InstallPage() {
           </Link>
         </div>
 
-        <ol className="mt-6 space-y-2 text-[13px] leading-relaxed text-zinc-400">
-          <li>1. 用手機或電腦瀏覽器開啟此頁或首頁連結。</li>
+        <ol
+          className={`mt-6 space-y-2 text-[13px] leading-relaxed ${
+            guideOpen ? "rounded-2xl border border-cyan-400/30 bg-cyan-400/8 p-3 text-zinc-200" : "text-zinc-400"
+          }`}
+        >
+          <li>1. 把此頁連結傳給要安裝的手機或電腦，用瀏覽器開啟。</li>
           <li>
-            2. Chrome／Edge：點「安裝到桌面」。安裝後桌面圖示即為此圖，名稱為
+            2. Chrome／Edge：點上方「{canInstall ? "安裝到桌面" : "透過連結安裝"}」，或選單裡的「安裝應用程式」。完成後桌面圖示即為此圖，名稱為
             「{APP_BOOKMARK_NAME}」。
           </li>
           {iosHint ? (
             <li>
               3. iPhone／iPad：點底部分享
               <span className="mx-1 inline-block align-middle text-zinc-200">□↑</span>
-              再選「加入主畫面」。
+              再選「加入主畫面」。主畫面名稱為「{APP_BOOKMARK_NAME}」。
             </li>
           ) : (
-            <li>3. Safari：分享選單 →「加入主畫面」或加入書籤。</li>
+            <li>
+              3. Safari：分享選單 →「加入主畫面」或加入書籤。書籤名稱為「
+              {APP_BOOKMARK_NAME}」。
+            </li>
           )}
         </ol>
         {installUrl ? (
