@@ -29,9 +29,12 @@ export function deriveAccidentIntel(
 ): RoadIntelItem[] {
   return accidents.map((accident) => ({
     id: `intel-accident-${accident.id}`,
+    eventId: accident.id,
     kind: "accident",
     title: accident.title,
     detail: accident.description,
     distanceMeters: Math.round(distanceKm(origin, accident.location) * 1000),
+    location: accident.location,
+    freshness: accident.freshness,
   }));
 }

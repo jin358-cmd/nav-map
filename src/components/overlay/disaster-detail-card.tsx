@@ -9,7 +9,7 @@ export function DisasterDetailCard({ alert, origin, onClose }: { alert: Disaster
       <div className="flex items-start gap-3">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-orange-500/20 text-orange-200"><AlertTriangle className="size-5" /></span>
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] text-orange-200">{origin === "ncdr-live" ? "NCDR 即時示警" : "示範災害資料"} · {alert.source ?? "災害通報"}</p>
+          <p className="text-[11px] text-orange-200">{origin === "ncdr-live" ? "NCDR 即時示警" : origin === "mock" ? "示範資料" : "資料暫時無法取得"} · {alert.source ?? "災害通報"}</p>
           <h2 className="mt-0.5 font-semibold">{alert.title}</h2>
           <p className="mt-1 line-clamp-3 text-xs leading-5 text-zinc-300">{alert.description}</p>
           {alert.area ? <p className="mt-1 text-xs text-zinc-400">影響區域：{alert.area}</p> : null}

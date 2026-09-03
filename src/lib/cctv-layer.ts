@@ -102,6 +102,7 @@ export function upsertCctvLayer(
   map: MapLibreMap,
   cameras: CctvCamera[],
   selectedId: string | null,
+  visible = true,
 ) {
   ensureCctvIcons(map);
   const data = toCollection(cameras);
@@ -163,12 +164,23 @@ export function upsertCctvLayer(
       iconSizeExpression(selectedId),
     );
   }
+  const visibility = visible ? "visible" : "none";
+  if (map.getLayer(CCTV_LAYER_ID)) {
+    map.setLayoutProperty(CCTV_LAYER_ID, "visibility", visibility);
+  }
+  if (map.getLayer(CCTV_LAYER_HIT_ID)) {
+    map.setLayoutProperty(CCTV_LAYER_HIT_ID, "visibility", visibility);
+  }
 }
+
+const boundCctv = new WeakSet<MapLibreMap>();
 
 export function bindCctvLayerClicks(
   map: MapLibreMap,
   onSelect: (cameraId: string) => void,
 ) {
+  if (boundCctv.has(map)) return;
+  boundCctv.add(map);
   const handle = (event: MapLayerMouseEvent) => {
     const feature = event.features?.[0];
     const id = feature?.properties?.id;

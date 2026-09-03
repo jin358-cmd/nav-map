@@ -72,7 +72,7 @@ export function useTrafficView({
   nearbyFocusKm?: number | null;
 }) {
   const [catalog, setCatalog] = useState<TrafficSegment[]>([]);
-  const [origin, setOrigin] = useState<TrafficDataOrigin>("mock");
+  const [origin, setOrigin] = useState<TrafficDataOrigin>("unavailable");
   const [error, setError] = useState<string | null>(null);
 
   const centerLng =
@@ -97,15 +97,11 @@ export function useTrafficView({
       .then((result) => {
         if (!cancelled) applyCatalog(result);
       })
-      .catch(async () => {
+      .catch(() => {
         if (cancelled) return;
-        const { TAINAN_TRAFFIC } = await import("@/data/mock-traffic");
-        applyCatalog({
-          origin: "mock",
-          segments: TAINAN_TRAFFIC,
-          fetchedAt: new Date().toISOString(),
-        });
-        setError("即時路況載入失敗，已改用示意路況。");
+        setCatalog([]);
+        setOrigin("unavailable");
+        setError("資料暫時無法取得");
       });
     return () => {
       cancelled = true;
@@ -141,14 +137,10 @@ export function useTrafficView({
   const reload = useCallback(() => {
     void fetchTrafficCatalog(true)
       .then(applyCatalog)
-      .catch(async () => {
-        const { TAINAN_TRAFFIC } = await import("@/data/mock-traffic");
-        applyCatalog({
-          origin: "mock",
-          segments: TAINAN_TRAFFIC,
-          fetchedAt: new Date().toISOString(),
-        });
-        setError("即時路況載入失敗，已改用示意路況。");
+      .catch(() => {
+        setCatalog([]);
+        setOrigin("unavailable");
+        setError("資料暫時無法取得");
       });
   }, [applyCatalog]);
 

@@ -1,9 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { TAINAN_DISASTERS } from "@/data/mock-disasters";
 import { DISASTER_LIVE_CACHE_MS } from "@/lib/disaster-constants";
-import { finalizeDisasterAlert } from "@/lib/disaster-normalize";
 import type {
   DisasterAlert,
   DisasterCatalog,
@@ -36,20 +34,9 @@ async function fetchDisasterCatalog(force = false): Promise<DisasterCatalog> {
   }
 }
 
-function mockCatalog(): DisasterCatalog {
-  const now = new Date().toISOString();
-  return {
-    origin: "mock",
-    alerts: TAINAN_DISASTERS.map((alert) =>
-      finalizeDisasterAlert({ ...alert, dataOrigin: "mock", updatedAt: now }),
-    ),
-    fetchedAt: now,
-  };
-}
-
 export function useDisasterView(refreshNonce: number) {
   const [alerts, setAlerts] = useState<DisasterAlert[]>([]);
-  const [origin, setOrigin] = useState<DisasterDataOrigin>("mock");
+  const [origin, setOrigin] = useState<DisasterDataOrigin>("unavailable");
   const [error, setError] = useState<string | null>(null);
 
   const applyCatalog = useCallback((result: DisasterCatalog) => {
@@ -66,8 +53,9 @@ export function useDisasterView(refreshNonce: number) {
       })
       .catch(() => {
         if (cancelled) return;
-        applyCatalog(mockCatalog());
-        setError("即時災害示警載入失敗，已改用示意標記。");
+        setAlerts([]);
+        setOrigin("unavailable");
+        setError("資料暫時無法取得");
       });
     return () => {
       cancelled = true;
@@ -89,8 +77,9 @@ export function useDisasterView(refreshNonce: number) {
     void fetchDisasterCatalog(true)
       .then(applyCatalog)
       .catch(() => {
-        applyCatalog(mockCatalog());
-        setError("即時災害示警載入失敗，已改用示意標記。");
+        setAlerts([]);
+        setOrigin("unavailable");
+        setError("資料暫時無法取得");
       });
   }, [applyCatalog]);
 

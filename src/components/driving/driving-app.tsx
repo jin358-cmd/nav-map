@@ -16,7 +16,14 @@ import { AddressSearch } from "@/components/overlay/address-search";
 import { PlaceEditor } from "@/components/overlay/place-editor";
 import { SavedPlaceBar } from "@/components/overlay/saved-place-bar";
 import { CctvDetailCard } from "@/components/overlay/cctv-detail-card";
-import { DisasterDetailCard } from "@/components/overlay/disaster-detail-card";
+import {
+  EventDetailCard,
+  accidentToCard,
+  congestionToCard,
+  constructionToCard,
+  disasterToCard,
+} from "@/components/overlay/event-detail-card";
+import { EventListPanel } from "@/components/overlay/event-list-panel";
 import { NextIntersectionHud } from "@/components/overlay/navigation-banner";
 import { RoadInformationCard } from "@/components/overlay/road-information-card";
 import { RouteConfirmBar } from "@/components/overlay/route-preview";
@@ -31,8 +38,14 @@ import { useSpeedEnforcementView } from "@/hooks/use-speed-enforcement-view";
 import { useTrafficView } from "@/hooks/use-traffic-view";
 import { roadIntelFromCameras } from "@/lib/cctv-intel";
 import { deriveAccidentIntel, mapVisibleAccidents } from "@/lib/accident-query";
+import {
+  deriveConstructionIntel,
+  mapVisibleConstruction,
+} from "@/lib/construction-query";
 import { deriveDisasterIntel } from "@/lib/disaster-intel";
 import { mapVisibleDisasters } from "@/lib/disaster-query";
+import { isDemoDataEnabled } from "@/lib/runtime-demo";
+import { segmentAnchor } from "@/lib/traffic-query";
 import { rememberAddress } from "@/lib/address-history";
 import {
   addFavorite,
@@ -77,33 +90,44 @@ import {
 import { deriveTrafficIntel } from "@/lib/traffic-intel";
 import {
   fetchAccidentReports,
-  fetchAheadIntel,
-  fetchDemoRoute,
-  fetchNavigationManeuver,
   planDrivingRoute,
   requestCurrentPosition,
   watchVehiclePosition,
 } from "@/services";
+import { fetchConstructionEvents } from "@/services/construction";
 import { reversePlace } from "@/services/routing";
 import type {
   AccidentReport,
   CameraMode,
   CctvCamera,
-  DisasterAlert,
+  ConstructionEvent,
+  EventDataOrigin,
   GeocodeHit,
   GpsStatus,
+  LayerKindVisibility,
+  MapFocusTarget,
   MapViewport,
   NavigationManeuver,
   RoadIntelItem,
+  RoadIntelKind,
   DisplayPose,
   FollowOrientation,
   MapDisplayMode,
   RouteDestination,
   RouteStep,
   SavedPlaceType,
+  SelectedMapEvent,
   TravelMode,
   VehiclePose,
 } from "@/types/domain";
+
+const DEFAULT_LAYER_VISIBILITY: LayerKindVisibility = {
+  congestion: true,
+  cctv: true,
+  construction: true,
+  accident: true,
+  disaster: true,
+};
 
 const DrivingMap = dynamic(
   () => import("@/components/map/driving-map").then((mod) => mod.DrivingMap),
@@ -143,12 +167,21 @@ export function DrivingApp() {
   const [viewport, setViewport] = useState<MapViewport | null>(null);
   const [refreshNonce, setRefreshNonce] = useState(0);
   const [accidents, setAccidents] = useState<AccidentReport[]>([]);
-  const [route, setRoute] = useState<[number, number][]>([]);
-  const [demoRoute, setDemoRoute] = useState<[number, number][]>([]);
-  const [maneuver, setManeuver] = useState<NavigationManeuver | null>(null);
-  const [demoManeuver, setDemoManeuver] = useState<NavigationManeuver | null>(
+  const [accidentOrigin, setAccidentOrigin] =
+    useState<EventDataOrigin>("unavailable");
+  const [constructions, setConstructions] = useState<ConstructionEvent[]>([]);
+  const [constructionOrigin, setConstructionOrigin] =
+    useState<EventDataOrigin>("unavailable");
+  const [selectedEvent, setSelectedEvent] = useState<SelectedMapEvent | null>(
     null,
   );
+  const [eventListKind, setEventListKind] = useState<RoadIntelKind | null>(null);
+  const [layerVisibility, setLayerVisibility] = useState<LayerKindVisibility>(
+    DEFAULT_LAYER_VISIBILITY,
+  );
+  const [focusTarget, setFocusTarget] = useState<MapFocusTarget | null>(null);
+  const [route, setRoute] = useState<[number, number][]>([]);
+  const [maneuver, setManeuver] = useState<NavigationManeuver | null>(null);
   const [destination, setDestination] = useState<RouteDestination | null>(null);
   const [routeSteps, setRouteSteps] = useState<RouteStep[]>([]);
   const [fitRouteKey, setFitRouteKey] = useState(0);
@@ -165,10 +198,7 @@ export function DrivingApp() {
   const lastRouteHitRef = useRef<GeocodeHit | null>(null);
   const [baseIntel, setBaseIntel] = useState<RoadIntelItem[]>([]);
   const [selectedCctv, setSelectedCctv] = useState<CctvCamera | null>(null);
-  const [selectedDisaster, setSelectedDisaster] = useState<DisasterAlert | null>(
-    null,
-  );
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const demoEnabled = isDemoDataEnabled();
   const [navigating, setNavigating] = useState(false);
   const [intelCollapse, setIntelCollapse] = useState(0);
   const [musicMode, setMusicMode] = useState<"off" | "open" | "mini">("off");
@@ -327,30 +357,35 @@ export function DrivingApp() {
   useEffect(() => {
     let cancelled = false;
 
+    const controller = new AbortController();
     async function load() {
       try {
-        const [accidentRows, routeLine, nav, ahead] =
-          await Promise.all([
-            fetchAccidentReports(),
-            fetchDemoRoute(),
-            fetchNavigationManeuver(),
-            fetchAheadIntel(),
-          ]);
+        const [accidentCatalog, constructionCatalog] = await Promise.all([
+          fetchAccidentReports(controller.signal),
+          fetchConstructionEvents(controller.signal),
+        ]);
         if (cancelled) return;
-        setAccidents(accidentRows);
-        setDemoRoute(routeLine);
-        setRoute(routeLine);
-        setDemoManeuver(nav);
-        setManeuver(nav);
-        setBaseIntel(ahead);
+        setAccidents(accidentCatalog.items);
+        setAccidentOrigin(accidentCatalog.origin);
+        setConstructions(constructionCatalog.items);
+        setConstructionOrigin(constructionCatalog.origin);
+        setRoute([]);
+        setManeuver(null);
+        setBaseIntel([]);
       } catch {
-        if (!cancelled) setLoadError("道路情報載入失敗，請重新整理。");
+        if (!cancelled) {
+          setAccidents([]);
+          setConstructions([]);
+          setAccidentOrigin("unavailable");
+          setConstructionOrigin("unavailable");
+        }
       }
     }
 
     void load();
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, []);
 
@@ -400,10 +435,19 @@ export function DrivingApp() {
           lng: vehicle.lng,
           lat: vehicle.lat,
         }),
-        selectedDisaster?.id ?? null,
+        selectedEvent?.kind === "disaster" ? selectedEvent.id : null,
         disasters,
       ),
-    [disasters, selectedDisaster?.id, vehicle.lat, vehicle.lng, viewport],
+    [disasters, selectedEvent, vehicle.lat, vehicle.lng, viewport],
+  );
+
+  const visibleConstructions = useMemo(
+    () =>
+      mapVisibleConstruction(constructions, viewport, {
+        lng: vehicle.lng,
+        lat: vehicle.lat,
+      }),
+    [constructions, vehicle.lat, vehicle.lng, viewport],
   );
 
   const mapCameras = useMemo(
@@ -418,7 +462,7 @@ export function DrivingApp() {
 
   const intel = useMemo(() => {
     const cameras = roadIntelFromCameras(visible);
-    const trafficItem = deriveTrafficIntel(
+    const trafficItems = deriveTrafficIntel(
       trafficScored,
       trafficFocus5km ? CITY_TRAFFIC_FOCUS_KM : undefined,
     );
@@ -427,12 +471,14 @@ export function DrivingApp() {
         item.kind !== "cctv" &&
         item.kind !== "congestion" &&
         item.kind !== "disaster" &&
-        item.kind !== "accident",
+        item.kind !== "accident" &&
+        item.kind !== "construction",
     );
     const origin = { lng: vehicle.lng, lat: vehicle.lat };
     return [
-      ...(trafficItem ? [trafficItem] : []),
+      ...trafficItems,
       ...cameras,
+      ...deriveConstructionIntel(visibleConstructions, origin),
       ...deriveAccidentIntel(visibleAccidents, origin),
       ...deriveDisasterIntel(visibleDisasters, origin),
       ...extras,
@@ -445,6 +491,7 @@ export function DrivingApp() {
     vehicle.lng,
     visible,
     visibleAccidents,
+    visibleConstructions,
     visibleDisasters,
   ]);
 
@@ -461,7 +508,8 @@ export function DrivingApp() {
         gpsStatus === "active"
           ? { lng: vehicle.lng, lat: vehicle.lat }
           : (viewport?.center ?? { lng: vehicle.lng, lat: vehicle.lat });
-      setSelectedDisaster(null);
+      setSelectedEvent({ kind: "cctv", id });
+      setEventListKind(null);
       setSelectedCctv({
         ...camera,
         distanceKm: camera.distanceKm ?? distanceKm(center, camera.location),
@@ -470,13 +518,50 @@ export function DrivingApp() {
     [cameraById, gpsStatus, vehicle.lat, vehicle.lng, viewport?.center],
   );
 
+  const selectedDisaster = useMemo(() => {
+    if (selectedEvent?.kind !== "disaster") return null;
+    return disasters.find((alert) => alert.id === selectedEvent.id) ?? null;
+  }, [disasters, selectedEvent]);
+  const selectedAccident = useMemo(() => {
+    if (selectedEvent?.kind !== "accident") return null;
+    return accidents.find((item) => item.id === selectedEvent.id) ?? null;
+  }, [accidents, selectedEvent]);
+  const selectedConstruction = useMemo(() => {
+    if (selectedEvent?.kind !== "construction") return null;
+    return constructions.find((item) => item.id === selectedEvent.id) ?? null;
+  }, [constructions, selectedEvent]);
+  const selectedCongestion = useMemo(() => {
+    if (selectedEvent?.kind !== "congestion") return null;
+    return (
+      trafficScored.find((item) => item.id === selectedEvent.id) ??
+      traffic.find((item) => item.id === selectedEvent.id) ??
+      null
+    );
+  }, [selectedEvent, traffic, trafficScored]);
+
+  const clearSelectedEvent = useCallback(() => {
+    setSelectedEvent(null);
+    setSelectedCctv(null);
+    setEventListKind(null);
+  }, []);
+
+  const focusEvent = useCallback((location: { lng: number; lat: number }) => {
+    setFollowVehicle(false);
+    setFocusTarget({
+      lng: location.lng,
+      lat: location.lat,
+      key: Date.now(),
+    });
+  }, []);
+
   const applyRoute = useCallback(async (hit: GeocodeHit, mode = travelMode) => {
     rememberAddress(hit);
     lastRouteHitRef.current = hit;
     setRouting(true);
     setRouteError(null);
     setSelectedCctv(null);
-    setSelectedDisaster(null);
+    setSelectedEvent(null);
+    setEventListKind(null);
     try {
       const plan = await planDrivingRoute(
         { lng: vehicle.lng, lat: vehicle.lat },
@@ -523,7 +608,8 @@ export function DrivingApp() {
 
   const handleHeartClick = useCallback(() => {
     setSelectedCctv(null);
-    setSelectedDisaster(null);
+    setSelectedEvent(null);
+    setEventListKind(null);
     setMusicMode((mode) => (mode === "open" ? "mini" : mode));
     if (currentPlace && !isFavorite(currentPlace)) {
       addFavorite(currentPlace);
@@ -536,15 +622,15 @@ export function DrivingApp() {
   const clearRoute = useCallback(() => {
     setDestination(null);
     setRouteError(null);
-    setRoute(demoRoute);
-    setManeuver(demoManeuver);
+    setRoute([]);
+    setManeuver(null);
     setRouteSteps([]);
     setFollowVehicle(true);
     setNavigating(false);
     navigationTrackerRef.current = null;
     setNavigationProgress(null);
     setDisplayVehicle(null);
-  }, [demoManeuver, demoRoute]);
+  }, []);
 
   const locate = useCallback(async () => {
     setGpsStatus("locating");
@@ -591,7 +677,8 @@ export function DrivingApp() {
     setCameraMode("3d");
     setFollowVehicle(true);
     setSelectedCctv(null);
-    setSelectedDisaster(null);
+    setSelectedEvent(null);
+    setEventListKind(null);
     setIntelCollapse((value) => value + 1);
   }, [routeProgressModel, routeSteps, vehicle]);
 
@@ -711,6 +798,88 @@ export function DrivingApp() {
     };
   }, [landscape, navigating]);
 
+  const intelByKind = useMemo(() => {
+    const groups: Record<RoadIntelKind, RoadIntelItem[]> = {
+      congestion: [],
+      cctv: [],
+      construction: [],
+      accident: [],
+      disaster: [],
+    };
+    for (const item of intel) groups[item.kind].push(item);
+    for (const kind of Object.keys(groups) as RoadIntelKind[]) {
+      groups[kind].sort((a, b) => a.distanceMeters - b.distanceMeters);
+    }
+    return groups;
+  }, [intel]);
+
+  const openIntelItem = useCallback(
+    (item: RoadIntelItem) => {
+      const id = item.eventId ?? item.cameraId ?? item.id;
+      setSelectedEvent({ kind: item.kind, id });
+      setEventListKind(null);
+      if (item.kind === "cctv") {
+        selectCamera(id);
+      } else {
+        setSelectedCctv(null);
+      }
+      if (item.location) focusEvent(item.location);
+    },
+    [focusEvent, selectCamera],
+  );
+
+  const handleKindClick = useCallback(
+    (kind: RoadIntelKind) => {
+      const visible = layerVisibility[kind];
+      if (visible && (eventListKind === kind || selectedEvent?.kind === kind)) {
+        setLayerVisibility((current) => ({ ...current, [kind]: false }));
+        if (selectedEvent?.kind === kind) {
+          setSelectedEvent(null);
+          setSelectedCctv(null);
+        }
+        if (eventListKind === kind) setEventListKind(null);
+        return;
+      }
+      if (!visible) {
+        setLayerVisibility((current) => ({ ...current, [kind]: true }));
+      }
+      const items = intelByKind[kind];
+      if (items.length === 1) {
+        openIntelItem(items[0]);
+        return;
+      }
+      setEventListKind(kind);
+      setSelectedEvent(null);
+      setSelectedCctv(null);
+    },
+    [eventListKind, intelByKind, layerVisibility, openIntelItem, selectedEvent],
+  );
+
+  const kindOrigin = (kind: RoadIntelKind) => {
+    if (kind === "cctv") return origin;
+    if (kind === "congestion") return trafficOrigin;
+    if (kind === "disaster") return disasterOrigin;
+    if (kind === "accident") return accidentOrigin;
+    return constructionOrigin;
+  };
+
+  const selectedEventCard =
+    selectedAccident
+      ? accidentToCard(selectedAccident, accidentOrigin)
+      : selectedConstruction
+        ? constructionToCard(selectedConstruction, constructionOrigin)
+        : selectedDisaster
+          ? disasterToCard(selectedDisaster, disasterOrigin)
+          : selectedCongestion
+            ? congestionToCard(selectedCongestion)
+            : null;
+
+  const selectedEventLocation =
+    selectedAccident?.location ??
+    selectedConstruction?.location ??
+    selectedDisaster?.location ??
+    (selectedCongestion ? segmentAnchor(selectedCongestion) : null);
+
   return (
     <div className="relative h-dvh w-full overflow-hidden overscroll-none bg-[#0b0d11] text-zinc-100">
       <DrivingMap
@@ -730,6 +899,11 @@ export function DrivingApp() {
         traffic={traffic}
         disasters={visibleDisasters}
         accidents={visibleAccidents}
+        constructions={visibleConstructions}
+        selectedAccidentId={selectedAccident?.id ?? null}
+        selectedConstructionId={selectedConstruction?.id ?? null}
+        layerVisibility={layerVisibility}
+        focusTarget={focusTarget}
         route={route}
         routeMeters={navigationProgress?.routeMeters ?? 0}
         distanceToNextMeters={distanceToNextMeters}
@@ -739,10 +913,29 @@ export function DrivingApp() {
         overlayPadding={navigating ? overlayPadding : null}
         fitRouteKey={fitRouteKey}
         onCctvSelect={selectCamera}
-        onDisasterSelect={(id) => {
+        onAccidentSelect={(id) => {
+          const found = accidents.find((item) => item.id === id);
           setSelectedCctv(null);
+          setEventListKind(null);
+          setSelectedEvent({ kind: "accident", id });
           setMusicMode((mode) => (mode === "open" ? "mini" : mode));
-          setSelectedDisaster(disasters.find((alert) => alert.id === id) ?? null);
+          if (found) focusEvent(found.location);
+        }}
+        onConstructionSelect={(id) => {
+          const found = constructions.find((item) => item.id === id);
+          setSelectedCctv(null);
+          setEventListKind(null);
+          setSelectedEvent({ kind: "construction", id });
+          setMusicMode((mode) => (mode === "open" ? "mini" : mode));
+          if (found) focusEvent(found.location);
+        }}
+        onDisasterSelect={(id) => {
+          const found = disasters.find((alert) => alert.id === id);
+          setSelectedCctv(null);
+          setEventListKind(null);
+          setSelectedEvent({ kind: "disaster", id });
+          setMusicMode((mode) => (mode === "open" ? "mini" : mode));
+          if (found) focusEvent(found.location);
         }}
         onUserPan={() => {
           setFollowVehicle(false);
@@ -768,6 +961,11 @@ export function DrivingApp() {
       {styleHint ? (
         <p className="pointer-events-none absolute top-[max(4.5rem,env(safe-area-inset-top))] left-1/2 z-30 -translate-x-1/2 rounded-full bg-black/70 px-3 py-1 text-xs text-amber-100">
           {styleHint}
+        </p>
+      ) : null}
+      {demoEnabled ? (
+        <p className="pointer-events-none absolute top-[max(6.6rem,calc(env(safe-area-inset-top)+6.2rem))] left-1/2 z-30 -translate-x-1/2 rounded-full border border-amber-300/40 bg-amber-500/20 px-3 py-1 text-xs text-amber-100">
+          示範資料
         </p>
       ) : null}
 
@@ -945,18 +1143,42 @@ export function DrivingApp() {
       ) : null}
 
       <footer className="absolute inset-x-0 bottom-0 z-10 flex flex-col items-center gap-2 px-2 pb-[max(0.45rem,env(safe-area-inset-bottom))] sm:p-4 sm:pt-0">
+        {eventListKind ? (
+          <EventListPanel
+            kind={eventListKind}
+            items={intelByKind[eventListKind]}
+            emptyHint={
+              kindOrigin(eventListKind) === "unavailable"
+                ? "資料暫時無法取得"
+                : "目前畫面內沒有此類事件"
+            }
+            onSelect={openIntelItem}
+            onClose={() => setEventListKind(null)}
+          />
+        ) : null}
         {selectedCctv ? (
           <CctvDetailCard
             key={selectedCctv.id}
             camera={selectedCctv}
-            onClose={() => setSelectedCctv(null)}
+            onClose={clearSelectedEvent}
           />
         ) : null}
-        {selectedDisaster ? (
-          <DisasterDetailCard
-            alert={selectedDisaster}
-            origin={disasterOrigin}
-            onClose={() => setSelectedDisaster(null)}
+        {selectedEventCard && !selectedCctv ? (
+          <EventDetailCard
+            event={selectedEventCard}
+            onClose={clearSelectedEvent}
+            onNavigate={
+              selectedEventLocation
+                ? () =>
+                    void applyRoute({
+                      id: `event-${selectedEvent?.id ?? "point"}`,
+                      name: selectedEventCard.title,
+                      address:
+                        selectedEventCard.roadName || selectedEventCard.title,
+                      location: selectedEventLocation,
+                    })
+                : undefined
+            }
           />
         ) : null}
         {musicMode !== "off" ? (
@@ -986,6 +1208,9 @@ export function DrivingApp() {
           disasterOrigin={disasterOrigin}
           emptyHint="目前畫面內尚無 CCTV、事故或災害情報。"
           onSelectCctv={selectCamera}
+          layerVisibility={layerVisibility}
+          activeKind={eventListKind ?? selectedEvent?.kind ?? null}
+          onKindClick={handleKindClick}
           musicOpen={musicMode !== "off"}
           favorites={favorites}
           favoritesOpen={favoritesOpen}
@@ -1011,13 +1236,13 @@ export function DrivingApp() {
           onPreviewOpen={() => {
             setFavoritesOpen(false);
             setSelectedCctv(null);
-            setSelectedDisaster(null);
+            setSelectedEvent(null);
             setMusicMode((mode) => (mode === "open" ? "mini" : mode));
           }}
           onToggleMusic={() => {
             setFavoritesOpen(false);
             setSelectedCctv(null);
-            setSelectedDisaster(null);
+            setSelectedEvent(null);
             setIntelCollapse((value) => value + 1);
             setMusicMode((mode) => {
               if (mode === "off") return "open";
@@ -1028,11 +1253,6 @@ export function DrivingApp() {
         />
       </footer>
 
-      {loadError ? (
-        <div className="absolute top-1/2 left-1/2 z-20 -translate-x-1/2 -translate-y-1/2 rounded-xl border border-red-400/30 bg-black/70 px-4 py-3 text-sm text-red-200">
-          {loadError}
-        </div>
-      ) : null}
       {cctvError || trafficError || speedEnforcementError || disasterError ? (
         <div className="pointer-events-none absolute top-[max(11rem,calc(env(safe-area-inset-top)+10rem))] left-1/2 z-20 -translate-x-1/2 rounded-xl border border-amber-300/25 bg-black/65 px-3 py-2 text-xs text-amber-100">
           {cctvError ?? trafficError ?? speedEnforcementError ?? disasterError}
@@ -1052,7 +1272,8 @@ function Legend() {
     { color: "bg-[#7f1d1d]", label: "接近停止" },
     { color: "bg-[#c084fc]", label: "CCTV" },
     { color: "bg-[#fbbf24]", label: "測速執法" },
-    { color: "bg-[#ff3b3b]", label: "事故" },
+    { color: "bg-[#eab308]", label: "施工" },
+    { color: "bg-[#ef4444]", label: "事故" },
     { color: "bg-[#ff9f1c]", label: "災害" },
   ];
 

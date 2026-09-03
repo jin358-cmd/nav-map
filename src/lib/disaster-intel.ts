@@ -24,10 +24,12 @@ export function deriveDisasterIntel(
     if (!cityWide && km > DISASTER_NEARBY_KM) continue;
     items.push({
       id: `intel-disaster-${alert.id}`,
+      eventId: alert.id,
       kind: "disaster",
       title: `${alert.severity === "emergency" ? "緊急" : alert.severity === "warning" ? "警戒" : "注意"}${KIND_LABEL[alert.kind]}`,
       detail: alert.title,
       distanceMeters: Math.round(km * 1000),
+      location: alert.location,
     });
   }
   return items.sort((a, b) => a.distanceMeters - b.distanceMeters);

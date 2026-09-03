@@ -17,7 +17,12 @@ function data(alerts: DisasterAlert[]) {
   };
 }
 
-export function upsertDisasterLayer(map: MapLibreMap, alerts: DisasterAlert[], selectedId: string | null) {
+export function upsertDisasterLayer(
+  map: MapLibreMap,
+  alerts: DisasterAlert[],
+  selectedId: string | null,
+  visible = true,
+) {
   const source = map.getSource(DISASTER_SOURCE_ID);
   if (source?.type === "geojson") (source as GeoJSONSource).setData(data(alerts));
   else if (!source) map.addSource(DISASTER_SOURCE_ID, { type: "geojson", data: data(alerts) });
@@ -40,6 +45,13 @@ export function upsertDisasterLayer(map: MapLibreMap, alerts: DisasterAlert[], s
   }
   if (!map.getLayer(DISASTER_HIT_LAYER_ID)) {
     map.addLayer({ id: DISASTER_HIT_LAYER_ID, type: "circle", source: DISASTER_SOURCE_ID, paint: { "circle-radius": 20, "circle-opacity": 0 } });
+  }
+  const visibility = visible ? "visible" : "none";
+  if (map.getLayer(DISASTER_LAYER_ID)) {
+    map.setLayoutProperty(DISASTER_LAYER_ID, "visibility", visibility);
+  }
+  if (map.getLayer(DISASTER_HIT_LAYER_ID)) {
+    map.setLayoutProperty(DISASTER_HIT_LAYER_ID, "visibility", visibility);
   }
   for (const routeLayer of ["demo-route-glow", "demo-route-line"]) {
     if (map.getLayer(routeLayer)) map.moveLayer(routeLayer);

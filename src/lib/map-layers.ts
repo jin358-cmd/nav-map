@@ -91,6 +91,7 @@ export function upsertIntelligenceLayers(
   map: MapLibreMap,
   route: [number, number][],
   traffic: TrafficSegment[],
+  trafficVisible = true,
 ) {
   const routeData = {
     type: "Feature" as const,
@@ -164,6 +165,13 @@ export function upsertIntelligenceLayers(
     map.setPaintProperty(TRAFFIC_LAYER_ID, "line-width", TRAFFIC_WIDTH);
     map.setPaintProperty(TRAFFIC_LAYER_ID, "line-opacity", TRAFFIC_OPACITY);
     map.setPaintProperty(TRAFFIC_LAYER_ID, "line-blur", 0.15);
+  }
+  if (map.getLayer(TRAFFIC_LAYER_ID)) {
+    map.setLayoutProperty(
+      TRAFFIC_LAYER_ID,
+      "visibility",
+      trafficVisible ? "visible" : "none",
+    );
   }
 
   if (!map.getLayer("demo-route-glow")) {

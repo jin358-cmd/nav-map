@@ -1,7 +1,9 @@
 import type {
   CctvDataOrigin,
   CctvStatus,
+  DataFreshness,
   DisasterDataOrigin,
+  EventDataOrigin,
   TrafficDataOrigin,
   TrafficLevel,
 } from "@/types/domain";
@@ -27,20 +29,42 @@ export function cctvStatusLabel(status: CctvStatus) {
   return "未知";
 }
 
+export function providedText(value?: string | null) {
+  const text = value?.trim();
+  return text ? text : "未提供";
+}
+
+export function freshnessLabel(value?: DataFreshness) {
+  if (value === "live") return "即時";
+  if (value === "stale") return "資料偏舊";
+  return "資料暫時無法取得";
+}
+
+export function eventOriginLabel(origin?: EventDataOrigin | TrafficDataOrigin | DisasterDataOrigin | CctvDataOrigin) {
+  if (origin === "tdx-live") return "TDX 即時資料";
+  if (origin === "ncdr-live") return "NCDR 即時災害";
+  if (origin === "snapshot") return "SNAPSHOT";
+  if (origin === "mock") return "示範資料";
+  return "資料暫時無法取得";
+}
+
 export function cctvOriginLabel(origin: CctvDataOrigin) {
   if (origin === "tdx-live") return "TDX LIVE";
   if (origin === "snapshot") return "SNAPSHOT";
-  return "MOCK";
+  if (origin === "mock") return "示範資料";
+  return "資料暫時無法取得";
 }
 
 export function trafficOriginLabel(origin: TrafficDataOrigin) {
   if (origin === "tdx-live") return "TDX 即時路況";
-  return "示範路況";
+  if (origin === "mock") return "示範路況";
+  return "資料暫時無法取得";
 }
 
 export function disasterOriginLabel(origin: DisasterDataOrigin) {
   if (origin === "ncdr-live") return "NCDR 即時災害";
-  return "示範災害";
+  if (origin === "mock") return "示範災害";
+  return "資料暫時無法取得";
 }
 
 export function trafficLevelLabel(level: TrafficLevel) {

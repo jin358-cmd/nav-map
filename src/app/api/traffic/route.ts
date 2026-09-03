@@ -6,7 +6,12 @@ export async function GET(request: Request) {
 
   try {
     const catalog = await loadTainanTraffic(fresh);
-    const source = catalog.origin === "tdx-live" ? "tdx" : "mock";
+    const source =
+      catalog.origin === "tdx-live"
+        ? "tdx"
+        : catalog.origin === "unavailable"
+          ? "unavailable"
+          : "mock";
     return Response.json(
       {
         source,

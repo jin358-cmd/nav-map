@@ -45,7 +45,12 @@ export function finalizeTrafficSegment(
     roadName: seed.name,
     direction: seed.direction?.trim() || "",
     congestionLevel: seed.level,
-    source: seed.dataOrigin === "tdx-live" ? "tdx" : "mock",
+    source:
+      seed.dataOrigin === "tdx-live"
+        ? "tdx"
+        : seed.dataOrigin === "unavailable"
+          ? "unavailable"
+          : "mock",
     averageSpeed: seed.speedKmh,
   };
 }

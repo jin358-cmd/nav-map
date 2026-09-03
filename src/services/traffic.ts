@@ -1,5 +1,6 @@
 import "server-only";
 import { TAINAN_TRAFFIC } from "@/data/mock-traffic";
+import { isDemoDataEnabled } from "@/lib/runtime-demo";
 import {
   TRAFFIC_LIVE_CACHE_MS,
   TRAFFIC_SHAPE_CACHE_MS,
@@ -44,10 +45,25 @@ export async function loadTainanTraffic(
   }
 
   const live = await fromTdxLive(force);
-  const catalog = live ?? fromMock();
-  liveCache = catalog;
+  if (live) {
+    liveCache = live;
+    liveCacheAt = Date.now();
+    return live;
+  }
+  if (isDemoDataEnabled()) {
+    const catalog = fromMock();
+    liveCache = catalog;
+    liveCacheAt = Date.now();
+    return catalog;
+  }
+  const empty: TrafficCatalog = {
+    origin: "unavailable",
+    segments: [],
+    fetchedAt: new Date().toISOString(),
+  };
+  liveCache = empty;
   liveCacheAt = Date.now();
-  return catalog;
+  return empty;
 }
 
 function fromMock(): TrafficCatalog {
@@ -91,7 +107,7 @@ async function fromTdxLive(force: boolean): Promise<TrafficCatalog | null> {
     };
   } catch (error) {
     console.warn(
-      "TDX live traffic fallback to mock",
+      "TDX live traffic unavailable",
       error instanceof Error ? error.message : "unknown error",
     );
     return null;

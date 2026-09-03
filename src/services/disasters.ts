@@ -1,6 +1,7 @@
 import "server-only";
 
 import { TAINAN_DISASTERS } from "@/data/mock-disasters";
+import { isDemoDataEnabled } from "@/lib/runtime-demo";
 import type {
   DisasterAlert,
   DisasterCatalog,
@@ -147,9 +148,18 @@ export async function fetchDisasterCatalog(): Promise<DisasterCatalog> {
     catalogCacheAt = Date.now();
     return catalogCache;
   } catch {
+    if (isDemoDataEnabled()) {
+      catalogCache = {
+        origin: "mock",
+        alerts: TAINAN_DISASTERS.map((alert) => ({ ...alert, dataOrigin: "mock" })),
+        fetchedAt,
+      };
+      catalogCacheAt = Date.now();
+      return catalogCache;
+    }
     catalogCache = {
-      origin: "mock",
-      alerts: TAINAN_DISASTERS.map((alert) => ({ ...alert, dataOrigin: "mock" })),
+      origin: "unavailable",
+      alerts: [],
       fetchedAt,
     };
     catalogCacheAt = Date.now();

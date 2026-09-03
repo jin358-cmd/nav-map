@@ -66,7 +66,10 @@ export function useCctvView({
         setError(null);
       })
       .catch(() => {
-        if (!cancelled) setError("CCTV 資料載入失敗，已略過圖層。");
+        if (cancelled) return;
+        setCatalog([]);
+        setOrigin("unavailable");
+        setError("資料暫時無法取得");
       });
     return () => {
       cancelled = true;
@@ -104,7 +107,9 @@ export function useCctvView({
         setError(null);
       })
       .catch(() => {
-        setError("CCTV 資料載入失敗，已略過圖層。");
+        setCatalog([]);
+        setOrigin("unavailable");
+        setError("資料暫時無法取得");
       });
   }, []);
 

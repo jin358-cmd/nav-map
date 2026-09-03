@@ -1,5 +1,6 @@
 import "server-only";
 import { TAINAN_DISASTERS } from "@/data/mock-disasters";
+import { isDemoDataEnabled } from "@/lib/runtime-demo";
 import { DISASTER_LIVE_CACHE_MS } from "@/lib/disaster-constants";
 import {
   finalizeDisasterAlert,
@@ -24,10 +25,25 @@ export async function loadTainanDisasters(
   }
 
   const live = await fromNcdrLive();
-  const catalog = live ?? fromMock();
-  liveCache = catalog;
+  if (live) {
+    liveCache = live;
+    liveCacheAt = Date.now();
+    return live;
+  }
+  if (isDemoDataEnabled()) {
+    const catalog = fromMock();
+    liveCache = catalog;
+    liveCacheAt = Date.now();
+    return catalog;
+  }
+  const empty: DisasterCatalog = {
+    origin: "unavailable",
+    alerts: [],
+    fetchedAt: new Date().toISOString(),
+  };
+  liveCache = empty;
   liveCacheAt = Date.now();
-  return catalog;
+  return empty;
 }
 
 function fromMock(): DisasterCatalog {
@@ -58,7 +74,7 @@ async function fromNcdrLive(): Promise<DisasterCatalog | null> {
     };
   } catch (error) {
     console.warn(
-      "NCDR live disasters fallback to mock",
+      "NCDR live disasters unavailable",
       error instanceof Error ? error.message : "unknown error",
     );
     return null;
@@ -66,5 +82,7 @@ async function fromNcdrLive(): Promise<DisasterCatalog | null> {
 }
 
 export function disasterPublishSource(origin: DisasterDataOrigin) {
-  return origin === "ncdr-live" ? "ncdr" : "mock";
+  if (origin === "ncdr-live") return "ncdr";
+  if (origin === "unavailable") return "unavailable";
+  return "mock";
 }

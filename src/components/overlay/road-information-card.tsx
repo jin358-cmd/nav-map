@@ -2,20 +2,22 @@
 
 import { useMemo, useState } from "react";
 import {
-  AlertTriangle,
-  Camera,
-  Construction,
   Heart,
   MapPin,
-  TrafficCone,
   Trash2,
   X,
 } from "lucide-react";
+import {
+  AccidentTriangleIcon,
+  CctvLensIcon,
+  CongestionCarsIcon,
+  ConstructionBarrierIcon,
+  DisasterWarningIcon,
+} from "@/components/overlay/status-icons";
 import { AccountChip } from "@/components/overlay/account-chip";
 import {
   cctvOriginLabel,
   disasterOriginLabel,
-  formatDistance,
   trafficOriginLabel,
 } from "@/lib/format";
 import type { GoogleAccount } from "@/lib/google-identity";
@@ -24,6 +26,7 @@ import type {
   CctvDataOrigin,
   DisasterDataOrigin,
   GeocodeHit,
+  LayerKindVisibility,
   RoadIntelItem,
   RoadIntelKind,
   TrafficDataOrigin,
@@ -39,37 +42,37 @@ const KIND_ORDER: RoadIntelKind[] = [
 
 const KIND_META: Record<
   RoadIntelKind,
-  { label: string; className: string; activeClass: string; icon: typeof Camera }
+  { label: string; className: string; activeClass: string; icon: typeof CongestionCarsIcon }
 > = {
   cctv: {
     label: "CCTV",
     className: "text-violet-300 bg-violet-500/15 border-violet-300/20",
     activeClass: "border-violet-300/70 bg-violet-500/30 text-violet-100",
-    icon: Camera,
+    icon: CctvLensIcon,
   },
   construction: {
     label: "施工",
     className: "text-amber-300 bg-amber-500/15 border-amber-300/20",
     activeClass: "border-amber-300/70 bg-amber-500/30 text-amber-100",
-    icon: Construction,
+    icon: ConstructionBarrierIcon,
   },
   congestion: {
     label: "壅塞",
     className: "text-orange-300 bg-orange-500/15 border-orange-300/20",
     activeClass: "border-orange-300/70 bg-orange-500/30 text-orange-100",
-    icon: TrafficCone,
+    icon: CongestionCarsIcon,
   },
   accident: {
     label: "事故",
     className: "text-red-300 bg-red-500/15 border-red-300/20",
     activeClass: "border-red-300/70 bg-red-500/30 text-red-100",
-    icon: AlertTriangle,
+    icon: AccidentTriangleIcon,
   },
   disaster: {
     label: "災害",
     className: "text-amber-200 bg-orange-400/15 border-orange-300/20",
     activeClass: "border-orange-200/70 bg-orange-400/30 text-amber-100",
-    icon: AlertTriangle,
+    icon: DisasterWarningIcon,
   },
 };
 
@@ -78,8 +81,10 @@ export function RoadInformationCard({
   origin,
   trafficOrigin,
   disasterOrigin,
-  emptyHint,
   onSelectCctv,
+  layerVisibility,
+  activeKind = null,
+  onKindClick,
   musicOpen = false,
   onToggleMusic,
   onPreviewOpen,
@@ -106,6 +111,9 @@ export function RoadInformationCard({
   disasterOrigin: DisasterDataOrigin;
   emptyHint?: string;
   onSelectCctv?: (cameraId: string) => void;
+  layerVisibility?: LayerKindVisibility;
+  activeKind?: RoadIntelKind | null;
+  onKindClick?: (kind: RoadIntelKind) => void;
   musicOpen?: boolean;
   onToggleMusic?: () => void;
   onPreviewOpen?: () => void;
@@ -127,20 +135,16 @@ export function RoadInformationCard({
   onSignOut?: () => void;
 }) {
   const [openKind, setOpenKind] = useState<RoadIntelKind | null>(null);
+  const selectedKind = activeKind ?? openKind;
 
   const groups = useMemo(
     () =>
       KIND_ORDER.map((kind) => ({
         kind,
         items: items.filter((item) => item.kind === kind),
-      })).filter((group) => group.items.length > 0),
+      })),
     [items],
   );
-
-  const openGroup = groups.find((group) => group.kind === openKind);
-  const openItems = openGroup?.items ?? [];
-
-  const previewItem = openItems[0] ?? null;
 
   return (
     <section className="pointer-events-auto relative inline-flex flex-col items-center text-white">
@@ -156,101 +160,50 @@ export function RoadInformationCard({
             onClose={() => onCloseFavorites?.()}
           />
         </div>
-      ) : previewItem ? (
-        <div className="mb-2 w-fit max-w-[17.5rem] rounded-2xl border border-white/10 bg-black/70 px-2.5 py-2 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl">
-          <div className="mb-1 flex items-center justify-between gap-2">
-            <p className="text-[11px] tracking-wide text-zinc-400">
-              {KIND_META[previewItem.kind].label}
-            </p>
-            <button
-              type="button"
-              aria-label="收合情報"
-              onClick={() => setOpenKind(null)}
-              className="flex size-7 shrink-0 items-center justify-center rounded-lg text-zinc-400 hover:bg-white/10 hover:text-white touch-manipulation"
-            >
-              <X className="size-3.5" />
-            </button>
-          </div>
-          {(() => {
-            const meta = KIND_META[previewItem.kind];
-            const Icon = meta.icon;
-            const clickable = previewItem.kind === "cctv" && previewItem.cameraId;
-            return (
-              <button
-                type="button"
-                disabled={!clickable}
-                onClick={() => {
-                  if (previewItem.cameraId) onSelectCctv?.(previewItem.cameraId);
-                }}
-                className={cn(
-                  "flex w-full items-center gap-2 text-left",
-                  clickable && "touch-manipulation",
-                  !clickable && "cursor-default",
-                )}
-              >
-                <span
-                  className={cn(
-                    "flex size-8 shrink-0 items-center justify-center rounded-lg",
-                    meta.className,
-                  )}
-                >
-                  <Icon className="size-4" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{previewItem.title}</p>
-                  <p className="truncate text-[11px] text-zinc-400">
-                    {previewItem.detail}
-                  </p>
-                </div>
-                <span className="shrink-0 text-[11px] text-zinc-400">
-                  {formatDistance(previewItem.distanceMeters)}
-                </span>
-              </button>
-            );
-          })()}
-          <p className="mt-1 truncate text-[10px] text-zinc-600">
-            CCTV {cctvOriginLabel(origin)} · 路況 {trafficOriginLabel(trafficOrigin)} · 災害 {disasterOriginLabel(disasterOrigin)}
-          </p>
-        </div>
       ) : null}
 
       <div className="inline-flex w-fit max-w-[min(36rem,calc(100vw-0.75rem))] items-center justify-center gap-1.5 rounded-full border border-white/10 bg-black/55 px-1.5 py-1 shadow-[0_10px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl">
         <div className="flex items-center gap-1.5">
-          {groups.length === 0 ? (
-            <p className="px-2 py-1 text-[11px] text-zinc-500">
-              {emptyHint ?? "前方暫無通報"}
-            </p>
-          ) : (
-            groups.map((group) => {
-              const meta = KIND_META[group.kind];
-              const Icon = meta.icon;
-              const active = openKind === group.kind;
-              return (
-                <button
-                  key={group.kind}
-                  type="button"
-                  aria-label={`${meta.label}${group.items.length}則`}
-                  aria-pressed={active}
-                  onClick={() =>
-                    setOpenKind((current) => {
-                      const next = current === group.kind ? null : group.kind;
-                      if (next) onPreviewOpen?.();
-                      return next;
-                    })
+          {groups.map((group) => {
+            const meta = KIND_META[group.kind];
+            const Icon = meta.icon;
+            const layerOn = layerVisibility ? layerVisibility[group.kind] : true;
+            const active = selectedKind === group.kind || layerOn;
+            return (
+              <button
+                key={group.kind}
+                type="button"
+                title={meta.label}
+                aria-label={`${meta.label}${group.items.length}則`}
+                aria-pressed={layerOn}
+                onClick={() => {
+                  onPreviewOpen?.();
+                  if (onKindClick) {
+                    onKindClick(group.kind);
+                    return;
                   }
-                  className={cn(
-                    "relative flex size-10 items-center justify-center rounded-full border touch-manipulation",
-                    active ? meta.activeClass : meta.className,
-                  )}
-                >
-                  <Icon className="size-5" />
-                  <span className="absolute -top-0.5 -right-0.5 flex min-w-4 items-center justify-center rounded-full bg-black/80 px-1 text-[10px] leading-4 text-zinc-200">
-                    {group.items.length}
-                  </span>
-                </button>
-              );
-            })
-          )}
+                  setOpenKind((current) => {
+                    const next = current === group.kind ? null : group.kind;
+                    if (next && group.items[0]?.cameraId) {
+                      onSelectCctv?.(group.items[0].cameraId);
+                    }
+                    return next;
+                  });
+                }}
+                className={cn(
+                  "relative flex size-11 items-center justify-center rounded-full border touch-manipulation",
+                  layerOn ? meta.activeClass : meta.className,
+                  !layerOn && "opacity-55",
+                  active && selectedKind === group.kind && "ring-2 ring-white/30",
+                )}
+              >
+                <Icon className="size-5" />
+                <span className="absolute -top-0.5 -right-0.5 flex min-w-4 items-center justify-center rounded-full bg-black/80 px-1 text-[10px] leading-4 text-zinc-200">
+                  {group.items.length}
+                </span>
+              </button>
+            );
+          })}
         </div>
         <AccountChip
           account={account}
@@ -279,6 +232,9 @@ export function RoadInformationCard({
           />
         </div>
       </div>
+      <p className="mt-1 max-w-[min(36rem,calc(100vw-0.75rem))] truncate text-center text-[10px] text-zinc-500">
+        CCTV {cctvOriginLabel(origin)} · 路況 {trafficOriginLabel(trafficOrigin)} · 災害 {disasterOriginLabel(disasterOrigin)}
+      </p>
     </section>
   );
 }

@@ -22,6 +22,11 @@ import {
 } from "@/lib/constants";
 import { junctionZoomProgress } from "@/lib/upcoming-route";
 import { bindCctvLayerClicks, upsertCctvLayer } from "@/lib/cctv-layer";
+import {
+  bindConstructionLayerClicks,
+  upsertConstructionLayer,
+} from "@/lib/construction-layer";
+import { bindAccidentLayerClicks, upsertAccidentLayer } from "@/lib/event-layer";
 import { bindDisasterLayerClicks, upsertDisasterLayer } from "@/lib/disaster-layer";
 import { upsertGuidanceArrows } from "@/lib/guidance-arrows";
 import { upsertIntelligenceLayers } from "@/lib/map-layers";
@@ -40,10 +45,13 @@ import type {
   AccidentReport,
   CameraMode,
   CctvCamera,
+  ConstructionEvent,
   DisasterAlert,
   FollowOrientation,
+  LayerKindVisibility,
   LngLat,
   MapDisplayMode,
+  MapFocusTarget,
   MapViewport,
   DisplayPose,
   RouteDestination,
@@ -51,6 +59,14 @@ import type {
   TrafficSegment,
   VehiclePose,
 } from "@/types/domain";
+
+const DEFAULT_LAYER_VISIBILITY: LayerKindVisibility = {
+  congestion: true,
+  cctv: true,
+  construction: true,
+  accident: true,
+  disaster: true,
+};
 
 type DrivingMapProps = {
   vehicle: VehiclePose;
@@ -64,11 +80,16 @@ type DrivingMapProps = {
   navigating: boolean;
   selectedCctvId: string | null;
   selectedDisasterId: string | null;
+  selectedAccidentId?: string | null;
+  selectedConstructionId?: string | null;
   cameras: CctvCamera[];
   speedEnforcement: SpeedEnforcementPoint[];
   traffic: TrafficSegment[];
   disasters: DisasterAlert[];
   accidents: AccidentReport[];
+  constructions?: ConstructionEvent[];
+  layerVisibility?: LayerKindVisibility;
+  focusTarget?: MapFocusTarget | null;
   route: [number, number][];
   routeMeters: number;
   distanceToNextMeters: number;
@@ -84,6 +105,8 @@ type DrivingMapProps = {
   fitRouteKey: number;
   onCctvSelect: (cameraId: string) => void;
   onDisasterSelect: (alertId: string) => void;
+  onAccidentSelect?: (accidentId: string) => void;
+  onConstructionSelect?: (constructionId: string) => void;
   onUserPan: () => void;
   onViewportChange: (viewport: MapViewport) => void;
   onLongPress?: (location: { lng: number; lat: number }) => void;
@@ -163,18 +186,6 @@ function cameraOptions(
   };
 }
 
-function markerEl(
-  className: string,
-  symbol: string,
-  label: string,
-): HTMLDivElement {
-  const el = document.createElement("div");
-  el.className = `intel-marker ${className}`;
-  el.title = label;
-  el.innerHTML = `<span>${symbol}</span>`;
-  return el;
-}
-
 function createDestinationPin(label: string): HTMLDivElement {
   const el = document.createElement("div");
   el.className = "destination-pin";
@@ -241,11 +252,16 @@ export function DrivingMap({
   navigating,
   selectedCctvId,
   selectedDisasterId,
+  selectedAccidentId = null,
+  selectedConstructionId = null,
   cameras,
   speedEnforcement,
   traffic,
   disasters,
   accidents,
+  constructions = [],
+  layerVisibility = DEFAULT_LAYER_VISIBILITY,
+  focusTarget = null,
   route,
   routeMeters,
   distanceToNextMeters,
@@ -256,6 +272,8 @@ export function DrivingMap({
   fitRouteKey,
   onCctvSelect,
   onDisasterSelect,
+  onAccidentSelect,
+  onConstructionSelect,
   onUserPan,
   onViewportChange,
   onLongPress,
@@ -269,6 +287,8 @@ export function DrivingMap({
   const destMarkerRef = useRef<Marker | null>(null);
   const onCctvSelectRef = useRef(onCctvSelect);
   const onDisasterSelectRef = useRef(onDisasterSelect);
+  const onAccidentSelectRef = useRef(onAccidentSelect);
+  const onConstructionSelectRef = useRef(onConstructionSelect);
   const onUserPanRef = useRef(onUserPan);
   const onViewportChangeRef = useRef(onViewportChange);
   const onLongPressRef = useRef(onLongPress);
@@ -294,7 +314,12 @@ export function DrivingMap({
   const speedEnforcementRef = useRef(speedEnforcement);
   const selectedRef = useRef(selectedCctvId);
   const disastersRef = useRef(disasters);
+  const accidentsRef = useRef(accidents);
+  const constructionsRef = useRef(constructions);
   const selectedDisasterRef = useRef(selectedDisasterId);
+  const selectedAccidentRef = useRef(selectedAccidentId);
+  const selectedConstructionRef = useRef(selectedConstructionId);
+  const layerVisibilityRef = useRef(layerVisibility);
   const followVehicleRef = useRef(followVehicle);
   const navigatingRef = useRef(navigating);
   const approachingRef = useRef(approachingIntersection);
@@ -314,6 +339,8 @@ export function DrivingMap({
   useEffect(() => {
     onCctvSelectRef.current = onCctvSelect;
     onDisasterSelectRef.current = onDisasterSelect;
+    onAccidentSelectRef.current = onAccidentSelect;
+    onConstructionSelectRef.current = onConstructionSelect;
     onUserPanRef.current = onUserPan;
     onViewportChangeRef.current = onViewportChange;
     onLongPressRef.current = onLongPress;
@@ -338,7 +365,12 @@ export function DrivingMap({
     speedEnforcementRef.current = speedEnforcement;
     selectedRef.current = selectedCctvId;
     disastersRef.current = disasters;
+    accidentsRef.current = accidents;
+    constructionsRef.current = constructions;
     selectedDisasterRef.current = selectedDisasterId;
+    selectedAccidentRef.current = selectedAccidentId;
+    selectedConstructionRef.current = selectedConstructionId;
+    layerVisibilityRef.current = layerVisibility;
     navigatingRef.current = navigating;
     approachingRef.current = approachingIntersection;
     junctionCueRef.current = junctionCue;
@@ -348,6 +380,8 @@ export function DrivingMap({
   }, [
     onCctvSelect,
     onDisasterSelect,
+    onAccidentSelect,
+    onConstructionSelect,
     onUserPan,
     onViewportChange,
     onLongPress,
@@ -365,7 +399,12 @@ export function DrivingMap({
     speedEnforcement,
     selectedCctvId,
     selectedDisasterId,
+    selectedAccidentId,
+    selectedConstructionId,
     disasters,
+    accidents,
+    constructions,
+    layerVisibility,
     navigating,
     approachingIntersection,
     junctionCue,
@@ -515,16 +554,26 @@ export function DrivingMap({
     };
 
     const attachCustomLayers = () => {
+      const visible = layerVisibilityRef.current;
       applyResolvedTheme(map, resolveMapBasemap(mapDisplayModeRef.current));
-      upsertIntelligenceLayers(map, routeRef.current, trafficRef.current);
+      upsertIntelligenceLayers(map, routeRef.current, trafficRef.current, visible.congestion);
       upsertSpeedEnforcementLayer(map, speedEnforcementRef.current);
       try {
-        upsertCctvLayer(map, camerasRef.current, selectedRef.current);
+        upsertCctvLayer(map, camerasRef.current, selectedRef.current, visible.cctv);
         bindCctvLayerClicks(map, (id) => onCctvSelectRef.current(id));
-        upsertDisasterLayer(map, disastersRef.current, selectedDisasterRef.current);
+        upsertDisasterLayer(map, disastersRef.current, selectedDisasterRef.current, visible.disaster);
         bindDisasterLayerClicks(map, (id) => onDisasterSelectRef.current(id));
+        upsertAccidentLayer(map, accidentsRef.current, selectedAccidentRef.current, visible.accident);
+        bindAccidentLayerClicks(map, (id) => onAccidentSelectRef.current?.(id));
+        upsertConstructionLayer(
+          map,
+          constructionsRef.current,
+          selectedConstructionRef.current,
+          visible.construction,
+        );
+        bindConstructionLayerClicks(map, (id) => onConstructionSelectRef.current?.(id));
       } catch (error) {
-        console.error("CCTV layer skipped", error);
+        console.error("Event layer skipped", error);
       }
     };
 
@@ -715,11 +764,11 @@ export function DrivingMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !readyRef.current) return;
-    upsertIntelligenceLayers(map, route, traffic);
+    upsertIntelligenceLayers(map, route, traffic, layerVisibility.congestion);
     if (!navigating) {
       upsertGuidanceArrows(map, route, 0, 0, false, 0);
     }
-  }, [navigating, route, traffic]);
+  }, [layerVisibility.congestion, navigating, route, traffic]);
 
   useEffect(() => {
     followVehicleRef.current = followVehicle;
@@ -741,12 +790,22 @@ export function DrivingMap({
       styleKeyRef.current = resolved;
       applyResolvedTheme(map, resolved);
       try {
-        upsertIntelligenceLayers(map, routeRef.current, trafficRef.current);
+        const visible = layerVisibilityRef.current;
+        upsertIntelligenceLayers(map, routeRef.current, trafficRef.current, visible.congestion);
         upsertSpeedEnforcementLayer(map, speedEnforcementRef.current);
-        upsertCctvLayer(map, camerasRef.current, selectedRef.current);
+        upsertCctvLayer(map, camerasRef.current, selectedRef.current, visible.cctv);
         bindCctvLayerClicks(map, (id) => onCctvSelectRef.current(id));
-        upsertDisasterLayer(map, disastersRef.current, selectedDisasterRef.current);
+        upsertDisasterLayer(map, disastersRef.current, selectedDisasterRef.current, visible.disaster);
         bindDisasterLayerClicks(map, (id) => onDisasterSelectRef.current(id));
+        upsertAccidentLayer(map, accidentsRef.current, selectedAccidentRef.current, visible.accident);
+        bindAccidentLayerClicks(map, (id) => onAccidentSelectRef.current?.(id));
+        upsertConstructionLayer(
+          map,
+          constructionsRef.current,
+          selectedConstructionRef.current,
+          visible.construction,
+        );
+        bindConstructionLayerClicks(map, (id) => onConstructionSelectRef.current?.(id));
       } catch {
         onStyleFallbackRef.current?.("地圖圖層重新掛載失敗，已保留目前畫面。");
       }
@@ -773,17 +832,17 @@ export function DrivingMap({
     const map = mapRef.current;
     if (!map || !readyRef.current) return;
     try {
-      upsertCctvLayer(map, cameras, selectedCctvId);
+      upsertCctvLayer(map, cameras, selectedCctvId, layerVisibility.cctv);
     } catch (error) {
       console.error("CCTV layer update skipped", error);
     }
-  }, [cameras, selectedCctvId]);
+  }, [cameras, layerVisibility.cctv, selectedCctvId]);
 
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !readyRef.current) return;
-    upsertDisasterLayer(map, disasters, selectedDisasterId);
-  }, [disasters, selectedDisasterId]);
+    upsertDisasterLayer(map, disasters, selectedDisasterId, layerVisibility.disaster);
+  }, [disasters, layerVisibility.disaster, selectedDisasterId]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -795,19 +854,30 @@ export function DrivingMap({
     const map = mapRef.current;
     if (!map) return;
 
-    for (const marker of intelMarkersRef.current) marker.remove();
-    intelMarkersRef.current = [];
+    upsertAccidentLayer(map, accidents, selectedAccidentId, layerVisibility.accident);
+  }, [accidents, layerVisibility.accident, selectedAccidentId]);
 
-    for (const accident of accidents) {
-      const el = markerEl("intel-marker--accident", "!", accident.title);
-      intelMarkersRef.current.push(
-        new Marker({ element: el, anchor: "bottom" })
-          .setLngLat([accident.location.lng, accident.location.lat])
-          .addTo(map),
-      );
-    }
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !readyRef.current) return;
+    upsertConstructionLayer(
+      map,
+      constructions,
+      selectedConstructionId,
+      layerVisibility.construction,
+    );
+  }, [constructions, layerVisibility.construction, selectedConstructionId]);
 
-  }, [accidents]);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !readyRef.current || !focusTarget) return;
+    map.easeTo({
+      center: [focusTarget.lng, focusTarget.lat],
+      zoom: Math.max(map.getZoom(), 16.2),
+      duration: 720,
+      essential: true,
+    });
+  }, [focusTarget]);
 
   useEffect(() => {
     const map = mapRef.current;

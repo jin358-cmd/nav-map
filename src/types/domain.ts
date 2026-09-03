@@ -43,7 +43,7 @@ export type SavedPlace = {
 
 export type CctvStatus = "online" | "offline" | "unknown" | "unsupported";
 export type CctvSourceType = "city" | "freeway";
-export type CctvDataOrigin = "tdx-live" | "snapshot" | "mock";
+export type CctvDataOrigin = "tdx-live" | "snapshot" | "mock" | "unavailable";
 
 export type CctvCamera = {
   id: string;
@@ -87,8 +87,8 @@ export type TrafficLevel =
   | "severe"
   | "blocked";
 export type TrafficSourceType = "city" | "freeway";
-export type TrafficDataOrigin = "tdx-live" | "mock";
-export type TrafficPublishSource = "tdx" | "mock";
+export type TrafficDataOrigin = "tdx-live" | "mock" | "unavailable";
+export type TrafficPublishSource = "tdx" | "mock" | "unavailable";
 
 export type TrafficSegment = {
   id: string;
@@ -143,8 +143,8 @@ export type DisasterKind =
   | "strong-wind"
   | "landslide"
   | "other";
-export type DisasterDataOrigin = "ncdr-live" | "mock";
-export type DisasterPublishSource = "ncdr" | "mock";
+export type DisasterDataOrigin = "ncdr-live" | "mock" | "unavailable";
+export type DisasterPublishSource = "ncdr" | "mock" | "unavailable";
 export type DisasterSeverity = "watch" | "warning" | "emergency";
 
 export type DisasterAlert = {
@@ -172,14 +172,63 @@ export type DisasterCatalog = {
   fetchedAt: string;
 };
 
+export type DataFreshness = "live" | "stale" | "unavailable";
+
 export type AccidentReport = {
   id: string;
   title: string;
   description: string;
   location: LngLat;
+  roadName?: string;
+  direction?: string;
+  issuedAt?: string;
+  updatedAt?: string;
+  severity?: string;
+  source?: string;
+  freshness?: DataFreshness;
 };
 
-export type RoadIntelKind = "cctv" | "construction" | "congestion" | "accident" | "disaster";
+export type ConstructionEvent = {
+  id: string;
+  title: string;
+  description: string;
+  location: LngLat;
+  roadName?: string;
+  direction?: string;
+  issuedAt?: string;
+  updatedAt?: string;
+  severity?: string;
+  source?: string;
+  freshness?: DataFreshness;
+};
+
+export type EventDataOrigin = "tdx-live" | "mock" | "unavailable";
+
+export type EventCatalog<T> = {
+  origin: EventDataOrigin;
+  items: T[];
+  fetchedAt: string;
+};
+
+export type RoadIntelKind =
+  | "cctv"
+  | "construction"
+  | "congestion"
+  | "accident"
+  | "disaster";
+
+export type LayerKindVisibility = Record<RoadIntelKind, boolean>;
+
+export type MapFocusTarget = {
+  lng: number;
+  lat: number;
+  key: number;
+};
+
+export type SelectedMapEvent = {
+  kind: RoadIntelKind;
+  id: string;
+};
 
 export type RoadIntelItem = {
   id: string;
@@ -188,6 +237,9 @@ export type RoadIntelItem = {
   detail: string;
   distanceMeters: number;
   cameraId?: string;
+  eventId?: string;
+  location?: LngLat;
+  freshness?: DataFreshness;
 };
 
 export type NavigationManeuver = {

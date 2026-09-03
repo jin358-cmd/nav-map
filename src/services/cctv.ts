@@ -1,5 +1,6 @@
 import fallbackCatalog from "@/data/cctv-fallback.json";
 import { TAINAN_CCTV } from "@/data/mock-cctv";
+import { isDemoDataEnabled } from "@/lib/runtime-demo";
 import { CCTV_CATALOG_CACHE_MS } from "@/lib/cctv-constants";
 import {
   normalizeFallbackCamera,
@@ -60,10 +61,15 @@ export async function fetchCctvCatalog(force = false): Promise<{
       return catalogCache;
     }
   } catch {
-    // Snapshot import failed; fall through to mock.
+    /* Snapshot 失敗時不填假鏡頭 */
   }
 
-  catalogCache = { cameras: fromMock(), origin: "mock", fetchedAt: Date.now() };
+  if (isDemoDataEnabled()) {
+    catalogCache = { cameras: fromMock(), origin: "mock", fetchedAt: Date.now() };
+    return catalogCache;
+  }
+
+  catalogCache = { cameras: [], origin: "unavailable", fetchedAt: Date.now() };
   return catalogCache;
 }
 

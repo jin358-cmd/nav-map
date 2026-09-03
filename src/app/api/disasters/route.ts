@@ -9,7 +9,12 @@ export async function GET(request: Request) {
 
   try {
     const catalog = await fetchDisasterCatalog();
-    const source = catalog.origin === "ncdr-live" ? "ncdr" : "mock";
+    const source =
+      catalog.origin === "ncdr-live"
+        ? "ncdr"
+        : catalog.origin === "unavailable"
+          ? "unavailable"
+          : "mock";
     return Response.json(
       {
         source,

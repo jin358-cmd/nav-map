@@ -11,11 +11,13 @@ export function roadIntelFromCameras(
     const kind = camera.sourceType === "freeway" ? "國道" : "市區";
     return {
       id: `intel-${camera.id}`,
+      eventId: camera.id,
       kind: "cctv" as const,
       title: camera.intersection,
       detail: `${prefix} CCTV · ${kind}`,
       distanceMeters: meters,
       cameraId: camera.id,
+      location: camera.location,
     };
   });
 

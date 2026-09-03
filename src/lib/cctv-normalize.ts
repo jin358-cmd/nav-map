@@ -143,5 +143,6 @@ export function normalizeFallbackCamera(
 export function dataOriginLabel(origin: CctvDataOrigin): string {
   if (origin === "tdx-live") return "TDX LIVE";
   if (origin === "snapshot") return "SNAPSHOT";
-  return "MOCK";
+  if (origin === "mock") return "示範資料";
+  return "資料暫時無法取得";
 }
