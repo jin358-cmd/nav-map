@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { LngLat, ParkingCatalog, ParkingLot } from "@/types/domain";
 
 async function fetchParking(
@@ -35,10 +35,12 @@ export function useParkingView({
   enabled: boolean;
   radiusKm?: number;
 }) {
-  const [lots, setLots] = useState<ParkingLot[]>([]);
-  const [origin, setOrigin] = useState<ParkingCatalog["origin"]>("unavailable");
+  const [catalog, setCatalog] = useState<ParkingCatalog>({
+    origin: "unavailable",
+    lots: [],
+    fetchedAt: "",
+  });
   const [error, setError] = useState<string | null>(null);
-  const [fetchedAt, setFetchedAt] = useState<string | null>(null);
   const generationRef = useRef(0);
 
   const quantized = useMemo(() => {
@@ -49,27 +51,25 @@ export function useParkingView({
     };
   }, [center]);
 
-  const load = useCallback(() => {
-    if (!enabled || !quantized) {
-      setLots([]);
-      return;
-    }
+  useEffect(() => {
+    if (!enabled || !quantized) return;
     const generation = generationRef.current + 1;
     generationRef.current = generation;
     const controller = new AbortController();
     void fetchParking(quantized, radiusKm, controller.signal)
-      .then((catalog) => {
+      .then((next) => {
         if (generation !== generationRef.current) return;
-        setLots(catalog.lots);
-        setOrigin(catalog.origin);
-        setFetchedAt(catalog.fetchedAt);
-        setError(catalog.origin === "unavailable" ? "資料暫時無法取得" : null);
+        setCatalog(next);
+        setError(next.origin === "unavailable" ? "資料暫時無法取得" : null);
       })
-      .catch((error: unknown) => {
+      .catch((caught: unknown) => {
         if (generation !== generationRef.current) return;
-        if (error instanceof DOMException && error.name === "AbortError") return;
-        setLots([]);
-        setOrigin("unavailable");
+        if (caught instanceof DOMException && caught.name === "AbortError") return;
+        setCatalog({
+          origin: "unavailable",
+          lots: [],
+          fetchedAt: new Date().toISOString(),
+        });
         setError("資料暫時無法取得");
       });
     return () => {
@@ -77,10 +77,15 @@ export function useParkingView({
     };
   }, [enabled, quantized, radiusKm]);
 
-  useEffect(() => {
-    const stop = load();
-    return () => stop?.();
-  }, [load]);
+  const lots: ParkingLot[] = enabled ? catalog.lots : [];
 
-  return { lots, origin, error, fetchedAt, reload: load };
+  return {
+    lots,
+    origin: catalog.origin,
+    error: enabled ? error : null,
+    fetchedAt: catalog.fetchedAt || null,
+    reload: () => {
+      generationRef.current += 1;
+    },
+  };
 }

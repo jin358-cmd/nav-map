@@ -317,7 +317,7 @@ export function DrivingMap({
     createVehicleDisplayState(displayVehicle ?? vehicle),
   );
   const lastFixKeyRef = useRef(`${vehicle.lng},${vehicle.lat}`);
-  const lastFixAtRef = useRef(performance.now());
+  const lastFixAtRef = useRef(0);
   const routeModelRef = useRef(createRouteProgressModel(route, []));
   const routeRef = useRef(route);
   const trafficRef = useRef(traffic);

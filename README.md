@@ -2,7 +2,7 @@
 
 智駕台灣。駕駛視角的道路情報地圖，不是 Google Maps 克隆。
 
-第一階段 Prototype 以 **臺南市區** 為示範範圍（中正路北上，民生路口右轉往臺南火車站）。Phase 2 已把 weather 專案的 CCTV 篩選／距離／city+freeway 模型移植到 MapLibre Driving HUD。Phase 3 已接 TDX 臺南市區即時路況，無憑證或 live 失敗時走 mock。Phase 4 已接 NCDR 民生示警，feed 失敗時走 mock。
+駕駛視角道路情報地圖。Phase 5.2 已含路線吸附、平滑跟隨、偏航重算、路口強化、住家／公司、亮暗衛星底圖、汽車／機車預覽、即時事件圖層與台南周邊停車。正式環境 API 失敗時顯示「資料暫時無法取得」，不會自動填入假路況、假事故或假災害。僅在本機將 `NEXT_PUBLIC_ENABLE_DEMO=1` 時才會出現標示為「示範資料」的測試圖層。
 
 ## 技術架構
 
@@ -72,7 +72,7 @@ npm run build
 npm start
 ```
 
-定位權限可拒絕；拒絕後仍停留在臺南示範路線。GPS 授權成功則車輛標記移到目前位置。
+定位權限可拒絕；拒絕後地圖仍可用，車輛標記留在預設中心。GPS 授權成功則移到目前位置。
 
 頂部可輸入地址或地標。輸入期間只顯示搜尋歷史、本機店家／地標，以及已寫入的地址快取。按 **Enter**、搜尋按鈕或「搜尋「…」」後，才向國土測繪圖資服務雲、TGOS（需金鑰）與 OpenStreetMap／Nominatim 查門牌。MapLibre 模式不使用 Google Geocoding／Places。成功選定的目的地會保存在搜尋列（最多 6 筆，可點選重用或清除）。導航終點為黃色圓點，外圈持續擴散。選定後搜尋列會收起，改顯示確認列。點 **確認** 後進入駕駛畫面。
 
@@ -100,9 +100,9 @@ npm start
 - 底部半透明 Road Information Card
 - Android 直式優先的 Responsive HUD（資訊卡不遮住主要駕駛視野）
 
-未設定 TDX 金鑰時：CCTV 走本地 SNAPSHOT（來自 weather 的 city／freeway JSON），路況走臺南示範線，HUD 顯示「示範路況」。金鑰請放伺服器端 `TDX_CLIENT_ID` / `TDX_CLIENT_SECRET`（不可用 `NEXT_PUBLIC_`），由 `/api/traffic` 伺服器端打 TDX。憑證有效時 HUD 顯示「TDX 即時路況」。live cache 與前端輪詢約 **5 分鐘**；拖曳／縮放地圖不會重打 TDX。token 失敗、timeout、401／429／500 或資料異常時自動 fallback mock，不把密鑰或堆疊傳給瀏覽器。
+未設定 TDX 金鑰時：CCTV 可走本地 SNAPSHOT；路況、事故、施工與停車顯示「資料暫時無法取得」，不會自動改用假資料。金鑰請放伺服器端 `TDX_CLIENT_ID` / `TDX_CLIENT_SECRET`（不可用 `NEXT_PUBLIC_`）。憑證有效時 HUD 顯示「TDX 即時路況」。live cache 與前端輪詢約 **5 分鐘**。
 
-災害示警由 `/api/disasters` 抓 NCDR 民生示警 JSON Atom，再讀各則 CAP 的 `polygon`／`circle` 幾何中心；沒有座標的示警不會用行政區質心臆測位置。可選填伺服器端 `NCDR_ALERT_FEED_URL`。HUD 顯示「NCDR 即時災害」或「示範災害」。live cache 與前端輪詢約 **5 分鐘**；feed 逾時或解析失敗時 fallback mock。
+災害示警由 `/api/disasters` 抓 NCDR 民生示警 JSON Atom，再讀各則 CAP 的 `polygon`／`circle` 幾何中心。可選填伺服器端 `NCDR_ALERT_FEED_URL`。失敗時顯示「資料暫時無法取得」。YouTube 歌單設定見 [`docs/youtube-playlist-oauth-setup.md`](docs/youtube-playlist-oauth-setup.md)。
 
 測速點預設使用警政署在[政府資料開放平臺](https://data.gov.tw/dataset/7320)發布的免金鑰 CSV，因此公開網站可直接顯示。專案內附官方資料快照，來源站逾時時仍可正常載入；執行 `npm run update:speed-enforcement` 可更新快照。若另有 `TGOS_THEME_API_KEY`，會優先使用[內政部主題 API](https://data.tgos.tw/)的「測速執法設置點」（主題 ID `kJqZSMsB`），失敗時自動回到公開資料。環域查詢半徑依縮放層級為 3、6 或 10 公里；查詢結果快取 10 分鐘，公開全臺清單快取 6 小時。
 
@@ -117,20 +117,11 @@ Phase 4 災害說明：[`docs/PHASE-4-DISASTERS.md`](docs/PHASE-4-DISASTERS.md)�
 **Phase 2：CCTV 顯示**  
 已完成 weather 邏輯移植與 Driving HUD。CCTV 的 TDX live token 仍是 stub。
 
-**Phase 3：即時交通（本階段）**  
-TDX 臺南市區 Live + Section + SectionShape，依壅塞級別／時速上色；無憑證或失敗時保留 mock。
+**Phase 5.2：導航體驗（本階段）**  
+路線吸附與平滑跟隨、五秒內偏航重算、50 公尺路口黃卡、住家／公司、亮／暗／自動／衛星、2D／3D、兩段式定位、汽車／機車預覽、事件圖層聯動、周邊停車、YouTube 歌單授權。
 
-**Phase 4：災害資訊（已完成）**  
-NCDR JSON Atom + CAP 取代 mock 積水／封路／強風標記；MapLibre 圖層、點擊詳情、120 秒快取與失敗 fallback。
-
-**Phase 5：路線規劃（部分完成）**  
-已可用地址／地標規劃開車路徑。進階避開壅塞與多點停靠尚未做。
-
-**Phase 6：Turn-by-turn Navigation**  
-依 GPS heading 對齊車頭、逐步轉向指示與語音。
-
-**Phase 7：PWA / Driving Assistant**  
-已可透過 `/install` 連結安裝到桌面（圖示與書籤名稱：智駕地圖NavPilot）。離線底圖快取與車機佈局仍待加強。
+**後續**  
+機車路由供應商、TDX CCTV live、全國停車覆蓋、離線底圖快取。
 
 ## Vercel 部署
 

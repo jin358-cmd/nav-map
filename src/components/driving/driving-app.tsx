@@ -154,7 +154,9 @@ export function DrivingApp() {
   const [followOrientation, setFollowOrientation] =
     useState<FollowOrientation>("heading-up");
   const [followVehicle, setFollowVehicle] = useState(true);
-  const [mapDisplayMode, setMapDisplayMode] = useState<MapDisplayMode>("dark");
+  const [mapDisplayMode, setMapDisplayMode] = useState<MapDisplayMode>(() =>
+    typeof window === "undefined" ? "dark" : readMapDisplayMode(),
+  );
   const [styleMenuOpen, setStyleMenuOpen] = useState(false);
   const [styleRevision, setStyleRevision] = useState(0);
   const [styleHint, setStyleHint] = useState<string | null>(null);
@@ -262,10 +264,6 @@ export function DrivingApp() {
   });
 
   useEffect(() => {
-    setMapDisplayMode(readMapDisplayMode());
-  }, []);
-
-  useEffect(() => {
     if (mapDisplayMode !== "auto") return;
     const timer = window.setTimeout(() => {
       setStyleRevision((value) => value + 1);
@@ -295,19 +293,15 @@ export function DrivingApp() {
     : activeNavigationStep?.cueMeters && activeNavigationStep.cueMeters > 0
       ? activeNavigationStep.cueMeters
       : (maneuver?.distanceMeters ?? activeNavigationStep?.distanceMeters ?? 0);
-  const approachingIntersection = navigating && junctionFocus;
-
-  useEffect(() => {
-    if (!navigating) {
-      setJunctionFocus(false);
-      return;
-    }
-    setJunctionFocus((current) =>
-      current
-        ? distanceToNextMeters <= JUNCTION_FOCUS_EXIT_METERS
-        : distanceToNextMeters <= JUNCTION_FOCUS_ENTER_METERS,
-    );
-  }, [distanceToNextMeters, navigating]);
+  const nextJunctionFocus = navigating
+    ? junctionFocus
+      ? distanceToNextMeters <= JUNCTION_FOCUS_EXIT_METERS
+      : distanceToNextMeters <= JUNCTION_FOCUS_ENTER_METERS
+    : false;
+  if (nextJunctionFocus !== junctionFocus) {
+    setJunctionFocus(nextJunctionFocus);
+  }
+  const approachingIntersection = navigating && nextJunctionFocus;
 
   useNavigationVoice({
     enabled: voiceEnabled,
@@ -712,7 +706,6 @@ export function DrivingApp() {
     navigationTrackerRef.current = null;
     setNavigationProgress(null);
     setDisplayVehicle(null);
-    setJunctionFocus(false);
     setFollowVehicle(false);
     setFitRouteKey((value) => value + 1);
   }, []);
@@ -1083,7 +1076,7 @@ export function DrivingApp() {
               offRoute={navigationProgress?.offRoute ?? false}
               rerouting={rerouting}
               reroutePending={reroutePending}
-              junctionFocus={junctionFocus}
+              junctionFocus={nextJunctionFocus}
               voiceEnabled={voiceEnabled}
               onToggleVoice={() => setVoiceEnabled((value) => !value)}
             />

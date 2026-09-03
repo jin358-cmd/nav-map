@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { YoutubePlaylist } from "@/lib/constants";
 import { GOOGLE_CLIENT_ID } from "@/lib/google-identity";
 import {
   fetchYoutubeLibrary,
@@ -8,22 +9,20 @@ import {
   type YoutubeLibraryResult,
   type YoutubeLibraryStatus,
 } from "@/lib/youtube-library";
-import type { YoutubePlaylist } from "@/lib/constants";
 
 export function useYoutubeLibrary(
   accessToken: string | null,
   signedIn: boolean,
 ) {
-  const [loaded, setLoaded] = useState<YoutubeLibraryResult | null>(null);
+  const [loaded, setLoaded] = useState<(YoutubeLibraryResult & { token: string }) | null>(
+    null,
+  );
 
   useEffect(() => {
-    if (!GOOGLE_CLIENT_ID || !accessToken) {
-      setLoaded(null);
-      return;
-    }
+    if (!GOOGLE_CLIENT_ID || !accessToken) return;
     let cancelled = false;
     void fetchYoutubeLibrary(accessToken).then((result) => {
-      if (!cancelled) setLoaded(result);
+      if (!cancelled) setLoaded({ ...result, token: accessToken });
     });
     return () => {
       cancelled = true;
@@ -39,7 +38,7 @@ export function useYoutubeLibrary(
   if (!accessToken) {
     return empty("unauthorized");
   }
-  if (!loaded || loaded.status === "loading") {
+  if (!loaded || loaded.token !== accessToken) {
     return empty("loading");
   }
   return {

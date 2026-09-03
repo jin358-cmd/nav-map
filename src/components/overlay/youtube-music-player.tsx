@@ -330,7 +330,7 @@ export function YouTubeMusicPlayer({
                 >
                   {libraryStatus === "unconfigured"
                     ? "尚未設定，請先完成 Google OAuth"
-                    : libraryStatus === "idle"
+                    : !signedIn || libraryStatus === "idle"
                       ? "先登入 Google，再授權 YouTube 歌單"
                       : libraryStatus === "unauthorized" || libraryStatus === "expired" || libraryStatus === "insufficient"
                         ? "授權 YouTube 播放清單"
