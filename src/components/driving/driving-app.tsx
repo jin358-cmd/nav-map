@@ -133,8 +133,28 @@ const DEFAULT_LAYER_VISIBILITY: LayerKindVisibility = {
   disaster: true,
 };
 
+function MapChunkError() {
+  return (
+    <div className="absolute inset-0 bg-[#0b0d11]">
+      <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center text-sm text-zinc-400">
+        <p>地圖模組載入失敗，請重新整理。</p>
+        <button
+          type="button"
+          className="rounded-full border border-white/15 bg-white/8 px-4 py-1.5 text-zinc-100"
+          onClick={() => window.location.reload()}
+        >
+          重新載入地圖
+        </button>
+      </div>
+    </div>
+  );
+}
+
 const DrivingMap = dynamic(
-  () => import("@/components/map/driving-map").then((mod) => mod.DrivingMap),
+  () =>
+    import("@/components/map/driving-map")
+      .then((mod) => mod.DrivingMap)
+      .catch(() => MapChunkError),
   {
     ssr: false,
     loading: () => (

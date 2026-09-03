@@ -1,4 +1,4 @@
-const CACHE = "navpilot-shell-v1";
+const CACHE = "navpilot-shell-v2";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -23,7 +23,18 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith("/api/")) return;
+  if (url.pathname.startsWith("/_next/")) return;
+  if (url.pathname.startsWith("/maplibre/")) return;
+  if (url.pathname.startsWith("/__nextjs")) return;
+
+  if (event.request.mode === "navigate") {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match("/").then((hit) => hit || Response.error())),
+    );
+    return;
+  }
+
   event.respondWith(
-    fetch(event.request).catch(() => caches.match(event.request).then((hit) => hit || caches.match("/"))),
+    fetch(event.request).catch(() => caches.match(event.request).then((hit) => hit || Response.error())),
   );
 });
