@@ -66,7 +66,7 @@ export function NextIntersectionHud({
       className={cn(
         "pointer-events-auto flex items-center text-white shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl",
         compact
-          ? "w-fit max-w-[24rem] origin-top-left scale-[2.5] gap-2 rounded-xl border border-cyan-300/25 bg-black/78 px-2 py-1.5"
+          ? "w-fit max-w-[16rem] gap-2 rounded-xl border border-cyan-300/25 bg-black/78 px-2 py-1.5"
           : "w-full max-w-2xl gap-3 rounded-2xl border border-cyan-300/25 bg-black/75 px-3 py-2.5 sm:gap-4 sm:px-5 sm:py-3",
       )}
     >
