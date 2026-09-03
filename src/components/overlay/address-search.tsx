@@ -375,6 +375,18 @@ export function AddressSearch({
                       <span className="block truncate text-[11px] text-zinc-500">
                         {hit.address}
                       </span>
+                      {hit.matchKind ? (
+                        <span
+                          className={cn(
+                            "mt-0.5 inline-block rounded-full px-1.5 py-px text-[10px]",
+                            hit.exactHouseNumber
+                              ? "bg-cyan-400/15 text-cyan-200"
+                              : "bg-white/8 text-zinc-400",
+                          )}
+                        >
+                          {matchKindLabel(hit.matchKind)}
+                        </span>
+                      ) : null}
                     </span>
                   </button>
                   <button

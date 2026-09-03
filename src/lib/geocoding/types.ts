@@ -2,10 +2,13 @@ export type GeocodeSource = "cache" | "tgos" | "nlsc" | "osm" | "google" | "loca
 
 export type GeocodeMatchKind =
   | "exact-house"
+  | "interpolated"
   | "approximate"
   | "lane-center"
   | "road-center"
   | "landmark";
+
+export type AddressAccuracy = GeocodeMatchKind;
 
 export type GeocodeResult = {
   id: string;
@@ -38,7 +41,12 @@ export type GeocodeProvider = {
   ): Promise<GeocodeResult[]>;
 };
 
-export type GeocodeProviderStatus = "ok" | "empty" | "disabled" | "error";
+export type GeocodeProviderStatus =
+  | "ok"
+  | "empty"
+  | "disabled"
+  | "error"
+  | "disabled_by_map_renderer_policy";
 
 export type GeocodeResponse = {
   query: string;

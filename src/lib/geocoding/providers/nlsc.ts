@@ -50,9 +50,11 @@ export function createNlscProvider(
             confidence:
               matchKind === "exact-house"
                 ? 0.94
-                : item.kind === "ADDRESS"
-                  ? 0.88
-                  : 0.64,
+                : matchKind === "interpolated"
+                  ? 0.82
+                  : item.kind === "ADDRESS"
+                    ? 0.88
+                    : 0.64,
             exactHouseNumber: matchKind === "exact-house",
             matchKind,
           } satisfies GeocodeResult;

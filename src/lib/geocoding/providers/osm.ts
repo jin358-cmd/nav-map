@@ -102,6 +102,8 @@ export function createOsmProvider(
         if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
         const label = item.name || item.display_name.split(",")[0] || query;
         const matchKind = classifyMatchKind(parsed, item.display_name, "approximate");
+        const osmKind =
+          matchKind === "exact-house" ? "interpolated" : matchKind;
         results.push({
           id: `osm-${item.place_id}`,
           label,
@@ -109,9 +111,9 @@ export function createOsmProvider(
           latitude: lat,
           longitude: lng,
           source: "osm",
-          confidence: matchKind === "road-center" ? 0.55 : 0.48,
+          confidence: osmKind === "road-center" ? 0.55 : 0.48,
           exactHouseNumber: false,
-          matchKind: matchKind === "exact-house" ? "approximate" : matchKind,
+          matchKind: osmKind,
         });
       }
 
@@ -131,7 +133,7 @@ export function createOsmProvider(
           source: "osm",
           confidence: 0.46,
           exactHouseNumber: false,
-          matchKind: matchKind === "exact-house" ? "approximate" : matchKind,
+          matchKind: matchKind === "exact-house" ? "interpolated" : matchKind,
         });
       }
       return results;

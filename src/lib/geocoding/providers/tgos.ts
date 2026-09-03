@@ -29,7 +29,12 @@ export function createTgosProvider(
       try {
         const rows = await searchHouseholdAddresses(query);
         return rows.map((item, index) => {
-          const matchKind = classifyMatchKind(parsed, item.fullAddress, "approximate");
+          const matchKind = classifyMatchKind(
+            parsed,
+            item.fullAddress,
+            "approximate",
+            item.matchType,
+          );
           return {
             id: `tgos-${index}-${item.location.lng.toFixed(5)}-${item.location.lat.toFixed(5)}`,
             label: item.fullAddress,
@@ -37,7 +42,12 @@ export function createTgosProvider(
             latitude: item.location.lat,
             longitude: item.location.lng,
             source: "tgos",
-            confidence: matchKind === "exact-house" ? 0.96 : 0.72,
+            confidence:
+              matchKind === "exact-house"
+                ? 0.96
+                : matchKind === "interpolated"
+                  ? 0.8
+                  : 0.72,
             exactHouseNumber: matchKind === "exact-house",
             matchKind,
           } satisfies GeocodeResult;

@@ -1,4 +1,5 @@
 import { DEFAULT_GEOCODE_CITY } from "@/lib/taiwan-address";
+import type { GeocodeMatchKind } from "@/lib/geocoding/types";
 
 export type TaiwanAddressParts = {
   city: string;
@@ -28,7 +29,16 @@ export type NormalizedTaiwanAddress = {
 
 export type RelaxedAddressQuery = {
   query: string;
-  matchKind: "exact-house" | "approximate" | "lane-center" | "road-center" | "landmark";
+  matchKind: GeocodeMatchKind;
+};
+
+export const ACCURACY_LABELS: Record<GeocodeMatchKind, string> = {
+  "exact-house": "精確門牌",
+  interpolated: "推估門牌位置",
+  approximate: "約略位置",
+  "lane-center": "巷弄位置",
+  "road-center": "道路位置",
+  landmark: "地標位置",
 };
 
 const FULLWIDTH_DIGITS = /[０-９]/g;
@@ -194,11 +204,25 @@ export function relaxedAddressQueries(
   return rows;
 }
 
+export function isInterpolationHint(value: string) {
+  return /內插|interpolation|interpolat|range\s*interpol/i.test(value);
+}
+
+function extractHouseToken(value: string) {
+  const match = comparableTaiwanText(value).match(/(\d+)(?:之(\d+))?號/u);
+  if (!match) return null;
+  return match[2] ? `${match[1]}之${match[2]}號` : `${match[1]}號`;
+}
+
 export function classifyMatchKind(
   query: NormalizedTaiwanAddress,
   candidateLabel: string,
-  fallback: RelaxedAddressQuery["matchKind"] = "approximate",
-): RelaxedAddressQuery["matchKind"] {
+  fallback: GeocodeMatchKind = "approximate",
+  providerHint = "",
+): GeocodeMatchKind {
+  if (providerHint && isInterpolationHint(providerHint)) {
+    return "interpolated";
+  }
   const hay = comparableTaiwanText(candidateLabel);
   const house = houseToken(query.parts);
   if (house && hay.includes(comparableTaiwanText(house))) {
@@ -208,7 +232,17 @@ export function classifyMatchKind(
     ) {
       return "exact-house";
     }
-    return "approximate";
+    return "interpolated";
+  }
+  const candidateHouse = extractHouseToken(candidateLabel);
+  if (
+    house &&
+    candidateHouse &&
+    comparableTaiwanText(candidateHouse) !== comparableTaiwanText(house) &&
+    query.parts.road &&
+    hay.includes(comparableTaiwanText(query.parts.road))
+  ) {
+    return "interpolated";
   }
   if (query.parts.alley && hay.includes(query.parts.alley)) return "lane-center";
   if (query.parts.lane && hay.includes(query.parts.lane)) return "lane-center";
@@ -218,12 +252,8 @@ export function classifyMatchKind(
   return fallback;
 }
 
-export function matchKindLabel(kind: RelaxedAddressQuery["matchKind"]) {
-  if (kind === "exact-house") return "精確門牌";
-  if (kind === "lane-center") return "巷弄中心點";
-  if (kind === "road-center") return "道路中心點";
-  if (kind === "landmark") return "地標位置";
-  return "約略位置";
+export function matchKindLabel(kind: GeocodeMatchKind) {
+  return ACCURACY_LABELS[kind] ?? ACCURACY_LABELS.approximate;
 }
 
 export function queryHash(normalizedQuery: string, biasKey = "") {

@@ -59,6 +59,9 @@ Vercel：
 禁止把 Places Key 當成 OAuth Client ID。  
 禁止把 `GOOGLE_PLACES_API_KEY` 設成 `NEXT_PUBLIC_`。
 
+**MapLibre 模式不使用 Google Geocoding／Places。**
+`NEXT_PUBLIC_GOOGLE_CLIENT_ID` 只負責登入、Drive 書籤與 YouTube 歌單。即使設定了 `GOOGLE_PLACES_API_KEY`，地圖搜尋鏈仍標為 `disabled_by_map_renderer_policy`，不會把 Google 地理結果畫上 MapLibre，也不會寫入共用地址快取。未來僅在採用合規呈現方案後重新評估。
+
 ## 5. 未設定時的行為
 
 未填 Client ID 時地圖仍可使用。底部「Google 登入」會顯示無法使用，點擊只會提示「Google 登入尚未完成設定」，不會出現 `.env.local` 或變數名稱。

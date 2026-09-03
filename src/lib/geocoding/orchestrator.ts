@@ -11,7 +11,6 @@ import {
   readAddressCache,
   writeAddressCache,
 } from "@/lib/geocoding/providers/cache";
-import { createGoogleProvider, googlePlacesEnabled } from "@/lib/geocoding/providers/google";
 import { createNlscProvider } from "@/lib/geocoding/providers/nlsc";
 import { createOsmProvider } from "@/lib/geocoding/providers/osm";
 import { createTgosProvider, tgosEnabled } from "@/lib/geocoding/providers/tgos";
@@ -127,17 +126,19 @@ function sortResults(
   const kindRank = preferLane
     ? {
         "exact-house": 0,
-        "lane-center": 1,
-        approximate: 2,
-        "road-center": 3,
-        landmark: 4,
+        interpolated: 1,
+        "lane-center": 2,
+        approximate: 3,
+        "road-center": 4,
+        landmark: 5,
       }
     : {
         "exact-house": 0,
-        approximate: 1,
-        "lane-center": 2,
-        "road-center": 3,
-        landmark: 4,
+        interpolated: 1,
+        approximate: 2,
+        "lane-center": 3,
+        "road-center": 4,
+        landmark: 5,
       };
   const sourceRank: Record<GeocodeSource, number> = {
     cache: 0,
@@ -209,7 +210,7 @@ function skippedRemoteStatuses(): Partial<Record<GeocodeSource, GeocodeProviderS
     tgos: "disabled",
     nlsc: "disabled",
     osm: "disabled",
-    google: "disabled",
+    google: "disabled_by_map_renderer_policy",
   };
 }
 
@@ -238,7 +239,7 @@ export async function searchGeocode(
         }
       : {
           tgos: tgosEnabled() ? "empty" : "disabled",
-          google: googlePlacesEnabled() ? "empty" : "disabled",
+          google: "disabled_by_map_renderer_policy",
           nlsc: "empty",
           osm: "empty",
           cache: "empty",
@@ -289,7 +290,6 @@ export async function searchGeocode(
   const tgos = createTgosProvider(parsed);
   const nlsc = createNlscProvider(parsed);
   const osm = createOsmProvider(parsed);
-  const google = createGoogleProvider(parsed);
   const collected: GeocodeResult[] = [...locals];
   const deadline = Date.now() + OVERALL_TIMEOUT_MS;
 
@@ -316,16 +316,6 @@ export async function searchGeocode(
     collected.push(...osmRows);
   }
 
-  const needGoogle =
-    google.enabled &&
-    !collected.some((item) => item.exactHouseNumber) &&
-    Date.now() < deadline &&
-    !options.signal?.aborted;
-  if (needGoogle) {
-    const googleQuery = relaxations[0]?.query ?? parsed.searchAddress;
-    collected.push(...(await runProvider(google, googleQuery, options, statuses)));
-  }
-
   const merged = applyLaneRoadLabels(
     sortResults(
       withDistance(mergeResults(collected), origin),
@@ -337,7 +327,10 @@ export async function searchGeocode(
   ).slice(0, SEARCH_RESULT_LIMIT);
 
   if (merged.length) {
-    void writeAddressCache(query, parsed.normalizedAddress, merged, key);
+    const cacheable = merged.filter((item) => item.source !== "google");
+    if (cacheable.length) {
+      void writeAddressCache(query, parsed.normalizedAddress, cacheable, key);
+    }
   }
 
   return {

@@ -161,14 +161,15 @@ export async function writeAddressCache(
   results: GeocodeResult[],
   biasKey = "",
 ) {
-  if (!results.length) return;
+  const cacheable = results.filter((item) => item.source !== "google");
+  if (!cacheable.length) return;
   const hash = queryHash(normalizedQuery, biasKey);
   memory.set(hash, {
-    results,
-    expiresAt: Date.now() + ttlFor(results),
+    results: cacheable,
+    expiresAt: Date.now() + ttlFor(cacheable),
     hitCount: 0,
   });
-  await supabasePut(hash, originalQuery, normalizedQuery, results);
+  await supabasePut(hash, originalQuery, normalizedQuery, cacheable);
 }
 
 export async function rememberAddressCacheHit(

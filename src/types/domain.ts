@@ -193,10 +193,13 @@ export type RouteStep = {
 
 export type GeocodeMatchKind =
   | "exact-house"
+  | "interpolated"
   | "approximate"
   | "lane-center"
   | "road-center"
   | "landmark";
+
+export type AddressAccuracy = GeocodeMatchKind;
 
 export type GeocodeHit = {
   id: string;
