@@ -4,7 +4,7 @@ export function createVehicleMarkerElement(): HTMLDivElement {
   root.innerHTML = `
     <div class="vehicle-marker__halo"></div>
     <div class="vehicle-marker__triangle" aria-hidden="true">
-      <svg viewBox="0 0 24 28" width="16" height="19">
+      <svg viewBox="0 0 24 28" width="32" height="38">
         <path d="M12 2 L22 25 L12 19 L2 25 Z" fill="#facc15" stroke="#fef08a" stroke-width="1.8" stroke-linejoin="round"/>
       </svg>
     </div>
