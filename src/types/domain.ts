@@ -241,6 +241,8 @@ export type RouteDestination = {
   location: LngLat;
 };
 
+export type TravelMode = "car" | "motorcycle";
+
 export type RoutePlan = {
   coordinates: [number, number][];
   distanceMeters: number;
@@ -248,4 +250,5 @@ export type RoutePlan = {
   destination: RouteDestination;
   maneuver: NavigationManeuver;
   steps: RouteStep[];
+  travelMode: TravelMode;
 };

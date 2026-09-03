@@ -101,6 +101,7 @@ import type {
   RouteDestination,
   RouteStep,
   SavedPlaceType,
+  TravelMode,
   VehiclePose,
 } from "@/types/domain";
 
@@ -153,6 +154,15 @@ export function DrivingApp() {
   const [fitRouteKey, setFitRouteKey] = useState(0);
   const [routing, setRouting] = useState(false);
   const [routeError, setRouteError] = useState<string | null>(null);
+  const [travelMode, setTravelMode] = useState<TravelMode>("car");
+  const [routeDurationSeconds, setRouteDurationSeconds] = useState<number | null>(
+    null,
+  );
+  const [routeDistanceMeters, setRouteDistanceMeters] = useState<number | null>(
+    null,
+  );
+  const [motorcycleUnsupported, setMotorcycleUnsupported] = useState(false);
+  const lastRouteHitRef = useRef<GeocodeHit | null>(null);
   const [baseIntel, setBaseIntel] = useState<RoadIntelItem[]>([]);
   const [selectedCctv, setSelectedCctv] = useState<CctvCamera | null>(null);
   const [selectedDisaster, setSelectedDisaster] = useState<DisasterAlert | null>(
@@ -460,8 +470,9 @@ export function DrivingApp() {
     [cameraById, gpsStatus, vehicle.lat, vehicle.lng, viewport?.center],
   );
 
-  const applyRoute = useCallback(async (hit: GeocodeHit) => {
+  const applyRoute = useCallback(async (hit: GeocodeHit, mode = travelMode) => {
     rememberAddress(hit);
+    lastRouteHitRef.current = hit;
     setRouting(true);
     setRouteError(null);
     setSelectedCctv(null);
@@ -470,22 +481,32 @@ export function DrivingApp() {
       const plan = await planDrivingRoute(
         { lng: vehicle.lng, lat: vehicle.lat },
         hit,
+        undefined,
+        mode,
       );
       setRoute(plan.coordinates);
       setDestination(plan.destination);
       setManeuver(plan.maneuver);
       setRouteSteps(plan.steps ?? []);
+      setRouteDurationSeconds(plan.durationSeconds);
+      setRouteDistanceMeters(plan.distanceMeters);
+      setTravelMode(plan.travelMode);
+      setMotorcycleUnsupported(false);
       setFollowVehicle(false);
       setNavigating(false);
       navigationTrackerRef.current = null;
       setNavigationProgress(null);
       setFitRouteKey((value) => value + 1);
     } catch (error) {
-      setRouteError(error instanceof Error ? error.message : "路線規劃失敗");
+      const message = error instanceof Error ? error.message : "路線規劃失敗";
+      setRouteError(message);
+      if (mode === "motorcycle" && message.includes("NOT CONFIGURED")) {
+        setMotorcycleUnsupported(true);
+      }
     } finally {
       setRouting(false);
     }
-  }, [vehicle.lat, vehicle.lng]);
+  }, [travelMode, vehicle.lat, vehicle.lng]);
 
   const handleLongPress = useCallback(
     async (location: { lng: number; lat: number }) => {
@@ -634,12 +655,15 @@ export function DrivingApp() {
           location: dest.location,
         },
         controller.signal,
+        travelMode,
       );
       if (generation !== rerouteGenerationRef.current) return;
       setRoute(plan.coordinates);
       setDestination(plan.destination);
       setManeuver(plan.maneuver);
       setRouteSteps(plan.steps ?? []);
+      setRouteDurationSeconds(plan.durationSeconds);
+      setRouteDistanceMeters(plan.distanceMeters);
       navigationTrackerRef.current = null;
       setNavigationProgress(null);
       lastRerouteSuccessAtRef.current = Date.now();
@@ -655,7 +679,7 @@ export function DrivingApp() {
         setReroutePending(false);
       }
     }
-  }, []);
+  }, [travelMode]);
 
   useEffect(() => {
     if (!navigating || !navigationProgress?.offRoute) return;
@@ -856,7 +880,16 @@ export function DrivingApp() {
             <RouteConfirmBar
               destination={destination}
               maneuver={maneuver}
-              rerouting={rerouting}
+              travelMode={travelMode}
+              durationSeconds={routeDurationSeconds}
+              distanceMeters={routeDistanceMeters}
+              rerouting={routing || rerouting}
+              motorcycleUnsupported={motorcycleUnsupported}
+              onTravelMode={(mode) => {
+                setTravelMode(mode);
+                const hit = lastRouteHitRef.current;
+                if (hit) void applyRoute(hit, mode);
+              }}
               onStartNav={startNavigation}
               onClear={clearRoute}
             />

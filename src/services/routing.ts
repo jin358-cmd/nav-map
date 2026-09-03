@@ -1,5 +1,5 @@
 import type { GeocodeLookupMode } from "@/lib/geocoding/types";
-import type { GeocodeHit, LngLat, RoutePlan } from "@/types/domain";
+import type { GeocodeHit, LngLat, RoutePlan, TravelMode } from "@/types/domain";
 
 export async function reversePlace(location: LngLat): Promise<GeocodeHit> {
   const params = new URLSearchParams({
@@ -94,6 +94,7 @@ export async function planDrivingRoute(
   from: LngLat,
   to: GeocodeHit,
   signal?: AbortSignal,
+  mode: TravelMode = "car",
 ): Promise<RoutePlan> {
   const params = new URLSearchParams({
     fromLng: String(from.lng),
@@ -101,11 +102,18 @@ export async function planDrivingRoute(
     toLng: String(to.location.lng),
     toLat: String(to.location.lat),
     label: to.name,
+    mode,
   });
   const response = await fetch(`/api/directions?${params.toString()}`, {
     signal,
   });
-  const data = (await response.json()) as RoutePlan & { error?: string };
+  const data = (await response.json()) as RoutePlan & {
+    error?: string;
+    code?: string;
+  };
+  if (data.code === "NOT_CONFIGURED" || response.status === 501) {
+    throw new Error("機車路線尚未設定（NOT CONFIGURED），目前供應商不支援機車模式。");
+  }
   if (!response.ok || !data.coordinates?.length) {
     throw new Error(data.error || "路線規劃失敗");
   }
@@ -116,5 +124,6 @@ export async function planDrivingRoute(
       ...data.destination,
       address: to.address,
     },
+    travelMode: data.travelMode ?? mode,
   };
 }
