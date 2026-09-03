@@ -1,7 +1,7 @@
 # YouTube／YouTube Music 播放清單 OAuth 設定
 
-NavPilot 延用 Phase 5.1 的 **Google Identity Services** token client，不另外做第二套登入。  
-Google 帳號登入（書籤）與 YouTube 播放清單授權是**分開的 scope**。  
+NavPilot 延用 Phase 5.1 的 **Google Identity Services** token client，不另外做第二套登入。
+Google 帳號登入（書籤）與 YouTube 播放清單授權是**分開的 scope**。
 禁止把 Client Secret、Places Key 或 Service Role Key 放到前端。
 
 ## 1. Google Cloud OAuth
@@ -13,7 +13,7 @@ Google 帳號登入（書籤）與 YouTube 播放清單授權是**分開的 scop
    - **Google Drive API**（書籤 appData）
 4. 「API 和服務 → 憑證 → 建立憑證 → OAuth 用戶端 ID」。
 5. Application type 選 **Web application**。
-6. 只把 **Client ID** 填進 `NEXT_PUBLIC_GOOGLE_CLIENT_ID`。  
+6. 只把 **Client ID** 填進 `NEXT_PUBLIC_GOOGLE_CLIENT_ID`。
    **Client Secret 不得出現在前端、不得加 `NEXT_PUBLIC_`。**
 
 ## 2. Authorized JavaScript Origins
@@ -34,7 +34,7 @@ Production：
 
 - 正式 HTTPS 網域，例如 `https://your-domain.com`
 
-授權重新導向 URI 可留空（本專案使用 popup token client，不走 redirect）。  
+授權重新導向 URI 可留空（本專案使用 popup token client，不走 redirect）。
 不要在 iframe 或嵌入播放器裡做 Google 登入。
 
 ## 3. 所需 scope
@@ -44,10 +44,10 @@ Production：
 | Google 登入＋Drive 書籤 | `openid email profile` + `https://www.googleapis.com/auth/drive.appdata` | 點底部「Google 登入」 |
 | YouTube 播放清單唯讀 | `https://www.googleapis.com/auth/youtube.readonly` | 第一次同步歌單，或權限不足／過期時 |
 
-已登入且 session 仍有效、且已有 YouTube scope 時，會重用現有權杖。  
+已登入且 session 仍有效、且已有 YouTube scope 時，會重用現有權杖。
 第一次使用或權限不足時，必須完成 Google 同意畫面，不得略過。
 
-YouTube Data API **不能**提供私人 YouTube Music 曲庫或付費音樂中繼資料。  
+YouTube Data API **不能**提供私人 YouTube Music 曲庫或付費音樂中繼資料。
 App 只會列出 API 回傳的可讀取播放清單。
 
 ## 4. Vercel 環境變數
