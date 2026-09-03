@@ -232,7 +232,10 @@ export function DrivingApp() {
     bottom: 130,
   });
   const googleAccount = useGoogleAccount();
-  const youtubeLibrary = useYoutubeLibrary(googleAccount.youtubeAccessToken);
+  const youtubeLibrary = useYoutubeLibrary(
+    googleAccount.youtubeAccessToken,
+    Boolean(googleAccount.account),
+  );
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [rerouting, setRerouting] = useState(false);
   const [reroutePending, setReroutePending] = useState(false);
@@ -1251,6 +1254,7 @@ export function DrivingApp() {
                 : YOUTUBE_PLAYLISTS
             }
             libraryStatus={youtubeLibrary.status}
+            libraryMessage={youtubeLibrary.message}
             signedIn={Boolean(googleAccount.account)}
             onClose={() => {
               setMusicMode("off");

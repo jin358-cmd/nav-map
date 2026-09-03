@@ -4,17 +4,24 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "
 import { pushDriveFavorites, syncDriveFavorites } from "@/lib/drive-bookmarks";
 import { getFavoritesSnapshot, subscribeFavorites } from "@/lib/favorites";
 import {
+  GOOGLE_ACCESS_EVENT,
   GOOGLE_ACCOUNT_EVENT,
   GOOGLE_CLIENT_ID,
   GOOGLE_LOGIN_SCOPES,
+  YOUTUBE_READONLY_SCOPE,
+  YOUTUBE_SCOPES,
   YOUTUBE_TOKEN_EVENT,
   fetchGoogleProfile,
+  hasScope,
   loadGoogleIdentityScript,
+  readGoogleAccess,
   readStoredAccount,
   readYoutubeAccess,
+  writeGoogleAccess,
   writeStoredAccount,
   writeYoutubeAccess,
   type GoogleAccount,
+  type ScopedAccess,
 } from "@/lib/google-identity";
 
 function subscribeAccount(onChange: () => void) {
@@ -22,21 +29,35 @@ function subscribeAccount(onChange: () => void) {
   return () => window.removeEventListener(GOOGLE_ACCOUNT_EVENT, onChange);
 }
 
+function subscribeGoogleAccess(onChange: () => void) {
+  window.addEventListener(GOOGLE_ACCESS_EVENT, onChange);
+  return () => window.removeEventListener(GOOGLE_ACCESS_EVENT, onChange);
+}
+
 function subscribeYoutube(onChange: () => void) {
   window.addEventListener(YOUTUBE_TOKEN_EVENT, onChange);
   return () => window.removeEventListener(YOUTUBE_TOKEN_EVENT, onChange);
 }
 
-function driveToken() {
-  return readYoutubeAccess()?.accessToken ?? null;
-}
-
 let warnedMissingClientId = false;
+
+export type GoogleTokenReason =
+  | "ok"
+  | "cancel"
+  | "error"
+  | "unconfigured"
+  | "origin"
+  | "popup";
 
 export function useGoogleAccount() {
   const account = useSyncExternalStore(
     subscribeAccount,
     readStoredAccount,
+    () => null,
+  );
+  const googleAccess = useSyncExternalStore(
+    subscribeGoogleAccess,
+    readGoogleAccess,
     () => null,
   );
   const youtubeAccess = useSyncExternalStore(
@@ -82,37 +103,62 @@ export function useGoogleAccount() {
     writeStoredAccount(next);
   }, []);
 
-  const requestGoogleAccess = useCallback((prompt: "" | "consent" = "consent") => {
-    if (!GOOGLE_CLIENT_ID) return Promise.resolve({ token: null, reason: "unconfigured" as const });
+  const requestGoogleAccess = useCallback((
+    scope: string,
+    prompt: "" | "consent" | "select_account" = "consent",
+  ) => {
+    if (!GOOGLE_CLIENT_ID) {
+      return Promise.resolve({ token: null, scopes: "", reason: "unconfigured" as const });
+    }
     return loadGoogleIdentityScript().then(
       () =>
-        new Promise<{ token: string | null; reason: "ok" | "cancel" | "error" }>((resolve) => {
+        new Promise<{
+          token: string | null;
+          scopes: string;
+          reason: GoogleTokenReason;
+        }>((resolve) => {
           const oauth = window.google?.accounts?.oauth2;
           if (!oauth) {
-            resolve({ token: null, reason: "error" });
+            resolve({ token: null, scopes: "", reason: "error" });
             return;
           }
           const client = oauth.initTokenClient({
             client_id: GOOGLE_CLIENT_ID,
-            scope: GOOGLE_LOGIN_SCOPES,
+            scope,
+            include_granted_scopes: true,
+            hint: accountRef.current?.email,
             callback: (response) => {
               if (!response.access_token) {
-                resolve({ token: null, reason: "error" });
+                resolve({ token: null, scopes: "", reason: "error" });
                 return;
               }
-              writeYoutubeAccess({
+              const scopes = response.scope || scope;
+              const access: ScopedAccess = {
                 accessToken: response.access_token,
                 exp: Date.now() + (response.expires_in ?? 3600) * 1000,
-              });
-              resolve({ token: response.access_token, reason: "ok" });
+                scopes,
+              };
+              writeGoogleAccess(access);
+              if (hasScope(scopes, YOUTUBE_READONLY_SCOPE)) {
+                writeYoutubeAccess(access);
+              }
+              resolve({ token: response.access_token, scopes, reason: "ok" });
             },
             error_callback: (error) => {
-              const type = error.type ?? "";
+              const type = `${error.type ?? ""} ${error.message ?? ""}`.toLowerCase();
               if (type.includes("popup_closed") || type.includes("popup_failed")) {
-                resolve({ token: null, reason: "cancel" });
+                resolve({ token: null, scopes: "", reason: "popup" });
                 return;
               }
-              resolve({ token: null, reason: "error" });
+              if (type.includes("origin")) {
+                resolve({ token: null, scopes: "", reason: "origin" });
+                return;
+              }
+              if (type.includes("popup") || type.includes("closed")) {
+                resolve({ token: null, scopes: "", reason: "cancel" });
+                return;
+              }
+              resolve({ token: null, scopes: "", reason: "error" });
             },
           });
           client.requestAccessToken({ prompt });
@@ -131,10 +177,11 @@ export function useGoogleAccount() {
     }
     setBusy(true);
     setHint(null);
-    void requestGoogleAccess("consent")
+    void requestGoogleAccess(GOOGLE_LOGIN_SCOPES, "consent")
       .then(async ({ token, reason }) => {
         if (!token) {
-          if (reason === "cancel") setHint("已取消登入。");
+          if (reason === "cancel" || reason === "popup") setHint("已取消登入。");
+          else if (reason === "origin") setHint("登入網域尚未加入 Google Authorized Origins。");
           else setHint("登入沒有完成，請再試一次。");
           return;
         }
@@ -159,15 +206,27 @@ export function useGoogleAccount() {
       return null;
     }
     if (!accountRef.current) {
-      setHint("請先登入 Google 帳號。");
+      setHint("請先登入 Google 帳號，再授權 YouTube 歌單。");
       signIn();
       return null;
     }
+    const existing = readYoutubeAccess();
+    if (existing?.accessToken) return existing.accessToken;
     setBusy(true);
-    const { token, reason } = await requestGoogleAccess(readYoutubeAccess() ? "" : "consent");
+    const { token, scopes, reason } = await requestGoogleAccess(
+      YOUTUBE_SCOPES,
+      "consent",
+    );
     setBusy(false);
     if (!token) {
-      setHint(reason === "cancel" ? "已取消授權。" : "無法同步音樂歌單，請再試一次。");
+      if (reason === "cancel" || reason === "popup") setHint("已取消 YouTube 授權。");
+      else if (reason === "origin") setHint("登入網域尚未加入 Google Authorized Origins。");
+      else setHint("無法取得 YouTube 授權，請再試一次。");
+      return null;
+    }
+    if (!hasScope(scopes, YOUTUBE_READONLY_SCOPE)) {
+      setHint("這個帳號尚未授權 YouTube 播放清單權限。");
+      writeYoutubeAccess(null);
       return null;
     }
     setHint(null);
@@ -178,7 +237,7 @@ export function useGoogleAccount() {
     if (!account) return;
     let timer = 0;
     const push = () => {
-      const token = driveToken();
+      const token = readGoogleAccess()?.accessToken ?? null;
       if (!token || !accountRef.current) return;
       window.clearTimeout(timer);
       timer = window.setTimeout(() => {
@@ -193,7 +252,7 @@ export function useGoogleAccount() {
       window.clearTimeout(timer);
       unsubscribe();
     };
-  }, [account]);
+  }, [account, googleAccess]);
 
   const signOut = useCallback(() => {
     const current = accountRef.current;
@@ -205,8 +264,15 @@ export function useGoogleAccount() {
         /* revoke 失敗仍清本機登入 */
       }
     }
+    const google = readGoogleAccess();
     const youtube = readYoutubeAccess();
-    if (youtube?.accessToken && window.google?.accounts?.oauth2) {
+    if (google?.accessToken && window.google?.accounts?.oauth2) {
+      try {
+        window.google.accounts.oauth2.revoke(google.accessToken, () => undefined);
+      } catch {
+        /* revoke 失敗仍清本機權杖 */
+      }
+    } else if (youtube?.accessToken && window.google?.accounts?.oauth2) {
       try {
         window.google.accounts.oauth2.revoke(youtube.accessToken, () => undefined);
       } catch {
@@ -214,6 +280,7 @@ export function useGoogleAccount() {
       }
     }
     writeYoutubeAccess(null);
+    writeGoogleAccess(null);
     applyAccount(null);
     setHint("已登出。書籤仍留在此裝置。");
   }, [applyAccount]);
@@ -227,6 +294,7 @@ export function useGoogleAccount() {
     unavailable: !configured || sdkStatus === "error",
     sdkStatus,
     youtubeAccessToken: youtubeAccess?.accessToken ?? null,
+    youtubeAuthorized: Boolean(youtubeAccess?.accessToken),
     signIn,
     signOut,
     connectYoutube,

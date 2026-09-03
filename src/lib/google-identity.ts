@@ -12,6 +12,8 @@ export const GOOGLE_CLIENT_ID =
 
 export const GOOGLE_ACCOUNT_STORAGE_KEY = "navpilot.google.v1";
 export const GOOGLE_ACCOUNT_EVENT = "navpilot-google-account";
+export const GOOGLE_ACCESS_STORAGE_KEY = "navpilot.google-access.v1";
+export const GOOGLE_ACCESS_EVENT = "navpilot-google-access";
 export const YOUTUBE_TOKEN_STORAGE_KEY = "navpilot.youtube-token.v1";
 export const YOUTUBE_TOKEN_EVENT = "navpilot-youtube-token";
 export const YOUTUBE_READONLY_SCOPE =
@@ -23,13 +25,20 @@ export const GOOGLE_LOGIN_SCOPES = [
   "email",
   "profile",
   DRIVE_APPDATA_SCOPE,
-  YOUTUBE_READONLY_SCOPE,
 ].join(" ");
+export const YOUTUBE_SCOPES = YOUTUBE_READONLY_SCOPE;
 
-export type YoutubeAccess = {
+export type ScopedAccess = {
   accessToken: string;
   exp: number;
+  scopes: string;
 };
+
+export type YoutubeAccess = ScopedAccess;
+
+export function hasScope(scopes: string | undefined, needed: string) {
+  return (scopes ?? "").split(/\s+/).includes(needed);
+}
 
 type JwtPayload = {
   sub?: string;
@@ -94,38 +103,54 @@ export function writeStoredAccount(account: GoogleAccount | null) {
   window.dispatchEvent(new Event(GOOGLE_ACCOUNT_EVENT));
 }
 
-export function isYoutubeAccessFresh(access: YoutubeAccess, skewMs = 60_000) {
+export function isAccessFresh(access: ScopedAccess, skewMs = 60_000) {
   return access.exp > Date.now() + skewMs;
 }
 
-export function readYoutubeAccess(): YoutubeAccess | null {
+export function isYoutubeAccessFresh(access: YoutubeAccess, skewMs = 60_000) {
+  return isAccessFresh(access, skewMs) && hasScope(access.scopes, YOUTUBE_READONLY_SCOPE);
+}
+
+function readScopedAccess(key: string): ScopedAccess | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = window.sessionStorage.getItem(YOUTUBE_TOKEN_STORAGE_KEY);
+    const raw = window.sessionStorage.getItem(key);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as YoutubeAccess;
+    const parsed = JSON.parse(raw) as ScopedAccess;
     if (!parsed?.accessToken || !parsed.exp) return null;
-    return isYoutubeAccessFresh(parsed) ? parsed : null;
+    return isAccessFresh(parsed) ? parsed : null;
   } catch {
     return null;
   }
 }
 
-export function writeYoutubeAccess(access: YoutubeAccess | null) {
+function writeScopedAccess(key: string, eventName: string, access: ScopedAccess | null) {
   if (typeof window === "undefined") return;
   try {
-    if (!access) {
-      window.sessionStorage.removeItem(YOUTUBE_TOKEN_STORAGE_KEY);
-    } else {
-      window.sessionStorage.setItem(
-        YOUTUBE_TOKEN_STORAGE_KEY,
-        JSON.stringify(access),
-      );
-    }
+    if (!access) window.sessionStorage.removeItem(key);
+    else window.sessionStorage.setItem(key, JSON.stringify(access));
   } catch {
     /* 私人模式可能擋 sessionStorage */
   }
-  window.dispatchEvent(new Event(YOUTUBE_TOKEN_EVENT));
+  window.dispatchEvent(new Event(eventName));
+}
+
+export function readGoogleAccess(): ScopedAccess | null {
+  return readScopedAccess(GOOGLE_ACCESS_STORAGE_KEY);
+}
+
+export function writeGoogleAccess(access: ScopedAccess | null) {
+  writeScopedAccess(GOOGLE_ACCESS_STORAGE_KEY, GOOGLE_ACCESS_EVENT, access);
+}
+
+export function readYoutubeAccess(): YoutubeAccess | null {
+  const access = readScopedAccess(YOUTUBE_TOKEN_STORAGE_KEY);
+  if (!access) return null;
+  return hasScope(access.scopes, YOUTUBE_READONLY_SCOPE) ? access : null;
+}
+
+export function writeYoutubeAccess(access: YoutubeAccess | null) {
+  writeScopedAccess(YOUTUBE_TOKEN_STORAGE_KEY, YOUTUBE_TOKEN_EVENT, access);
 }
 
 export async function fetchGoogleProfile(
@@ -244,9 +269,12 @@ declare global {
           initTokenClient: (config: {
             client_id: string;
             scope: string;
+            include_granted_scopes?: boolean;
+            hint?: string;
             callback: (response: {
               access_token?: string;
               expires_in?: number;
+              scope?: string;
               error?: string;
             }) => void;
             error_callback?: (error: { type?: string; message?: string }) => void;

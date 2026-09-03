@@ -17,6 +17,7 @@ import {
   type YoutubePlaylist,
 } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { statusMessage, type YoutubeLibraryStatus } from "@/lib/youtube-library";
 import {
   loadYouTubeIframeApi,
   YT_PAUSED,
@@ -60,6 +61,7 @@ export function YouTubeMusicPlayer({
   hidden = false,
   playlists = YOUTUBE_PLAYLISTS,
   libraryStatus = "idle",
+  libraryMessage = "",
   signedIn = false,
   onClose,
   onExpand,
@@ -70,7 +72,8 @@ export function YouTubeMusicPlayer({
   compact?: boolean;
   hidden?: boolean;
   playlists?: readonly YoutubePlaylist[];
-  libraryStatus?: "idle" | "loading" | "ready" | "error";
+  libraryStatus?: YoutubeLibraryStatus;
+  libraryMessage?: string;
   signedIn?: boolean;
   onClose: () => void;
   onExpand?: () => void;
@@ -311,29 +314,27 @@ export function YouTubeMusicPlayer({
                   </button>
                 ))}
               </div>
-              {signedIn && libraryStatus === "loading" ? (
-                <p className="mt-1 text-[11px] text-zinc-400">正在同步 YouTube Music 歌單…</p>
-              ) : null}
-              {signedIn && libraryStatus === "ready" && playlists.length === 0 ? (
-                <p className="mt-1 text-[11px] text-zinc-400">
-                  這個帳號還沒有可讀取的已儲存歌單。
+              <p className="mt-1 text-[11px] text-zinc-400">
+                {libraryMessage || statusMessage(libraryStatus)}
+              </p>
+              {libraryStatus === "connected" && playlists.length === 0 ? (
+                <p className="mt-1 text-[11px] text-zinc-500">
+                  YouTube Data API 無法提供私人 YouTube Music 曲庫，僅顯示可讀取播放清單。
                 </p>
               ) : null}
-              {!signedIn ? (
+              {libraryStatus !== "connected" && libraryStatus !== "loading" ? (
                 <button
                   type="button"
                   onClick={() => onConnectLibrary?.()}
                   className="mt-1.5 w-full rounded-lg border border-white/10 bg-white/6 px-2 py-1 text-left text-[11px] text-zinc-200 hover:bg-white/10 touch-manipulation"
                 >
-                  登入 Google，同步 YouTube Music 歌單
-                </button>
-              ) : libraryStatus === "idle" || libraryStatus === "error" ? (
-                <button
-                  type="button"
-                  onClick={() => onConnectLibrary?.()}
-                  className="mt-1.5 w-full rounded-lg border border-white/10 bg-white/6 px-2 py-1 text-left text-[11px] text-zinc-200 hover:bg-white/10 touch-manipulation"
-                >
-                  同步 YouTube Music 已儲存歌單
+                  {libraryStatus === "unconfigured"
+                    ? "尚未設定，請先完成 Google OAuth"
+                    : libraryStatus === "idle"
+                      ? "先登入 Google，再授權 YouTube 歌單"
+                      : libraryStatus === "unauthorized" || libraryStatus === "expired" || libraryStatus === "insufficient"
+                        ? "授權 YouTube 播放清單"
+                        : "重新授權 YouTube"}
                 </button>
               ) : null}
               {error ? (

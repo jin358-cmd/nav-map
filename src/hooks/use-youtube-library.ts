@@ -1,40 +1,58 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { GOOGLE_CLIENT_ID } from "@/lib/google-identity";
+import {
+  fetchYoutubeLibrary,
+  statusMessage,
+  type YoutubeLibraryResult,
+  type YoutubeLibraryStatus,
+} from "@/lib/youtube-library";
 import type { YoutubePlaylist } from "@/lib/constants";
-import { fetchYoutubeLibrary } from "@/lib/youtube-library";
 
-type LibraryState = {
-  token: string;
-  playlists: YoutubePlaylist[];
-  status: "ready" | "error";
-};
-
-export function useYoutubeLibrary(accessToken: string | null) {
-  const [loaded, setLoaded] = useState<LibraryState | null>(null);
+export function useYoutubeLibrary(
+  accessToken: string | null,
+  signedIn: boolean,
+) {
+  const [loaded, setLoaded] = useState<YoutubeLibraryResult | null>(null);
 
   useEffect(() => {
-    if (!accessToken) return;
+    if (!GOOGLE_CLIENT_ID || !accessToken) {
+      setLoaded(null);
+      return;
+    }
     let cancelled = false;
-    void fetchYoutubeLibrary(accessToken)
-      .then((playlists) => {
-        if (cancelled) return;
-        setLoaded({ token: accessToken, playlists, status: "ready" });
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setLoaded({ token: accessToken, playlists: [], status: "error" });
-      });
+    void fetchYoutubeLibrary(accessToken).then((result) => {
+      if (!cancelled) setLoaded(result);
+    });
     return () => {
       cancelled = true;
     };
   }, [accessToken]);
 
+  if (!GOOGLE_CLIENT_ID) {
+    return empty("unconfigured");
+  }
+  if (!signedIn) {
+    return empty("idle");
+  }
   if (!accessToken) {
-    return { playlists: [] as YoutubePlaylist[], status: "idle" as const };
+    return empty("unauthorized");
   }
-  if (!loaded || loaded.token !== accessToken) {
-    return { playlists: [] as YoutubePlaylist[], status: "loading" as const };
+  if (!loaded || loaded.status === "loading") {
+    return empty("loading");
   }
-  return { playlists: loaded.playlists, status: loaded.status };
+  return {
+    playlists: loaded.playlists,
+    status: loaded.status,
+    message: loaded.message || statusMessage(loaded.status),
+  };
+}
+
+function empty(status: YoutubeLibraryStatus): {
+  playlists: YoutubePlaylist[];
+  status: YoutubeLibraryStatus;
+  message: string;
+} {
+  return { playlists: [], status, message: statusMessage(status) };
 }
