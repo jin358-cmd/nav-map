@@ -66,7 +66,6 @@ export function AddressSearch({
     getServerFavoritesSnapshot,
   );
   const needle = query.trim();
-  const submitFirstHitRef = useRef(false);
   const speechStopRef = useRef<() => void>(() => undefined);
   const biasBucket = useMemo(
     () => ({
@@ -94,18 +93,28 @@ export function AddressSearch({
     },
     [biasBucket, onSelect],
   );
-  const remote = useAddressSearch(needle, biasBucket, composing, (rows) => {
-    if (!submitFirstHitRef.current) return;
-    const first = rows[0];
-    if (!first) return;
-    submitFirstHitRef.current = false;
-    selectHit(first);
-  });
+  const lookup = useAddressSearch(needle, biasBucket, composing);
+  const pendingVoiceSubmitRef = useRef(false);
+
+  const submitLookup = lookup.submit;
+  const runFormalSearch = useCallback(
+    (selectFirst = false) => {
+      if (needle.length < 1 || composing) return;
+      setOpen(true);
+      submitLookup(needle, (rows) => {
+        if (!selectFirst) return;
+        const first = rows[0];
+        if (first) selectHit(first);
+      });
+    },
+    [composing, needle, selectHit, submitLookup],
+  );
 
   const handleVoiceTranscript = useCallback((text: string, isFinal: boolean) => {
     setQuery(text);
     setOpen(true);
     setComposing(!isFinal);
+    pendingVoiceSubmitRef.current = isFinal && text.trim().length >= 1;
   }, []);
 
   const speech = useSpeechToText(handleVoiceTranscript);
@@ -114,26 +123,35 @@ export function AddressSearch({
     speechStopRef.current = speech.stop;
   }, [speech.stop]);
 
-  const searching = remote.searching;
+  useEffect(() => {
+    if (!pendingVoiceSubmitRef.current || composing) return;
+    pendingVoiceSubmitRef.current = false;
+    runFormalSearch(false);
+  }, [composing, needle, runFormalSearch]);
+
+  const searching = lookup.searching;
+  const suggesting = lookup.suggesting && !lookup.submitted;
+  const previewHits = lookup.submitted ? lookup.remoteHits : lookup.suggestHits;
   const visibleHits =
     needle.length < 1
       ? []
       : rankSearchHits(
-          mergeSearchHits([...instantHits, ...remote.hits], 24),
+          mergeSearchHits([...instantHits, ...previewHits], 24),
           needle,
           bias,
         );
   const chips = useMemo(() => TAIWAN_LANDMARKS.slice(0, 5), []);
   const emptyHint =
     needle.length >= 1 && !searching && !busy && visibleHits.length === 0
-      ? remote.error
+      ? lookup.submitted
+        ? lookup.error
+        : "輸入時會先找紀錄、快取與附近店家。按搜尋或 Enter 再查門牌地圖。"
       : null;
 
   return (
     <div className="pointer-events-auto w-full max-w-xl">
       <div className="rounded-2xl border border-white/12 bg-black/60 shadow-[0_10px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl">
         <div className="flex items-center gap-2 px-2.5 py-2">
-          <Search className="ml-1 size-4 shrink-0 text-cyan-300" />
           <Input
             value={query}
             onChange={(event) => {
@@ -150,17 +168,25 @@ export function AddressSearch({
             onKeyDown={(event) => {
               if (event.key !== "Enter" || composing) return;
               event.preventDefault();
-              const first = visibleHits[0];
-              if (first) {
-                selectHit(first);
-                return;
-              }
-              if (needle.length >= 1) submitFirstHitRef.current = true;
+              if (needle.length < 1) return;
+              runFormalSearch(true);
             }}
             placeholder={speech.listening ? "正在聽…請說出目的地" : "地址、店家、公司、品牌或縮寫"}
             aria-label="目的地搜尋"
             className="h-10 border-0 bg-transparent px-1 text-sm text-white shadow-none placeholder:text-zinc-500 focus-visible:ring-0"
           />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label="搜尋門牌與地圖"
+            title="搜尋門牌與地圖"
+            disabled={needle.length < 1 || composing || searching || busy}
+            onClick={() => runFormalSearch(false)}
+            className="size-9 shrink-0 text-cyan-200 hover:bg-white/10 hover:text-white touch-manipulation disabled:text-zinc-500"
+          >
+            <Search className="size-4" />
+          </Button>
           <Button
             type="button"
             variant="ghost"
@@ -204,9 +230,29 @@ export function AddressSearch({
         <div className="mt-1.5 overflow-hidden rounded-2xl border border-white/10 bg-black/78 shadow-xl backdrop-blur-xl">
           <p className="px-3 pt-2 text-[11px] text-zinc-500">
             {speech.listening
-              ? "正在聽取語音…說完後會自動搜尋"
-              : "全市約 20 公里 · 店家／公司／品牌／縮寫 · 長按地圖自訂位置"}
+              ? "正在聽取語音…說完後會查門牌與地圖"
+              : lookup.submitted
+                ? "已查門牌與地圖 · 點選結果開始導航"
+                : "輸入中只顯示紀錄、快取與附近店家 · 按搜尋或 Enter 查門牌"}
           </p>
+          {needle.length >= 1 ? (
+            <button
+              type="button"
+              onClick={() => runFormalSearch(false)}
+              disabled={composing || searching || busy}
+              className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left hover:bg-white/8 touch-manipulation disabled:opacity-50"
+            >
+              <Search className="size-4 shrink-0 text-cyan-300" />
+              <span className="min-w-0">
+                <span className="block truncate text-sm text-white">
+                  搜尋「{needle}」
+                </span>
+                <span className="block text-[11px] text-zinc-500">
+                  查 TGOS、國土測量雲與地圖門牌
+                </span>
+              </span>
+            </button>
+          ) : null}
           {speech.error ? (
             <p className="px-3 pt-1 text-[11px] text-amber-200">{speech.error}</p>
           ) : null}
@@ -299,10 +345,14 @@ export function AddressSearch({
             </ul>
           ) : null}
 
-          {searching || busy ? (
+          {searching || suggesting || busy ? (
             <p className="flex items-center gap-2 px-3 py-2 text-[11px] text-zinc-400">
               <Loader2 className="size-3.5 animate-spin" />
-              {busy ? "規劃路線中…" : "補齊門牌與關鍵字…"}
+              {busy
+                ? "規劃路線中…"
+                : searching
+                  ? "正在查門牌與地圖…"
+                  : "比對紀錄與快取…"}
             </p>
           ) : null}
 

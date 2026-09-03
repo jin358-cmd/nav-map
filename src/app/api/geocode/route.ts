@@ -1,13 +1,19 @@
 import { searchGeocode, toGeocodeHits } from "@/lib/geocoding/orchestrator";
 import { normalizeTaiwanAddress } from "@/lib/geocoding/normalizeTaiwanAddress";
 import { rememberAddressCacheHit } from "@/lib/geocoding/providers/cache";
+import type { GeocodeLookupMode } from "@/lib/geocoding/types";
 import { TAINAN_CENTER } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
+function lookupMode(value: string | null): GeocodeLookupMode {
+  return value === "suggest" ? "suggest" : "search";
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const query = url.searchParams.get("q")?.trim() ?? "";
+  const mode = lookupMode(url.searchParams.get("mode"));
   const biasLng = Number(url.searchParams.get("lng"));
   const biasLat = Number(url.searchParams.get("lat"));
   const latitude = Number.isFinite(biasLat) ? biasLat : TAINAN_CENTER.lat;
@@ -20,6 +26,10 @@ export async function GET(request: Request) {
       normalizedQuery: parsed.normalizedAddress,
       cacheHit: false,
       results: [],
+      providers:
+        mode === "suggest"
+          ? { cache: "empty", local: "empty", tgos: "disabled", nlsc: "disabled", osm: "disabled", google: "disabled" }
+          : undefined,
     });
   }
 
@@ -28,6 +38,7 @@ export async function GET(request: Request) {
       latitude,
       longitude,
       signal: request.signal,
+      mode,
     });
     const hits = toGeocodeHits(payload.results);
     return Response.json({

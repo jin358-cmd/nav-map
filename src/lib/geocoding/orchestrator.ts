@@ -18,6 +18,7 @@ import { createTgosProvider, tgosEnabled } from "@/lib/geocoding/providers/tgos"
 import { matchLocalPois } from "@/lib/poi-search";
 import { SEARCH_RESULT_LIMIT } from "@/lib/search-constants";
 import type {
+  GeocodeLookupMode,
   GeocodeProviderStatus,
   GeocodeResponse,
   GeocodeResult,
@@ -203,34 +204,76 @@ function applyLaneRoadLabels(rows: GeocodeResult[]) {
   });
 }
 
+function skippedRemoteStatuses(): Partial<Record<GeocodeSource, GeocodeProviderStatus>> {
+  return {
+    tgos: "disabled",
+    nlsc: "disabled",
+    osm: "disabled",
+    google: "disabled",
+  };
+}
+
 export async function searchGeocode(
   query: string,
-  options: { latitude?: number; longitude?: number; signal?: AbortSignal } = {},
+  options: {
+    latitude?: number;
+    longitude?: number;
+    signal?: AbortSignal;
+    mode?: GeocodeLookupMode;
+  } = {},
 ): Promise<GeocodeResponse> {
+  const mode: GeocodeLookupMode = options.mode ?? "search";
   const parsed = normalizeTaiwanAddress(query);
   const origin =
     options.latitude != null && options.longitude != null
       ? { lat: options.latitude, lng: options.longitude }
       : undefined;
   const key = biasKey(options.latitude, options.longitude);
-  const statuses: Partial<Record<GeocodeSource, GeocodeProviderStatus>> = {
-    tgos: tgosEnabled() ? "empty" : "disabled",
-    google: googlePlacesEnabled() ? "empty" : "disabled",
-    nlsc: "empty",
-    osm: "empty",
-    cache: "empty",
-    local: "empty",
-  };
+  const statuses: Partial<Record<GeocodeSource, GeocodeProviderStatus>> =
+    mode === "suggest"
+      ? {
+          ...skippedRemoteStatuses(),
+          cache: "empty",
+          local: "empty",
+        }
+      : {
+          tgos: tgosEnabled() ? "empty" : "disabled",
+          google: googlePlacesEnabled() ? "empty" : "disabled",
+          nlsc: "empty",
+          osm: "empty",
+          cache: "empty",
+          local: "empty",
+        };
 
   const cached = await readAddressCache(parsed.normalizedAddress, key);
   if (cached?.length) {
     statuses.cache = "ok";
+    const locals = mode === "suggest" ? localResults(query, options.latitude, options.longitude) : [];
+    if (locals.length) statuses.local = "ok";
     return {
       query,
       normalizedQuery: parsed.normalizedAddress,
       cacheHit: true,
       results: sortResults(
-        withDistance(cached, origin),
+        withDistance(mode === "suggest" ? mergeResults([...cached, ...locals]) : cached, origin),
+        parsed.parts.city,
+        parsed.parts.town,
+        parsed.hasLaneOrAlley,
+        origin,
+      ).slice(0, SEARCH_RESULT_LIMIT),
+      providers: statuses,
+    };
+  }
+
+  if (mode === "suggest") {
+    const locals = localResults(query, options.latitude, options.longitude);
+    if (locals.length) statuses.local = "ok";
+    return {
+      query,
+      normalizedQuery: parsed.normalizedAddress,
+      cacheHit: false,
+      results: sortResults(
+        withDistance(locals, origin),
         parsed.parts.city,
         parsed.parts.town,
         parsed.hasLaneOrAlley,

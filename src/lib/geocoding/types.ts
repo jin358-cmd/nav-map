@@ -20,6 +20,8 @@ export type GeocodeResult = {
   matchKind: GeocodeMatchKind;
 };
 
+export type GeocodeLookupMode = "suggest" | "search";
+
 export type GeocodeSearchOptions = {
   latitude?: number;
   longitude?: number;

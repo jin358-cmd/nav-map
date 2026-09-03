@@ -1,3 +1,4 @@
+import type { GeocodeLookupMode } from "@/lib/geocoding/types";
 import type { GeocodeHit, LngLat, RoutePlan } from "@/types/domain";
 
 export async function reversePlace(location: LngLat): Promise<GeocodeHit> {
@@ -29,8 +30,9 @@ export async function searchAddresses(
   query: string,
   bias?: LngLat,
   signal?: AbortSignal,
+  mode: GeocodeLookupMode = "search",
 ): Promise<GeocodeHit[]> {
-  const params = new URLSearchParams({ q: query });
+  const params = new URLSearchParams({ q: query, mode });
   if (bias) {
     params.set("lng", String(bias.lng));
     params.set("lat", String(bias.lat));

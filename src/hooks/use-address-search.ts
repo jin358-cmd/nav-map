@@ -1,62 +1,113 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { searchAddresses } from "@/services/routing";
 import type { GeocodeHit, LngLat } from "@/types/domain";
 
-const DEBOUNCE_MS = 350;
+const SUGGEST_DEBOUNCE_MS = 350;
 
 export function useAddressSearch(
   query: string,
   bias: LngLat,
   composing: boolean,
-  onSettled?: (rows: GeocodeHit[]) => void,
 ) {
-  const [hits, setHits] = useState<GeocodeHit[]>([]);
+  const [suggestHits, setSuggestHits] = useState<GeocodeHit[]>([]);
+  const [remoteHits, setRemoteHits] = useState<GeocodeHit[]>([]);
+  const [submittedQuery, setSubmittedQuery] = useState("");
+  const [suggesting, setSuggesting] = useState(false);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const generationRef = useRef(0);
-  const onSettledRef = useRef(onSettled);
+  const suggestGenerationRef = useRef(0);
+  const searchGenerationRef = useRef(0);
+  const searchAbortRef = useRef<AbortController | null>(null);
+  const needle = query.trim();
+  const submitted = submittedQuery.length > 0 && submittedQuery === needle;
 
   useEffect(() => {
-    onSettledRef.current = onSettled;
-  }, [onSettled]);
-
-  useEffect(() => {
-    const needle = query.trim();
     if (composing || needle.length < 2) {
       return;
     }
 
-    const generation = generationRef.current + 1;
-    generationRef.current = generation;
+    const generation = suggestGenerationRef.current + 1;
+    suggestGenerationRef.current = generation;
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
-      setSearching(true);
-      void searchAddresses(needle, bias, controller.signal)
+      setSuggesting(true);
+      void searchAddresses(needle, bias, controller.signal, "suggest")
         .then((rows) => {
-          if (generation !== generationRef.current) return;
-          setHits(rows);
-          setError(rows.length ? null : "找不到店家、公司或地址，已改查附近巷弄或道路。");
-          onSettledRef.current?.(rows);
+          if (generation !== suggestGenerationRef.current) return;
+          setSuggestHits(rows);
         })
         .catch((cause: unknown) => {
-          if (generation !== generationRef.current) return;
+          if (generation !== suggestGenerationRef.current) return;
           if (cause instanceof DOMException && cause.name === "AbortError") return;
-          setError("地址搜尋失敗，請稍後再試。");
+          setSuggestHits([]);
         })
         .finally(() => {
-          if (generation === generationRef.current) setSearching(false);
+          if (generation === suggestGenerationRef.current) setSuggesting(false);
         });
-    }, DEBOUNCE_MS);
+    }, SUGGEST_DEBOUNCE_MS);
 
     return () => {
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [bias, composing, query]);
+  }, [bias, composing, needle]);
 
-  const activeHits = query.trim().length < 2 ? [] : hits;
-  const activeError = query.trim().length < 2 ? null : error;
-  return { hits: activeHits, searching, error: activeError, setError };
+  useEffect(() => {
+    if (!submittedQuery || needle === submittedQuery) return;
+    searchAbortRef.current?.abort();
+  }, [needle, submittedQuery]);
+
+  useEffect(() => {
+    return () => {
+      searchAbortRef.current?.abort();
+    };
+  }, []);
+
+  const submit = useCallback(
+    (text: string, onSettled?: (rows: GeocodeHit[]) => void) => {
+      const next = text.trim();
+      if (next.length < 1) return;
+
+      searchAbortRef.current?.abort();
+      const generation = searchGenerationRef.current + 1;
+      searchGenerationRef.current = generation;
+      const controller = new AbortController();
+      searchAbortRef.current = controller;
+      setSubmittedQuery(next);
+      setSearching(true);
+      setError(null);
+
+      void searchAddresses(next, bias, controller.signal, "search")
+        .then((rows) => {
+          if (generation !== searchGenerationRef.current) return;
+          setRemoteHits(rows);
+          setError(
+            rows.length ? null : "找不到店家、公司或地址，已改查附近巷弄或道路。",
+          );
+          onSettled?.(rows);
+        })
+        .catch((cause: unknown) => {
+          if (generation !== searchGenerationRef.current) return;
+          if (cause instanceof DOMException && cause.name === "AbortError") return;
+          setError("地址搜尋失敗，請稍後再試。");
+        })
+        .finally(() => {
+          if (generation === searchGenerationRef.current) setSearching(false);
+        });
+    },
+    [bias],
+  );
+
+  return {
+    suggestHits: needle.length < 2 ? [] : suggestHits,
+    remoteHits: submitted ? remoteHits : [],
+    submitted,
+    suggesting: needle.length >= 2 && suggesting,
+    searching: submitted && searching,
+    error: submitted && needle.length >= 1 ? error : null,
+    submit,
+    setError,
+  };
 }
