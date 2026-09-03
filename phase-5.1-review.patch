@@ -1,0 +1,3217 @@
+diff --git a/.env.example b/.env.example
+index 500b3f9..52aef6d 100644
+--- a/.env.example
++++ b/.env.example
+@@ -10,30 +10,33 @@ TDX_CLIENT_SECRET=
+ # 建物門牌優先使用國土測繪圖資服務雲公開 TextQueryMap（免金鑰）。
+ # 下列 TGOS 全國門牌為選用後備；未設定時仍走國土測量雲 + OSM。
+ TGOS_APP_ID=
++TGOS_API_URL=
+ TGOS_API_KEY=
+ 
+ # 內政主題 API「測速執法設置點」（選填、伺服器端）
+ # 未設定時會直接使用警政署政府資料開放平臺的免金鑰 CSV。
+ TGOS_THEME_API_KEY=
+ 
++# NLSC：預設使用公開 TextQueryMap。可選填自訂端點；金鑰不得加 NEXT_PUBLIC_。
++NLSC_API_URL=
++NLSC_API_KEY=
++
+ # NCDR 民生示警公開資料（選填、伺服器端）
+-# 未設定時使用免金鑰 JSONAtomFeed。會員 API Key 可改走 webapi，
+-# 取得較完整的地方政府示警；失敗仍回落到公開 feed，再失敗才用 mock。
+ NCDR_API_KEY=
+-
+-# NCDR 民生示警 JSON Atom Feed（可留空使用官方預設網址）
+ NCDR_ALERT_FEED_URL=
+ 
+ # OpenAI / ChatGPT 導航語音（選填、伺服器端）
+-# 未設定時改用瀏覽器 zh-TW 語音合成，不阻擋導航。
+ OPENAI_API_KEY=
+ 
+-# Google 登入、書籤寫入個人 Google 帳號、YouTube Music 歌單（選填）
+-# 未設定時底部「Google 登入」仍可點，會提示需設定 Client ID；書籤只留在此裝置。
+-# Google Cloud Console → OAuth 2.0 網頁用戶端：
+-# 1. 啟用 Google Drive API、YouTube Data API v3
+-# 2. 授權 JavaScript 來源：本機 http://127.0.0.1:43145；正式站為你的網域
+-# 3. 授權重新導向 URI 可留空（使用 GIS token client 彈出視窗）
+-# 4. 範圍：openid email profile、drive.appdata、youtube.readonly
+-# 書籤存在該帳號的 Drive 應用程式資料夾（navpilot-bookmarks.json），不會出現在雲端硬碟清單。
++# Google 登入（OAuth Client ID，可給前端）
++# 設定方式見 docs/google-oauth-setup.md
+ NEXT_PUBLIC_GOOGLE_CLIENT_ID=
++
++# Google Places／Geocoding：MapLibre 模式不使用。即使填了也不會啟用。
++# 禁止 NEXT_PUBLIC_。與 NEXT_PUBLIC_GOOGLE_CLIENT_ID（OAuth 登入）完全不同。
++GOOGLE_PLACES_API_KEY=
++
++# Supabase 地址快取。SERVICE_ROLE 只能放 Server，禁止 NEXT_PUBLIC_
++NEXT_PUBLIC_SUPABASE_URL=
++NEXT_PUBLIC_SUPABASE_ANON_KEY=
++SUPABASE_SERVICE_ROLE_KEY=
+diff --git a/README.md b/README.md
+index beb8c73..cfb6069 100644
+--- a/README.md
++++ b/README.md
+@@ -72,7 +72,7 @@ npm start
+ 
+ 定位權限可拒絕；拒絕後仍停留在臺南示範路線。GPS 授權成功則車輛標記移到目前位置。
+ 
+-頂部可輸入地址或地標。成功選定的目的地會保存在搜尋列上方（最多 6 筆，可點選重用或清除）。建物門牌優先使用[國土測繪圖資服務雲](https://maps.nlsc.gov.tw/)公開地址定位（門牌坐標），再以地政行政區交叉比對；失敗時才走 TGOS（需金鑰）或 OpenStreetMap。導航終點為黃色圓點，外圈持續擴散。選定後搜尋列會收起，改顯示確認列。點 **確認** 後進入駕駛畫面。
++頂部可輸入地址或地標。輸入期間只顯示搜尋歷史、本機店家／地標，以及已寫入的地址快取。按 **Enter**、搜尋按鈕或「搜尋「…」」後，才向國土測繪圖資服務雲、TGOS（需金鑰）與 OpenStreetMap／Nominatim 查門牌。MapLibre 模式不使用 Google Geocoding／Places。成功選定的目的地會保存在搜尋列（最多 6 筆，可點選重用或清除）。導航終點為黃色圓點，外圈持續擴散。選定後搜尋列會收起，改顯示確認列。點 **確認** 後進入駕駛畫面。
+ 
+ ## 第一階段已完成功能
+ 
+@@ -85,12 +85,12 @@ npm start
+ - 即時路況：獨立 `traffic-source` / `traffic-layer`，TDX live 或 MOCK 後備
+ - 測速執法：警政署政府開放資料免金鑰 CSV，亦支援 TGOS 環域 API，依地圖中心載入 3–10 公里內點位與速限
+ - NCDR 即時災害 GeoJSON 圖層（CAP 幾何中心）
+-- 頂部搜尋：門牌、店家、公司行號、連鎖品牌與縮寫；輸入後約 1 秒內即可挑選關鍵字。長按地圖可自訂位置並存成最愛書籤
+-- 底部狀態列中央為 Google 登入：彈出視窗授權後，最愛書籤寫入該 Google 帳號的 Drive 應用程式資料；未設定 `NEXT_PUBLIC_GOOGLE_CLIENT_ID` 時書籤仍留在此裝置
++- 頂部搜尋：門牌、店家、公司行號、連鎖品牌與縮寫；本機關鍵字可立刻挑選，遠端走 TGOS／NLSC／OSM（Google Places 僅最後補查）。長按地圖可自訂位置並存成最愛書籤
++- 底部狀態列中央為 Google 登入：未完成設定時顯示無法使用，不會出現工程變數名稱。設定見 `docs/google-oauth-setup.md`
+ - 底部狀態列紅心：把目前或已輸入的位置加入最愛
+ - 導航終點：既有立體圖釘＋圖示外中空黃點，外圈持續擴散；確認後與導航中都保留
+ - 定位點為道路上方的黃色三角形路標（較先前再放大一倍），不左右晃動
+-- 點確認後進入駕駛畫面，最上方顯示下一個路口距離；橫向時指示欄維持 1 倍並貼左上。接近路口會自動放大，並以道路上方的大型黃色箭頭指引
++- 點確認後進入駕駛畫面，左上角顯示下一個路口距離；提示卡以實際字級與內距縮小，並用地圖 padding 避開黃色定位箭頭
+ - 任何時候可用雙指縮放、單指平移檢視；定位鈕回到跟隨
+ - ChatGPT AI 語音播報轉向（可靜音）；未設定 `OPENAI_API_KEY` 時改用系統中文語音
+ - 路況範圍常態為車輛 5 公里內與路線沿線；每 5 分鐘於後台自動更新路況與災害
+diff --git a/docs/google-oauth-setup.md b/docs/google-oauth-setup.md
+new file mode 100644
+index 0000000..60e9791
+--- /dev/null
++++ b/docs/google-oauth-setup.md
+@@ -0,0 +1,67 @@
++# Google OAuth 設定（NavPilot）
++
++Google 登入使用 **Google Identity Services** 的 OAuth token client，不是 Google Places Key。  
++Cursor 不會幫你產生 Client ID，下列步驟需由專案負責人在 Google Cloud 完成。
++
++## 1. 建立 OAuth 2.0 Client ID
++
++1. 開啟 [Google Cloud Console](https://console.cloud.google.com/)。
++2. 選取或建立專案。
++3. 啟用 **Google Drive API** 與 **YouTube Data API v3**（書籤與歌單）。
++4. 到「API 和服務 → 憑證 → 建立憑證 → OAuth 用戶端 ID」。
++5. Application type 選 **Web application**。
++
++## 2. Authorized JavaScript origins
++
++在 OAuth 用戶端加入實際會開啟 NavPilot 的來源，**不要**把 Places API Key 填在這裡。
++
++本機範例：
++
++- `http://127.0.0.1:43145`
++- `http://localhost:43145`
++
++Vercel Preview 原則：
++
++- 加入該專案的 Preview 網域，例如 `https://<project>-git-<branch>-<team>.vercel.app`
++- 若使用固定 Preview 網域，也一併加入
++
++正式網域原則：
++
++- 只加入正式 HTTPS 網域，例如 `https://your-domain.com`
++- 修改 origins 後通常立刻生效，但瀏覽器快取的舊 token 可能要重新登入
++
++授權重新導向 URI 可留空（本專案使用 GIS token client 彈出視窗，不走 redirect）。
++
++## 3. 環境變數
++
++本機 `.env.local`：
++
++```env
++NEXT_PUBLIC_GOOGLE_CLIENT_ID=
++```
++
++填入 Web application 的 Client ID，然後**重新啟動** `npm run dev`。
++
++Vercel：
++
++1. Project → Settings → Environment Variables
++2. 新增 `NEXT_PUBLIC_GOOGLE_CLIENT_ID`
++3. 分別套用到 Preview 與 Production
++4. **重新部署**後才會生效
++
++## 4. Client ID 與 Places Key 的差別
++
++| 變數 | 用途 | 可否放前端 |
++| --- | --- | --- |
++| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Google 登入（OAuth） | 可以 |
++| `GOOGLE_PLACES_API_KEY` | 地址／地點補查 | **不可以**，只能在 Server |
++
++禁止把 Places Key 當成 OAuth Client ID。  
++禁止把 `GOOGLE_PLACES_API_KEY` 設成 `NEXT_PUBLIC_`。
++
++**MapLibre 模式不使用 Google Geocoding／Places。**
++`NEXT_PUBLIC_GOOGLE_CLIENT_ID` 只負責登入、Drive 書籤與 YouTube 歌單。即使設定了 `GOOGLE_PLACES_API_KEY`，地圖搜尋鏈仍標為 `disabled_by_map_renderer_policy`，不會把 Google 地理結果畫上 MapLibre，也不會寫入共用地址快取。未來僅在採用合規呈現方案後重新評估。
++
++## 5. 未設定時的行為
++
++未填 Client ID 時地圖仍可使用。底部「Google 登入」會顯示無法使用，點擊只會提示「Google 登入尚未完成設定」，不會出現 `.env.local` 或變數名稱。
+diff --git a/package.json b/package.json
+index ce6f3eb..d91240a 100644
+--- a/package.json
++++ b/package.json
+@@ -7,6 +7,7 @@
+     "build": "next build",
+     "start": "next start --port 43145",
+     "lint": "eslint",
++    "typecheck": "tsc --noEmit",
+     "update:speed-enforcement": "node scripts/update-speed-enforcement-data.mjs"
+   },
+   "dependencies": {
+diff --git a/src/app/api/geocode/route.ts b/src/app/api/geocode/route.ts
+index 188e8dc..945008a 100644
+--- a/src/app/api/geocode/route.ts
++++ b/src/app/api/geocode/route.ts
+@@ -1,306 +1,84 @@
+-import { matchLandmarks } from "@/data/landmarks";
++import { searchGeocode, toGeocodeHits } from "@/lib/geocoding/orchestrator";
++import { normalizeTaiwanAddress } from "@/lib/geocoding/normalizeTaiwanAddress";
++import { rememberAddressCacheHit } from "@/lib/geocoding/providers/cache";
++import type { GeocodeLookupMode } from "@/lib/geocoding/types";
+ import { TAINAN_CENTER } from "@/lib/constants";
+-import {
+-  expandKeywordQueries,
+-  filterWithinSearchRadius,
+-  isDoorplateQuery,
+-  matchLocalPois,
+-  mergeSearchHits,
+-  rankSearchHits,
+-} from "@/lib/poi-search";
+-import { SEARCH_RADIUS_KM, SEARCH_RESULT_LIMIT } from "@/lib/search-constants";
+-import {
+-  describeRelaxedMatch,
+-  expandTaiwanGeocodeQueries,
+-  officialAddressQuery,
+-  parseTaiwanAddress,
+-} from "@/lib/taiwan-address";
+-import {
+-  crossCheckLandArea,
+-  describeLandCrossCheck,
+-  describeNlscHit,
+-  householdAddressConfigured,
+-  searchHouseholdAddresses,
+-  searchNlscMapHits,
+-} from "@/services/official-address";
+-import { searchOverpassPois } from "@/services/overpass-poi";
+-import type { GeocodeHit } from "@/types/domain";
+ 
+-const NOMINATIM = "https://nominatim.openstreetmap.org/search";
+-const PHOTON = "https://photon.komoot.io/api/";
+-const USER_AGENT =
+-  "NavPilot/0.1 (https://github.com/jin358-cmd/nav-map)";
++export const dynamic = "force-dynamic";
+ 
+-type NominatimRow = {
+-  place_id: number;
+-  name?: string;
+-  display_name: string;
+-  lat: string;
+-  lon: string;
+-};
+-
+-const mergeHits = mergeSearchHits;
+-
+-async function searchNominatim(
+-  query: string,
+-  bias?: { lng: number; lat: number },
+-): Promise<NominatimRow[]> {
+-  const nominatim = new URL(NOMINATIM);
+-  nominatim.searchParams.set("format", "jsonv2");
+-  nominatim.searchParams.set("countrycodes", "tw");
+-  nominatim.searchParams.set("limit", "10");
+-  nominatim.searchParams.set("q", query);
+-  nominatim.searchParams.set("accept-language", "zh-TW");
+-  if (bias) {
+-    const padLng = SEARCH_RADIUS_KM / 101;
+-    const padLat = SEARCH_RADIUS_KM / 111;
+-    nominatim.searchParams.set(
+-      "viewbox",
+-      `${bias.lng - padLng},${bias.lat + padLat},${bias.lng + padLng},${bias.lat - padLat}`,
+-    );
+-    nominatim.searchParams.set("bounded", "0");
+-  }
+-
+-  const controller = new AbortController();
+-  const timer = setTimeout(() => controller.abort(), 900);
+-  try {
+-    const response = await fetch(nominatim, {
+-      headers: {
+-        Accept: "application/json",
+-        "Accept-Language": "zh-TW",
+-        "User-Agent": USER_AGENT,
+-      },
+-      cache: "no-store",
+-      signal: controller.signal,
+-    });
+-    if (!response.ok) return [];
+-    const raw = (await response.json()) as NominatimRow[];
+-    return Array.isArray(raw) ? preferLocalRows(raw) : [];
+-  } catch {
+-    return [];
+-  } finally {
+-    clearTimeout(timer);
+-  }
+-}
+-
+-function preferLocalRows(rows: NominatimRow[]) {
+-  return rows;
+-}
+-
+-function sleep(ms: number) {
+-  return new Promise((resolve) => setTimeout(resolve, ms));
+-}
+-
+-type PhotonFeature = {
+-  geometry?: { coordinates?: number[] };
+-  properties?: { osm_id?: number; name?: string; city?: string; street?: string };
+-};
+-
+-async function searchPhoton(
+-  query: string,
+-  original: string,
+-  bias?: { lng: number; lat: number },
+-): Promise<GeocodeHit[]> {
+-  const photon = new URL(PHOTON);
+-  photon.searchParams.set("q", query);
+-  photon.searchParams.set("limit", "10");
+-  photon.searchParams.set("lang", "zh");
+-  if (bias) {
+-    photon.searchParams.set("lon", String(bias.lng));
+-    photon.searchParams.set("lat", String(bias.lat));
+-  }
+-
+-  const controller = new AbortController();
+-  const timer = setTimeout(() => controller.abort(), 900);
+-  try {
+-    const response = await fetch(photon, {
+-      headers: { Accept: "application/json", "User-Agent": USER_AGENT },
+-      cache: "no-store",
+-      signal: controller.signal,
+-    });
+-    if (!response.ok) return [];
+-    const payload = (await response.json()) as { features?: PhotonFeature[] };
+-    const features = payload.features ?? [];
+-    const hits = features.flatMap((feature, index) => {
+-      const lng = Number(feature.geometry?.coordinates?.[0]);
+-      const lat = Number(feature.geometry?.coordinates?.[1]);
+-      if (!Number.isFinite(lng) || !Number.isFinite(lat)) return [];
+-      const name =
+-        feature.properties?.name ||
+-        feature.properties?.street ||
+-        original;
+-      return [
+-        {
+-          id: `photon-${feature.properties?.osm_id ?? index}`,
+-          name,
+-          address: describeRelaxedMatch(original, query, name),
+-          location: { lng, lat },
+-        },
+-      ];
+-    });
+-    return hits;
+-  } catch {
+-    return [];
+-  } finally {
+-    clearTimeout(timer);
+-  }
+-}
+-
+-function toHits(
+-  raw: NominatimRow[],
+-  original: string,
+-  matchedQuery: string,
+-): GeocodeHit[] {
+-  return raw
+-    .map((item) => {
+-      const osmName = item.name || item.display_name.split(",")[0] || original;
+-      return {
+-        id: `osm-${item.place_id}`,
+-        name: osmName,
+-        address: describeRelaxedMatch(original, matchedQuery, item.display_name),
+-        location: { lng: Number(item.lon), lat: Number(item.lat) },
+-      };
+-    })
+-    .filter(
+-      (item) =>
+-        Number.isFinite(item.location.lng) && Number.isFinite(item.location.lat),
+-    );
+-}
+-
+-async function withLandCrossCheck(
+-  hits: GeocodeHit[],
+-  expected: { city: string; town: string },
+-  sourceLabel: string,
+-) {
+-  return Promise.all(
+-    hits.map(async (hit) => {
+-      const check = await crossCheckLandArea(hit.location, expected);
+-      return {
+-        ...hit,
+-        address: `${hit.address} · ${sourceLabel} · ${describeLandCrossCheck(check)}`,
+-      };
+-    }),
+-  );
++function lookupMode(value: string | null): GeocodeLookupMode {
++  return value === "suggest" ? "suggest" : "search";
+ }
+ 
+ export async function GET(request: Request) {
+   const url = new URL(request.url);
+   const query = url.searchParams.get("q")?.trim() ?? "";
++  const mode = lookupMode(url.searchParams.get("mode"));
+   const biasLng = Number(url.searchParams.get("lng"));
+   const biasLat = Number(url.searchParams.get("lat"));
+-  const bias =
+-    Number.isFinite(biasLng) && Number.isFinite(biasLat)
+-      ? { lng: biasLng, lat: biasLat }
+-      : { ...TAINAN_CENTER };
+-  const local = [
+-    ...matchLandmarks(query),
+-    ...matchLocalPois(query, bias),
+-  ];
++  const latitude = Number.isFinite(biasLat) ? biasLat : TAINAN_CENTER.lat;
++  const longitude = Number.isFinite(biasLng) ? biasLng : TAINAN_CENTER.lng;
+ 
+   if (query.length < 2) {
++    const parsed = normalizeTaiwanAddress(query);
+     return Response.json({
+-      results: mergeHits(filterWithinSearchRadius(local, bias)),
++      query,
++      normalizedQuery: parsed.normalizedAddress,
++      cacheHit: false,
++      results: [],
++      providers:
++        mode === "suggest"
++          ? { cache: "empty", local: "empty", tgos: "disabled", nlsc: "disabled", osm: "disabled", google: "disabled" }
++          : undefined,
+     });
+   }
+ 
+   try {
+-    const parsed = parseTaiwanAddress(query);
+-    const officialQuery = officialAddressQuery(query);
+-    const doorplate = isDoorplateQuery(query);
+-
+-    const toNlscHits = (rows: Awaited<ReturnType<typeof searchNlscMapHits>>) =>
+-      [...rows]
+-        .sort((a, b) => {
+-          const rank = (kind: typeof a.kind) =>
+-            kind === "ADDRESS" ? 0 : kind === "CROSSROAD" ? 1 : kind === "LANDGOAL" ? 2 : 3;
+-          return rank(a.kind) - rank(b.kind);
+-        })
+-        .map((item, index) => ({
+-          id: `nlsc-${item.kind}-${index}-${item.location.lng.toFixed(6)}-${item.location.lat.toFixed(6)}`,
+-          name: item.fullAddress,
+-          address: describeNlscHit(item),
+-          location: item.location,
+-        }));
+-
+-    if (doorplate) {
+-      const nlscHits = toNlscHits(await searchNlscMapHits(officialQuery, bias, 1500));
+-      if (nlscHits.length) {
+-        return Response.json({
+-          results: mergeHits([...nlscHits, ...local]),
+-          source: "nlsc-doorplate",
+-          matchedQuery: officialQuery,
+-        });
+-      }
+-
+-      if (parsed?.number && householdAddressConfigured()) {
+-        const official = await searchHouseholdAddresses(officialQuery);
+-        if (official.length) {
+-          const officialHits: GeocodeHit[] = official.map((item, index) => ({
+-            id: `tgos-${index}-${item.location.lng.toFixed(6)}-${item.location.lat.toFixed(6)}`,
+-            name: item.fullAddress,
+-            address: `戶政門牌 · ${item.matchType}`,
+-            location: item.location,
+-          }));
+-          const checked = parsed
+-            ? await withLandCrossCheck(officialHits, parsed, "內政部全國門牌")
+-            : officialHits;
+-          return Response.json({
+-            results: mergeHits([...checked, ...local]),
+-            source: "household-doorplate+land-check",
+-            matchedQuery: query,
+-          });
+-        }
+-      }
+-    }
+-
+-    const keywordVariants = expandKeywordQueries(query);
+-    const variants = doorplate
+-      ? expandTaiwanGeocodeQueries(query)
+-      : keywordVariants;
+-    const poiQuery = keywordVariants[1] ?? keywordVariants[0] ?? query;
+-    const matchedQuery = variants[0] ?? query;
+-
+-    const overpassPromise = doorplate
+-      ? Promise.resolve([] as GeocodeHit[])
+-      : searchOverpassPois(poiQuery, bias);
+-    const [nlscRows, nominatimRows, photonHits, overpassHits] = await Promise.all([
+-      searchNlscMapHits(officialQuery, bias, 900),
+-      searchNominatim(matchedQuery, bias),
+-      searchPhoton(poiQuery, query, bias),
+-      Promise.race([
+-        overpassPromise,
+-        sleep(700).then(() => [] as GeocodeHit[]),
+-      ]),
+-    ]);
+-    const nlscHits = toNlscHits(nlscRows);
+-    const remote = toHits(nominatimRows, query, matchedQuery);
+-
+-    const pooled = rankSearchHits(
+-      filterWithinSearchRadius(
+-        mergeHits(
+-          [...local, ...nlscHits, ...remote, ...photonHits, ...overpassHits],
+-          48,
+-        ),
+-        bias,
+-      ),
+-      query,
+-      bias,
+-    );
+-
++    const payload = await searchGeocode(query, {
++      latitude,
++      longitude,
++      signal: request.signal,
++      mode,
++    });
++    const hits = toGeocodeHits(payload.results);
+     return Response.json({
+-      results: pooled.slice(0, SEARCH_RESULT_LIMIT),
+-      source: overpassHits.length
+-        ? "poi+overpass"
+-        : remote.length || photonHits.length
+-          ? "poi"
+-          : nlscHits.length
+-            ? "nlsc"
+-            : local.length
+-              ? "landmark"
+-              : "empty",
+-      matchedQuery,
++      ...payload,
++      results: payload.results.map((item, index) => ({
++        ...item,
++        name: hits[index]?.name,
++        address: hits[index]?.address,
++        location: hits[index]?.location,
++      })),
+     });
+   } catch {
+-    return Response.json({ results: local, source: "landmark" });
++    return Response.json({
++      query,
++      normalizedQuery: normalizeTaiwanAddress(query).normalizedAddress,
++      cacheHit: false,
++      results: [],
++    });
++  }
++}
++
++export async function POST(request: Request) {
++  try {
++    const body = (await request.json()) as {
++      query?: string;
++      normalizedQuery?: string;
++      lng?: number;
++      lat?: number;
++    };
++    const normalized =
++      body.normalizedQuery?.trim() ||
++      normalizeTaiwanAddress(body.query ?? "").normalizedAddress;
++    if (!normalized) return Response.json({ ok: false }, { status: 400 });
++    const biasKey =
++      Number.isFinite(body.lng) && Number.isFinite(body.lat)
++        ? `${Number(body.lng).toFixed(2)},${Number(body.lat).toFixed(2)}`
++        : "";
++    await rememberAddressCacheHit(normalized, biasKey);
++    return Response.json({ ok: true });
++  } catch {
++    return Response.json({ ok: true });
+   }
+ }
+diff --git a/src/app/globals.css b/src/app/globals.css
+index dfc4848..93bf982 100644
+--- a/src/app/globals.css
++++ b/src/app/globals.css
+@@ -354,4 +354,93 @@
+ 
+ .maplibregl-ctrl-attrib a {
+   color: #b8c4d4 !important;
++}
++
++.navigation-instruction-card {
++  position: relative;
++  width: min(420px, 32vw);
++  max-width: calc(100vw - 96px);
++  max-height: min(280px, 34vh);
++  padding: 14px 16px;
++  border-radius: 22px;
++  overflow: hidden;
++}
++
++.navigation-instruction-content {
++  display: grid;
++  grid-template-columns: 72px minmax(0, 1fr) 36px;
++  align-items: center;
++  gap: 12px;
++}
++
++.navigation-turn-icon {
++  width: 72px;
++  height: 72px;
++}
++
++.navigation-distance {
++  font-size: clamp(32px, 4vw, 52px);
++  line-height: 1;
++  font-weight: 800;
++}
++
++.navigation-next-label {
++  font-size: clamp(15px, 1.6vw, 22px);
++  line-height: 1.2;
++}
++
++.navigation-street-name {
++  font-size: clamp(16px, 1.8vw, 24px);
++  line-height: 1.25;
++  white-space: nowrap;
++  overflow: hidden;
++  text-overflow: ellipsis;
++}
++
++.navigation-audio-button {
++  width: 36px;
++  height: 36px;
++}
++
++@media (orientation: portrait) {
++  .navigation-instruction-card {
++    width: min(320px, calc(100vw - 88px));
++    max-height: 230px;
++    padding: 12px 14px;
++    border-radius: 18px;
++  }
++
++  .navigation-instruction-content {
++    grid-template-columns: 56px minmax(0, 1fr) 32px;
++    gap: 10px;
++  }
++
++  .navigation-turn-icon {
++    width: 56px;
++    height: 56px;
++  }
++
++  .navigation-distance {
++    font-size: clamp(30px, 7vw, 40px);
++  }
++
++  .navigation-next-label {
++    font-size: clamp(14px, 3.6vw, 18px);
++  }
++
++  .navigation-street-name {
++    font-size: clamp(14px, 3.8vw, 18px);
++  }
++
++  .navigation-audio-button {
++    width: 32px;
++    height: 32px;
++  }
++}
++
++@media (max-width: 390px) {
++  .navigation-instruction-card {
++    width: min(292px, calc(100vw - 76px));
++    padding: 10px 12px;
++  }
+ }
+\ No newline at end of file
+diff --git a/src/components/driving/driving-app.tsx b/src/components/driving/driving-app.tsx
+index 888f103..2923bbb 100644
+--- a/src/components/driving/driving-app.tsx
++++ b/src/components/driving/driving-app.tsx
+@@ -132,6 +132,13 @@ export function DrivingApp() {
+   );
+   const trafficFocus5km = true;
+   const landscape = useLandscape();
++  const navCardRef = useRef<HTMLDivElement>(null);
++  const [overlayPadding, setOverlayPadding] = useState({
++    top: 90,
++    left: 24,
++    right: 88,
++    bottom: 130,
++  });
+   const googleAccount = useGoogleAccount();
+   const youtubeLibrary = useYoutubeLibrary(googleAccount.youtubeAccessToken);
+   const [voiceEnabled, setVoiceEnabled] = useState(true);
+@@ -526,6 +533,31 @@ export function DrivingApp() {
+     void rerouteFromHere();
+   }, [navigating, navigationProgress?.offRoute, rerouteFromHere]);
+ 
++  useEffect(() => {
++    if (!navigating) return;
++    const el = navCardRef.current;
++    if (!el) return;
++    const update = () => {
++      const rect = el.getBoundingClientRect();
++      setOverlayPadding({
++        top: Math.max(90, Math.round(rect.height + 24)),
++        left: Math.max(24, Math.round(rect.width + 24)),
++        right: 88,
++        bottom: 130,
++      });
++    };
++    update();
++    const observer = new ResizeObserver(update);
++    observer.observe(el);
++    window.addEventListener("resize", update);
++    window.addEventListener("orientationchange", update);
++    return () => {
++      observer.disconnect();
++      window.removeEventListener("resize", update);
++      window.removeEventListener("orientationchange", update);
++    };
++  }, [landscape, navigating]);
++
+   return (
+     <div className="relative h-dvh w-full overflow-hidden overscroll-none bg-[#0b0d11] text-zinc-100">
+       <DrivingMap
+@@ -545,6 +577,7 @@ export function DrivingApp() {
+         distanceToNextMeters={distanceToNextMeters}
+         approachingIntersection={approachingIntersection}
+         destination={destination}
++        overlayPadding={navigating ? overlayPadding : null}
+         fitRouteKey={fitRouteKey}
+         onCctvSelect={selectCamera}
+         onDisasterSelect={(id) => {
+@@ -563,20 +596,14 @@ export function DrivingApp() {
+ 
+       {destination && navigating ? (
+         <>
+-          <div
+-            className={
+-              landscape
+-                ? "absolute top-[max(0.4rem,env(safe-area-inset-top))] left-3 z-20"
+-                : "absolute top-[max(0.45rem,env(safe-area-inset-top))] right-16 left-3 z-20 flex justify-center sm:right-24"
+-            }
+-          >
++          <div className="absolute top-[calc(env(safe-area-inset-top,0px)+12px)] left-[calc(env(safe-area-inset-left,0px)+12px)] z-30">
+             <NextIntersectionHud
++              ref={navCardRef}
+               step={activeNavigationStep}
+               distanceMeters={distanceToNextMeters}
+               offRoute={navigationProgress?.offRoute ?? false}
+               rerouting={rerouting}
+               voiceEnabled={voiceEnabled}
+-              compact={landscape}
+               onToggleVoice={() => setVoiceEnabled((value) => !value)}
+             />
+           </div>
+@@ -696,6 +723,7 @@ export function DrivingApp() {
+           accountBusy={googleAccount.busy}
+           accountHint={googleAccount.hint}
+           accountConfigured={googleAccount.configured}
++          accountUnavailable={googleAccount.unavailable}
+           onSignIn={googleAccount.signIn}
+           onSignOut={googleAccount.signOut}
+           onPreviewOpen={() => {
+diff --git a/src/components/map/driving-map.tsx b/src/components/map/driving-map.tsx
+index ed3cbf3..231d903 100644
+--- a/src/components/map/driving-map.tsx
++++ b/src/components/map/driving-map.tsx
+@@ -58,6 +58,12 @@ type DrivingMapProps = {
+   distanceToNextMeters: number;
+   approachingIntersection: boolean;
+   destination: RouteDestination | null;
++  overlayPadding?: {
++    top: number;
++    left: number;
++    right: number;
++    bottom: number;
++  } | null;
+   fitRouteKey: number;
+   onCctvSelect: (cameraId: string) => void;
+   onDisasterSelect: (alertId: string) => void;
+@@ -70,24 +76,39 @@ function isCompactViewport(width: number) {
+   return width < 640;
+ }
+ 
+-function drivingPadding(height: number, width: number, mode: CameraMode) {
++function drivingPadding(
++  height: number,
++  width: number,
++  mode: CameraMode,
++  navigating = false,
++  overlay?: DrivingMapProps["overlayPadding"],
++) {
+   const compact = isCompactViewport(width);
+   const bottomPad = compact ? 96 : 118;
+   const rightPad = compact ? 58 : 20;
+-  if (mode !== "3d") {
+-    return {
+-      top: compact ? 108 : 96,
+-      bottom: bottomPad,
+-      left: 12,
+-      right: rightPad,
+-    };
+-  }
+-  const topPad = Math.round((height - bottomPad) * DRIVING_PADDING_RATIO);
++  const base =
++    mode !== "3d"
++      ? {
++          top: compact ? 108 : 96,
++          bottom: bottomPad,
++          left: 12,
++          right: rightPad,
++        }
++      : {
++          top: Math.max(
++            Math.round((height - bottomPad) * DRIVING_PADDING_RATIO),
++            compact ? 96 : 80,
++          ),
++          bottom: bottomPad,
++          left: 12,
++          right: rightPad,
++        };
++  if (!navigating || !overlay) return base;
+   return {
+-    top: Math.max(topPad, compact ? 96 : 80),
+-    bottom: bottomPad,
+-    left: 12,
+-    right: rightPad,
++    top: Math.max(base.top, overlay.top),
++    bottom: Math.max(base.bottom, overlay.bottom),
++    left: Math.max(base.left, overlay.left),
++    right: Math.max(base.right, overlay.right),
+   };
+ }
+ 
+@@ -97,6 +118,7 @@ function cameraOptions(
+   mode: CameraMode,
+   navigating = false,
+   approaching = false,
++  overlay?: DrivingMapProps["overlayPadding"],
+ ) {
+   const height = map.getContainer().clientHeight;
+   const width = map.getContainer().clientWidth;
+@@ -120,7 +142,7 @@ function cameraOptions(
+             : DRIVING_PITCH
+         : 0,
+     zoom: mode === "3d" ? navZoom : OVERHEAD_ZOOM,
+-    padding: drivingPadding(height, width, mode),
++    padding: drivingPadding(height, width, mode, navigating, overlay),
+   };
+ }
+ 
+@@ -207,6 +229,7 @@ export function DrivingMap({
+   distanceToNextMeters,
+   approachingIntersection,
+   destination,
++  overlayPadding = null,
+   fitRouteKey,
+   onCctvSelect,
+   onDisasterSelect,
+@@ -240,6 +263,7 @@ export function DrivingMap({
+   const distanceToNextRef = useRef(distanceToNextMeters);
+   const pinchingRef = useRef(false);
+   const userZoomRef = useRef<number | null>(null);
++  const overlayPaddingRef = useRef(overlayPadding);
+   const lastArrowUpdateRef = useRef(0);
+   const readyRef = useRef(false);
+   const lastFrameRef = useRef(0);
+@@ -266,6 +290,7 @@ export function DrivingMap({
+     approachingRef.current = approachingIntersection;
+     routeMetersRef.current = routeMeters;
+     distanceToNextRef.current = distanceToNextMeters;
++    overlayPaddingRef.current = overlayPadding;
+   }, [
+     onCctvSelect,
+     onDisasterSelect,
+@@ -285,6 +310,7 @@ export function DrivingMap({
+     approachingIntersection,
+     routeMeters,
+     distanceToNextMeters,
++    overlayPadding,
+   ]);
+ 
+   useEffect(() => {
+@@ -393,6 +419,7 @@ export function DrivingMap({
+           modeRef.current,
+           navigatingRef.current,
+           approachingRef.current,
++          overlayPaddingRef.current,
+         );
+         const center = mapNow.getCenter();
+         const zoomTarget = pinchingRef.current
+@@ -434,6 +461,7 @@ export function DrivingMap({
+           modeRef.current,
+           navigatingRef.current,
+           approachingRef.current,
++          overlayPaddingRef.current,
+         ),
+       );
+       emitViewport(true);
+diff --git a/src/components/overlay/account-chip.tsx b/src/components/overlay/account-chip.tsx
+index 4d283d4..8f1e297 100644
+--- a/src/components/overlay/account-chip.tsx
++++ b/src/components/overlay/account-chip.tsx
+@@ -9,6 +9,7 @@ export function AccountChip({
+   busy,
+   hint,
+   configured,
++  unavailable,
+   onSignIn,
+   onSignOut,
+ }: {
+@@ -16,6 +17,7 @@ export function AccountChip({
+   busy?: boolean;
+   hint?: string | null;
+   configured: boolean;
++  unavailable?: boolean;
+   onSignIn: () => void;
+   onSignOut: () => void;
+ }) {
+@@ -63,25 +65,30 @@ export function AccountChip({
+     );
+   }
+ 
++  const blocked = !configured || unavailable;
++
+   return (
+     <div className="relative">
+       <button
+         type="button"
+-        aria-label="使用 Google 帳號登入並把書籤存進你的帳號"
+-        disabled={busy}
++        aria-label={blocked ? "Google 登入尚未完成設定" : "使用 Google 帳號登入並把書籤存進你的帳號"}
++        aria-disabled={blocked || busy}
++        disabled={Boolean(busy && configured)}
+         onClick={onSignIn}
+         className={cn(
+-          "flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] touch-manipulation",
+-          configured
+-            ? "border-white/15 bg-white/8 text-white hover:bg-white/12"
+-            : "border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10",
++          "flex max-w-[9.5rem] items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] touch-manipulation",
++          blocked
++            ? "cursor-not-allowed border-white/8 bg-white/4 text-zinc-500"
++            : "border-white/15 bg-white/8 text-white hover:bg-white/12",
+         )}
+       >
+         <GoogleMark />
+-        <span className="font-medium">{busy ? "登入中…" : "Google 登入"}</span>
++        <span className="truncate font-medium">
++          {busy && configured ? "登入中…" : blocked ? "無法使用" : "Google 登入"}
++        </span>
+       </button>
+       {hint ? (
+-        <p className="absolute bottom-full left-1/2 z-20 mb-1 w-48 -translate-x-1/2 rounded-lg bg-black/80 px-2 py-1 text-center text-[10px] text-amber-100">
++        <p className="absolute bottom-full left-1/2 z-20 mb-1 w-44 -translate-x-1/2 rounded-lg bg-black/80 px-2 py-1 text-center text-[10px] text-amber-100">
+           {hint}
+         </p>
+       ) : null}
+diff --git a/src/components/overlay/address-search.tsx b/src/components/overlay/address-search.tsx
+index 6766569..7dfa97f 100644
+--- a/src/components/overlay/address-search.tsx
++++ b/src/components/overlay/address-search.tsx
+@@ -27,14 +27,16 @@ import {
+   removeFavorite,
+   subscribeFavorites,
+ } from "@/lib/favorites";
++import { matchKindLabel } from "@/lib/geocoding/normalizeTaiwanAddress";
+ import {
+   instantKeywordHits,
+   mergeSearchHits,
+   rankSearchHits,
+ } from "@/lib/poi-search";
++import { useAddressSearch } from "@/hooks/use-address-search";
+ import { useSpeechToText } from "@/hooks/use-speech-to-text";
+ import { cn } from "@/lib/utils";
+-import { searchAddresses } from "@/services/routing";
++import { rememberGeocodeSelection } from "@/services/routing";
+ import type { GeocodeHit, LngLat } from "@/types/domain";
+ 
+ type AddressSearchProps = {
+@@ -53,12 +55,6 @@ export function AddressSearch({
+   const [query, setQuery] = useState("");
+   const [composing, setComposing] = useState(false);
+   const [open, setOpen] = useState(false);
+-  const [remote, setRemote] = useState<{ q: string; hits: GeocodeHit[] }>({
+-    q: "",
+-    hits: [],
+-  });
+-  const [searchingFor, setSearchingFor] = useState<string | null>(null);
+-  const [searchError, setSearchError] = useState<string | null>(null);
+   const history = useSyncExternalStore(
+     subscribeAddressHistory,
+     getAddressHistorySnapshot,
+@@ -70,9 +66,7 @@ export function AddressSearch({
+     getServerFavoritesSnapshot,
+   );
+   const needle = query.trim();
+-  const submitFirstHitRef = useRef(false);
+   const speechStopRef = useRef<() => void>(() => undefined);
+-  const instantRef = useRef<GeocodeHit[]>([]);
+   const biasBucket = useMemo(
+     () => ({
+       lng: Math.round(bias.lng * 50) / 50,
+@@ -88,25 +82,39 @@ export function AddressSearch({
+     [bias, favorites, history, needle],
+   );
+ 
+-  useEffect(() => {
+-    instantRef.current = instantHits;
+-  }, [instantHits]);
+-
+   const selectHit = useCallback(
+     (hit: GeocodeHit) => {
+       speechStopRef.current();
+       setQuery(hit.name);
+       setOpen(false);
+       rememberAddress(hit);
++      void rememberGeocodeSelection(hit.name, biasBucket);
+       onSelect(hit);
+     },
+-    [onSelect],
++    [biasBucket, onSelect],
++  );
++  const lookup = useAddressSearch(needle, biasBucket, composing);
++  const pendingVoiceSubmitRef = useRef(false);
++
++  const submitLookup = lookup.submit;
++  const runFormalSearch = useCallback(
++    (selectFirst = false) => {
++      if (needle.length < 1 || composing) return;
++      setOpen(true);
++      submitLookup(needle, (rows) => {
++        if (!selectFirst) return;
++        const first = rows[0];
++        if (first) selectHit(first);
++      });
++    },
++    [composing, needle, selectHit, submitLookup],
+   );
+ 
+   const handleVoiceTranscript = useCallback((text: string, isFinal: boolean) => {
+     setQuery(text);
+     setOpen(true);
+     setComposing(!isFinal);
++    pendingVoiceSubmitRef.current = isFinal && text.trim().length >= 1;
+   }, []);
+ 
+   const speech = useSpeechToText(handleVoiceTranscript);
+@@ -116,78 +124,34 @@ export function AddressSearch({
+   }, [speech.stop]);
+ 
+   useEffect(() => {
+-    if (composing || needle.length < 2) return;
++    if (!pendingVoiceSubmitRef.current || composing) return;
++    pendingVoiceSubmitRef.current = false;
++    runFormalSearch(false);
++  }, [composing, needle, runFormalSearch]);
+ 
+-    let cancelled = false;
+-    const controller = new AbortController();
+-    const timer = window.setTimeout(() => {
+-      setSearchingFor(needle);
+-      const deadline = window.setTimeout(() => controller.abort(), 1000);
+-      void searchAddresses(needle, biasBucket, controller.signal)
+-        .then((rows) => {
+-          if (cancelled) return;
+-          setRemote({ q: needle, hits: rows });
+-          const merged = rankSearchHits(
+-            mergeSearchHits([...instantRef.current, ...rows], 24),
+-            needle,
+-            biasBucket,
+-          );
+-          setSearchError(
+-            merged.length ? null : "找不到店家、公司或地址，請換關鍵字或縮寫。",
+-          );
+-          if (submitFirstHitRef.current && merged[0]) {
+-            submitFirstHitRef.current = false;
+-            selectHit(merged[0]);
+-          }
+-        })
+-        .catch((error: unknown) => {
+-          if (cancelled) return;
+-          if (error instanceof DOMException && error.name === "AbortError") {
+-            setSearchError(
+-              instantRef.current.length
+-                ? null
+-                : "搜尋逾時，請再輸入門牌或更完整關鍵字。",
+-            );
+-            return;
+-          }
+-          setSearchError(
+-            instantRef.current.length ? null : "地址搜尋失敗，請稍後再試。",
+-          );
+-        })
+-        .finally(() => {
+-          window.clearTimeout(deadline);
+-          if (!cancelled) setSearchingFor(null);
+-        });
+-    }, 160);
+-
+-    return () => {
+-      cancelled = true;
+-      controller.abort();
+-      window.clearTimeout(timer);
+-    };
+-  }, [biasBucket, composing, needle, selectHit]);
+-
+-  const remoteHits = remote.q === needle ? remote.hits : [];
+-  const searching = searchingFor === needle;
++  const searching = lookup.searching;
++  const suggesting = lookup.suggesting && !lookup.submitted;
++  const previewHits = lookup.submitted ? lookup.remoteHits : lookup.suggestHits;
+   const visibleHits =
+     needle.length < 1
+       ? []
+       : rankSearchHits(
+-          mergeSearchHits([...instantHits, ...remoteHits], 24),
++          mergeSearchHits([...instantHits, ...previewHits], 24),
+           needle,
+           bias,
+         );
+   const chips = useMemo(() => TAIWAN_LANDMARKS.slice(0, 5), []);
+   const emptyHint =
+     needle.length >= 1 && !searching && !busy && visibleHits.length === 0
+-      ? searchError
++      ? lookup.submitted
++        ? lookup.error
++        : "輸入時會先找紀錄、快取與附近店家。按搜尋或 Enter 再查門牌地圖。"
+       : null;
+ 
+   return (
+     <div className="pointer-events-auto w-full max-w-xl">
+       <div className="rounded-2xl border border-white/12 bg-black/60 shadow-[0_10px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl">
+         <div className="flex items-center gap-2 px-2.5 py-2">
+-          <Search className="ml-1 size-4 shrink-0 text-cyan-300" />
+           <Input
+             value={query}
+             onChange={(event) => {
+@@ -204,17 +168,25 @@ export function AddressSearch({
+             onKeyDown={(event) => {
+               if (event.key !== "Enter" || composing) return;
+               event.preventDefault();
+-              const first = visibleHits[0];
+-              if (first) {
+-                selectHit(first);
+-                return;
+-              }
+-              if (needle.length >= 1) submitFirstHitRef.current = true;
++              if (needle.length < 1) return;
++              runFormalSearch(true);
+             }}
+             placeholder={speech.listening ? "正在聽…請說出目的地" : "地址、店家、公司、品牌或縮寫"}
+             aria-label="目的地搜尋"
+             className="h-10 border-0 bg-transparent px-1 text-sm text-white shadow-none placeholder:text-zinc-500 focus-visible:ring-0"
+           />
++          <Button
++            type="button"
++            variant="ghost"
++            size="icon-sm"
++            aria-label="搜尋門牌與地圖"
++            title="搜尋門牌與地圖"
++            disabled={needle.length < 1 || composing || searching || busy}
++            onClick={() => runFormalSearch(false)}
++            className="size-9 shrink-0 text-cyan-200 hover:bg-white/10 hover:text-white touch-manipulation disabled:text-zinc-500"
++          >
++            <Search className="size-4" />
++          </Button>
+           <Button
+             type="button"
+             variant="ghost"
+@@ -244,8 +216,6 @@ export function AddressSearch({
+               onClick={() => {
+                 speech.stop();
+                 setQuery("");
+-                setRemote({ q: "", hits: [] });
+-                setSearchError(null);
+                 setOpen(false);
+               }}
+               className="size-9 text-zinc-300 hover:bg-white/10 hover:text-white"
+@@ -260,9 +230,29 @@ export function AddressSearch({
+         <div className="mt-1.5 overflow-hidden rounded-2xl border border-white/10 bg-black/78 shadow-xl backdrop-blur-xl">
+           <p className="px-3 pt-2 text-[11px] text-zinc-500">
+             {speech.listening
+-              ? "正在聽取語音…說完後會自動搜尋"
+-              : "全市約 20 公里 · 店家／公司／品牌／縮寫 · 長按地圖自訂位置"}
++              ? "正在聽取語音…說完後會查門牌與地圖"
++              : lookup.submitted
++                ? "已查門牌與地圖 · 點選結果開始導航"
++                : "輸入中只顯示紀錄、快取與附近店家 · 按搜尋或 Enter 查門牌"}
+           </p>
++          {needle.length >= 1 ? (
++            <button
++              type="button"
++              onClick={() => runFormalSearch(false)}
++              disabled={composing || searching || busy}
++              className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left hover:bg-white/8 touch-manipulation disabled:opacity-50"
++            >
++              <Search className="size-4 shrink-0 text-cyan-300" />
++              <span className="min-w-0">
++                <span className="block truncate text-sm text-white">
++                  搜尋「{needle}」
++                </span>
++                <span className="block text-[11px] text-zinc-500">
++                  查 TGOS、國土測量雲與地圖門牌
++                </span>
++              </span>
++            </button>
++          ) : null}
+           {speech.error ? (
+             <p className="px-3 pt-1 text-[11px] text-amber-200">{speech.error}</p>
+           ) : null}
+@@ -300,6 +290,18 @@ export function AddressSearch({
+                         <span className="block truncate text-[11px] text-zinc-500">
+                           {hit.address}
+                         </span>
++                        {hit.matchKind ? (
++                          <span
++                            className={cn(
++                              "mt-0.5 inline-block rounded-full px-1.5 py-px text-[10px]",
++                              hit.exactHouseNumber
++                                ? "bg-cyan-400/15 text-cyan-200"
++                                : "bg-white/8 text-zinc-400",
++                            )}
++                          >
++                            {matchKindLabel(hit.matchKind)}
++                          </span>
++                        ) : null}
+                       </span>
+                     </button>
+                   </li>
+@@ -343,10 +345,14 @@ export function AddressSearch({
+             </ul>
+           ) : null}
+ 
+-          {searching || busy ? (
++          {searching || suggesting || busy ? (
+             <p className="flex items-center gap-2 px-3 py-2 text-[11px] text-zinc-400">
+               <Loader2 className="size-3.5 animate-spin" />
+-              {busy ? "規劃路線中…" : "補齊門牌與關鍵字…"}
++              {busy
++                ? "規劃路線中…"
++                : searching
++                  ? "正在查門牌與地圖…"
++                  : "比對紀錄與快取…"}
+             </p>
+           ) : null}
+ 
+@@ -369,6 +375,18 @@ export function AddressSearch({
+                       <span className="block truncate text-[11px] text-zinc-500">
+                         {hit.address}
+                       </span>
++                      {hit.matchKind ? (
++                        <span
++                          className={cn(
++                            "mt-0.5 inline-block rounded-full px-1.5 py-px text-[10px]",
++                            hit.exactHouseNumber
++                              ? "bg-cyan-400/15 text-cyan-200"
++                              : "bg-white/8 text-zinc-400",
++                          )}
++                        >
++                          {matchKindLabel(hit.matchKind)}
++                        </span>
++                      ) : null}
+                     </span>
+                   </button>
+                   <button
+diff --git a/src/components/overlay/navigation-banner.tsx b/src/components/overlay/navigation-banner.tsx
+index 788b55c..463bcab 100644
+--- a/src/components/overlay/navigation-banner.tsx
++++ b/src/components/overlay/navigation-banner.tsx
+@@ -1,5 +1,6 @@
+ "use client";
+ 
++import { forwardRef } from "react";
+ import {
+   ArrowUp,
+   CornerUpLeft,
+@@ -15,16 +16,10 @@ import { formatDistance } from "@/lib/format";
+ import { cn } from "@/lib/utils";
+ import type { RouteStep } from "@/types/domain";
+ 
+-function TurnGlyph({
+-  step,
+-  compact,
+-}: {
+-  step: RouteStep | null;
+-  compact?: boolean;
+-}) {
++function TurnGlyph({ step }: { step: RouteStep | null }) {
+   const type = step?.type ?? "";
+   const modifier = step?.modifier ?? "";
+-  const className = compact ? "size-7 text-cyan-200" : "size-12 text-cyan-200";
++  const className = "size-8 text-cyan-200";
+   if (type === "arrive") return <Flag className={className} />;
+   if (type.includes("roundabout") || type.includes("rotary")) {
+     return <RotateCw className={className} />;
+@@ -44,103 +39,74 @@ function guidanceLine(step: RouteStep | null) {
+   return step.action;
+ }
+ 
+-export function NextIntersectionHud({
+-  step,
+-  distanceMeters,
+-  offRoute,
+-  rerouting = false,
+-  voiceEnabled,
+-  compact = false,
+-  onToggleVoice,
+-}: {
+-  step: RouteStep | null;
+-  distanceMeters: number;
+-  offRoute: boolean;
+-  rerouting?: boolean;
+-  voiceEnabled: boolean;
+-  compact?: boolean;
+-  onToggleVoice: () => void;
+-}) {
++export const NextIntersectionHud = forwardRef<
++  HTMLDivElement,
++  {
++    step: RouteStep | null;
++    distanceMeters: number;
++    offRoute: boolean;
++    rerouting?: boolean;
++    voiceEnabled: boolean;
++    onToggleVoice: () => void;
++  }
++>(function NextIntersectionHud(
++  {
++    step,
++    distanceMeters,
++    offRoute,
++    rerouting = false,
++    voiceEnabled,
++    onToggleVoice,
++  },
++  ref,
++) {
+   return (
+     <div
+-      className={cn(
+-        "pointer-events-auto flex items-center text-white shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl",
+-        compact
+-          ? "w-fit max-w-[16rem] gap-2 rounded-xl border border-cyan-300/25 bg-black/78 px-2 py-1.5"
+-          : "w-full max-w-2xl gap-3 rounded-2xl border border-cyan-300/25 bg-black/75 px-3 py-2.5 sm:gap-4 sm:px-5 sm:py-3",
+-      )}
++      ref={ref}
++      className="navigation-instruction-card pointer-events-auto border border-cyan-300/25 bg-black/78 text-white shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl"
+     >
+-      <div
+-        className={cn(
+-          "flex shrink-0 items-center justify-center bg-cyan-400/15",
+-          compact ? "size-11 rounded-lg" : "size-20 rounded-2xl",
+-        )}
+-      >
+-        <TurnGlyph step={step} compact={compact} />
+-      </div>
+-      <div className={cn("min-w-0 flex-1", compact ? "text-left" : "text-center sm:text-left")}>
+-        <p
+-          className={cn(
+-            "tracking-wide text-cyan-200/90",
+-            compact ? "text-[11px] leading-tight" : "text-[22px] leading-tight",
+-          )}
+-        >
+-          下一個路口
+-        </p>
+-        <p
++      <div className="navigation-instruction-content">
++        <div className="navigation-turn-icon flex shrink-0 items-center justify-center rounded-2xl bg-cyan-400/15">
++          <TurnGlyph step={step} />
++        </div>
++        <div className="min-w-0 text-left">
++          <p className="navigation-next-label tracking-wide text-cyan-200/90">
++            下一個路口
++          </p>
++          <p className="navigation-distance truncate tabular-nums tracking-tight">
++            {formatDistance(distanceMeters)}
++          </p>
++          <p className="navigation-street-name font-medium text-white">
++            {guidanceLine(step)}
++          </p>
++          {rerouting ? (
++            <p className="mt-0.5 truncate text-[12px] font-medium text-amber-300">
++              正在更新路線…
++            </p>
++          ) : offRoute ? (
++            <p className="mt-0.5 truncate text-[12px] font-medium text-amber-300">
++              偏離路線，即將重算
++            </p>
++          ) : null}
++        </div>
++        <Button
++          type="button"
++          variant="ghost"
++          size="icon-sm"
++          aria-label={voiceEnabled ? "關閉 AI 語音" : "開啟 AI 語音"}
++          aria-pressed={voiceEnabled}
++          onClick={onToggleVoice}
+           className={cn(
+-            "truncate font-semibold tabular-nums leading-none tracking-tight",
+-            compact ? "text-[22px]" : "text-[40px] sm:text-[48px]",
++            "navigation-audio-button shrink-0 text-zinc-300 hover:bg-white/10 hover:text-white",
+           )}
+         >
+-          {formatDistance(distanceMeters)}
+-        </p>
+-        <p
+-          className={cn(
+-            "truncate font-medium leading-tight text-white",
+-            compact ? "mt-0.5 text-[12px]" : "mt-1 text-[22px]",
++          {voiceEnabled ? (
++            <Volume2 className="size-4" />
++          ) : (
++            <VolumeX className="size-4" />
+           )}
+-        >
+-          {guidanceLine(step)}
+-        </p>
+-        {rerouting ? (
+-          <p
+-            className={cn(
+-              "font-medium leading-tight text-amber-300",
+-              compact ? "text-[11px]" : "text-[22px]",
+-            )}
+-          >
+-            正在更新路線…
+-          </p>
+-        ) : offRoute ? (
+-          <p
+-            className={cn(
+-              "font-medium leading-tight text-amber-300",
+-              compact ? "text-[11px]" : "text-[22px]",
+-            )}
+-          >
+-            偏離路線，即將重算
+-          </p>
+-        ) : null}
++        </Button>
+       </div>
+-      <Button
+-        type="button"
+-        variant="ghost"
+-        size="icon-sm"
+-        aria-label={voiceEnabled ? "關閉 AI 語音" : "開啟 AI 語音"}
+-        aria-pressed={voiceEnabled}
+-        onClick={onToggleVoice}
+-        className={cn(
+-          "shrink-0 text-zinc-300 hover:bg-white/10 hover:text-white",
+-          compact ? "size-8" : "size-10",
+-        )}
+-      >
+-        {voiceEnabled ? (
+-          <Volume2 className={compact ? "size-4" : "size-5"} />
+-        ) : (
+-          <VolumeX className={compact ? "size-4" : "size-5"} />
+-        )}
+-      </Button>
+     </div>
+   );
+-}
++});
+diff --git a/src/components/overlay/road-information-card.tsx b/src/components/overlay/road-information-card.tsx
+index 4845f62..b6a8dc5 100644
+--- a/src/components/overlay/road-information-card.tsx
++++ b/src/components/overlay/road-information-card.tsx
+@@ -96,6 +96,7 @@ export function RoadInformationCard({
+   accountBusy = false,
+   accountHint = null,
+   accountConfigured = false,
++  accountUnavailable = false,
+   onSignIn,
+   onSignOut,
+ }: {
+@@ -121,6 +122,7 @@ export function RoadInformationCard({
+   accountBusy?: boolean;
+   accountHint?: string | null;
+   accountConfigured?: boolean;
++  accountUnavailable?: boolean;
+   onSignIn?: () => void;
+   onSignOut?: () => void;
+ }) {
+@@ -255,6 +257,7 @@ export function RoadInformationCard({
+           busy={accountBusy}
+           hint={accountHint}
+           configured={accountConfigured}
++          unavailable={accountUnavailable}
+           onSignIn={() => onSignIn?.()}
+           onSignOut={() => onSignOut?.()}
+         />
+diff --git a/src/hooks/use-address-search.ts b/src/hooks/use-address-search.ts
+new file mode 100644
+index 0000000..406a80b
+--- /dev/null
++++ b/src/hooks/use-address-search.ts
+@@ -0,0 +1,113 @@
++"use client";
++
++import { useCallback, useEffect, useRef, useState } from "react";
++import { searchAddresses } from "@/services/routing";
++import type { GeocodeHit, LngLat } from "@/types/domain";
++
++const SUGGEST_DEBOUNCE_MS = 350;
++
++export function useAddressSearch(
++  query: string,
++  bias: LngLat,
++  composing: boolean,
++) {
++  const [suggestHits, setSuggestHits] = useState<GeocodeHit[]>([]);
++  const [remoteHits, setRemoteHits] = useState<GeocodeHit[]>([]);
++  const [submittedQuery, setSubmittedQuery] = useState("");
++  const [suggesting, setSuggesting] = useState(false);
++  const [searching, setSearching] = useState(false);
++  const [error, setError] = useState<string | null>(null);
++  const suggestGenerationRef = useRef(0);
++  const searchGenerationRef = useRef(0);
++  const searchAbortRef = useRef<AbortController | null>(null);
++  const needle = query.trim();
++  const submitted = submittedQuery.length > 0 && submittedQuery === needle;
++
++  useEffect(() => {
++    if (composing || needle.length < 2) {
++      return;
++    }
++
++    const generation = suggestGenerationRef.current + 1;
++    suggestGenerationRef.current = generation;
++    const controller = new AbortController();
++    const timer = window.setTimeout(() => {
++      setSuggesting(true);
++      void searchAddresses(needle, bias, controller.signal, "suggest")
++        .then((rows) => {
++          if (generation !== suggestGenerationRef.current) return;
++          setSuggestHits(rows);
++        })
++        .catch((cause: unknown) => {
++          if (generation !== suggestGenerationRef.current) return;
++          if (cause instanceof DOMException && cause.name === "AbortError") return;
++          setSuggestHits([]);
++        })
++        .finally(() => {
++          if (generation === suggestGenerationRef.current) setSuggesting(false);
++        });
++    }, SUGGEST_DEBOUNCE_MS);
++
++    return () => {
++      window.clearTimeout(timer);
++      controller.abort();
++    };
++  }, [bias, composing, needle]);
++
++  useEffect(() => {
++    if (!submittedQuery || needle === submittedQuery) return;
++    searchAbortRef.current?.abort();
++  }, [needle, submittedQuery]);
++
++  useEffect(() => {
++    return () => {
++      searchAbortRef.current?.abort();
++    };
++  }, []);
++
++  const submit = useCallback(
++    (text: string, onSettled?: (rows: GeocodeHit[]) => void) => {
++      const next = text.trim();
++      if (next.length < 1) return;
++
++      searchAbortRef.current?.abort();
++      const generation = searchGenerationRef.current + 1;
++      searchGenerationRef.current = generation;
++      const controller = new AbortController();
++      searchAbortRef.current = controller;
++      setSubmittedQuery(next);
++      setSearching(true);
++      setError(null);
++
++      void searchAddresses(next, bias, controller.signal, "search")
++        .then((rows) => {
++          if (generation !== searchGenerationRef.current) return;
++          setRemoteHits(rows);
++          setError(
++            rows.length ? null : "找不到店家、公司或地址，已改查附近巷弄或道路。",
++          );
++          onSettled?.(rows);
++        })
++        .catch((cause: unknown) => {
++          if (generation !== searchGenerationRef.current) return;
++          if (cause instanceof DOMException && cause.name === "AbortError") return;
++          setError("地址搜尋失敗，請稍後再試。");
++        })
++        .finally(() => {
++          if (generation === searchGenerationRef.current) setSearching(false);
++        });
++    },
++    [bias],
++  );
++
++  return {
++    suggestHits: needle.length < 2 ? [] : suggestHits,
++    remoteHits: submitted ? remoteHits : [],
++    submitted,
++    suggesting: needle.length >= 2 && suggesting,
++    searching: submitted && searching,
++    error: submitted && needle.length >= 1 ? error : null,
++    submit,
++    setError,
++  };
++}
+diff --git a/src/hooks/use-google-account.ts b/src/hooks/use-google-account.ts
+index a637260..869b395 100644
+--- a/src/hooks/use-google-account.ts
++++ b/src/hooks/use-google-account.ts
+@@ -31,6 +31,8 @@ function driveToken() {
+   return readYoutubeAccess()?.accessToken ?? null;
+ }
+ 
++let warnedMissingClientId = false;
++
+ export function useGoogleAccount() {
+   const account = useSyncExternalStore(
+     subscribeAccount,
+@@ -44,25 +46,50 @@ export function useGoogleAccount() {
+   );
+   const [busy, setBusy] = useState(false);
+   const [hint, setHint] = useState<string | null>(null);
++  const [sdkStatus, setSdkStatus] = useState<"idle" | "loading" | "ready" | "error">(
++    GOOGLE_CLIENT_ID ? "loading" : "idle",
++  );
+   const accountRef = useRef<GoogleAccount | null>(account);
++  const configured = Boolean(GOOGLE_CLIENT_ID);
+ 
+   useEffect(() => {
+     accountRef.current = account;
+   }, [account]);
+ 
++  useEffect(() => {
++    if (!configured) {
++      if (process.env.NODE_ENV === "development" && !warnedMissingClientId) {
++        warnedMissingClientId = true;
++        console.warn("Google OAuth client ID is missing.");
++      }
++      return;
++    }
++    let cancelled = false;
++    void loadGoogleIdentityScript()
++      .then(() => {
++        if (!cancelled) setSdkStatus("ready");
++      })
++      .catch(() => {
++        if (!cancelled) setSdkStatus("error");
++      });
++    return () => {
++      cancelled = true;
++    };
++  }, [configured]);
++
+   const applyAccount = useCallback((next: GoogleAccount | null) => {
+     accountRef.current = next;
+     writeStoredAccount(next);
+   }, []);
+ 
+   const requestGoogleAccess = useCallback((prompt: "" | "consent" = "consent") => {
+-    if (!GOOGLE_CLIENT_ID) return Promise.resolve(null);
++    if (!GOOGLE_CLIENT_ID) return Promise.resolve({ token: null, reason: "unconfigured" as const });
+     return loadGoogleIdentityScript().then(
+       () =>
+-        new Promise<string | null>((resolve) => {
++        new Promise<{ token: string | null; reason: "ok" | "cancel" | "error" }>((resolve) => {
+           const oauth = window.google?.accounts?.oauth2;
+           if (!oauth) {
+-            resolve(null);
++            resolve({ token: null, reason: "error" });
+             return;
+           }
+           const client = oauth.initTokenClient({
+@@ -70,16 +97,23 @@ export function useGoogleAccount() {
+             scope: GOOGLE_LOGIN_SCOPES,
+             callback: (response) => {
+               if (!response.access_token) {
+-                resolve(null);
++                resolve({ token: null, reason: "error" });
+                 return;
+               }
+               writeYoutubeAccess({
+                 accessToken: response.access_token,
+                 exp: Date.now() + (response.expires_in ?? 3600) * 1000,
+               });
+-              resolve(response.access_token);
++              resolve({ token: response.access_token, reason: "ok" });
++            },
++            error_callback: (error) => {
++              const type = error.type ?? "";
++              if (type.includes("popup_closed") || type.includes("popup_failed")) {
++                resolve({ token: null, reason: "cancel" });
++                return;
++              }
++              resolve({ token: null, reason: "error" });
+             },
+-            error_callback: () => resolve(null),
+           });
+           client.requestAccessToken({ prompt });
+         }),
+@@ -87,36 +121,41 @@ export function useGoogleAccount() {
+   }, []);
+ 
+   const signIn = useCallback(() => {
+-    if (!GOOGLE_CLIENT_ID) {
+-      setHint("請在 .env.local 設定 NEXT_PUBLIC_GOOGLE_CLIENT_ID 後重新啟動。");
++    if (!configured) {
++      setHint("Google 登入尚未完成設定");
++      return;
++    }
++    if (sdkStatus === "error") {
++      setHint("目前無法連線 Google 登入，請稍後再試。");
+       return;
+     }
+     setBusy(true);
+     setHint(null);
+     void requestGoogleAccess("consent")
+-      .then(async (token) => {
++      .then(async ({ token, reason }) => {
+         if (!token) {
+-          setHint("請允許彈出視窗並授權 Google，才能把書籤存進你的帳號。");
++          if (reason === "cancel") setHint("已取消登入。");
++          else setHint("登入沒有完成，請再試一次。");
+           return;
+         }
+         const profile = await fetchGoogleProfile(token);
+         if (!profile) {
+-          setHint("無法讀取 Google 帳號，請再試一次。");
++          setHint("無法確認 Google 帳號，請再試一次。");
+           return;
+         }
+         applyAccount(profile);
+         await syncDriveFavorites(token);
+-        setHint("書籤已同步到你的 Google 帳號。");
++        setHint("已登入，書籤會存到你的 Google 帳號。");
+       })
+       .catch(() => {
+-        setHint("無法載入 Google 登入。");
++        setHint("目前無法連線 Google 登入，請稍後再試。");
+       })
+       .finally(() => setBusy(false));
+-  }, [applyAccount, requestGoogleAccess]);
++  }, [applyAccount, configured, requestGoogleAccess, sdkStatus]);
+ 
+   const connectYoutube = useCallback(async () => {
+-    if (!GOOGLE_CLIENT_ID) {
+-      setHint("尚未設定 Google 登入，無法同步 YouTube Music 歌單。");
++    if (!configured) {
++      setHint("Google 登入尚未完成設定");
+       return null;
+     }
+     if (!accountRef.current) {
+@@ -125,15 +164,15 @@ export function useGoogleAccount() {
+       return null;
+     }
+     setBusy(true);
+-    const token = await requestGoogleAccess(readYoutubeAccess() ? "" : "consent");
++    const { token, reason } = await requestGoogleAccess(readYoutubeAccess() ? "" : "consent");
+     setBusy(false);
+     if (!token) {
+-      setHint("請允許 YouTube 讀取權限，才能同步已儲存歌單。");
++      setHint(reason === "cancel" ? "已取消授權。" : "無法同步音樂歌單，請再試一次。");
+       return null;
+     }
+     setHint(null);
+     return token;
+-  }, [requestGoogleAccess, signIn]);
++  }, [configured, requestGoogleAccess, signIn]);
+ 
+   useEffect(() => {
+     if (!account) return;
+@@ -176,15 +215,17 @@ export function useGoogleAccount() {
+     }
+     writeYoutubeAccess(null);
+     applyAccount(null);
+-    setHint("已登出。書籤仍留在此裝置，下次登入會再同步到 Google。");
++    setHint("已登出。書籤仍留在此裝置。");
+   }, [applyAccount]);
+ 
+   return {
+     account,
+     ready: true,
+-    busy,
++    busy: busy || sdkStatus === "loading",
+     hint,
+-    configured: Boolean(GOOGLE_CLIENT_ID),
++    configured,
++    unavailable: !configured || sdkStatus === "error",
++    sdkStatus,
+     youtubeAccessToken: youtubeAccess?.accessToken ?? null,
+     signIn,
+     signOut,
+diff --git a/src/lib/geocoding/normalizeTaiwanAddress.ts b/src/lib/geocoding/normalizeTaiwanAddress.ts
+new file mode 100644
+index 0000000..e9b4379
+--- /dev/null
++++ b/src/lib/geocoding/normalizeTaiwanAddress.ts
+@@ -0,0 +1,267 @@
++import { DEFAULT_GEOCODE_CITY } from "@/lib/taiwan-address";
++import type { GeocodeMatchKind } from "@/lib/geocoding/types";
++
++export type TaiwanAddressParts = {
++  city: string;
++  town: string;
++  village: string;
++  road: string;
++  section: string;
++  lane: string;
++  alley: string;
++  number: string;
++  subNumber: string;
++  floor: string;
++  room: string;
++};
++
++export type NormalizedTaiwanAddress = {
++  original: string;
++  compact: string;
++  comparable: string;
++  normalizedAddress: string;
++  searchAddress: string;
++  parts: TaiwanAddressParts;
++  hasHouseNumber: boolean;
++  hasLaneOrAlley: boolean;
++  hasRoad: boolean;
++};
++
++export type RelaxedAddressQuery = {
++  query: string;
++  matchKind: GeocodeMatchKind;
++};
++
++export const ACCURACY_LABELS: Record<GeocodeMatchKind, string> = {
++  "exact-house": "精確門牌",
++  interpolated: "推估門牌位置",
++  approximate: "約略位置",
++  "lane-center": "巷弄位置",
++  "road-center": "道路位置",
++  landmark: "地標位置",
++};
++
++const FULLWIDTH_DIGITS = /[０-９]/g;
++const FLOOR_RE = /(?:地下|B)?\d+\s*(?:樓|F|f)(?:之\d+)?|[Bb]\d+|第?\d+層/u;
++const ROOM_RE = /\d+\s*(?:室|房)/u;
++
++function toHalfWidth(value: string) {
++  return value.replace(FULLWIDTH_DIGITS, (digit) =>
++    String.fromCharCode(digit.charCodeAt(0) - 0xfee0),
++  );
++}
++
++export function compactTaiwanText(value: string) {
++  return toHalfWidth(value)
++    .replace(/[－–—]/g, "-")
++    .replace(/[／/]/g, "")
++    .replace(/\s+/g, "")
++    .trim();
++}
++
++export function comparableTaiwanText(value: string) {
++  return compactTaiwanText(value).replaceAll("臺", "台");
++}
++
++function stripFloorAndRoom(value: string) {
++  return value.replace(FLOOR_RE, "").replace(ROOM_RE, "");
++}
++
++function normalizeHouseToken(value: string) {
++  return value
++    .replace(/(\d+)-(\d+)號/g, "$1之$2號")
++    .replace(/(\d+)之(\d+)/g, "$1之$2");
++}
++
++function parseParts(compact: string): TaiwanAddressParts {
++  const city = compact.match(/(.+?[縣市])/u)?.[1] ?? "";
++  const restAfterCity = city ? compact.slice(city.length) : compact;
++  const town = restAfterCity.match(/^(.+?[區市鎮鄉])/u)?.[1] ?? "";
++  const restAfterTown = town ? restAfterCity.slice(town.length) : restAfterCity;
++  const village = restAfterTown.match(/^(.+?[村里])/u)?.[1] ?? "";
++  const rest = village ? restAfterTown.slice(village.length) : restAfterTown;
++
++  const road = rest.match(/(.+?(?:路|街|大道|道))/u)?.[1] ?? "";
++  const afterRoad = road ? rest.slice(road.length) : rest;
++  const section = afterRoad.match(/^([0-9一二三四五六七八九十]+段)/u)?.[1] ?? "";
++  const afterSection = section ? afterRoad.slice(section.length) : afterRoad;
++  const lane = afterSection.match(/^(\d+巷)/u)?.[1] ?? "";
++  const afterLane = lane ? afterSection.slice(lane.length) : afterSection;
++  const alley = afterLane.match(/^(\d+弄)/u)?.[1] ?? "";
++  const afterAlley = alley ? afterLane.slice(alley.length) : afterLane;
++  const house = afterAlley.match(/^(\d+)(?:之(\d+))?(?:號)?/u);
++  const floor = afterAlley.match(FLOOR_RE)?.[0] ?? "";
++  const room = afterAlley.match(ROOM_RE)?.[0] ?? "";
++
++  return {
++    city,
++    town,
++    village,
++    road,
++    section,
++    lane,
++    alley,
++    number: house?.[1] ?? "",
++    subNumber: house?.[2] ?? "",
++    floor,
++    room,
++  };
++}
++
++function joinParts(parts: Array<string | undefined>) {
++  return parts.filter(Boolean).join("");
++}
++
++function houseToken(parts: TaiwanAddressParts) {
++  if (!parts.number) return "";
++  return parts.subNumber
++    ? `${parts.number}之${parts.subNumber}號`
++    : `${parts.number}號`;
++}
++
++export function normalizeTaiwanAddress(query: string): NormalizedTaiwanAddress {
++  const original = query.trim();
++  const compact = normalizeHouseToken(stripFloorAndRoom(compactTaiwanText(original)));
++  const parts = parseParts(compact);
++  if (!parts.city && (parts.road || parts.town)) {
++    parts.city = DEFAULT_GEOCODE_CITY;
++  }
++  const searchAddress = joinParts([
++    parts.city,
++    parts.town,
++    parts.village,
++    parts.road,
++    parts.section,
++    parts.lane,
++    parts.alley,
++    houseToken(parts),
++  ]);
++  const normalizedAddress = searchAddress || compact || original;
++
++  return {
++    original,
++    compact,
++    comparable: comparableTaiwanText(normalizedAddress),
++    normalizedAddress,
++    searchAddress: searchAddress || compact,
++    parts,
++    hasHouseNumber: Boolean(parts.number),
++    hasLaneOrAlley: Boolean(parts.lane || parts.alley),
++    hasRoad: Boolean(parts.road),
++  };
++}
++
++export function relaxedAddressQueries(
++  parsed: NormalizedTaiwanAddress,
++): RelaxedAddressQuery[] {
++  const { parts, original, searchAddress } = parsed;
++  const rows: RelaxedAddressQuery[] = [];
++  const seen = new Set<string>();
++  const push = (
++    query: string,
++    matchKind: RelaxedAddressQuery["matchKind"],
++  ) => {
++    const cleaned = query.trim();
++    if (cleaned.length < 2 || seen.has(cleaned)) return;
++    seen.add(cleaned);
++    rows.push({ query: cleaned, matchKind });
++  };
++
++  if (parsed.hasHouseNumber) {
++    push(searchAddress, "exact-house");
++    push(
++      joinParts([
++        parts.city,
++        parts.town,
++        parts.road,
++        parts.section,
++        parts.lane,
++        parts.alley,
++        houseToken(parts),
++      ]),
++      "exact-house",
++    );
++  }
++  if (parts.alley) {
++    push(
++      joinParts([parts.city, parts.town, parts.road, parts.section, parts.lane, parts.alley]),
++      "lane-center",
++    );
++    push(joinParts([parts.road, parts.section, parts.lane, parts.alley]), "lane-center");
++  }
++  if (parts.lane) {
++    push(
++      joinParts([parts.city, parts.town, parts.road, parts.section, parts.lane]),
++      "lane-center",
++    );
++    push(joinParts([parts.road, parts.section, parts.lane]), "lane-center");
++  }
++  if (parts.road) {
++    push(joinParts([parts.city, parts.town, parts.road, parts.section]), "road-center");
++    push(joinParts([parts.road, parts.section]), "road-center");
++  }
++  push(original, "landmark");
++  return rows;
++}
++
++export function isInterpolationHint(value: string) {
++  return /內插|interpolation|interpolat|range\s*interpol/i.test(value);
++}
++
++function extractHouseToken(value: string) {
++  const match = comparableTaiwanText(value).match(/(\d+)(?:之(\d+))?號/u);
++  if (!match) return null;
++  return match[2] ? `${match[1]}之${match[2]}號` : `${match[1]}號`;
++}
++
++export function classifyMatchKind(
++  query: NormalizedTaiwanAddress,
++  candidateLabel: string,
++  fallback: GeocodeMatchKind = "approximate",
++  providerHint = "",
++): GeocodeMatchKind {
++  if (providerHint && isInterpolationHint(providerHint)) {
++    return "interpolated";
++  }
++  const hay = comparableTaiwanText(candidateLabel);
++  const house = houseToken(query.parts);
++  if (house && hay.includes(comparableTaiwanText(house))) {
++    if (
++      (!query.parts.lane || hay.includes(query.parts.lane)) &&
++      (!query.parts.alley || hay.includes(query.parts.alley))
++    ) {
++      return "exact-house";
++    }
++    return "interpolated";
++  }
++  const candidateHouse = extractHouseToken(candidateLabel);
++  if (
++    house &&
++    candidateHouse &&
++    comparableTaiwanText(candidateHouse) !== comparableTaiwanText(house) &&
++    query.parts.road &&
++    hay.includes(comparableTaiwanText(query.parts.road))
++  ) {
++    return "interpolated";
++  }
++  if (query.parts.alley && hay.includes(query.parts.alley)) return "lane-center";
++  if (query.parts.lane && hay.includes(query.parts.lane)) return "lane-center";
++  if (query.parts.road && hay.includes(comparableTaiwanText(query.parts.road))) {
++    return "road-center";
++  }
++  return fallback;
++}
++
++export function matchKindLabel(kind: GeocodeMatchKind) {
++  return ACCURACY_LABELS[kind] ?? ACCURACY_LABELS.approximate;
++}
++
++export function queryHash(normalizedQuery: string, biasKey = "") {
++  const raw = `${comparableTaiwanText(normalizedQuery)}|${biasKey}`;
++  let hash = 2166136261;
++  for (let index = 0; index < raw.length; index += 1) {
++    hash ^= raw.charCodeAt(index);
++    hash = Math.imul(hash, 16777619);
++  }
++  return `q${(hash >>> 0).toString(16)}`;
++}
+diff --git a/src/lib/geocoding/orchestrator.ts b/src/lib/geocoding/orchestrator.ts
+new file mode 100644
+index 0000000..83ab261
+--- /dev/null
++++ b/src/lib/geocoding/orchestrator.ts
+@@ -0,0 +1,357 @@
++import "server-only";
++
++import { matchLandmarks } from "@/data/landmarks";
++import { distanceKm } from "@/lib/geo";
++import {
++  matchKindLabel,
++  normalizeTaiwanAddress,
++  relaxedAddressQueries,
++} from "@/lib/geocoding/normalizeTaiwanAddress";
++import {
++  readAddressCache,
++  writeAddressCache,
++} from "@/lib/geocoding/providers/cache";
++import { createNlscProvider } from "@/lib/geocoding/providers/nlsc";
++import { createOsmProvider } from "@/lib/geocoding/providers/osm";
++import { createTgosProvider, tgosEnabled } from "@/lib/geocoding/providers/tgos";
++import { matchLocalPois } from "@/lib/poi-search";
++import { SEARCH_RESULT_LIMIT } from "@/lib/search-constants";
++import type {
++  GeocodeLookupMode,
++  GeocodeProviderStatus,
++  GeocodeResponse,
++  GeocodeResult,
++  GeocodeSource,
++} from "@/lib/geocoding/types";
++
++const PROVIDER_TIMEOUT_MS = 3000;
++const OVERALL_TIMEOUT_MS = 5500;
++const DEDUPE_METERS = 25;
++
++function biasKey(latitude?: number, longitude?: number) {
++  if (latitude == null || longitude == null) return "";
++  return `${longitude.toFixed(2)},${latitude.toFixed(2)}`;
++}
++
++function inTaiwan(lat: number, lng: number) {
++  return lng >= 118 && lng <= 123 && lat >= 20 && lat <= 27;
++}
++
++function localResults(
++  query: string,
++  latitude?: number,
++  longitude?: number,
++): GeocodeResult[] {
++  const origin =
++    latitude != null && longitude != null
++      ? { lat: latitude, lng: longitude }
++      : { lat: 22.99721, lng: 120.21258 };
++  return [...matchLandmarks(query, 8), ...matchLocalPois(query, origin, 12)].map(
++    (hit) => ({
++      id: hit.id,
++      label: hit.name,
++      formattedAddress: hit.address,
++      latitude: hit.location.lat,
++      longitude: hit.location.lng,
++      source: "local" as const,
++      confidence: 0.7,
++      exactHouseNumber: false,
++      matchKind: "landmark" as const,
++    }),
++  );
++}
++
++async function runProvider(
++  provider: { name: GeocodeSource; enabled: boolean; search: (q: string, o?: { latitude?: number; longitude?: number; timeoutMs?: number; signal?: AbortSignal }) => Promise<GeocodeResult[]> },
++  query: string,
++  options: { latitude?: number; longitude?: number; signal?: AbortSignal },
++  statuses: Partial<Record<GeocodeSource, GeocodeProviderStatus>>,
++) {
++  if (!provider.enabled) {
++    statuses[provider.name] = "disabled";
++    return [] as GeocodeResult[];
++  }
++  try {
++    const rows = await provider.search(query, {
++      ...options,
++      timeoutMs: PROVIDER_TIMEOUT_MS,
++    });
++    statuses[provider.name] =
++      statuses[provider.name] === "ok" || rows.length
++        ? "ok"
++        : statuses[provider.name] ?? "empty";
++    return rows;
++  } catch {
++    statuses[provider.name] = "error";
++    return [];
++  }
++}
++
++function mergeResults(rows: GeocodeResult[]) {
++  const kept: GeocodeResult[] = [];
++  for (const hit of rows) {
++    if (!inTaiwan(hit.latitude, hit.longitude)) continue;
++    const duplicate = kept.find(
++      (item) =>
++        distanceKm(
++          { lat: item.latitude, lng: item.longitude },
++          { lat: hit.latitude, lng: hit.longitude },
++        ) *
++          1000 <=
++          DEDUPE_METERS &&
++        (item.label === hit.label || item.source === hit.source || item.matchKind === hit.matchKind),
++    );
++    if (!duplicate) {
++      kept.push(hit);
++      continue;
++    }
++    if (hit.confidence > duplicate.confidence) {
++      const index = kept.indexOf(duplicate);
++      kept[index] = {
++        ...hit,
++        formattedAddress: `${hit.formattedAddress} · ${matchKindLabel(hit.matchKind)}`,
++      };
++    }
++  }
++  return kept;
++}
++
++function sortResults(
++  rows: GeocodeResult[],
++  parsedCity: string,
++  parsedTown: string,
++  preferLane: boolean,
++  origin?: { lat: number; lng: number },
++) {
++  const kindRank = preferLane
++    ? {
++        "exact-house": 0,
++        interpolated: 1,
++        "lane-center": 2,
++        approximate: 3,
++        "road-center": 4,
++        landmark: 5,
++      }
++    : {
++        "exact-house": 0,
++        interpolated: 1,
++        approximate: 2,
++        "lane-center": 3,
++        "road-center": 4,
++        landmark: 5,
++      };
++  const sourceRank: Record<GeocodeSource, number> = {
++    cache: 0,
++    tgos: 1,
++    nlsc: 2,
++    google: 3,
++    local: 4,
++    osm: 5,
++  };
++  return [...rows].sort((a, b) => {
++    if (a.exactHouseNumber !== b.exactHouseNumber) {
++      return a.exactHouseNumber ? -1 : 1;
++    }
++    const kindDelta = kindRank[a.matchKind] - kindRank[b.matchKind];
++    if (kindDelta !== 0) return kindDelta;
++    const cityA = parsedCity && a.formattedAddress.includes(parsedCity.replaceAll("台", "臺"));
++    const cityB = parsedCity && b.formattedAddress.includes(parsedCity.replaceAll("台", "臺"));
++    if (Boolean(cityA) !== Boolean(cityB)) return cityA ? -1 : 1;
++    const townA = parsedTown && a.formattedAddress.includes(parsedTown);
++    const townB = parsedTown && b.formattedAddress.includes(parsedTown);
++    if (Boolean(townA) !== Boolean(townB)) return townA ? -1 : 1;
++    const sourceDelta = sourceRank[a.source] - sourceRank[b.source];
++    if (sourceDelta !== 0) return sourceDelta;
++    if (origin) {
++      const distA =
++        a.distanceMeters ??
++        distanceKm(origin, { lat: a.latitude, lng: a.longitude }) * 1000;
++      const distB =
++        b.distanceMeters ??
++        distanceKm(origin, { lat: b.latitude, lng: b.longitude }) * 1000;
++      if (distA !== distB) return distA - distB;
++    }
++    return b.confidence - a.confidence;
++  });
++}
++
++function withDistance(
++  rows: GeocodeResult[],
++  origin?: { lat: number; lng: number },
++) {
++  if (!origin) return rows;
++  return rows.map((item) => ({
++    ...item,
++    distanceMeters: Math.round(
++      distanceKm(origin, { lat: item.latitude, lng: item.longitude }) * 1000,
++    ),
++    formattedAddress: item.formattedAddress.includes(matchKindLabel(item.matchKind))
++      ? item.formattedAddress
++      : `${item.formattedAddress} · ${matchKindLabel(item.matchKind)}`,
++  }));
++}
++
++function applyLaneRoadLabels(rows: GeocodeResult[]) {
++  return rows.map((item) => {
++    if (item.exactHouseNumber || item.label.includes("附近")) return item;
++    const hasHouse = /\d+號/u.test(item.label);
++    if (item.matchKind === "lane-center" && !hasHouse) {
++      return { ...item, label: `${item.label}附近` };
++    }
++    if (item.matchKind === "road-center" && !hasHouse) {
++      return { ...item, label: `${item.label}附近` };
++    }
++    return item;
++  });
++}
++
++function skippedRemoteStatuses(): Partial<Record<GeocodeSource, GeocodeProviderStatus>> {
++  return {
++    tgos: "disabled",
++    nlsc: "disabled",
++    osm: "disabled",
++    google: "disabled_by_map_renderer_policy",
++  };
++}
++
++export async function searchGeocode(
++  query: string,
++  options: {
++    latitude?: number;
++    longitude?: number;
++    signal?: AbortSignal;
++    mode?: GeocodeLookupMode;
++  } = {},
++): Promise<GeocodeResponse> {
++  const mode: GeocodeLookupMode = options.mode ?? "search";
++  const parsed = normalizeTaiwanAddress(query);
++  const origin =
++    options.latitude != null && options.longitude != null
++      ? { lat: options.latitude, lng: options.longitude }
++      : undefined;
++  const key = biasKey(options.latitude, options.longitude);
++  const statuses: Partial<Record<GeocodeSource, GeocodeProviderStatus>> =
++    mode === "suggest"
++      ? {
++          ...skippedRemoteStatuses(),
++          cache: "empty",
++          local: "empty",
++        }
++      : {
++          tgos: tgosEnabled() ? "empty" : "disabled",
++          google: "disabled_by_map_renderer_policy",
++          nlsc: "empty",
++          osm: "empty",
++          cache: "empty",
++          local: "empty",
++        };
++
++  const cached = await readAddressCache(parsed.normalizedAddress, key);
++  if (cached?.length) {
++    statuses.cache = "ok";
++    const locals = mode === "suggest" ? localResults(query, options.latitude, options.longitude) : [];
++    if (locals.length) statuses.local = "ok";
++    return {
++      query,
++      normalizedQuery: parsed.normalizedAddress,
++      cacheHit: true,
++      results: sortResults(
++        withDistance(mode === "suggest" ? mergeResults([...cached, ...locals]) : cached, origin),
++        parsed.parts.city,
++        parsed.parts.town,
++        parsed.hasLaneOrAlley,
++        origin,
++      ).slice(0, SEARCH_RESULT_LIMIT),
++      providers: statuses,
++    };
++  }
++
++  if (mode === "suggest") {
++    const locals = localResults(query, options.latitude, options.longitude);
++    if (locals.length) statuses.local = "ok";
++    return {
++      query,
++      normalizedQuery: parsed.normalizedAddress,
++      cacheHit: false,
++      results: sortResults(
++        withDistance(locals, origin),
++        parsed.parts.city,
++        parsed.parts.town,
++        parsed.hasLaneOrAlley,
++        origin,
++      ).slice(0, SEARCH_RESULT_LIMIT),
++      providers: statuses,
++    };
++  }
++
++  const locals = localResults(query, options.latitude, options.longitude);
++  if (locals.length) statuses.local = "ok";
++
++  const tgos = createTgosProvider(parsed);
++  const nlsc = createNlscProvider(parsed);
++  const osm = createOsmProvider(parsed);
++  const collected: GeocodeResult[] = [...locals];
++  const deadline = Date.now() + OVERALL_TIMEOUT_MS;
++
++  const relaxations = relaxedAddressQueries(parsed);
++  for (const step of relaxations) {
++    if (Date.now() > deadline || options.signal?.aborted) break;
++    const official = await Promise.allSettled([
++      runProvider(tgos, step.query, options, statuses),
++      runProvider(nlsc, step.query, options, statuses),
++    ]);
++    for (const outcome of official) {
++      if (outcome.status === "fulfilled") collected.push(...outcome.value);
++    }
++    if (collected.some((item) => item.exactHouseNumber)) break;
++  }
++
++  if (
++    !collected.some((item) => item.exactHouseNumber) &&
++    Date.now() < deadline &&
++    !options.signal?.aborted
++  ) {
++    const fallbackQuery = relaxations[0]?.query ?? parsed.searchAddress;
++    const osmRows = await runProvider(osm, fallbackQuery, options, statuses);
++    collected.push(...osmRows);
++  }
++
++  const merged = applyLaneRoadLabels(
++    sortResults(
++      withDistance(mergeResults(collected), origin),
++      parsed.parts.city,
++      parsed.parts.town,
++      parsed.hasLaneOrAlley,
++      origin,
++    ),
++  ).slice(0, SEARCH_RESULT_LIMIT);
++
++  if (merged.length) {
++    const cacheable = merged.filter((item) => item.source !== "google");
++    if (cacheable.length) {
++      void writeAddressCache(query, parsed.normalizedAddress, cacheable, key);
++    }
++  }
++
++  return {
++    query,
++    normalizedQuery: parsed.normalizedAddress,
++    cacheHit: false,
++    results: merged,
++    providers: statuses,
++  };
++}
++
++export function toGeocodeHits(results: GeocodeResult[]) {
++  return results.map((item) => ({
++    id: item.id,
++    name: item.label,
++    address: item.formattedAddress,
++    location: { lng: item.longitude, lat: item.latitude },
++    source: item.source,
++    exactHouseNumber: item.exactHouseNumber,
++    matchKind: item.matchKind,
++    confidence: item.confidence,
++    distanceMeters: item.distanceMeters,
++  }));
++}
+diff --git a/src/lib/geocoding/providers/cache.ts b/src/lib/geocoding/providers/cache.ts
+new file mode 100644
+index 0000000..f529074
+--- /dev/null
++++ b/src/lib/geocoding/providers/cache.ts
+@@ -0,0 +1,183 @@
++import "server-only";
++
++import { queryHash } from "@/lib/geocoding/normalizeTaiwanAddress";
++import type { GeocodeResult } from "@/lib/geocoding/types";
++
++const memory = new Map<
++  string,
++  { results: GeocodeResult[]; expiresAt: number; hitCount: number }
++>();
++
++const EXACT_TTL_MS = 14 * 24 * 60 * 60 * 1000;
++const FUZZY_TTL_MS = 6 * 60 * 60 * 1000;
++
++function supabaseConfig() {
++  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "";
++  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ?? "";
++  if (!url || !serviceKey) return null;
++  return { url: url.replace(/\/$/, ""), serviceKey };
++}
++
++export function cacheProviderEnabled() {
++  return true;
++}
++
++function ttlFor(results: GeocodeResult[]) {
++  return results.some((item) => item.exactHouseNumber)
++    ? EXACT_TTL_MS
++    : FUZZY_TTL_MS;
++}
++
++function isFresh(expiresAt: number) {
++  return expiresAt > Date.now();
++}
++
++async function supabaseGet(hash: string): Promise<GeocodeResult[] | null> {
++  const config = supabaseConfig();
++  if (!config) return null;
++  try {
++    const response = await fetch(
++      `${config.url}/rest/v1/address_search_cache?query_hash=eq.${encodeURIComponent(hash)}&select=response_data,expires_at,hit_count`,
++      {
++        headers: {
++          apikey: config.serviceKey,
++          Authorization: `Bearer ${config.serviceKey}`,
++        },
++        cache: "no-store",
++      },
++    );
++    if (!response.ok) return null;
++    const rows = (await response.json()) as Array<{
++      response_data?: { results?: GeocodeResult[] };
++      expires_at?: string;
++      hit_count?: number;
++    }>;
++    const row = rows[0];
++    if (!row?.expires_at || !isFresh(Date.parse(row.expires_at))) return null;
++    const results = row.response_data?.results;
++    return Array.isArray(results) ? results : null;
++  } catch {
++    return null;
++  }
++}
++
++async function supabasePut(
++  hash: string,
++  originalQuery: string,
++  normalizedQuery: string,
++  results: GeocodeResult[],
++) {
++  const config = supabaseConfig();
++  if (!config) return;
++  const expiresAt = new Date(Date.now() + ttlFor(results)).toISOString();
++  try {
++    await fetch(`${config.url}/rest/v1/address_search_cache`, {
++      method: "POST",
++      headers: {
++        apikey: config.serviceKey,
++        Authorization: `Bearer ${config.serviceKey}`,
++        "Content-Type": "application/json",
++        Prefer: "resolution=merge-duplicates",
++      },
++      body: JSON.stringify({
++        query_hash: hash,
++        original_query: originalQuery,
++        normalized_query: normalizedQuery,
++        response_data: { results },
++        primary_source: results[0]?.source ?? null,
++        expires_at: expiresAt,
++        updated_at: new Date().toISOString(),
++      }),
++    });
++  } catch {
++    /* 快取寫入失敗不影響搜尋 */
++  }
++}
++
++async function supabaseTouch(hash: string) {
++  const config = supabaseConfig();
++  if (!config) return;
++  try {
++    const current = await fetch(
++      `${config.url}/rest/v1/address_search_cache?query_hash=eq.${encodeURIComponent(hash)}&select=hit_count`,
++      {
++        headers: {
++          apikey: config.serviceKey,
++          Authorization: `Bearer ${config.serviceKey}`,
++        },
++        cache: "no-store",
++      },
++    );
++    if (!current.ok) return;
++    const rows = (await current.json()) as Array<{ hit_count?: number }>;
++    const next = (rows[0]?.hit_count ?? 0) + 1;
++    await fetch(
++      `${config.url}/rest/v1/address_search_cache?query_hash=eq.${encodeURIComponent(hash)}`,
++      {
++        method: "PATCH",
++        headers: {
++          apikey: config.serviceKey,
++          Authorization: `Bearer ${config.serviceKey}`,
++          "Content-Type": "application/json",
++        },
++        body: JSON.stringify({
++          hit_count: next,
++          updated_at: new Date().toISOString(),
++        }),
++      },
++    );
++  } catch {
++    /* 計數失敗可忽略 */
++  }
++}
++
++export async function readAddressCache(
++  normalizedQuery: string,
++  biasKey = "",
++): Promise<GeocodeResult[] | null> {
++  const hash = queryHash(normalizedQuery, biasKey);
++  const local = memory.get(hash);
++  if (local && isFresh(local.expiresAt)) {
++    local.hitCount += 1;
++    return local.results;
++  }
++  if (local) memory.delete(hash);
++
++  const remote = await supabaseGet(hash);
++  if (remote) {
++    memory.set(hash, {
++      results: remote,
++      expiresAt: Date.now() + ttlFor(remote),
++      hitCount: 1,
++    });
++    return remote;
++  }
++  return null;
++}
++
++export async function writeAddressCache(
++  originalQuery: string,
++  normalizedQuery: string,
++  results: GeocodeResult[],
++  biasKey = "",
++) {
++  const cacheable = results.filter((item) => item.source !== "google");
++  if (!cacheable.length) return;
++  const hash = queryHash(normalizedQuery, biasKey);
++  memory.set(hash, {
++    results: cacheable,
++    expiresAt: Date.now() + ttlFor(cacheable),
++    hitCount: 0,
++  });
++  await supabasePut(hash, originalQuery, normalizedQuery, cacheable);
++}
++
++export async function rememberAddressCacheHit(
++  normalizedQuery: string,
++  biasKey = "",
++) {
++  const hash = queryHash(normalizedQuery, biasKey);
++  const local = memory.get(hash);
++  if (local) local.hitCount += 1;
++  await supabaseTouch(hash);
++}
+diff --git a/src/lib/geocoding/providers/google.ts b/src/lib/geocoding/providers/google.ts
+new file mode 100644
+index 0000000..f3722d1
+--- /dev/null
++++ b/src/lib/geocoding/providers/google.ts
+@@ -0,0 +1,28 @@
++import "server-only";
++
++import type {
++  GeocodeProvider,
++  GeocodeProviderStatus,
++} from "@/lib/geocoding/types";
++import type { NormalizedTaiwanAddress } from "@/lib/geocoding/normalizeTaiwanAddress";
++
++/** MapLibre 底圖模式下永不啟用 Google Geocoding／Places，即使金鑰存在。 */
++export const GOOGLE_GEOCODING_POLICY_STATUS: GeocodeProviderStatus =
++  "disabled_by_map_renderer_policy";
++
++export function googlePlacesEnabled() {
++  return false;
++}
++
++export function createGoogleProvider(
++  parsed: NormalizedTaiwanAddress,
++): GeocodeProvider {
++  void parsed;
++  return {
++    name: "google",
++    enabled: false,
++    async search() {
++      return [];
++    },
++  };
++}
+diff --git a/src/lib/geocoding/providers/nlsc.ts b/src/lib/geocoding/providers/nlsc.ts
+new file mode 100644
+index 0000000..5e2e6b9
+--- /dev/null
++++ b/src/lib/geocoding/providers/nlsc.ts
+@@ -0,0 +1,67 @@
++import "server-only";
++
++import {
++  classifyMatchKind,
++  type NormalizedTaiwanAddress,
++} from "@/lib/geocoding/normalizeTaiwanAddress";
++import type {
++  GeocodeProvider,
++  GeocodeResult,
++  GeocodeSearchOptions,
++} from "@/lib/geocoding/types";
++import { searchNlscMapHits } from "@/services/official-address";
++
++export function nlscEnabled() {
++  return true;
++}
++
++export function createNlscProvider(
++  parsed: NormalizedTaiwanAddress,
++): GeocodeProvider {
++  return {
++    name: "nlsc",
++    enabled: nlscEnabled(),
++    async search(query: string, options?: GeocodeSearchOptions) {
++      try {
++        const rows = await searchNlscMapHits(
++          query,
++          options?.latitude && options.longitude
++            ? { lat: options.latitude, lng: options.longitude }
++            : undefined,
++          options?.timeoutMs ?? 3000,
++        );
++        return rows.map((item, index) => {
++          const fallback =
++            item.kind === "ADDRESS"
++              ? "exact-house"
++              : item.kind === "CROSSROAD"
++                ? "lane-center"
++                : item.kind === "LANDGOAL"
++                  ? "landmark"
++                  : "approximate";
++          const matchKind = classifyMatchKind(parsed, item.fullAddress, fallback);
++          return {
++            id: `nlsc-${item.kind}-${index}-${item.location.lng.toFixed(5)}-${item.location.lat.toFixed(5)}`,
++            label: item.fullAddress,
++            formattedAddress: item.fullAddress,
++            latitude: item.location.lat,
++            longitude: item.location.lng,
++            source: "nlsc",
++            confidence:
++              matchKind === "exact-house"
++                ? 0.94
++                : matchKind === "interpolated"
++                  ? 0.82
++                  : item.kind === "ADDRESS"
++                    ? 0.88
++                    : 0.64,
++            exactHouseNumber: matchKind === "exact-house",
++            matchKind,
++          } satisfies GeocodeResult;
++        });
++      } catch {
++        return [];
++      }
++    },
++  };
++}
+diff --git a/src/lib/geocoding/providers/osm.ts b/src/lib/geocoding/providers/osm.ts
+new file mode 100644
+index 0000000..7a8c36c
+--- /dev/null
++++ b/src/lib/geocoding/providers/osm.ts
+@@ -0,0 +1,142 @@
++import "server-only";
++
++import { SEARCH_RADIUS_KM } from "@/lib/search-constants";
++import {
++  classifyMatchKind,
++  type NormalizedTaiwanAddress,
++} from "@/lib/geocoding/normalizeTaiwanAddress";
++import type {
++  GeocodeProvider,
++  GeocodeResult,
++  GeocodeSearchOptions,
++} from "@/lib/geocoding/types";
++
++const NOMINATIM = "https://nominatim.openstreetmap.org/search";
++const PHOTON = "https://photon.komoot.io/api/";
++const USER_AGENT = "NavPilot/0.1 (https://github.com/jin358-cmd/nav-map)";
++
++type NominatimRow = {
++  place_id: number;
++  name?: string;
++  display_name: string;
++  lat: string;
++  lon: string;
++};
++
++type PhotonFeature = {
++  geometry?: { coordinates?: number[] };
++  properties?: { osm_id?: number; name?: string; street?: string };
++};
++
++async function fetchJson<T>(
++  url: URL,
++  timeoutMs: number,
++  signal?: AbortSignal,
++): Promise<T | null> {
++  const controller = new AbortController();
++  const timer = setTimeout(() => controller.abort(), timeoutMs);
++  const onAbort = () => controller.abort();
++  signal?.addEventListener("abort", onAbort);
++  try {
++    const response = await fetch(url, {
++      headers: {
++        Accept: "application/json",
++        "Accept-Language": "zh-TW",
++        "User-Agent": USER_AGENT,
++      },
++      cache: "no-store",
++      signal: controller.signal,
++    });
++    if (!response.ok) return null;
++    return (await response.json()) as T;
++  } catch {
++    return null;
++  } finally {
++    clearTimeout(timer);
++    signal?.removeEventListener("abort", onAbort);
++  }
++}
++
++export function createOsmProvider(
++  parsed: NormalizedTaiwanAddress,
++): GeocodeProvider {
++  return {
++    name: "osm",
++    enabled: true,
++    async search(query: string, options?: GeocodeSearchOptions) {
++      const timeoutMs = options?.timeoutMs ?? 3000;
++      const nominatim = new URL(NOMINATIM);
++      nominatim.searchParams.set("format", "jsonv2");
++      nominatim.searchParams.set("countrycodes", "tw");
++      nominatim.searchParams.set("limit", "8");
++      nominatim.searchParams.set("q", query);
++      nominatim.searchParams.set("accept-language", "zh-TW");
++      if (options?.latitude && options.longitude) {
++        const padLng = SEARCH_RADIUS_KM / 101;
++        const padLat = SEARCH_RADIUS_KM / 111;
++        nominatim.searchParams.set(
++          "viewbox",
++          `${options.longitude - padLng},${options.latitude + padLat},${options.longitude + padLng},${options.latitude - padLat}`,
++        );
++        nominatim.searchParams.set("bounded", "0");
++      }
++
++      const photon = new URL(PHOTON);
++      photon.searchParams.set("q", query);
++      photon.searchParams.set("limit", "8");
++      photon.searchParams.set("lang", "zh");
++      if (options?.latitude && options.longitude) {
++        photon.searchParams.set("lat", String(options.latitude));
++        photon.searchParams.set("lon", String(options.longitude));
++      }
++
++      const [nominatimRows, photonPayload] = await Promise.all([
++        fetchJson<NominatimRow[]>(nominatim, timeoutMs, options?.signal),
++        fetchJson<{ features?: PhotonFeature[] }>(photon, timeoutMs, options?.signal),
++      ]);
++
++      const results: GeocodeResult[] = [];
++      for (const item of nominatimRows ?? []) {
++        const lat = Number(item.lat);
++        const lng = Number(item.lon);
++        if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
++        const label = item.name || item.display_name.split(",")[0] || query;
++        const matchKind = classifyMatchKind(parsed, item.display_name, "approximate");
++        const osmKind =
++          matchKind === "exact-house" ? "interpolated" : matchKind;
++        results.push({
++          id: `osm-${item.place_id}`,
++          label,
++          formattedAddress: item.display_name,
++          latitude: lat,
++          longitude: lng,
++          source: "osm",
++          confidence: osmKind === "road-center" ? 0.55 : 0.48,
++          exactHouseNumber: false,
++          matchKind: osmKind,
++        });
++      }
++
++      for (const [index, feature] of (photonPayload?.features ?? []).entries()) {
++        const lng = Number(feature.geometry?.coordinates?.[0]);
++        const lat = Number(feature.geometry?.coordinates?.[1]);
++        if (!Number.isFinite(lng) || !Number.isFinite(lat)) continue;
++        const label =
++          feature.properties?.name || feature.properties?.street || query;
++        const matchKind = classifyMatchKind(parsed, label, "approximate");
++        results.push({
++          id: `photon-${feature.properties?.osm_id ?? index}`,
++          label,
++          formattedAddress: label,
++          latitude: lat,
++          longitude: lng,
++          source: "osm",
++          confidence: 0.46,
++          exactHouseNumber: false,
++          matchKind: matchKind === "exact-house" ? "interpolated" : matchKind,
++        });
++      }
++      return results;
++    },
++  };
++}
+diff --git a/src/lib/geocoding/providers/tgos.ts b/src/lib/geocoding/providers/tgos.ts
+new file mode 100644
+index 0000000..ac37ce5
+--- /dev/null
++++ b/src/lib/geocoding/providers/tgos.ts
+@@ -0,0 +1,60 @@
++import "server-only";
++
++import { classifyMatchKind } from "@/lib/geocoding/normalizeTaiwanAddress";
++import type {
++  GeocodeProvider,
++  GeocodeResult,
++  GeocodeSearchOptions,
++} from "@/lib/geocoding/types";
++import { searchHouseholdAddresses } from "@/services/official-address";
++import type { NormalizedTaiwanAddress } from "@/lib/geocoding/normalizeTaiwanAddress";
++
++export function tgosEnabled() {
++  const url = process.env.TGOS_API_URL?.trim();
++  return Boolean(
++    (process.env.TGOS_APP_ID?.trim() && process.env.TGOS_API_KEY?.trim()) ||
++      (url && process.env.TGOS_API_KEY?.trim()),
++  );
++}
++
++export function createTgosProvider(
++  parsed: NormalizedTaiwanAddress,
++): GeocodeProvider {
++  return {
++    name: "tgos",
++    enabled: tgosEnabled(),
++    async search(query: string, options?: GeocodeSearchOptions) {
++      void options;
++      if (!tgosEnabled()) return [];
++      try {
++        const rows = await searchHouseholdAddresses(query);
++        return rows.map((item, index) => {
++          const matchKind = classifyMatchKind(
++            parsed,
++            item.fullAddress,
++            "approximate",
++            item.matchType,
++          );
++          return {
++            id: `tgos-${index}-${item.location.lng.toFixed(5)}-${item.location.lat.toFixed(5)}`,
++            label: item.fullAddress,
++            formattedAddress: item.fullAddress,
++            latitude: item.location.lat,
++            longitude: item.location.lng,
++            source: "tgos",
++            confidence:
++              matchKind === "exact-house"
++                ? 0.96
++                : matchKind === "interpolated"
++                  ? 0.8
++                  : 0.72,
++            exactHouseNumber: matchKind === "exact-house",
++            matchKind,
++          } satisfies GeocodeResult;
++        });
++      } catch {
++        return [];
++      }
++    },
++  };
++}
+diff --git a/src/lib/geocoding/types.ts b/src/lib/geocoding/types.ts
+new file mode 100644
+index 0000000..e6420f8
+--- /dev/null
++++ b/src/lib/geocoding/types.ts
+@@ -0,0 +1,57 @@
++export type GeocodeSource = "cache" | "tgos" | "nlsc" | "osm" | "google" | "local";
++
++export type GeocodeMatchKind =
++  | "exact-house"
++  | "interpolated"
++  | "approximate"
++  | "lane-center"
++  | "road-center"
++  | "landmark";
++
++export type AddressAccuracy = GeocodeMatchKind;
++
++export type GeocodeResult = {
++  id: string;
++  label: string;
++  formattedAddress: string;
++  latitude: number;
++  longitude: number;
++  source: GeocodeSource;
++  confidence: number;
++  distanceMeters?: number;
++  exactHouseNumber?: boolean;
++  matchKind: GeocodeMatchKind;
++};
++
++export type GeocodeLookupMode = "suggest" | "search";
++
++export type GeocodeSearchOptions = {
++  latitude?: number;
++  longitude?: number;
++  signal?: AbortSignal;
++  timeoutMs?: number;
++};
++
++export type GeocodeProvider = {
++  name: GeocodeSource;
++  enabled: boolean;
++  search(
++    query: string,
++    options?: GeocodeSearchOptions,
++  ): Promise<GeocodeResult[]>;
++};
++
++export type GeocodeProviderStatus =
++  | "ok"
++  | "empty"
++  | "disabled"
++  | "error"
++  | "disabled_by_map_renderer_policy";
++
++export type GeocodeResponse = {
++  query: string;
++  normalizedQuery: string;
++  cacheHit: boolean;
++  results: GeocodeResult[];
++  providers: Partial<Record<GeocodeSource, GeocodeProviderStatus>>;
++};
+diff --git a/src/lib/google-identity.ts b/src/lib/google-identity.ts
+index 5ad0132..2962e12 100644
+--- a/src/lib/google-identity.ts
++++ b/src/lib/google-identity.ts
+@@ -158,31 +158,58 @@ export async function fetchGoogleProfile(
+   }
+ }
+ 
++const GSI_SRC = "https://accounts.google.com/gsi/client";
++let gsiLoadPromise: Promise<void> | null = null;
++
++function gsiReady() {
++  return Boolean(window.google?.accounts?.oauth2);
++}
++
+ export function loadGoogleIdentityScript(): Promise<void> {
+   if (typeof window === "undefined") return Promise.resolve();
+-  if (window.google?.accounts?.id && window.google.accounts.oauth2) {
+-    return Promise.resolve();
+-  }
+-  const existing = document.querySelector<HTMLScriptElement>(
+-    'script[src="https://accounts.google.com/gsi/client"]',
+-  );
+-  if (existing) {
+-    return new Promise((resolve, reject) => {
+-      existing.addEventListener("load", () => resolve(), { once: true });
+-      existing.addEventListener("error", () => reject(new Error("gsi")), {
+-        once: true,
+-      });
+-    });
+-  }
+-  return new Promise((resolve, reject) => {
++  if (gsiReady()) return Promise.resolve();
++  if (gsiLoadPromise) return gsiLoadPromise;
++
++  gsiLoadPromise = new Promise((resolve, reject) => {
++    const finish = () => {
++      if (gsiReady()) {
++        resolve();
++        return;
++      }
++      gsiLoadPromise = null;
++      reject(new Error("gsi"));
++    };
++    const fail = () => {
++      gsiLoadPromise = null;
++      reject(new Error("gsi"));
++    };
++
++    const existing = document.querySelector<HTMLScriptElement>(
++      `script[src="${GSI_SRC}"]`,
++    );
++    if (existing) {
++      if (existing.dataset.loaded === "true" || gsiReady()) {
++        finish();
++        return;
++      }
++      existing.addEventListener("load", finish, { once: true });
++      existing.addEventListener("error", fail, { once: true });
++      return;
++    }
++
+     const script = document.createElement("script");
+-    script.src = "https://accounts.google.com/gsi/client";
++    script.src = GSI_SRC;
+     script.async = true;
+     script.defer = true;
+-    script.onload = () => resolve();
+-    script.onerror = () => reject(new Error("gsi"));
++    script.onload = () => {
++      script.dataset.loaded = "true";
++      finish();
++    };
++    script.onerror = fail;
+     document.head.appendChild(script);
+   });
++
++  return gsiLoadPromise;
+ }
+ 
+ declare global {
+diff --git a/src/services/official-address.ts b/src/services/official-address.ts
+index 512efcd..b554412 100644
+--- a/src/services/official-address.ts
++++ b/src/services/official-address.ts
+@@ -3,10 +3,12 @@ import "server-only";
+ import type { LngLat } from "@/types/domain";
+ 
+ const TGOS_ENDPOINT =
++  process.env.TGOS_API_URL?.trim() ||
+   "https://addr.tgos.tw/addrws/v30/QueryAddr.asmx/QueryAddr";
+ const NLSC_LAND_ENDPOINT =
+   "https://api.nlsc.gov.tw/other/TownVillagePointQuery";
+ const NLSC_MAP_SEARCH =
++  process.env.NLSC_API_URL?.trim() ||
+   "https://api.nlsc.gov.tw/idc/TextQueryMap";
+ const NLSC_MAP_REFERER = "https://maps.nlsc.gov.tw/T09/";
+ 
+@@ -113,7 +115,7 @@ function parseNlscLocation(value: string): LngLat | null {
+ export async function searchNlscMapHits(
+   address: string,
+   bias?: LngLat,
+-  timeoutMs = 1_200,
++  timeoutMs = 3_000,
+ ): Promise<NlscMapHit[]> {
+   const query = address.replace(/[\\/]/g, "").trim();
+   if (query.length < 2) return [];
+@@ -197,7 +199,7 @@ export async function searchHouseholdAddresses(
+     oReturnMaxCount: "6",
+   });
+   const controller = new AbortController();
+-  const timer = setTimeout(() => controller.abort(), 8_000);
++  const timer = setTimeout(() => controller.abort(), 3_500);
+ 
+   try {
+     const response = await fetch(TGOS_ENDPOINT, {
+diff --git a/src/services/routing.ts b/src/services/routing.ts
+index 9bc9602..03da2d1 100644
+--- a/src/services/routing.ts
++++ b/src/services/routing.ts
+@@ -1,3 +1,4 @@
++import type { GeocodeLookupMode } from "@/lib/geocoding/types";
+ import type { GeocodeHit, LngLat, RoutePlan } from "@/types/domain";
+ 
+ export async function reversePlace(location: LngLat): Promise<GeocodeHit> {
+@@ -29,8 +30,9 @@ export async function searchAddresses(
+   query: string,
+   bias?: LngLat,
+   signal?: AbortSignal,
++  mode: GeocodeLookupMode = "search",
+ ): Promise<GeocodeHit[]> {
+-  const params = new URLSearchParams({ q: query });
++  const params = new URLSearchParams({ q: query, mode });
+   if (bias) {
+     params.set("lng", String(bias.lng));
+     params.set("lat", String(bias.lat));
+@@ -39,8 +41,53 @@ export async function searchAddresses(
+   if (!response.ok) {
+     throw new Error("地址搜尋失敗");
+   }
+-  const data = (await response.json()) as { results?: GeocodeHit[] };
+-  return data.results ?? [];
++  const data = (await response.json()) as {
++    results?: Array<
++      GeocodeHit & {
++        label?: string;
++        formattedAddress?: string;
++        latitude?: number;
++        longitude?: number;
++      }
++    >;
++  };
++  return (data.results ?? []).flatMap((item) => {
++    const lng = item.location?.lng ?? item.longitude;
++    const lat = item.location?.lat ?? item.latitude;
++    if (!Number.isFinite(lng) || !Number.isFinite(lat)) return [];
++    return [
++      {
++        id: item.id,
++        name: item.name || item.label || query,
++        address: item.address || item.formattedAddress || "",
++        location: { lng: Number(lng), lat: Number(lat) },
++        source: item.source,
++        exactHouseNumber: item.exactHouseNumber,
++        matchKind: item.matchKind,
++        confidence: item.confidence,
++        distanceMeters: item.distanceMeters,
++      } satisfies GeocodeHit,
++    ];
++  });
++}
++
++export async function rememberGeocodeSelection(
++  query: string,
++  bias?: LngLat,
++) {
++  try {
++    await fetch("/api/geocode", {
++      method: "POST",
++      headers: { "Content-Type": "application/json" },
++      body: JSON.stringify({
++        query,
++        lng: bias?.lng,
++        lat: bias?.lat,
++      }),
++    });
++  } catch {
++    /* 快取計數失敗不影響導航 */
++  }
+ }
+ 
+ export async function planDrivingRoute(
+diff --git a/src/types/domain.ts b/src/types/domain.ts
+index 4b7b342..ceee715 100644
+--- a/src/types/domain.ts
++++ b/src/types/domain.ts
+@@ -191,11 +191,26 @@ export type RouteStep = {
+   location?: LngLat;
+ };
+ 
++export type GeocodeMatchKind =
++  | "exact-house"
++  | "interpolated"
++  | "approximate"
++  | "lane-center"
++  | "road-center"
++  | "landmark";
++
++export type AddressAccuracy = GeocodeMatchKind;
++
+ export type GeocodeHit = {
+   id: string;
+   name: string;
+   address: string;
+   location: LngLat;
++  source?: "cache" | "tgos" | "nlsc" | "osm" | "google" | "local";
++  exactHouseNumber?: boolean;
++  matchKind?: GeocodeMatchKind;
++  confidence?: number;
++  distanceMeters?: number;
+ };
+ 
+ export type RouteDestination = {
+diff --git a/supabase/migrations/20260903_address_search_cache.sql b/supabase/migrations/20260903_address_search_cache.sql
+new file mode 100644
+index 0000000..5352c82
+--- /dev/null
++++ b/supabase/migrations/20260903_address_search_cache.sql
+@@ -0,0 +1,22 @@
++create table if not exists public.address_search_cache (
++  id uuid primary key default gen_random_uuid(),
++  query_hash text not null unique,
++  original_query text not null,
++  normalized_query text not null,
++  response_data jsonb not null,
++  primary_source text,
++  hit_count bigint not null default 0,
++  expires_at timestamptz not null,
++  created_at timestamptz not null default now(),
++  updated_at timestamptz not null default now()
++);
++
++create index if not exists
++  address_search_cache_normalized_query_idx
++on public.address_search_cache (normalized_query);
++
++create index if not exists
++  address_search_cache_expires_at_idx
++on public.address_search_cache (expires_at);
++
++alter table public.address_search_cache enable row level security;
