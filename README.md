@@ -1,6 +1,6 @@
 # NavPilot
 
-智駕台灣。駕駛視角的道路情報地圖，不是 Google Maps 克隆。畫面標示目前定位的縣市。
+智駕台灣。駕駛視角的道路情報地圖，不是 Google Maps 克隆。
 
 第一階段 Prototype 以 **臺南市區** 為示範範圍（中正路北上，民生路口右轉往臺南火車站）。Phase 2 已把 weather 專案的 CCTV 篩選／距離／city+freeway 模型移植到 MapLibre Driving HUD。Phase 3 已接 TDX 臺南市區即時路況，無憑證或 live 失敗時走 mock。Phase 4 已接 NCDR 民生示警，feed 失敗時走 mock。
 
@@ -79,28 +79,28 @@ npm start
 - 全螢幕 MapLibre 地圖，預設中心在臺南
 - Dark Driving Mode（石墨黑、灰藍道路、青綠路線）
 - 駕駛視角 3D：pitch 約 60°，車子在可見駕駛區下方約 30%，前方視野拉長
-- 2D / 3D 切換、GPS 定位、居中、回臺南示範
+- 2D / 3D 切換（右側顯示「3D」或「2」）、GPS 定位
 - 自訂 Vehicle Marker（不是 Google 藍點）
 - CCTV、交通事故、災害：只畫目前畫面內的標記，可見數量隨放大縮小自動增減，底部情報列徽章同步
 - 即時路況：獨立 `traffic-source` / `traffic-layer`，TDX live 或 MOCK 後備
 - 測速執法：警政署政府開放資料免金鑰 CSV，亦支援 TGOS 環域 API，依地圖中心載入 3–10 公里內點位與速限
 - NCDR 即時災害 GeoJSON 圖層（CAP 幾何中心）
-- 頂部搜尋：門牌、店家、公司行號、連鎖品牌與縮寫；範圍約全市 20 公里。長按地圖可自訂位置並存成最愛書籤
-- 底部狀態列中央為 Google 帳號：可登入並把最愛書籤同步到雲端；未設定 `NEXT_PUBLIC_GOOGLE_CLIENT_ID` 時書籤仍留在此裝置
+- 頂部搜尋：門牌、店家、公司行號、連鎖品牌與縮寫；輸入後約 1 秒內即可挑選關鍵字。長按地圖可自訂位置並存成最愛書籤
+- 底部狀態列中央為 Google 登入：彈出視窗授權後，最愛書籤寫入該 Google 帳號的 Drive 應用程式資料；未設定 `NEXT_PUBLIC_GOOGLE_CLIENT_ID` 時書籤仍留在此裝置
 - 底部狀態列紅心：把目前或已輸入的位置加入最愛
 - 導航終點：既有立體圖釘＋圖示外中空黃點，外圈持續擴散；確認後與導航中都保留
-- 定位點改為黃色小三角形，隨車頭轉向
-- 點確認後進入駕駛畫面，最上方顯示下一個路口距離；橫向時縮小並貼左上。接近路口會自動放大，並以大型立體方向指示牌走馬燈指引
+- 定位點為道路上方的黃色三角形（約 2 倍），不左右晃動
+- 點確認後進入駕駛畫面，最上方顯示下一個路口距離；橫向時指示欄放大 2.5 倍並貼左上。接近路口會自動放大，並以道路上方的大型黃色箭頭指引
 - 任何時候可用雙指縮放、單指平移檢視；定位鈕回到跟隨
 - ChatGPT AI 語音播報轉向（可靜音）；未設定 `OPENAI_API_KEY` 時改用系統中文語音
-- 右側「5km」開關：開啟時只畫車輛 5 公里內與路線沿線路況
-- 底部狀態列可開啟 YouTube Music 小窗；播放時維持縮小，並可連到既有 YouTube Music 帳號
+- 路況範圍常態為車輛 5 公里內與路線沿線；每 5 分鐘於後台自動更新路況與災害
+- 底部狀態列可開啟 YouTube Music 小窗；播放後再點一次圖示會縮小小窗，第三次關閉
 - 底部半透明 Road Information Card
 - Android 直式優先的 Responsive HUD（資訊卡不遮住主要駕駛視野）
 
-未設定 TDX 金鑰時：CCTV 走本地 SNAPSHOT（來自 weather 的 city／freeway JSON），路況走臺南示範線，HUD 顯示「示範路況」。金鑰請放伺服器端 `TDX_CLIENT_ID` / `TDX_CLIENT_SECRET`（不可用 `NEXT_PUBLIC_`），由 `/api/traffic` 伺服器端打 TDX。憑證有效時 HUD 顯示「TDX 即時路況」。live cache 與前端輪詢約 **60 秒**；拖曳／縮放地圖不會重打 TDX。token 失敗、timeout、401／429／500 或資料異常時自動 fallback mock，不把密鑰或堆疊傳給瀏覽器。
+未設定 TDX 金鑰時：CCTV 走本地 SNAPSHOT（來自 weather 的 city／freeway JSON），路況走臺南示範線，HUD 顯示「示範路況」。金鑰請放伺服器端 `TDX_CLIENT_ID` / `TDX_CLIENT_SECRET`（不可用 `NEXT_PUBLIC_`），由 `/api/traffic` 伺服器端打 TDX。憑證有效時 HUD 顯示「TDX 即時路況」。live cache 與前端輪詢約 **5 分鐘**；拖曳／縮放地圖不會重打 TDX。token 失敗、timeout、401／429／500 或資料異常時自動 fallback mock，不把密鑰或堆疊傳給瀏覽器。
 
-災害示警由 `/api/disasters` 抓 NCDR 民生示警 JSON Atom，再讀各則 CAP 的 `polygon`／`circle` 幾何中心；沒有座標的示警不會用行政區質心臆測位置。可選填伺服器端 `NCDR_ALERT_FEED_URL`。HUD 顯示「NCDR 即時災害」或「示範災害」。live cache 與前端輪詢約 **120 秒**；feed 逾時或解析失敗時 fallback mock。
+災害示警由 `/api/disasters` 抓 NCDR 民生示警 JSON Atom，再讀各則 CAP 的 `polygon`／`circle` 幾何中心；沒有座標的示警不會用行政區質心臆測位置。可選填伺服器端 `NCDR_ALERT_FEED_URL`。HUD 顯示「NCDR 即時災害」或「示範災害」。live cache 與前端輪詢約 **5 分鐘**；feed 逾時或解析失敗時 fallback mock。
 
 測速點預設使用警政署在[政府資料開放平臺](https://data.gov.tw/dataset/7320)發布的免金鑰 CSV，因此公開網站可直接顯示。專案內附官方資料快照，來源站逾時時仍可正常載入；執行 `npm run update:speed-enforcement` 可更新快照。若另有 `TGOS_THEME_API_KEY`，會優先使用[內政部主題 API](https://data.tgos.tw/)的「測速執法設置點」（主題 ID `kJqZSMsB`），失敗時自動回到公開資料。環域查詢半徑依縮放層級為 3、6 或 10 公里；查詢結果快取 10 分鐘，公開全臺清單快取 6 小時。
 
@@ -137,7 +137,7 @@ NCDR JSON Atom + CAP 取代 mock 積水／封路／強風標記；MapLibre 圖�
 - Framework Preset：Next.js
 - Build Command：`npm run build`
 - Output：Next.js 預設
-- 環境變數：正式路況用 `TDX_CLIENT_ID` / `TDX_CLIENT_SECRET`；正式戶政門牌定位用 `TGOS_APP_ID` / `TGOS_API_KEY`；測速公開資料不需金鑰，TGOS 主題 API 可選填 `TGOS_THEME_API_KEY`；NCDR 示警免金鑰，會員資料可選填 `NCDR_API_KEY`；Google 書籤同步可選填 `NEXT_PUBLIC_GOOGLE_CLIENT_ID`
+- 環境變數：正式路況用 `TDX_CLIENT_ID` / `TDX_CLIENT_SECRET`；正式戶政門牌定位用 `TGOS_APP_ID` / `TGOS_API_KEY`；測速公開資料不需金鑰，TGOS 主題 API 可選填 `TGOS_THEME_API_KEY`；NCDR 示警免金鑰，會員資料可選填 `NCDR_API_KEY`；Google 登入與 Drive 書籤、YouTube Music 歌單可選填 `NEXT_PUBLIC_GOOGLE_CLIENT_ID`（需啟用 Drive API 與 YouTube Data API v3）
 
 MapLibre worker 由 `src/app/maplibre/[file]/route.ts` 提供，`next.config.ts` 已列入 tracing，避免 serverless 漏檔。
 

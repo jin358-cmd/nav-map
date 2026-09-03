@@ -113,13 +113,14 @@ function parseNlscLocation(value: string): LngLat | null {
 export async function searchNlscMapHits(
   address: string,
   bias?: LngLat,
+  timeoutMs = 1_200,
 ): Promise<NlscMapHit[]> {
   const query = address.replace(/[\\/]/g, "").trim();
   if (query.length < 2) return [];
   const center = bias ?? { lng: 120.2049, lat: 22.9878 };
   const url = `${NLSC_MAP_SEARCH}/${encodeURIComponent(query)}/10/${center.lng}/${center.lat}`;
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 8_000);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const response = await fetch(url, {

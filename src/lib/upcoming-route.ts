@@ -68,11 +68,12 @@ export function sliceRouteAhead(
 export function guidanceArrowsAlong(
   line: [number, number][],
   spacingMeters: number,
-  phase: number,
+  phase = 0,
 ): GuidanceArrow[] {
+  void phase;
   if (line.length < 2) return [];
   const arrows: GuidanceArrow[] = [];
-  let leftover = (phase % 1) * spacingMeters;
+  let leftover = 0;
 
   for (let index = 1; index < line.length; index += 1) {
     const from = { lng: line[index - 1][0], lat: line[index - 1][1] };
@@ -84,12 +85,11 @@ export function guidanceArrowsAlong(
     while (cursor < length) {
       if (cursor >= 0) {
         const ratio = cursor / length;
-        const wave = 0.5 + 0.5 * Math.sin(phase * Math.PI * 2 - arrows.length * 0.7);
         arrows.push({
           lng: from.lng + (to.lng - from.lng) * ratio,
           lat: from.lat + (to.lat - from.lat) * ratio,
           bearing,
-          opacity: 0.28 + wave * 0.72,
+          opacity: 0.96,
         });
       }
       cursor += spacingMeters;

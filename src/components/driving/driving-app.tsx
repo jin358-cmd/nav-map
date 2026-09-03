@@ -130,11 +130,10 @@ export function DrivingApp() {
     getFavoritesSnapshot,
     getServerFavoritesSnapshot,
   );
-  const [trafficFocus5km, setTrafficFocus5km] = useState(true);
+  const trafficFocus5km = true;
   const landscape = useLandscape();
   const googleAccount = useGoogleAccount();
   const youtubeLibrary = useYoutubeLibrary(googleAccount.youtubeAccessToken);
-  const [musicPlaying, setMusicPlaying] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [rerouting, setRerouting] = useState(false);
   const [navigationProgress, setNavigationProgress] =
@@ -483,6 +482,13 @@ export function DrivingApp() {
     reloadDisasters();
   }, [reload, reloadDisasters, reloadSpeedEnforcement, reloadTraffic]);
 
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      refreshIntel();
+    }, 5 * 60 * 1000);
+    return () => window.clearInterval(timer);
+  }, [refreshIntel]);
+
   const rerouteFromHere = useCallback(async () => {
     const dest = destinationRef.current;
     const here = vehicleRef.current;
@@ -616,14 +622,9 @@ export function DrivingApp() {
         <MapControls
           cameraMode={cameraMode}
           gpsStatus={gpsStatus}
-          trafficFocus5km={trafficFocus5km}
           onLocate={() => void locate()}
           onToggleCamera={() =>
             setCameraMode((mode) => (mode === "3d" ? "2d" : "3d"))
-          }
-          onRefreshIntel={refreshIntel}
-          onToggleTrafficFocus={() =>
-            setTrafficFocus5km((value) => !value)
           }
         />
       </div>
@@ -652,7 +653,6 @@ export function DrivingApp() {
         {musicMode !== "off" ? (
           <YouTubeMusicPlayer
             compact={musicMode === "mini"}
-            hidden={landscape && musicPlaying}
             playlists={
               youtubeLibrary.playlists.length > 0
                 ? youtubeLibrary.playlists
@@ -661,15 +661,9 @@ export function DrivingApp() {
             libraryStatus={youtubeLibrary.status}
             signedIn={Boolean(googleAccount.account)}
             onClose={() => {
-              setMusicPlaying(false);
               setMusicMode("off");
             }}
             onExpand={() => setMusicMode("open")}
-            onPlaying={() => {
-              setMusicPlaying(true);
-              setMusicMode("mini");
-            }}
-            onPaused={() => setMusicPlaying(false)}
             onConnectLibrary={() => {
               void googleAccount.connectYoutube();
             }}
@@ -702,7 +696,6 @@ export function DrivingApp() {
           accountBusy={googleAccount.busy}
           accountHint={googleAccount.hint}
           accountConfigured={googleAccount.configured}
-          signInHostRef={googleAccount.signInHostRef}
           onSignIn={googleAccount.signIn}
           onSignOut={googleAccount.signOut}
           onPreviewOpen={() => {
@@ -716,8 +709,11 @@ export function DrivingApp() {
             setSelectedCctv(null);
             setSelectedDisaster(null);
             setIntelCollapse((value) => value + 1);
-            setMusicPlaying(false);
-            setMusicMode((mode) => (mode === "off" ? "mini" : "off"));
+            setMusicMode((mode) => {
+              if (mode === "off") return "open";
+              if (mode === "open") return "mini";
+              return "off";
+            });
           }}
         />
       </footer>

@@ -16,6 +16,15 @@ export const YOUTUBE_TOKEN_STORAGE_KEY = "navpilot.youtube-token.v1";
 export const YOUTUBE_TOKEN_EVENT = "navpilot-youtube-token";
 export const YOUTUBE_READONLY_SCOPE =
   "https://www.googleapis.com/auth/youtube.readonly";
+export const DRIVE_APPDATA_SCOPE =
+  "https://www.googleapis.com/auth/drive.appdata";
+export const GOOGLE_LOGIN_SCOPES = [
+  "openid",
+  "email",
+  "profile",
+  DRIVE_APPDATA_SCOPE,
+  YOUTUBE_READONLY_SCOPE,
+].join(" ");
 
 export type YoutubeAccess = {
   accessToken: string;
@@ -117,6 +126,36 @@ export function writeYoutubeAccess(access: YoutubeAccess | null) {
     /* 私人模式可能擋 sessionStorage */
   }
   window.dispatchEvent(new Event(YOUTUBE_TOKEN_EVENT));
+}
+
+export async function fetchGoogleProfile(
+  accessToken: string,
+  expiresIn = 3600,
+): Promise<GoogleAccount | null> {
+  try {
+    const response = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      cache: "no-store",
+    });
+    if (!response.ok) return null;
+    const profile = (await response.json()) as {
+      sub?: string;
+      name?: string;
+      email?: string;
+      picture?: string;
+    };
+    if (!profile.sub) return null;
+    return {
+      sub: profile.sub,
+      name: profile.name?.trim() || profile.email?.split("@")[0] || "Google 帳號",
+      email: profile.email?.trim() || "",
+      picture: profile.picture?.trim() || "",
+      idToken: accessToken,
+      exp: Math.floor((Date.now() + expiresIn * 1000) / 1000),
+    };
+  } catch {
+    return null;
+  }
 }
 
 export function loadGoogleIdentityScript(): Promise<void> {

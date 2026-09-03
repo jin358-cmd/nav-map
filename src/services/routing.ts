@@ -28,13 +28,14 @@ export async function reversePlace(location: LngLat): Promise<GeocodeHit> {
 export async function searchAddresses(
   query: string,
   bias?: LngLat,
+  signal?: AbortSignal,
 ): Promise<GeocodeHit[]> {
   const params = new URLSearchParams({ q: query });
   if (bias) {
     params.set("lng", String(bias.lng));
     params.set("lat", String(bias.lat));
   }
-  const response = await fetch(`/api/geocode?${params.toString()}`);
+  const response = await fetch(`/api/geocode?${params.toString()}`, { signal });
   if (!response.ok) {
     throw new Error("地址搜尋失敗");
   }

@@ -27,6 +27,11 @@ import {
   removeFavorite,
   subscribeFavorites,
 } from "@/lib/favorites";
+import {
+  instantKeywordHits,
+  mergeSearchHits,
+  rankSearchHits,
+} from "@/lib/poi-search";
 import { useSpeechToText } from "@/hooks/use-speech-to-text";
 import { cn } from "@/lib/utils";
 import { searchAddresses } from "@/services/routing";
@@ -48,8 +53,11 @@ export function AddressSearch({
   const [query, setQuery] = useState("");
   const [composing, setComposing] = useState(false);
   const [open, setOpen] = useState(false);
-  const [hits, setHits] = useState<GeocodeHit[]>([]);
-  const [searching, setSearching] = useState(false);
+  const [remote, setRemote] = useState<{ q: string; hits: GeocodeHit[] }>({
+    q: "",
+    hits: [],
+  });
+  const [searchingFor, setSearchingFor] = useState<string | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
   const history = useSyncExternalStore(
     subscribeAddressHistory,
@@ -64,6 +72,7 @@ export function AddressSearch({
   const needle = query.trim();
   const submitFirstHitRef = useRef(false);
   const speechStopRef = useRef<() => void>(() => undefined);
+  const instantRef = useRef<GeocodeHit[]>([]);
   const biasBucket = useMemo(
     () => ({
       lng: Math.round(bias.lng * 50) / 50,
@@ -71,6 +80,17 @@ export function AddressSearch({
     }),
     [bias.lat, bias.lng],
   );
+  const instantHits = useMemo(
+    () =>
+      needle.length < 1
+        ? []
+        : instantKeywordHits(needle, bias, [...history, ...favorites]),
+    [bias, favorites, history, needle],
+  );
+
+  useEffect(() => {
+    instantRef.current = instantHits;
+  }, [instantHits]);
 
   const selectHit = useCallback(
     (hit: GeocodeHit) => {
@@ -99,40 +119,69 @@ export function AddressSearch({
     if (composing || needle.length < 2) return;
 
     let cancelled = false;
+    const controller = new AbortController();
     const timer = window.setTimeout(() => {
-      setSearching(true);
-      void searchAddresses(needle, biasBucket)
+      setSearchingFor(needle);
+      const deadline = window.setTimeout(() => controller.abort(), 1000);
+      void searchAddresses(needle, biasBucket, controller.signal)
         .then((rows) => {
           if (cancelled) return;
-          setHits(rows);
-          setSearchError(
-            rows.length ? null : "找不到店家、公司或地址，請換關鍵字或縮寫。",
+          setRemote({ q: needle, hits: rows });
+          const merged = rankSearchHits(
+            mergeSearchHits([...instantRef.current, ...rows], 24),
+            needle,
+            biasBucket,
           );
-          if (submitFirstHitRef.current && rows[0]) {
+          setSearchError(
+            merged.length ? null : "找不到店家、公司或地址，請換關鍵字或縮寫。",
+          );
+          if (submitFirstHitRef.current && merged[0]) {
             submitFirstHitRef.current = false;
-            selectHit(rows[0]);
+            selectHit(merged[0]);
           }
         })
-        .catch(() => {
+        .catch((error: unknown) => {
           if (cancelled) return;
-          setHits([]);
-          setSearchError("地址搜尋失敗，請稍後再試。");
+          if (error instanceof DOMException && error.name === "AbortError") {
+            setSearchError(
+              instantRef.current.length
+                ? null
+                : "搜尋逾時，請再輸入門牌或更完整關鍵字。",
+            );
+            return;
+          }
+          setSearchError(
+            instantRef.current.length ? null : "地址搜尋失敗，請稍後再試。",
+          );
         })
         .finally(() => {
-          if (!cancelled) setSearching(false);
+          window.clearTimeout(deadline);
+          if (!cancelled) setSearchingFor(null);
         });
-    }, 420);
+    }, 160);
 
     return () => {
       cancelled = true;
+      controller.abort();
       window.clearTimeout(timer);
     };
   }, [biasBucket, composing, needle, selectHit]);
 
-  const visibleHits = needle.length < 2 ? [] : hits;
+  const remoteHits = remote.q === needle ? remote.hits : [];
+  const searching = searchingFor === needle;
+  const visibleHits =
+    needle.length < 1
+      ? []
+      : rankSearchHits(
+          mergeSearchHits([...instantHits, ...remoteHits], 24),
+          needle,
+          bias,
+        );
   const chips = useMemo(() => TAIWAN_LANDMARKS.slice(0, 5), []);
   const emptyHint =
-    needle.length >= 2 && !searching && !busy ? searchError : null;
+    needle.length >= 1 && !searching && !busy && visibleHits.length === 0
+      ? searchError
+      : null;
 
   return (
     <div className="pointer-events-auto w-full max-w-xl">
@@ -155,11 +204,12 @@ export function AddressSearch({
             onKeyDown={(event) => {
               if (event.key !== "Enter" || composing) return;
               event.preventDefault();
-              if (hits[0]) {
-                selectHit(hits[0]);
+              const first = visibleHits[0];
+              if (first) {
+                selectHit(first);
                 return;
               }
-              if (needle.length >= 2) submitFirstHitRef.current = true;
+              if (needle.length >= 1) submitFirstHitRef.current = true;
             }}
             placeholder={speech.listening ? "正在聽…請說出目的地" : "地址、店家、公司、品牌或縮寫"}
             aria-label="目的地搜尋"
@@ -194,7 +244,7 @@ export function AddressSearch({
               onClick={() => {
                 speech.stop();
                 setQuery("");
-                setHits([]);
+                setRemote({ q: "", hits: [] });
                 setSearchError(null);
                 setOpen(false);
               }}
@@ -216,7 +266,7 @@ export function AddressSearch({
           {speech.error ? (
             <p className="px-3 pt-1 text-[11px] text-amber-200">{speech.error}</p>
           ) : null}
-          {needle.length < 2 && history.length ? (
+          {needle.length < 1 && history.length ? (
             <div className="px-1 pt-1">
               <div className="flex items-center justify-between px-2">
                 <p className="flex items-center gap-1.5 text-[11px] text-cyan-200/85">
@@ -257,7 +307,7 @@ export function AddressSearch({
               </ul>
             </div>
           ) : null}
-          {needle.length < 2 && favorites.length ? (
+          {needle.length < 1 && favorites.length ? (
             <div className="px-3 pt-1">
               <p className="mb-1 text-[10px] text-rose-200/80">最愛書籤</p>
               <ul className="flex flex-wrap gap-1.5">
@@ -275,7 +325,7 @@ export function AddressSearch({
               </ul>
             </div>
           ) : null}
-          {needle.length < 2 ? (
+          {needle.length < 1 ? (
             <ul className="flex flex-wrap gap-1.5 px-3 py-2">
               {chips.map((chip) => (
                 <li key={chip.id}>
@@ -294,13 +344,13 @@ export function AddressSearch({
           ) : null}
 
           {searching || busy ? (
-            <p className="flex items-center gap-2 px-3 py-3 text-sm text-zinc-400">
-              <Loader2 className="size-4 animate-spin" />
-              {busy ? "規劃路線中…" : "搜尋地址中…"}
+            <p className="flex items-center gap-2 px-3 py-2 text-[11px] text-zinc-400">
+              <Loader2 className="size-3.5 animate-spin" />
+              {busy ? "規劃路線中…" : "補齊門牌與關鍵字…"}
             </p>
           ) : null}
 
-          {!searching && !busy && visibleHits.length > 0 ? (
+          {!busy && visibleHits.length > 0 ? (
             <ul className="max-h-56 overflow-y-auto py-1">
               {visibleHits.map((hit) => (
                 <li key={hit.id} className="flex items-start">
@@ -342,7 +392,7 @@ export function AddressSearch({
             </ul>
           ) : null}
 
-          {!searching && !busy && (emptyHint || error) ? (
+          {!busy && visibleHits.length === 0 && (emptyHint || error) ? (
             <p
               className={cn(
                 "px-3 py-3 text-sm",

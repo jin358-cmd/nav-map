@@ -1,15 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { pullAndMergeCloudFavorites, pushCloudFavorites } from "@/lib/bookmark-sync";
+import { pushDriveFavorites, syncDriveFavorites } from "@/lib/drive-bookmarks";
 import { getFavoritesSnapshot, subscribeFavorites } from "@/lib/favorites";
 import {
   GOOGLE_ACCOUNT_EVENT,
   GOOGLE_CLIENT_ID,
-  YOUTUBE_READONLY_SCOPE,
+  GOOGLE_LOGIN_SCOPES,
   YOUTUBE_TOKEN_EVENT,
-  decodeIdToken,
-  isAccountFresh,
+  fetchGoogleProfile,
   loadGoogleIdentityScript,
   readStoredAccount,
   readYoutubeAccess,
@@ -28,6 +27,10 @@ function subscribeYoutube(onChange: () => void) {
   return () => window.removeEventListener(YOUTUBE_TOKEN_EVENT, onChange);
 }
 
+function driveToken() {
+  return readYoutubeAccess()?.accessToken ?? null;
+}
+
 export function useGoogleAccount() {
   const account = useSyncExternalStore(
     subscribeAccount,
@@ -42,30 +45,6 @@ export function useGoogleAccount() {
   const [busy, setBusy] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
   const accountRef = useRef<GoogleAccount | null>(account);
-  const signInHostRef = useRef<HTMLDivElement | null>(null);
-
-  const renderSignInButton = useCallback((host: HTMLDivElement | null) => {
-    if (!host || accountRef.current || !GOOGLE_CLIENT_ID) return;
-    if (!window.google?.accounts?.id) return;
-    host.innerHTML = "";
-    window.google.accounts.id.renderButton(host, {
-      type: "standard",
-      theme: "filled_black",
-      size: "medium",
-      text: "signin_with",
-      shape: "pill",
-      locale: "zh_TW",
-      width: 168,
-    });
-  }, []);
-
-  const attachSignInHost = useCallback(
-    (el: HTMLDivElement | null) => {
-      signInHostRef.current = el;
-      renderSignInButton(el);
-    },
-    [renderSignInButton],
-  );
 
   useEffect(() => {
     accountRef.current = account;
@@ -76,7 +55,7 @@ export function useGoogleAccount() {
     writeStoredAccount(next);
   }, []);
 
-  const requestYoutubeAccess = useCallback((prompt: "" | "consent" = "") => {
+  const requestGoogleAccess = useCallback((prompt: "" | "consent" = "consent") => {
     if (!GOOGLE_CLIENT_ID) return Promise.resolve(null);
     return loadGoogleIdentityScript().then(
       () =>
@@ -88,7 +67,7 @@ export function useGoogleAccount() {
           }
           const client = oauth.initTokenClient({
             client_id: GOOGLE_CLIENT_ID,
-            scope: YOUTUBE_READONLY_SCOPE,
+            scope: GOOGLE_LOGIN_SCOPES,
             callback: (response) => {
               if (!response.access_token) {
                 resolve(null);
@@ -107,38 +86,33 @@ export function useGoogleAccount() {
     );
   }, []);
 
-  const requestYoutubeAccessRef = useRef(requestYoutubeAccess);
-  useEffect(() => {
-    requestYoutubeAccessRef.current = requestYoutubeAccess;
-  }, [requestYoutubeAccess]);
-
   const signIn = useCallback(() => {
     if (!GOOGLE_CLIENT_ID) {
-      setHint("尚未設定 Google 登入，書籤仍保存在此裝置。");
+      setHint("請在 .env.local 設定 NEXT_PUBLIC_GOOGLE_CLIENT_ID 後重新啟動。");
       return;
     }
     setBusy(true);
     setHint(null);
-    const prompt = () => {
-      if (!window.google?.accounts?.id) {
-        setBusy(false);
-        setHint("Google 登入尚未就緒，請稍後再試。");
-        return;
-      }
-      window.google.accounts.id.prompt((notification) => {
-        setBusy(false);
-        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-          setHint("請允許彈出視窗，或再點一次以登入 Google。");
+    void requestGoogleAccess("consent")
+      .then(async (token) => {
+        if (!token) {
+          setHint("請允許彈出視窗並授權 Google，才能把書籤存進你的帳號。");
+          return;
         }
-      });
-    };
-    void loadGoogleIdentityScript()
-      .then(prompt)
+        const profile = await fetchGoogleProfile(token);
+        if (!profile) {
+          setHint("無法讀取 Google 帳號，請再試一次。");
+          return;
+        }
+        applyAccount(profile);
+        await syncDriveFavorites(token);
+        setHint("書籤已同步到你的 Google 帳號。");
+      })
       .catch(() => {
-        setBusy(false);
         setHint("無法載入 Google 登入。");
-      });
-  }, []);
+      })
+      .finally(() => setBusy(false));
+  }, [applyAccount, requestGoogleAccess]);
 
   const connectYoutube = useCallback(async () => {
     if (!GOOGLE_CLIENT_ID) {
@@ -151,7 +125,7 @@ export function useGoogleAccount() {
       return null;
     }
     setBusy(true);
-    const token = await requestYoutubeAccess(readYoutubeAccess() ? "" : "consent");
+    const token = await requestGoogleAccess(readYoutubeAccess() ? "" : "consent");
     setBusy(false);
     if (!token) {
       setHint("請允許 YouTube 讀取權限，才能同步已儲存歌單。");
@@ -159,64 +133,27 @@ export function useGoogleAccount() {
     }
     setHint(null);
     return token;
-  }, [requestYoutubeAccess, signIn]);
-
-  useEffect(() => {
-    if (!GOOGLE_CLIENT_ID) return;
-    let cancelled = false;
-    void loadGoogleIdentityScript()
-      .then(() => {
-        if (cancelled || !window.google?.accounts?.id) return;
-        window.google.accounts.id.initialize({
-          client_id: GOOGLE_CLIENT_ID,
-          auto_select: false,
-          cancel_on_tap_outside: true,
-          callback: (response) => {
-            const next = decodeIdToken(response.credential);
-            if (!next) {
-              setHint("無法讀取 Google 帳號，請再試一次。");
-              return;
-            }
-            applyAccount(next);
-            setHint(null);
-            void pullAndMergeCloudFavorites(next.idToken)
-              .then(() => pushCloudFavorites(next.idToken, getFavoritesSnapshot()))
-              .catch(() => {
-                setHint("已登入，書籤先保存在此裝置。");
-              });
-            void requestYoutubeAccessRef.current("");
-          },
-        });
-        renderSignInButton(signInHostRef.current);
-      })
-      .catch(() => {
-        if (!cancelled) setHint("無法載入 Google 登入。");
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [applyAccount, renderSignInButton]);
-
-  useEffect(() => {
-    if (account) return;
-    renderSignInButton(signInHostRef.current);
-  }, [account, renderSignInButton]);
+  }, [requestGoogleAccess, signIn]);
 
   useEffect(() => {
     if (!account) return;
     let timer = 0;
     const push = () => {
-      const current = accountRef.current;
-      if (!current || !isAccountFresh(current)) return;
+      const token = driveToken();
+      if (!token || !accountRef.current) return;
       window.clearTimeout(timer);
       timer = window.setTimeout(() => {
-        void pushCloudFavorites(current.idToken, getFavoritesSnapshot()).catch(
+        void pushDriveFavorites(token, getFavoritesSnapshot()).catch(
           () => undefined,
         );
       }, 400);
     };
+    const unsubscribe = subscribeFavorites(push);
     push();
-    return subscribeFavorites(push);
+    return () => {
+      window.clearTimeout(timer);
+      unsubscribe();
+    };
   }, [account]);
 
   const signOut = useCallback(() => {
@@ -239,7 +176,7 @@ export function useGoogleAccount() {
     }
     writeYoutubeAccess(null);
     applyAccount(null);
-    setHint("已登出。書籤仍留在此裝置。");
+    setHint("已登出。書籤仍留在此裝置，下次登入會再同步到 Google。");
   }, [applyAccount]);
 
   return {
@@ -249,7 +186,6 @@ export function useGoogleAccount() {
     hint,
     configured: Boolean(GOOGLE_CLIENT_ID),
     youtubeAccessToken: youtubeAccess?.accessToken ?? null,
-    signInHostRef: attachSignInHost,
     signIn,
     signOut,
     connectYoutube,

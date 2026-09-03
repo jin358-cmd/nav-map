@@ -5,6 +5,7 @@ import {
   filterWithinSearchRadius,
   isDoorplateQuery,
   matchLocalPois,
+  mergeSearchHits,
   rankSearchHits,
 } from "@/lib/poi-search";
 import { SEARCH_RADIUS_KM, SEARCH_RESULT_LIMIT } from "@/lib/search-constants";
@@ -38,17 +39,7 @@ type NominatimRow = {
   lon: string;
 };
 
-function mergeHits(rows: GeocodeHit[], limit = SEARCH_RESULT_LIMIT) {
-  const seen = new Set<string>();
-  const out: GeocodeHit[] = [];
-  for (const hit of rows) {
-    const key = `${hit.name}|${hit.location.lng.toFixed(5)}|${hit.location.lat.toFixed(5)}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push(hit);
-  }
-  return out.slice(0, limit);
-}
+const mergeHits = mergeSearchHits;
 
 async function searchNominatim(
   query: string,
@@ -70,33 +61,26 @@ async function searchNominatim(
     nominatim.searchParams.set("bounded", "0");
   }
 
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 8_000);
-    try {
-      const response = await fetch(nominatim, {
-        headers: {
-          Accept: "application/json",
-          "Accept-Language": "zh-TW",
-          "User-Agent": USER_AGENT,
-        },
-        cache: "no-store",
-        signal: controller.signal,
-      });
-      if (response.status === 429) {
-        await sleep(1100);
-        continue;
-      }
-      if (!response.ok) return [];
-      const raw = (await response.json()) as NominatimRow[];
-      return Array.isArray(raw) ? preferLocalRows(raw) : [];
-    } catch {
-      return [];
-    } finally {
-      clearTimeout(timer);
-    }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 900);
+  try {
+    const response = await fetch(nominatim, {
+      headers: {
+        Accept: "application/json",
+        "Accept-Language": "zh-TW",
+        "User-Agent": USER_AGENT,
+      },
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    if (!response.ok) return [];
+    const raw = (await response.json()) as NominatimRow[];
+    return Array.isArray(raw) ? preferLocalRows(raw) : [];
+  } catch {
+    return [];
+  } finally {
+    clearTimeout(timer);
   }
-  return [];
 }
 
 function preferLocalRows(rows: NominatimRow[]) {
@@ -127,7 +111,7 @@ async function searchPhoton(
   }
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 8_000);
+  const timer = setTimeout(() => controller.abort(), 900);
   try {
     const response = await fetch(photon, {
       headers: { Accept: "application/json", "User-Agent": USER_AGENT },
@@ -223,58 +207,49 @@ export async function GET(request: Request) {
     const parsed = parseTaiwanAddress(query);
     const officialQuery = officialAddressQuery(query);
     const doorplate = isDoorplateQuery(query);
-    const nlsc = await searchNlscMapHits(officialQuery, bias);
-    const nlscHits: GeocodeHit[] = [...nlsc]
-      .sort((a, b) => {
-        const rank = (kind: typeof a.kind) =>
-          kind === "ADDRESS" ? 0 : kind === "CROSSROAD" ? 1 : kind === "LANDGOAL" ? 2 : 3;
-        return rank(a.kind) - rank(b.kind);
-      })
-      .map((item, index) => ({
-        id: `nlsc-${item.kind}-${index}-${item.location.lng.toFixed(6)}-${item.location.lat.toFixed(6)}`,
-        name: item.fullAddress,
-        address: describeNlscHit(item),
-        location: item.location,
-      }));
 
-    if (doorplate && nlscHits.length) {
-      const checked = parsed
-        ? await Promise.all(
-            nlscHits.map(async (hit) => {
-              const check = await crossCheckLandArea(hit.location, parsed);
-              return {
-                ...hit,
-                address: `${hit.address} · ${describeLandCrossCheck(check)}`,
-              };
-            }),
-          )
-        : nlscHits;
-      return Response.json({
-        results: mergeHits([...checked, ...local]),
-        source: "nlsc-doorplate",
-        matchedQuery: officialQuery,
-      });
-    }
-
-    if (parsed?.number && householdAddressConfigured()) {
-      const official = await searchHouseholdAddresses(officialQuery);
-      if (official.length) {
-        const officialHits: GeocodeHit[] = official.map((item, index) => ({
-          id: `tgos-${index}-${item.location.lng.toFixed(6)}-${item.location.lat.toFixed(6)}`,
+    const toNlscHits = (rows: Awaited<ReturnType<typeof searchNlscMapHits>>) =>
+      [...rows]
+        .sort((a, b) => {
+          const rank = (kind: typeof a.kind) =>
+            kind === "ADDRESS" ? 0 : kind === "CROSSROAD" ? 1 : kind === "LANDGOAL" ? 2 : 3;
+          return rank(a.kind) - rank(b.kind);
+        })
+        .map((item, index) => ({
+          id: `nlsc-${item.kind}-${index}-${item.location.lng.toFixed(6)}-${item.location.lat.toFixed(6)}`,
           name: item.fullAddress,
-          address: `戶政門牌 · ${item.matchType}`,
+          address: describeNlscHit(item),
           location: item.location,
         }));
-        const checked = await withLandCrossCheck(
-          officialHits,
-          parsed,
-          "內政部全國門牌",
-        );
+
+    if (doorplate) {
+      const nlscHits = toNlscHits(await searchNlscMapHits(officialQuery, bias, 1500));
+      if (nlscHits.length) {
         return Response.json({
-          results: mergeHits([...checked, ...local]),
-          source: "household-doorplate+land-check",
-          matchedQuery: query,
+          results: mergeHits([...nlscHits, ...local]),
+          source: "nlsc-doorplate",
+          matchedQuery: officialQuery,
         });
+      }
+
+      if (parsed?.number && householdAddressConfigured()) {
+        const official = await searchHouseholdAddresses(officialQuery);
+        if (official.length) {
+          const officialHits: GeocodeHit[] = official.map((item, index) => ({
+            id: `tgos-${index}-${item.location.lng.toFixed(6)}-${item.location.lat.toFixed(6)}`,
+            name: item.fullAddress,
+            address: `戶政門牌 · ${item.matchType}`,
+            location: item.location,
+          }));
+          const checked = parsed
+            ? await withLandCrossCheck(officialHits, parsed, "內政部全國門牌")
+            : officialHits;
+          return Response.json({
+            results: mergeHits([...checked, ...local]),
+            source: "household-doorplate+land-check",
+            matchedQuery: query,
+          });
+        }
       }
     }
 
@@ -283,40 +258,22 @@ export async function GET(request: Request) {
       ? expandTaiwanGeocodeQueries(query)
       : keywordVariants;
     const poiQuery = keywordVariants[1] ?? keywordVariants[0] ?? query;
+    const matchedQuery = variants[0] ?? query;
 
     const overpassPromise = doorplate
       ? Promise.resolve([] as GeocodeHit[])
       : searchOverpassPois(poiQuery, bias);
-    const [nominatimRows, photonHits] = await Promise.all([
-      searchNominatim(variants[0] ?? query, bias),
+    const [nlscRows, nominatimRows, photonHits, overpassHits] = await Promise.all([
+      searchNlscMapHits(officialQuery, bias, 900),
+      searchNominatim(matchedQuery, bias),
       searchPhoton(poiQuery, query, bias),
+      Promise.race([
+        overpassPromise,
+        sleep(700).then(() => [] as GeocodeHit[]),
+      ]),
     ]);
-    const overpassHits = await Promise.race([
-      overpassPromise,
-      sleep(1600).then(() => [] as GeocodeHit[]),
-    ]);
-
-    let remote = toHits(nominatimRows, query, variants[0] ?? query);
-    let matchedQuery = variants[0] ?? query;
-
-    if (!remote.length) {
-      for (const variant of variants.slice(1, 3)) {
-        await sleep(400);
-        const rows = await searchNominatim(variant, bias);
-        if (!rows.length) continue;
-        matchedQuery = variant;
-        remote = toHits(rows, query, variant);
-        break;
-      }
-    }
-
-    if (parsed && remote.length) {
-      remote = await withLandCrossCheck(
-        remote,
-        parsed,
-        "開放地圖後備定位",
-      );
-    }
+    const nlscHits = toNlscHits(nlscRows);
+    const remote = toHits(nominatimRows, query, matchedQuery);
 
     const pooled = rankSearchHits(
       filterWithinSearchRadius(

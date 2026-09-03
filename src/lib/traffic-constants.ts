@@ -1,6 +1,6 @@
 /** City live traffic search / draw limits. Freeway types are reserved. */
 export const CITY_TRAFFIC_NEARBY_KM = 8;
-/** HUD「5km」開關：只畫車輛附近與路線沿線路況 */
+/** 常態只畫車輛附近 5 公里與路線沿線路況 */
 export const CITY_TRAFFIC_FOCUS_KM = 5;
 export const CITY_TRAFFIC_PRIORITY_KM = 1;
 export const CITY_TRAFFIC_ROUTE_BUFFER_KM = 0.4;
@@ -9,7 +9,7 @@ export const CITY_TRAFFIC_MOVE_REFRESH_KM = 0.35;
 export const CITY_TRAFFIC_ZOOM_REFRESH_DELTA = 0.55;
 
 /** Live TravelSpeed / CongestionLevel refresh. */
-export const TRAFFIC_LIVE_CACHE_MS = 60 * 1000;
+export const TRAFFIC_LIVE_CACHE_MS = 5 * 60 * 1000;
 /** Section metadata + WKT shapes change slowly. */
 export const TRAFFIC_SHAPE_CACHE_MS = 15 * 60 * 1000;
 

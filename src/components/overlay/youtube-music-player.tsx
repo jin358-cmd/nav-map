@@ -185,12 +185,6 @@ export function YouTubeMusicPlayer({
     };
   }, []);
 
-  useEffect(() => {
-    if (compact || !playing) return;
-    const timer = window.setTimeout(() => onPlayingRef.current?.(), 4000);
-    return () => window.clearTimeout(timer);
-  }, [compact, playing]);
-
   function togglePlay() {
     const player = playerRef.current;
     if (!player) return;

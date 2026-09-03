@@ -240,7 +240,6 @@ export function DrivingMap({
   const distanceToNextRef = useRef(distanceToNextMeters);
   const pinchingRef = useRef(false);
   const userZoomRef = useRef<number | null>(null);
-  const arrowPhaseRef = useRef(0);
   const lastArrowUpdateRef = useRef(0);
   const readyRef = useRef(false);
   const lastFrameRef = useRef(0);
@@ -370,8 +369,7 @@ export function DrivingMap({
       marker.setRotation(headingUp ? 0 : target.heading);
 
       if (navigatingRef.current) {
-        arrowPhaseRef.current = (arrowPhaseRef.current + dt * 0.55) % 1;
-        if (now - lastArrowUpdateRef.current > 70) {
+        if (now - lastArrowUpdateRef.current > 180) {
           lastArrowUpdateRef.current = now;
           try {
             upsertGuidanceArrows(
@@ -380,7 +378,7 @@ export function DrivingMap({
               routeMetersRef.current,
               distanceToNextRef.current,
               true,
-              arrowPhaseRef.current,
+              0,
             );
           } catch {
             /* style may still be swapping */

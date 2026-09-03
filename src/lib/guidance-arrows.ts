@@ -15,7 +15,7 @@ export const GUIDANCE_PATH_SOURCE_ID = "guidance-path";
 export const GUIDANCE_LAYER_ID = "guidance-arrows-layer";
 export const GUIDANCE_PATH_LAYER_ID = "guidance-path-layer";
 export const GUIDANCE_PATH_GLOW_ID = "guidance-path-glow";
-const ARROW_IMAGE_ID = "guidance-hover-arrow-3d-v2";
+const ARROW_IMAGE_ID = "guidance-hover-arrow-3d-v3";
 
 function emptyCollection() {
   return { type: "FeatureCollection" as const, features: [] };
@@ -152,11 +152,11 @@ function ensureArrowLayer(map: MapLibreMap) {
     ["linear"],
     ["zoom"],
     14,
-    1.35,
-    17,
-    2.05,
-    19,
     2.7,
+    17,
+    4.1,
+    19,
+    5.4,
   ] as ExpressionSpecification;
 
   if (!map.getLayer(GUIDANCE_LAYER_ID)) {
@@ -168,10 +168,10 @@ function ensureArrowLayer(map: MapLibreMap) {
         "icon-image": ARROW_IMAGE_ID,
         "icon-size": size,
         "icon-anchor": "bottom",
-        "icon-offset": [0, -18],
+        "icon-offset": [0, -56],
         "icon-rotate": ["get", "bearing"],
         "icon-rotation-alignment": "map",
-        "icon-pitch-alignment": "viewport",
+        "icon-pitch-alignment": "map",
         "icon-allow-overlap": true,
         "icon-ignore-placement": true,
       },
@@ -187,8 +187,8 @@ function ensureArrowLayer(map: MapLibreMap) {
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-image", ARROW_IMAGE_ID);
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-size", size);
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-anchor", "bottom");
-  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-offset", [0, -18]);
-  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-pitch-alignment", "viewport");
+  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-offset", [0, -56]);
+  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-pitch-alignment", "map");
 }
 
 export function upsertGuidanceArrows(

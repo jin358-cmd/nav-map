@@ -1,6 +1,5 @@
 "use client";
 
-import type { Ref } from "react";
 import { Cloud, LogOut } from "lucide-react";
 import type { GoogleAccount } from "@/lib/google-identity";
 import { cn } from "@/lib/utils";
@@ -10,7 +9,6 @@ export function AccountChip({
   busy,
   hint,
   configured,
-  signInHostRef,
   onSignIn,
   onSignOut,
 }: {
@@ -18,7 +16,6 @@ export function AccountChip({
   busy?: boolean;
   hint?: string | null;
   configured: boolean;
-  signInHostRef?: Ref<HTMLDivElement>;
   onSignIn: () => void;
   onSignOut: () => void;
 }) {
@@ -27,7 +24,7 @@ export function AccountChip({
       <div className="relative flex min-w-0 max-w-[11.5rem] items-center gap-1.5">
         <button
           type="button"
-          title={`${account.name} · 書籤已同步雲端`}
+          title={`${account.name} · 書籤已同步到 Google 帳號`}
           onClick={onSignOut}
           className="flex min-w-0 items-center gap-1.5 rounded-full border border-cyan-300/25 bg-cyan-400/10 px-1.5 py-1 text-left touch-manipulation"
         >
@@ -52,7 +49,7 @@ export function AccountChip({
             </span>
             <span className="flex items-center gap-0.5 text-[9px] leading-tight text-cyan-200/80">
               <Cloud className="size-2.5" />
-              雲端書籤
+              Google 書籤
             </span>
           </span>
           <LogOut className="size-3 shrink-0 text-zinc-400" />
@@ -68,26 +65,21 @@ export function AccountChip({
 
   return (
     <div className="relative">
-      {configured ? (
-        <div
-          ref={signInHostRef}
-          className="google-signin-host flex min-h-8 min-w-[10.5rem] items-center justify-center overflow-hidden rounded-full"
-        />
-      ) : (
-        <button
-          type="button"
-          aria-label="使用 Google 帳號登入並同步書籤"
-          disabled={busy}
-          onClick={onSignIn}
-          className={cn(
-            "flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] touch-manipulation",
-            "border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10",
-          )}
-        >
-          <GoogleMark />
-          <span className="font-medium">{busy ? "登入中…" : "Google 登入"}</span>
-        </button>
-      )}
+      <button
+        type="button"
+        aria-label="使用 Google 帳號登入並把書籤存進你的帳號"
+        disabled={busy}
+        onClick={onSignIn}
+        className={cn(
+          "flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] touch-manipulation",
+          configured
+            ? "border-white/15 bg-white/8 text-white hover:bg-white/12"
+            : "border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10",
+        )}
+      >
+        <GoogleMark />
+        <span className="font-medium">{busy ? "登入中…" : "Google 登入"}</span>
+      </button>
       {hint ? (
         <p className="absolute bottom-full left-1/2 z-20 mb-1 w-48 -translate-x-1/2 rounded-lg bg-black/80 px-2 py-1 text-center text-[10px] text-amber-100">
           {hint}

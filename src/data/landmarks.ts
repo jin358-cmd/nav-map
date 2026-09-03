@@ -39,6 +39,15 @@ export const TAIWAN_LANDMARKS: GeocodeHit[] = [
   },
 ];
 
+const LANDMARK_ALIASES: Record<string, string[]> = {
+  "lm-tainan-station": ["火車站", "台南車站", "台南站", "TRA"],
+  "lm-anping": ["安平", "古堡", "熱蘭遮"],
+  "lm-ncku": ["成大", "NCKU", "成功大學"],
+  "lm-chimei": ["奇美", "博物館"],
+  "lm-tainan-city-hall": ["市府", "市政府", "永華"],
+  "lm-shennong": ["文創園區", "舊台南工場"],
+};
+
 function normalize(value: string) {
   return value.toLowerCase().replaceAll("臺", "台").replaceAll(" ", "");
 }
@@ -47,7 +56,8 @@ export function matchLandmarks(query: string, limit = 4): GeocodeHit[] {
   const needle = normalize(query);
   if (needle.length < 1) return TAIWAN_LANDMARKS.slice(0, limit);
   return TAIWAN_LANDMARKS.filter((item) => {
-    const hay = normalize(`${item.name} ${item.address}`);
-    return hay.includes(needle);
+    const extra = LANDMARK_ALIASES[item.id]?.join(" ") ?? "";
+    const hay = normalize(`${item.name} ${item.address} ${extra}`);
+    return hay.includes(needle) || extra.split(" ").some((alias) => normalize(alias) === needle);
   }).slice(0, limit);
 }

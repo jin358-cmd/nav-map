@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type Ref } from "react";
+import { useMemo, useState } from "react";
 import {
   AlertTriangle,
   Camera,
@@ -96,7 +96,6 @@ export function RoadInformationCard({
   accountBusy = false,
   accountHint = null,
   accountConfigured = false,
-  signInHostRef,
   onSignIn,
   onSignOut,
 }: {
@@ -122,7 +121,6 @@ export function RoadInformationCard({
   accountBusy?: boolean;
   accountHint?: string | null;
   accountConfigured?: boolean;
-  signInHostRef?: Ref<HTMLDivElement>;
   onSignIn?: () => void;
   onSignOut?: () => void;
 }) {
@@ -257,7 +255,6 @@ export function RoadInformationCard({
           busy={accountBusy}
           hint={accountHint}
           configured={accountConfigured}
-          signInHostRef={signInHostRef}
           onSignIn={() => onSignIn?.()}
           onSignOut={() => onSignOut?.()}
         />

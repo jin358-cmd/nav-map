@@ -1,3 +1,4 @@
+import { matchLandmarks } from "@/data/landmarks";
 import { BRAND_ALIASES, TAINAN_POIS } from "@/data/tainan-pois";
 import { distanceKm } from "@/lib/geo";
 import { SEARCH_RADIUS_KM, SEARCH_RESULT_LIMIT } from "@/lib/search-constants";
@@ -58,10 +59,60 @@ export function scoreNameMatch(query: string, name: string) {
   if (brandNames.some((brand) => brand.length >= 2 && hay.includes(brand))) {
     best = Math.max(best, 10);
   }
-  if (/^\d+$/.test(hay) || /\d+號/.test(name)) {
+  if (isDoorplateQuery(query)) {
+    const qDigits = query.replace(/\D/g, "");
+    const nDigits = name.replace(/\D/g, "");
+    if (qDigits && nDigits.endsWith(qDigits)) best = Math.max(best, 12);
+    if (hay.includes(normalizeSearchKey(query))) best = Math.max(best, 10);
+  } else if (/^\d+$/.test(hay) || /\d+號/.test(name)) {
     best -= 6;
   }
   return best;
+}
+
+export function mergeSearchHits(rows: GeocodeHit[], limit = SEARCH_RESULT_LIMIT) {
+  const seen = new Set<string>();
+  const out: GeocodeHit[] = [];
+  for (const hit of rows) {
+    const key = `${hit.name}|${hit.location.lng.toFixed(5)}|${hit.location.lat.toFixed(5)}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(hit);
+  }
+  return out.slice(0, limit);
+}
+
+export function matchSavedPlaces(query: string, places: GeocodeHit[]) {
+  const variants = expandKeywordQueries(query).map(normalizeSearchKey);
+  return places.filter((hit) => {
+    const hay = normalizeSearchKey(`${hit.name} ${hit.address}`);
+    return variants.some(
+      (needle) => needle.length >= 1 && (hay.includes(needle) || needle.includes(hay)),
+    );
+  });
+}
+
+export function instantKeywordHits(
+  query: string,
+  origin: LngLat,
+  extras: GeocodeHit[] = [],
+  limit = 8,
+): GeocodeHit[] {
+  return rankSearchHits(
+    filterWithinSearchRadius(
+      mergeSearchHits(
+        [
+          ...matchLandmarks(query, 8),
+          ...matchLocalPois(query, origin, 12),
+          ...matchSavedPlaces(query, extras),
+        ],
+        24,
+      ),
+      origin,
+    ),
+    query,
+    origin,
+  ).slice(0, limit);
 }
 
 export function rankSearchHits(
@@ -91,7 +142,12 @@ export function matchLocalPois(
     return variants.some(
       (needle) => needle.length >= 1 && (hay.includes(needle) || needle.includes(normalizeSearchKey(poi.name))),
     );
-  }).map(({ aliases: _aliases, ...hit }) => hit);
+  }).map((poi) => ({
+    id: poi.id,
+    name: poi.name,
+    address: poi.address,
+    location: poi.location,
+  }));
 
   return rankSearchHits(rows, query, origin).slice(0, limit);
 }
