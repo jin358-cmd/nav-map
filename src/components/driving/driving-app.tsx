@@ -56,6 +56,7 @@ import {
   type NavigationProgress,
   type NavigationTrackerState,
 } from "@/lib/route-progress";
+import { snapVehicleToRoute } from "@/lib/route-snap";
 import { deriveTrafficIntel } from "@/lib/traffic-intel";
 import {
   fetchAccidentReports,
@@ -77,6 +78,7 @@ import type {
   MapViewport,
   NavigationManeuver,
   RoadIntelItem,
+  DisplayPose,
   RouteDestination,
   RouteStep,
   VehiclePose,
@@ -98,6 +100,7 @@ const DrivingMap = dynamic(
 
 export function DrivingApp() {
   const [vehicle, setVehicle] = useState<VehiclePose>(DEMO_VEHICLE);
+  const [displayVehicle, setDisplayVehicle] = useState<DisplayPose | null>(null);
   const [cameraMode, setCameraMode] = useState<CameraMode>("3d");
   const [followVehicle, setFollowVehicle] = useState(true);
   const [gpsStatus, setGpsStatus] = useState<GpsStatus>("idle");
@@ -276,7 +279,10 @@ export function DrivingApp() {
       onFix: (pose) => {
         setVehicle(pose);
         const context = navigationContextRef.current;
-        if (!context.navigating || !context.routeProgressModel) return;
+        if (!context.navigating || !context.routeProgressModel) {
+          setDisplayVehicle(null);
+          return;
+        }
         const next = updateNavigationProgress({
           model: context.routeProgressModel,
           steps: context.routeSteps,
@@ -285,6 +291,13 @@ export function DrivingApp() {
         });
         navigationTrackerRef.current = next;
         setNavigationProgress(next);
+        setDisplayVehicle(
+          snapVehicleToRoute({
+            raw: pose,
+            model: context.routeProgressModel,
+            previousRouteMeters: next?.routeMeters,
+          }),
+        );
       },
       onStatus: setGpsStatus,
     });
@@ -439,6 +452,7 @@ export function DrivingApp() {
     setNavigating(false);
     navigationTrackerRef.current = null;
     setNavigationProgress(null);
+    setDisplayVehicle(null);
   }, [demoManeuver, demoRoute]);
 
   const locate = useCallback(async () => {
@@ -465,6 +479,15 @@ export function DrivingApp() {
       : null;
     navigationTrackerRef.current = next;
     setNavigationProgress(next);
+    setDisplayVehicle(
+      routeProgressModel
+        ? snapVehicleToRoute({
+            raw: vehicle,
+            model: routeProgressModel,
+            previousRouteMeters: next?.routeMeters,
+          })
+        : null,
+    );
     setNavigating(true);
     setCameraMode("3d");
     setFollowVehicle(true);
@@ -477,6 +500,7 @@ export function DrivingApp() {
     setNavigating(false);
     navigationTrackerRef.current = null;
     setNavigationProgress(null);
+    setDisplayVehicle(null);
     setFollowVehicle(false);
     setFitRouteKey((value) => value + 1);
   }, []);
@@ -562,6 +586,7 @@ export function DrivingApp() {
     <div className="relative h-dvh w-full overflow-hidden overscroll-none bg-[#0b0d11] text-zinc-100">
       <DrivingMap
         vehicle={vehicle}
+        displayVehicle={displayVehicle}
         cameraMode={cameraMode}
         followVehicle={followVehicle}
         navigating={navigating}

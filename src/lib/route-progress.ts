@@ -1,7 +1,7 @@
-import { distanceKm } from "@/lib/geo";
+import { bearingDegrees, distanceKm } from "@/lib/geo";
 import type { LngLat, RouteStep, VehiclePose } from "@/types/domain";
 
-type RouteSegment = {
+export type RouteSegment = {
   from: LngLat;
   to: LngLat;
   startMeters: number;
@@ -70,7 +70,7 @@ function pointOnSegment(
   };
 }
 
-function projectToRoute(
+export function projectToRoute(
   point: LngLat,
   segments: RouteSegment[],
   minimumMeters = 0,
@@ -129,6 +129,32 @@ export function createRouteProgressModel(
   });
 
   return { segments, stepMeters, totalMeters };
+}
+
+export function pointAtRouteMeters(
+  model: RouteProgressModel,
+  meters: number,
+): { point: LngLat; heading: number } | null {
+  if (model.segments.length === 0) return null;
+  const target = Math.max(0, Math.min(model.totalMeters, meters));
+  for (let index = 0; index < model.segments.length; index += 1) {
+    const segment = model.segments[index];
+    const end = segment.startMeters + segment.lengthMeters;
+    const isLast = index === model.segments.length - 1;
+    if (target > end && !isLast) continue;
+    const ratio = segment.lengthMeters <= 0
+      ? 0
+      : (target - segment.startMeters) / segment.lengthMeters;
+    const t = Math.max(0, Math.min(1, ratio));
+    return {
+      point: {
+        lng: segment.from.lng + (segment.to.lng - segment.from.lng) * t,
+        lat: segment.from.lat + (segment.to.lat - segment.from.lat) * t,
+      },
+      heading: bearingDegrees(segment.from, segment.to),
+    };
+  }
+  return null;
 }
 
 function arrivalThreshold(speedMps: number | undefined) {

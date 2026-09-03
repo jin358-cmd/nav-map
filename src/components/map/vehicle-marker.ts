@@ -1,3 +1,7 @@
+/**
+ * MapLibre Marker 使用 anchor=center、無 offset。
+ * 根節點不做 translate；旋轉只走 marker.setRotation。
+ */
 export function createVehicleMarkerElement(): HTMLDivElement {
   const root = document.createElement("div");
   root.className = "vehicle-marker";

@@ -10,6 +10,14 @@ export type VehiclePose = LngLat & {
   source: "demo" | "gps";
 };
 
+/** 畫面上黃色箭頭用的位置；不得回寫 GPS。 */
+export type DisplayPose = LngLat & {
+  heading: number;
+  routeMeters: number;
+  snapConfidence: number;
+  snapped: boolean;
+};
+
 export type GpsStatus =
   | "idle"
   | "locating"

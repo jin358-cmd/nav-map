@@ -27,7 +27,13 @@ import { upsertGuidanceArrows } from "@/lib/guidance-arrows";
 import { upsertIntelligenceLayers } from "@/lib/map-layers";
 import { configureMapLibreWorker } from "@/lib/maplibre-worker";
 import { applyDarkDrivingTheme } from "@/lib/map-style";
-import { damp, distanceKm, lerp, lerpAngle } from "@/lib/geo";
+import { damp, lerp, lerpAngle } from "@/lib/geo";
+import { createRouteProgressModel } from "@/lib/route-progress";
+import {
+  createVehicleDisplayState,
+  stepVehicleDisplay,
+  type VehicleDisplayState,
+} from "@/lib/vehicle-display";
 import { upsertSpeedEnforcementLayer } from "@/lib/speed-enforcement-layer";
 import type {
   AccidentReport,
@@ -35,6 +41,7 @@ import type {
   CctvCamera,
   DisasterAlert,
   MapViewport,
+  DisplayPose,
   RouteDestination,
   SpeedEnforcementPoint,
   TrafficSegment,
@@ -43,6 +50,7 @@ import type {
 
 type DrivingMapProps = {
   vehicle: VehiclePose;
+  displayVehicle?: DisplayPose | null;
   cameraMode: CameraMode;
   followVehicle: boolean;
   navigating: boolean;
@@ -214,6 +222,7 @@ function readViewport(map: MapLibreMap): MapViewport {
 
 export function DrivingMap({
   vehicle,
+  displayVehicle = null,
   cameraMode,
   followVehicle,
   navigating,
@@ -249,6 +258,13 @@ export function DrivingMap({
   const onLongPressRef = useRef(onLongPress);
   const modeRef = useRef(cameraMode);
   const vehicleRef = useRef(vehicle);
+  const displayVehicleRef = useRef(displayVehicle);
+  const displayStateRef = useRef<VehicleDisplayState>(
+    createVehicleDisplayState(displayVehicle ?? vehicle),
+  );
+  const lastFixKeyRef = useRef(`${vehicle.lng},${vehicle.lat}`);
+  const lastFixAtRef = useRef(performance.now());
+  const routeModelRef = useRef(createRouteProgressModel(route, []));
   const routeRef = useRef(route);
   const trafficRef = useRef(traffic);
   const camerasRef = useRef(cameras);
@@ -279,6 +295,14 @@ export function DrivingMap({
     onLongPressRef.current = onLongPress;
     modeRef.current = cameraMode;
     vehicleRef.current = vehicle;
+    displayVehicleRef.current = displayVehicle;
+    routeModelRef.current = createRouteProgressModel(route, []);
+    const fixKey = `${vehicle.lng.toFixed(6)},${vehicle.lat.toFixed(6)}`;
+    if (fixKey !== lastFixKeyRef.current) {
+      lastFixKeyRef.current = fixKey;
+      lastFixAtRef.current = performance.now();
+      displayStateRef.current.predictedMeters = 0;
+    }
     routeRef.current = route;
     trafficRef.current = traffic;
     camerasRef.current = cameras;
@@ -299,6 +323,7 @@ export function DrivingMap({
     onLongPress,
     cameraMode,
     vehicle,
+    displayVehicle,
     route,
     traffic,
     cameras,
@@ -377,22 +402,24 @@ export function DrivingMap({
       const dt = Math.min(0.05, (now - last) / 1000);
       lastFrameRef.current = now;
 
-      const target = vehicleRef.current;
-      const here = marker.getLngLat();
-      const jumpKm = distanceKm(
-        { lng: here.lng, lat: here.lat },
-        { lng: target.lng, lat: target.lat },
-      );
-      const tau = jumpKm > 0.35 ? 0.14 : 0.26;
-      const t = damp(dt, tau);
-
-      const nextLng = lerp(here.lng, target.lng, t);
-      const nextLat = lerp(here.lat, target.lat, t);
-      marker.setLngLat([nextLng, nextLat]);
+      const raw = vehicleRef.current;
+      const snapTarget = displayVehicleRef.current;
+      const target = snapTarget ?? raw;
+      displayStateRef.current = stepVehicleDisplay({
+        current: displayStateRef.current,
+        target,
+        raw,
+        model: routeModelRef.current,
+        navigating: navigatingRef.current,
+        dtSeconds: dt,
+        elapsedSinceFixSeconds: Math.max(0, (now - lastFixAtRef.current) / 1000),
+      });
+      const display = displayStateRef.current;
+      marker.setLngLat([display.lng, display.lat]);
 
       const headingUp = modeRef.current === "3d";
       setVehicleMarkerNavigating(marker.getElement(), navigatingRef.current);
-      marker.setRotation(headingUp ? 0 : target.heading);
+      marker.setRotation(headingUp ? 0 : display.heading);
 
       if (navigatingRef.current) {
         if (now - lastArrowUpdateRef.current > 180) {
@@ -413,9 +440,15 @@ export function DrivingMap({
       }
 
       if (followVehicleRef.current) {
+        const displayPose = {
+          ...raw,
+          lng: display.lng,
+          lat: display.lat,
+          heading: display.heading,
+        };
         const wanted = cameraOptions(
           mapNow,
-          target,
+          displayPose,
           modeRef.current,
           navigatingRef.current,
           approachingRef.current,
@@ -425,14 +458,15 @@ export function DrivingMap({
         const zoomTarget = pinchingRef.current
           ? mapNow.getZoom()
           : (userZoomRef.current ?? wanted.zoom);
+        const followT = damp(dt, 0.22);
         mapNow.jumpTo({
           center: [
-            lerp(center.lng, wanted.center[0], t),
-            lerp(center.lat, wanted.center[1], t),
+            lerp(center.lng, wanted.center[0], followT),
+            lerp(center.lat, wanted.center[1], followT),
           ],
-          bearing: lerpAngle(mapNow.getBearing(), wanted.bearing, t),
-          pitch: lerp(mapNow.getPitch(), wanted.pitch, t),
-          zoom: lerp(mapNow.getZoom(), zoomTarget, pinchingRef.current ? 0 : t),
+          bearing: lerpAngle(mapNow.getBearing(), wanted.bearing, followT),
+          pitch: lerp(mapNow.getPitch(), wanted.pitch, followT),
+          zoom: lerp(mapNow.getZoom(), zoomTarget, pinchingRef.current ? 0 : followT),
           padding: wanted.padding,
         });
         emitViewport();
