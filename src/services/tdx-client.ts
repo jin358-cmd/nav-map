@@ -79,6 +79,36 @@ export async function fetchTainanCityNews(): Promise<Record<string, unknown>[]> 
   return unwrapTdxList<Record<string, unknown>>(payload, ["News", "news"]);
 }
 
+export async function fetchTainanParkingLots(): Promise<Record<string, unknown>[]> {
+  const payload = await fetchTdxJson(
+    `/v1/Parking/OffStreet/CarPark/City/${TDX_TAINAN_CITY}`,
+  );
+  return unwrapParkingList(payload);
+}
+
+export async function fetchTainanParkingAvailability(): Promise<
+  Record<string, unknown>[]
+> {
+  const payload = await fetchTdxJson(
+    `/v1/Parking/OffStreet/ParkingAvailability/City/${TDX_TAINAN_CITY}`,
+  );
+  return unwrapParkingList(payload);
+}
+
+function unwrapParkingList(payload: unknown): Record<string, unknown>[] {
+  if (Array.isArray(payload)) return payload as Record<string, unknown>[];
+  if (!payload || typeof payload !== "object") return [];
+  const record = payload as Record<string, unknown>;
+  for (const key of ["Items", "items", "CarParks", "ParkingAvailabilities"]) {
+    const value = record[key];
+    if (Array.isArray(value)) return value as Record<string, unknown>[];
+  }
+  return unwrapTdxList<Record<string, unknown>>(payload, [
+    "ParkingLots",
+    "parkingLots",
+  ]);
+}
+
 async function fetchTdxJson(path: string): Promise<unknown> {
   const url = new URL(`${TDX_API_BASE}${path}`);
   url.searchParams.set("$format", "JSON");

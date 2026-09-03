@@ -26,6 +26,7 @@ import {
   bindConstructionLayerClicks,
   upsertConstructionLayer,
 } from "@/lib/construction-layer";
+import { bindParkingLayerClicks, upsertParkingLayer } from "@/lib/parking-layer";
 import { bindAccidentLayerClicks, upsertAccidentLayer } from "@/lib/event-layer";
 import { bindDisasterLayerClicks, upsertDisasterLayer } from "@/lib/disaster-layer";
 import { upsertGuidanceArrows } from "@/lib/guidance-arrows";
@@ -54,6 +55,7 @@ import type {
   MapFocusTarget,
   MapViewport,
   DisplayPose,
+  ParkingLot,
   RouteDestination,
   SpeedEnforcementPoint,
   TrafficSegment,
@@ -88,6 +90,9 @@ type DrivingMapProps = {
   disasters: DisasterAlert[];
   accidents: AccidentReport[];
   constructions?: ConstructionEvent[];
+  parkingLots?: ParkingLot[];
+  selectedParkingId?: string | null;
+  parkingVisible?: boolean;
   layerVisibility?: LayerKindVisibility;
   focusTarget?: MapFocusTarget | null;
   route: [number, number][];
@@ -107,6 +112,7 @@ type DrivingMapProps = {
   onDisasterSelect: (alertId: string) => void;
   onAccidentSelect?: (accidentId: string) => void;
   onConstructionSelect?: (constructionId: string) => void;
+  onParkingSelect?: (parkingId: string) => void;
   onUserPan: () => void;
   onViewportChange: (viewport: MapViewport) => void;
   onLongPress?: (location: { lng: number; lat: number }) => void;
@@ -260,6 +266,9 @@ export function DrivingMap({
   disasters,
   accidents,
   constructions = [],
+  parkingLots = [],
+  selectedParkingId = null,
+  parkingVisible = false,
   layerVisibility = DEFAULT_LAYER_VISIBILITY,
   focusTarget = null,
   route,
@@ -274,6 +283,7 @@ export function DrivingMap({
   onDisasterSelect,
   onAccidentSelect,
   onConstructionSelect,
+  onParkingSelect,
   onUserPan,
   onViewportChange,
   onLongPress,
@@ -289,6 +299,7 @@ export function DrivingMap({
   const onDisasterSelectRef = useRef(onDisasterSelect);
   const onAccidentSelectRef = useRef(onAccidentSelect);
   const onConstructionSelectRef = useRef(onConstructionSelect);
+  const onParkingSelectRef = useRef(onParkingSelect);
   const onUserPanRef = useRef(onUserPan);
   const onViewportChangeRef = useRef(onViewportChange);
   const onLongPressRef = useRef(onLongPress);
@@ -316,6 +327,9 @@ export function DrivingMap({
   const disastersRef = useRef(disasters);
   const accidentsRef = useRef(accidents);
   const constructionsRef = useRef(constructions);
+  const parkingLotsRef = useRef(parkingLots);
+  const selectedParkingRef = useRef(selectedParkingId);
+  const parkingVisibleRef = useRef(parkingVisible);
   const selectedDisasterRef = useRef(selectedDisasterId);
   const selectedAccidentRef = useRef(selectedAccidentId);
   const selectedConstructionRef = useRef(selectedConstructionId);
@@ -341,6 +355,7 @@ export function DrivingMap({
     onDisasterSelectRef.current = onDisasterSelect;
     onAccidentSelectRef.current = onAccidentSelect;
     onConstructionSelectRef.current = onConstructionSelect;
+    onParkingSelectRef.current = onParkingSelect;
     onUserPanRef.current = onUserPan;
     onViewportChangeRef.current = onViewportChange;
     onLongPressRef.current = onLongPress;
@@ -367,6 +382,9 @@ export function DrivingMap({
     disastersRef.current = disasters;
     accidentsRef.current = accidents;
     constructionsRef.current = constructions;
+    parkingLotsRef.current = parkingLots;
+    selectedParkingRef.current = selectedParkingId;
+    parkingVisibleRef.current = parkingVisible;
     selectedDisasterRef.current = selectedDisasterId;
     selectedAccidentRef.current = selectedAccidentId;
     selectedConstructionRef.current = selectedConstructionId;
@@ -382,6 +400,7 @@ export function DrivingMap({
     onDisasterSelect,
     onAccidentSelect,
     onConstructionSelect,
+    onParkingSelect,
     onUserPan,
     onViewportChange,
     onLongPress,
@@ -404,6 +423,9 @@ export function DrivingMap({
     disasters,
     accidents,
     constructions,
+    parkingLots,
+    selectedParkingId,
+    parkingVisible,
     layerVisibility,
     navigating,
     approachingIntersection,
@@ -572,6 +594,13 @@ export function DrivingMap({
           visible.construction,
         );
         bindConstructionLayerClicks(map, (id) => onConstructionSelectRef.current?.(id));
+        upsertParkingLayer(
+          map,
+          parkingLotsRef.current,
+          selectedParkingRef.current,
+          parkingVisibleRef.current,
+        );
+        bindParkingLayerClicks(map, (id) => onParkingSelectRef.current?.(id));
       } catch (error) {
         console.error("Event layer skipped", error);
       }
@@ -806,6 +835,13 @@ export function DrivingMap({
           visible.construction,
         );
         bindConstructionLayerClicks(map, (id) => onConstructionSelectRef.current?.(id));
+        upsertParkingLayer(
+          map,
+          parkingLotsRef.current,
+          selectedParkingRef.current,
+          parkingVisibleRef.current,
+        );
+        bindParkingLayerClicks(map, (id) => onParkingSelectRef.current?.(id));
       } catch {
         onStyleFallbackRef.current?.("地圖圖層重新掛載失敗，已保留目前畫面。");
       }
@@ -867,6 +903,12 @@ export function DrivingMap({
       layerVisibility.construction,
     );
   }, [constructions, layerVisibility.construction, selectedConstructionId]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !readyRef.current) return;
+    upsertParkingLayer(map, parkingLots, selectedParkingId, parkingVisible);
+  }, [parkingLots, parkingVisible, selectedParkingId]);
 
   useEffect(() => {
     const map = mapRef.current;

@@ -293,6 +293,35 @@ export type RouteDestination = {
   location: LngLat;
 };
 
+export type ParkingFill = "plenty" | "limited" | "full" | "unknown";
+export type ParkingSort = "distance" | "remaining" | "price";
+export type ParkingDataOrigin = "tdx-live" | "tainan-open" | "unavailable";
+
+export type ParkingLot = {
+  id: string;
+  name: string;
+  address?: string;
+  location: LngLat;
+  distanceMeters?: number;
+  carAvailable?: number | null;
+  carTotal?: number | null;
+  motorcycleAvailable?: number | null;
+  motorcycleTotal?: number | null;
+  fee?: string;
+  hours?: string;
+  updatedAt?: string;
+  source: string;
+  origin: ParkingDataOrigin;
+  freshness: DataFreshness;
+  fill: ParkingFill;
+};
+
+export type ParkingCatalog = {
+  origin: ParkingDataOrigin;
+  lots: ParkingLot[];
+  fetchedAt: string;
+};
+
 export type TravelMode = "car" | "motorcycle";
 
 export type RoutePlan = {

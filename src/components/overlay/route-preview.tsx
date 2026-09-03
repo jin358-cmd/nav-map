@@ -17,6 +17,7 @@ export function RouteConfirmBar({
   onTravelMode,
   onStartNav,
   onClear,
+  onNearbyParking,
 }: {
   destination: RouteDestination;
   maneuver: NavigationManeuver | null;
@@ -28,6 +29,7 @@ export function RouteConfirmBar({
   onTravelMode: (mode: TravelMode) => void;
   onStartNav: () => void;
   onClear: () => void;
+  onNearbyParking?: () => void;
 }) {
   const remainingKm =
     distanceMeters != null
@@ -86,6 +88,16 @@ export function RouteConfirmBar({
           </p>
         </div>
         <div className="flex w-full items-center gap-2">
+          {onNearbyParking ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onNearbyParking}
+              className="h-12 min-h-12 rounded-xl border-emerald-300/30 bg-emerald-500/15 text-emerald-100 hover:bg-emerald-500/25"
+            >
+              附近停車
+            </Button>
+          ) : null}
           <Button
             type="button"
             onClick={onStartNav}

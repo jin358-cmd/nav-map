@@ -24,6 +24,7 @@ import {
   disasterToCard,
 } from "@/components/overlay/event-detail-card";
 import { EventListPanel } from "@/components/overlay/event-list-panel";
+import { ParkingPanel } from "@/components/overlay/parking-panel";
 import { NextIntersectionHud } from "@/components/overlay/navigation-banner";
 import { RoadInformationCard } from "@/components/overlay/road-information-card";
 import { RouteConfirmBar } from "@/components/overlay/route-preview";
@@ -35,6 +36,7 @@ import { useLandscape } from "@/hooks/use-landscape";
 import { useYoutubeLibrary } from "@/hooks/use-youtube-library";
 import { useNavigationVoice } from "@/hooks/use-navigation-voice";
 import { useSpeedEnforcementView } from "@/hooks/use-speed-enforcement-view";
+import { useParkingView } from "@/hooks/use-parking-view";
 import { useTrafficView } from "@/hooks/use-traffic-view";
 import { roadIntelFromCameras } from "@/lib/cctv-intel";
 import { deriveAccidentIntel, mapVisibleAccidents } from "@/lib/accident-query";
@@ -113,6 +115,8 @@ import type {
   DisplayPose,
   FollowOrientation,
   MapDisplayMode,
+  ParkingLot,
+  ParkingSort,
   RouteDestination,
   RouteStep,
   SavedPlaceType,
@@ -180,6 +184,9 @@ export function DrivingApp() {
     DEFAULT_LAYER_VISIBILITY,
   );
   const [focusTarget, setFocusTarget] = useState<MapFocusTarget | null>(null);
+  const [parkingOpen, setParkingOpen] = useState(false);
+  const [parkingSort, setParkingSort] = useState<ParkingSort>("distance");
+  const [selectedParking, setSelectedParking] = useState<ParkingLot | null>(null);
   const [route, setRoute] = useState<[number, number][]>([]);
   const [maneuver, setManeuver] = useState<NavigationManeuver | null>(null);
   const [destination, setDestination] = useState<RouteDestination | null>(null);
@@ -353,6 +360,18 @@ export function DrivingApp() {
     error: disasterError,
     reload: reloadDisasters,
   } = useDisasterView(refreshNonce);
+
+  const parkingCenter = destination?.location ?? null;
+  const {
+    lots: parkingLots,
+    origin: parkingOrigin,
+    error: parkingError,
+    fetchedAt: parkingFetchedAt,
+  } = useParkingView({
+    center: parkingCenter,
+    enabled: Boolean(destination) && parkingOpen,
+    radiusKm: 4,
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -630,6 +649,8 @@ export function DrivingApp() {
     navigationTrackerRef.current = null;
     setNavigationProgress(null);
     setDisplayVehicle(null);
+    setParkingOpen(false);
+    setSelectedParking(null);
   }, []);
 
   const locate = useCallback(async () => {
@@ -904,6 +925,15 @@ export function DrivingApp() {
         selectedConstructionId={selectedConstruction?.id ?? null}
         layerVisibility={layerVisibility}
         focusTarget={focusTarget}
+        parkingLots={parkingLots}
+        selectedParkingId={selectedParking?.id ?? null}
+        parkingVisible={parkingOpen}
+        onParkingSelect={(id) => {
+          const found = parkingLots.find((lot) => lot.id === id) ?? null;
+          setSelectedParking(found);
+          setParkingOpen(true);
+          if (found) focusEvent(found.location);
+        }}
         route={route}
         routeMeters={navigationProgress?.routeMeters ?? 0}
         distanceToNextMeters={distanceToNextMeters}
@@ -1090,6 +1120,10 @@ export function DrivingApp() {
               }}
               onStartNav={startNavigation}
               onClear={clearRoute}
+              onNearbyParking={() => {
+                setParkingOpen(true);
+                setSelectedParking(null);
+              }}
             />
           ) : (
             <>
@@ -1143,6 +1177,33 @@ export function DrivingApp() {
       ) : null}
 
       <footer className="absolute inset-x-0 bottom-0 z-10 flex flex-col items-center gap-2 px-2 pb-[max(0.45rem,env(safe-area-inset-bottom))] sm:p-4 sm:pt-0">
+        {parkingOpen ? (
+          <ParkingPanel
+            lots={parkingLots}
+            origin={parkingOrigin}
+            fetchedAt={parkingFetchedAt}
+            selected={selectedParking}
+            sort={parkingSort}
+            onSort={setParkingSort}
+            onSelect={(lot) => {
+              setSelectedParking(lot);
+              focusEvent(lot.location);
+            }}
+            onNavigate={(lot) => {
+              setParkingOpen(false);
+              void applyRoute({
+                id: `parking-${lot.id}`,
+                name: lot.name,
+                address: lot.address || lot.name,
+                location: lot.location,
+              });
+            }}
+            onClose={() => {
+              setParkingOpen(false);
+              setSelectedParking(null);
+            }}
+          />
+        ) : null}
         {eventListKind ? (
           <EventListPanel
             kind={eventListKind}
@@ -1253,9 +1314,9 @@ export function DrivingApp() {
         />
       </footer>
 
-      {cctvError || trafficError || speedEnforcementError || disasterError ? (
+      {cctvError || trafficError || speedEnforcementError || disasterError || parkingError ? (
         <div className="pointer-events-none absolute top-[max(11rem,calc(env(safe-area-inset-top)+10rem))] left-1/2 z-20 -translate-x-1/2 rounded-xl border border-amber-300/25 bg-black/65 px-3 py-2 text-xs text-amber-100">
-          {cctvError ?? trafficError ?? speedEnforcementError ?? disasterError}
+          {cctvError ?? trafficError ?? speedEnforcementError ?? disasterError ?? parkingError}
         </div>
       ) : null}
     </div>
@@ -1272,7 +1333,8 @@ function Legend() {
     { color: "bg-[#7f1d1d]", label: "接近停止" },
     { color: "bg-[#c084fc]", label: "CCTV" },
     { color: "bg-[#fbbf24]", label: "測速執法" },
-    { color: "bg-[#eab308]", label: "施工" },
+    { color: "bg-[#22c55e]", label: "停車場（充足）" },
+    { color: "bg-[#eab308]", label: "施工／車位不多" },
     { color: "bg-[#ef4444]", label: "事故" },
     { color: "bg-[#ff9f1c]", label: "災害" },
   ];
