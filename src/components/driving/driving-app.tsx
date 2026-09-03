@@ -45,7 +45,8 @@ import { destinationToHit } from "@/lib/poi-search";
 import { CITY_TRAFFIC_FOCUS_KM } from "@/lib/traffic-constants";
 import {
   DEMO_VEHICLE,
-  INTERSECTION_APPROACH_METERS,
+  JUNCTION_FOCUS_ENTER_METERS,
+  JUNCTION_FOCUS_EXIT_METERS,
   YOUTUBE_PLAYLISTS,
 } from "@/lib/constants";
 import { distanceKm } from "@/lib/geo";
@@ -146,11 +147,16 @@ export function DrivingApp() {
   const youtubeLibrary = useYoutubeLibrary(googleAccount.youtubeAccessToken);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [rerouting, setRerouting] = useState(false);
+  const [reroutePending, setReroutePending] = useState(false);
+  const [junctionFocus, setJunctionFocus] = useState(false);
   const [navigationProgress, setNavigationProgress] =
     useState<NavigationProgress | null>(null);
   const navigationTrackerRef = useRef<NavigationTrackerState | null>(null);
   const reroutingRef = useRef(false);
   const lastRerouteAtRef = useRef(0);
+  const lastRerouteSuccessAtRef = useRef(0);
+  const rerouteAbortRef = useRef<AbortController | null>(null);
+  const rerouteGenerationRef = useRef(0);
   const destinationRef = useRef<RouteDestination | null>(null);
   const vehicleRef = useRef(vehicle);
 
@@ -186,8 +192,19 @@ export function DrivingApp() {
     : activeNavigationStep?.cueMeters && activeNavigationStep.cueMeters > 0
       ? activeNavigationStep.cueMeters
       : (maneuver?.distanceMeters ?? activeNavigationStep?.distanceMeters ?? 0);
-  const approachingIntersection =
-    navigating && distanceToNextMeters <= INTERSECTION_APPROACH_METERS;
+  const approachingIntersection = navigating && junctionFocus;
+
+  useEffect(() => {
+    if (!navigating) {
+      setJunctionFocus(false);
+      return;
+    }
+    setJunctionFocus((current) =>
+      current
+        ? distanceToNextMeters <= JUNCTION_FOCUS_EXIT_METERS
+        : distanceToNextMeters <= JUNCTION_FOCUS_ENTER_METERS,
+    );
+  }, [distanceToNextMeters, navigating]);
 
   useNavigationVoice({
     enabled: voiceEnabled,
@@ -497,10 +514,12 @@ export function DrivingApp() {
   }, [routeProgressModel, routeSteps, vehicle]);
 
   const exitNavigation = useCallback(() => {
+    rerouteAbortRef.current?.abort();
     setNavigating(false);
     navigationTrackerRef.current = null;
     setNavigationProgress(null);
     setDisplayVehicle(null);
+    setJunctionFocus(false);
     setFollowVehicle(false);
     setFitRouteKey((value) => value + 1);
   }, []);
@@ -524,10 +543,26 @@ export function DrivingApp() {
     const dest = destinationRef.current;
     const here = vehicleRef.current;
     if (!dest || reroutingRef.current) return;
-    if (Date.now() - lastRerouteAtRef.current < 8000) return;
+    const now = Date.now();
+    if (now - lastRerouteSuccessAtRef.current < 8000) return;
+    if (now - lastRerouteAtRef.current < 2500) return;
+    rerouteAbortRef.current?.abort();
+    const controller = new AbortController();
+    rerouteAbortRef.current = controller;
+    const generation = rerouteGenerationRef.current + 1;
+    rerouteGenerationRef.current = generation;
     reroutingRef.current = true;
-    lastRerouteAtRef.current = Date.now();
+    lastRerouteAtRef.current = now;
     setRerouting(true);
+    setReroutePending(false);
+    const staleTimer = window.setTimeout(() => {
+      if (
+        rerouteGenerationRef.current === generation &&
+        reroutingRef.current
+      ) {
+        setReroutePending(true);
+      }
+    }, 5000);
     try {
       const plan = await planDrivingRoute(
         { lng: here.lng, lat: here.lat },
@@ -537,18 +572,27 @@ export function DrivingApp() {
           address: dest.address,
           location: dest.location,
         },
+        controller.signal,
       );
+      if (generation !== rerouteGenerationRef.current) return;
       setRoute(plan.coordinates);
       setDestination(plan.destination);
       setManeuver(plan.maneuver);
       setRouteSteps(plan.steps ?? []);
       navigationTrackerRef.current = null;
       setNavigationProgress(null);
+      lastRerouteSuccessAtRef.current = Date.now();
     } catch (error) {
+      if (controller.signal.aborted) return;
+      if (generation !== rerouteGenerationRef.current) return;
       setRouteError(error instanceof Error ? error.message : "重新規劃路線失敗");
     } finally {
-      reroutingRef.current = false;
-      setRerouting(false);
+      window.clearTimeout(staleTimer);
+      if (generation === rerouteGenerationRef.current) {
+        reroutingRef.current = false;
+        setRerouting(false);
+        setReroutePending(false);
+      }
     }
   }, []);
 
@@ -601,6 +645,7 @@ export function DrivingApp() {
         routeMeters={navigationProgress?.routeMeters ?? 0}
         distanceToNextMeters={distanceToNextMeters}
         approachingIntersection={approachingIntersection}
+        junctionCue={activeNavigationStep?.location ?? null}
         destination={destination}
         overlayPadding={navigating ? overlayPadding : null}
         fitRouteKey={fitRouteKey}
@@ -628,6 +673,8 @@ export function DrivingApp() {
               distanceMeters={distanceToNextMeters}
               offRoute={navigationProgress?.offRoute ?? false}
               rerouting={rerouting}
+              reroutePending={reroutePending}
+              junctionFocus={junctionFocus}
               voiceEnabled={voiceEnabled}
               onToggleVoice={() => setVoiceEnabled((value) => !value)}
             />

@@ -358,39 +358,49 @@
 
 .navigation-instruction-card {
   position: relative;
-  width: min(420px, 32vw);
+  width: min(520px, 40vw);
   max-width: calc(100vw - 96px);
-  max-height: min(280px, 34vh);
-  padding: 14px 16px;
-  border-radius: 22px;
+  max-height: min(320px, 38vh);
+  padding: 18px 20px;
+  border-radius: 24px;
   overflow: hidden;
+}
+
+.navigation-instruction-card--junction {
+  background: #f5c400;
+  color: #1a1400;
 }
 
 .navigation-instruction-content {
   display: grid;
-  grid-template-columns: 72px minmax(0, 1fr) 36px;
+  grid-template-columns: 90px minmax(0, 1fr) 44px;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
 }
 
 .navigation-turn-icon {
-  width: 72px;
-  height: 72px;
+  width: 90px;
+  height: 90px;
 }
 
 .navigation-distance {
-  font-size: clamp(32px, 4vw, 52px);
+  font-size: clamp(40px, 5vw, 64px);
   line-height: 1;
   font-weight: 800;
 }
 
+.navigation-instruction-card--junction .navigation-distance {
+  font-size: clamp(46px, 6vw, 72px);
+  color: #111;
+}
+
 .navigation-next-label {
-  font-size: clamp(15px, 1.6vw, 22px);
+  font-size: clamp(16px, 1.8vw, 24px);
   line-height: 1.2;
 }
 
 .navigation-street-name {
-  font-size: clamp(16px, 1.8vw, 24px);
+  font-size: clamp(18px, 2vw, 28px);
   line-height: 1.25;
   white-space: nowrap;
   overflow: hidden;
@@ -398,49 +408,49 @@
 }
 
 .navigation-audio-button {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
 }
 
 @media (orientation: portrait) {
   .navigation-instruction-card {
-    width: min(320px, calc(100vw - 88px));
-    max-height: 230px;
-    padding: 12px 14px;
-    border-radius: 18px;
+    width: min(400px, calc(100vw - 80px));
+    max-height: 260px;
+    padding: 15px 16px;
+    border-radius: 20px;
   }
 
   .navigation-instruction-content {
-    grid-template-columns: 56px minmax(0, 1fr) 32px;
-    gap: 10px;
+    grid-template-columns: 70px minmax(0, 1fr) 40px;
+    gap: 12px;
   }
 
   .navigation-turn-icon {
-    width: 56px;
-    height: 56px;
+    width: 70px;
+    height: 70px;
   }
 
   .navigation-distance {
-    font-size: clamp(30px, 7vw, 40px);
+    font-size: clamp(36px, 8vw, 50px);
   }
 
   .navigation-next-label {
-    font-size: clamp(14px, 3.6vw, 18px);
+    font-size: clamp(15px, 3.8vw, 20px);
   }
 
   .navigation-street-name {
-    font-size: clamp(14px, 3.8vw, 18px);
+    font-size: clamp(16px, 4vw, 22px);
   }
 
   .navigation-audio-button {
-    width: 32px;
-    height: 32px;
+    width: 40px;
+    height: 40px;
   }
 }
 
 @media (max-width: 390px) {
   .navigation-instruction-card {
-    width: min(292px, calc(100vw - 76px));
-    padding: 10px 12px;
+    width: min(340px, calc(100vw - 68px));
+    padding: 12px 14px;
   }
 }

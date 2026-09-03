@@ -25,6 +25,10 @@ export const INTERSECTION_ZOOM = 18.65;
 export const INTERSECTION_ZOOM_MOBILE = 18.25;
 export const INTERSECTION_PITCH = 40;
 export const INTERSECTION_APPROACH_METERS = 95;
+/** 50 公尺進入路口強化；65 公尺才退出，避免 49～51 閃爍 */
+export const JUNCTION_FOCUS_ENTER_METERS = 50;
+export const JUNCTION_FOCUS_EXIT_METERS = 65;
+export const JUNCTION_FOCUS_MAX_ZOOM_METERS = 12;
 /** 跑馬燈箭頭：接近路口約 30 公尺才顯現 */
 export const GUIDANCE_ARROW_APPROACH_METERS = 30;
 

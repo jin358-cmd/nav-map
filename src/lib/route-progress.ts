@@ -1,4 +1,4 @@
-import { bearingDegrees, distanceKm } from "@/lib/geo";
+import { bearingDegrees, distanceKm, headingDelta } from "@/lib/geo";
 import type { LngLat, RouteStep, VehiclePose } from "@/types/domain";
 
 export type RouteSegment = {
@@ -204,15 +204,41 @@ export function updateNavigationProgress({
   }
 
   const routeTolerance = Math.max(
-    45,
-    Math.min(80, (vehicle.accuracy ?? 10) * 1.5),
+    40,
+    Math.min(90, (vehicle.accuracy ?? 10) * 1.8),
   );
+  const along = pointAtRouteMeters(model, nearestProjection.routeMeters);
+  const headingGap = along ? headingDelta(vehicle.heading, along.heading) : 0;
+  const localWindow = previous
+    ? projectToRoute(
+        vehicle,
+        model.segments,
+        Math.max(0, previous.routeMeters - 40),
+        Math.min(model.totalMeters, previous.routeMeters + 90),
+      )
+    : nearestProjection;
   const outsideRoute = nearestProjection.distanceMeters > routeTolerance;
-  const offRouteSamples = outsideRoute ? (previous?.offRouteSamples ?? 0) + 1 : 0;
-  const onRouteSamples = outsideRoute ? 0 : (previous?.onRouteSamples ?? 0) + 1;
+  const headingAway =
+    (vehicle.speedMps ?? 0) > 2.5 &&
+    headingGap > 60 &&
+    nearestProjection.distanceMeters > 18;
+  const previousCue =
+    model.stepMeters[previous?.stepIndex ?? 0] ?? model.totalMeters;
+  const missedTurn =
+    Boolean(previous) &&
+    routeMeters > previousCue + 18 &&
+    nearestProjection.distanceMeters > 28;
+  const parallelRoad =
+    Boolean(localWindow) &&
+    nearestProjection.distanceMeters + 10 < (localWindow?.distanceMeters ?? 999) &&
+    Math.abs(nearestProjection.routeMeters - (previous?.routeMeters ?? 0)) > 70;
+  const deviant = outsideRoute || headingAway || missedTurn || parallelRoad;
+  const samplesNeeded = (vehicle.accuracy ?? 10) > 28 ? 3 : 2;
+  const offRouteSamples = deviant ? (previous?.offRouteSamples ?? 0) + 1 : 0;
+  const onRouteSamples = deviant ? 0 : (previous?.onRouteSamples ?? 0) + 1;
   const offRoute = previous?.offRoute
     ? onRouteSamples < 2
-    : offRouteSamples >= 2;
+    : offRouteSamples >= samplesNeeded;
 
   let stepIndex = Math.max(
     previous?.stepIndex ?? firstNavigationStep(steps),

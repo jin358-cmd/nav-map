@@ -16,10 +16,18 @@ import { formatDistance } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { RouteStep } from "@/types/domain";
 
-function TurnGlyph({ step }: { step: RouteStep | null }) {
+function TurnGlyph({
+  step,
+  junction,
+}: {
+  step: RouteStep | null;
+  junction?: boolean;
+}) {
   const type = step?.type ?? "";
   const modifier = step?.modifier ?? "";
-  const className = "size-8 text-cyan-200";
+  const className = junction
+    ? "size-12 text-[#1a1400]"
+    : "size-10 text-cyan-200";
   if (type === "arrive") return <Flag className={className} />;
   if (type.includes("roundabout") || type.includes("rotary")) {
     return <RotateCw className={className} />;
@@ -46,6 +54,8 @@ export const NextIntersectionHud = forwardRef<
     distanceMeters: number;
     offRoute: boolean;
     rerouting?: boolean;
+    reroutePending?: boolean;
+    junctionFocus?: boolean;
     voiceEnabled: boolean;
     onToggleVoice: () => void;
   }
@@ -55,6 +65,8 @@ export const NextIntersectionHud = forwardRef<
     distanceMeters,
     offRoute,
     rerouting = false,
+    reroutePending = false,
+    junctionFocus = false,
     voiceEnabled,
     onToggleVoice,
   },
@@ -63,28 +75,58 @@ export const NextIntersectionHud = forwardRef<
   return (
     <div
       ref={ref}
-      className="navigation-instruction-card pointer-events-auto border border-cyan-300/25 bg-black/78 text-white shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl"
+      className={cn(
+        "navigation-instruction-card pointer-events-auto shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl",
+        junctionFocus
+          ? "navigation-instruction-card--junction border border-amber-700/40 text-[#1a1400]"
+          : "border border-cyan-300/25 bg-black/78 text-white",
+      )}
     >
       <div className="navigation-instruction-content">
-        <div className="navigation-turn-icon flex shrink-0 items-center justify-center rounded-2xl bg-cyan-400/15">
-          <TurnGlyph step={step} />
+        <div
+          className={cn(
+            "navigation-turn-icon flex shrink-0 items-center justify-center rounded-2xl",
+            junctionFocus ? "bg-black/12" : "bg-cyan-400/15",
+          )}
+        >
+          <TurnGlyph step={step} junction={junctionFocus} />
         </div>
         <div className="min-w-0 text-left">
-          <p className="navigation-next-label tracking-wide text-cyan-200/90">
-            下一個路口
+          <p
+            className={cn(
+              "navigation-next-label tracking-wide",
+              junctionFocus ? "text-[#3a2a00]" : "text-cyan-200/90",
+            )}
+          >
+            {junctionFocus ? "即將轉向" : "下一個路口"}
           </p>
           <p className="navigation-distance truncate tabular-nums tracking-tight">
             {formatDistance(distanceMeters)}
           </p>
-          <p className="navigation-street-name font-medium text-white">
+          <p
+            className={cn(
+              "navigation-street-name font-medium",
+              junctionFocus ? "text-[#1a1400]" : "text-white",
+            )}
+          >
             {guidanceLine(step)}
           </p>
           {rerouting ? (
-            <p className="mt-0.5 truncate text-[12px] font-medium text-amber-300">
-              正在更新路線…
+            <p
+              className={cn(
+                "mt-0.5 truncate text-[12px] font-medium",
+                junctionFocus ? "text-[#5a3d00]" : "text-amber-300",
+              )}
+            >
+              {reroutePending ? "仍在重新規劃路線" : "正在重新規劃路線"}
             </p>
           ) : offRoute ? (
-            <p className="mt-0.5 truncate text-[12px] font-medium text-amber-300">
+            <p
+              className={cn(
+                "mt-0.5 truncate text-[12px] font-medium",
+                junctionFocus ? "text-[#5a3d00]" : "text-amber-300",
+              )}
+            >
               偏離路線，即將重算
             </p>
           ) : null}
@@ -97,13 +139,16 @@ export const NextIntersectionHud = forwardRef<
           aria-pressed={voiceEnabled}
           onClick={onToggleVoice}
           className={cn(
-            "navigation-audio-button shrink-0 text-zinc-300 hover:bg-white/10 hover:text-white",
+            "navigation-audio-button shrink-0 hover:bg-white/10",
+            junctionFocus
+              ? "text-[#1a1400] hover:text-[#1a1400]"
+              : "text-zinc-300 hover:text-white",
           )}
         >
           {voiceEnabled ? (
-            <Volume2 className="size-4" />
+            <Volume2 className="size-5" />
           ) : (
-            <VolumeX className="size-4" />
+            <VolumeX className="size-5" />
           )}
         </Button>
       </div>

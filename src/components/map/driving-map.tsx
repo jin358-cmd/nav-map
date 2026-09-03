@@ -21,6 +21,7 @@ import {
   OVERVIEW_PITCH,
   TAINAN_CENTER,
 } from "@/lib/constants";
+import { junctionZoomProgress } from "@/lib/upcoming-route";
 import { bindCctvLayerClicks, upsertCctvLayer } from "@/lib/cctv-layer";
 import { bindDisasterLayerClicks, upsertDisasterLayer } from "@/lib/disaster-layer";
 import { upsertGuidanceArrows } from "@/lib/guidance-arrows";
@@ -40,6 +41,7 @@ import type {
   CameraMode,
   CctvCamera,
   DisasterAlert,
+  LngLat,
   MapViewport,
   DisplayPose,
   RouteDestination,
@@ -65,6 +67,7 @@ type DrivingMapProps = {
   routeMeters: number;
   distanceToNextMeters: number;
   approachingIntersection: boolean;
+  junctionCue?: LngLat | null;
   destination: RouteDestination | null;
   overlayPadding?: {
     top: number;
@@ -127,28 +130,25 @@ function cameraOptions(
   navigating = false,
   approaching = false,
   overlay?: DrivingMapProps["overlayPadding"],
+  distanceToNext = Number.POSITIVE_INFINITY,
+  junctionCue: LngLat | null = null,
 ) {
   const height = map.getContainer().clientHeight;
   const width = map.getContainer().clientWidth;
   const compact = isCompactViewport(width);
-  const navZoom = approaching
-    ? compact
-      ? INTERSECTION_ZOOM_MOBILE
-      : INTERSECTION_ZOOM
-    : compact
-      ? DRIVING_ZOOM_MOBILE
-      : DRIVING_ZOOM;
+  const blend = approaching ? junctionZoomProgress(distanceToNext) : 0;
+  const cruiseZoom = compact ? DRIVING_ZOOM_MOBILE : DRIVING_ZOOM;
+  const focusZoom = compact ? INTERSECTION_ZOOM_MOBILE : INTERSECTION_ZOOM;
+  const navZoom = lerp(cruiseZoom, focusZoom, blend);
+  const cruisePitch = navigating ? NAVIGATION_PITCH : DRIVING_PITCH;
+  const towardCue = approaching && junctionCue ? blend * 0.36 : 0;
   return {
-    center: [vehicle.lng, vehicle.lat] as [number, number],
+    center: [
+      lerp(vehicle.lng, junctionCue?.lng ?? vehicle.lng, towardCue),
+      lerp(vehicle.lat, junctionCue?.lat ?? vehicle.lat, towardCue),
+    ] as [number, number],
     bearing: mode === "3d" ? vehicle.heading : 0,
-    pitch:
-      mode === "3d"
-        ? approaching
-          ? INTERSECTION_PITCH
-          : navigating
-            ? NAVIGATION_PITCH
-            : DRIVING_PITCH
-        : 0,
+    pitch: mode === "3d" ? lerp(cruisePitch, INTERSECTION_PITCH, blend) : 0,
     zoom: mode === "3d" ? navZoom : OVERHEAD_ZOOM,
     padding: drivingPadding(height, width, mode, navigating, overlay),
   };
@@ -237,6 +237,7 @@ export function DrivingMap({
   routeMeters,
   distanceToNextMeters,
   approachingIntersection,
+  junctionCue = null,
   destination,
   overlayPadding = null,
   fitRouteKey,
@@ -275,6 +276,7 @@ export function DrivingMap({
   const followVehicleRef = useRef(followVehicle);
   const navigatingRef = useRef(navigating);
   const approachingRef = useRef(approachingIntersection);
+  const junctionCueRef = useRef(junctionCue);
   const routeMetersRef = useRef(routeMeters);
   const distanceToNextRef = useRef(distanceToNextMeters);
   const pinchingRef = useRef(false);
@@ -312,6 +314,7 @@ export function DrivingMap({
     selectedDisasterRef.current = selectedDisasterId;
     navigatingRef.current = navigating;
     approachingRef.current = approachingIntersection;
+    junctionCueRef.current = junctionCue;
     routeMetersRef.current = routeMeters;
     distanceToNextRef.current = distanceToNextMeters;
     overlayPaddingRef.current = overlayPadding;
@@ -333,6 +336,7 @@ export function DrivingMap({
     disasters,
     navigating,
     approachingIntersection,
+    junctionCue,
     routeMeters,
     distanceToNextMeters,
     overlayPadding,
@@ -453,6 +457,8 @@ export function DrivingMap({
           navigatingRef.current,
           approachingRef.current,
           overlayPaddingRef.current,
+          distanceToNextRef.current,
+          junctionCueRef.current,
         );
         const center = mapNow.getCenter();
         const zoomTarget = pinchingRef.current

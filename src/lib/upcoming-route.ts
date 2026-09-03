@@ -1,6 +1,8 @@
 import {
   GUIDANCE_ARROW_APPROACH_METERS,
   INTERSECTION_APPROACH_METERS,
+  JUNCTION_FOCUS_ENTER_METERS,
+  JUNCTION_FOCUS_MAX_ZOOM_METERS,
 } from "@/lib/constants";
 import { bearingDegrees, distanceKm } from "@/lib/geo";
 import type { LngLat } from "@/types/domain";
@@ -106,6 +108,16 @@ export function approachLookaheadMeters(distanceToNext: number) {
 
 export function isApproachingIntersection(distanceToNext: number) {
   return Number.isFinite(distanceToNext) && distanceToNext <= INTERSECTION_APPROACH_METERS;
+}
+
+/** 50 公尺開始放大，越近越接近最大 Zoom（0～1）。 */
+export function junctionZoomProgress(distanceToNext: number) {
+  if (!Number.isFinite(distanceToNext)) return 0;
+  const span = JUNCTION_FOCUS_ENTER_METERS - JUNCTION_FOCUS_MAX_ZOOM_METERS;
+  return Math.max(
+    0,
+    Math.min(1, (JUNCTION_FOCUS_ENTER_METERS - distanceToNext) / span),
+  );
 }
 
 export function shouldShowGuidanceArrows(distanceToNext: number) {

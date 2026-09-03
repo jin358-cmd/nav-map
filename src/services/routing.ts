@@ -93,6 +93,7 @@ export async function rememberGeocodeSelection(
 export async function planDrivingRoute(
   from: LngLat,
   to: GeocodeHit,
+  signal?: AbortSignal,
 ): Promise<RoutePlan> {
   const params = new URLSearchParams({
     fromLng: String(from.lng),
@@ -101,7 +102,9 @@ export async function planDrivingRoute(
     toLat: String(to.location.lat),
     label: to.name,
   });
-  const response = await fetch(`/api/directions?${params.toString()}`);
+  const response = await fetch(`/api/directions?${params.toString()}`, {
+    signal,
+  });
   const data = (await response.json()) as RoutePlan & { error?: string };
   if (!response.ok || !data.coordinates?.length) {
     throw new Error(data.error || "路線規劃失敗");
