@@ -294,7 +294,15 @@ export type GeocodeHit = {
   name: string;
   address: string;
   location: LngLat;
-  source?: "cache" | "tgos" | "nlsc" | "osm" | "google" | "local";
+  source?:
+    | "cache"
+    | "index"
+    | "tgos"
+    | "nlsc"
+    | "osm"
+    | "google"
+    | "local"
+    | "overture";
   exactHouseNumber?: boolean;
   matchKind?: GeocodeMatchKind;
   confidence?: number;

@@ -1,4 +1,3 @@
-import { DEFAULT_GEOCODE_CITY } from "@/lib/taiwan-address";
 import { queryNlscTownVillage } from "@/services/official-address";
 import type { LngLat } from "@/types/domain";
 
@@ -25,7 +24,7 @@ export async function GET(request: Request) {
   const location = parsePoint(request);
   if (!location) {
     return Response.json(
-      { city: DEFAULT_GEOCODE_CITY, town: "", source: "default" },
+      { city: "", town: "", source: "unavailable" },
       { status: 400 },
     );
   }
@@ -33,9 +32,9 @@ export async function GET(request: Request) {
   const area = await queryNlscTownVillage(location);
   if (!area?.city) {
     return Response.json({
-      city: DEFAULT_GEOCODE_CITY,
+      city: "",
       town: "",
-      source: "default",
+      source: "unavailable",
     });
   }
 

@@ -1,4 +1,12 @@
-export type GeocodeSource = "cache" | "tgos" | "nlsc" | "osm" | "google" | "local";
+export type GeocodeSource =
+  | "cache"
+  | "index"
+  | "tgos"
+  | "nlsc"
+  | "osm"
+  | "google"
+  | "local"
+  | "overture";
 
 export type GeocodeMatchKind =
   | "exact-house"

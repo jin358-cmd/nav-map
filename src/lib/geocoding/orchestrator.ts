@@ -11,6 +11,10 @@ import {
   readAddressCache,
   writeAddressCache,
 } from "@/lib/geocoding/providers/cache";
+import {
+  createOfficialIndexProvider,
+  officialIndexEnabled,
+} from "@/lib/geocoding/providers/official-index";
 import { createNlscProvider } from "@/lib/geocoding/providers/nlsc";
 import { createOsmProvider } from "@/lib/geocoding/providers/osm";
 import { createTgosProvider, tgosEnabled } from "@/lib/geocoding/providers/tgos";
@@ -142,11 +146,13 @@ function sortResults(
       };
   const sourceRank: Record<GeocodeSource, number> = {
     cache: 0,
-    tgos: 1,
-    nlsc: 2,
-    google: 3,
+    index: 1,
+    tgos: 2,
+    nlsc: 3,
     local: 4,
-    osm: 5,
+    overture: 5,
+    osm: 6,
+    google: 7,
   };
   return [...rows].sort((a, b) => {
     if (a.exactHouseNumber !== b.exactHouseNumber) {
@@ -210,6 +216,8 @@ function skippedRemoteStatuses(): Partial<Record<GeocodeSource, GeocodeProviderS
     tgos: "disabled",
     nlsc: "disabled",
     osm: "disabled",
+    index: "disabled",
+    overture: "disabled",
     google: "disabled_by_map_renderer_policy",
   };
 }
@@ -242,6 +250,8 @@ export async function searchGeocode(
           google: "disabled_by_map_renderer_policy",
           nlsc: "empty",
           osm: "empty",
+          index: officialIndexEnabled() ? "empty" : "disabled",
+          overture: "disabled",
           cache: "empty",
           local: "empty",
         };
@@ -290,6 +300,7 @@ export async function searchGeocode(
   const tgos = createTgosProvider(parsed);
   const nlsc = createNlscProvider(parsed);
   const osm = createOsmProvider(parsed);
+  const officialIndex = createOfficialIndexProvider();
   const collected: GeocodeResult[] = [...locals];
   const deadline = Date.now() + OVERALL_TIMEOUT_MS;
 
@@ -297,6 +308,7 @@ export async function searchGeocode(
   for (const step of relaxations) {
     if (Date.now() > deadline || options.signal?.aborted) break;
     const official = await Promise.allSettled([
+      runProvider(officialIndex, step.query, options, statuses),
       runProvider(tgos, step.query, options, statuses),
       runProvider(nlsc, step.query, options, statuses),
     ]);

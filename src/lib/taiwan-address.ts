@@ -11,7 +11,7 @@ export type ParsedTaiwanAddress = {
 const ADDRESS_RE =
   /^(.+?[縣市])?(.+?[區市鎮鄉])?(.+?(?:路|街|大道|道))([0-9一二三四五六七八九十]+段)?(\d+巷)?(\d+弄)?(\d+(?:之\d+)?號)?$/u;
 
-/** 本產品示範範圍；門牌沒寫縣市時補上，避免命中外縣市同名路。 */
+/** 僅供地圖啟動畫面中心與缺資料後備標籤，不得當搜尋預設縣市。 */
 export const DEFAULT_GEOCODE_CITY = "臺南市";
 
 export function parseTaiwanAddress(query: string): ParsedTaiwanAddress | null {
@@ -61,11 +61,10 @@ export function expandTaiwanGeocodeQueries(query: string): string[] {
   const parsed = parseTaiwanAddress(compact);
   if (!parsed) {
     pushOne(compact);
-    if (!mentionsTainanCity(compact)) push(`${DEFAULT_GEOCODE_CITY}${compact}`);
     return ordered.slice(0, 4);
   }
 
-  const city = parsed.city || DEFAULT_GEOCODE_CITY;
+  const city = parsed.city;
   const { town, road, section, lane, alley } = parsed;
 
   if (alley) {
@@ -86,8 +85,7 @@ export function officialAddressQuery(query: string) {
   const compact = query.trim().replace(/\s+/g, "");
   const parsed = parseTaiwanAddress(compact);
   if (!parsed) return compact;
-  if (parsed.city) return compact;
-  return `${DEFAULT_GEOCODE_CITY}${compact}`;
+  return compact;
 }
 
 export function describeRelaxedMatch(

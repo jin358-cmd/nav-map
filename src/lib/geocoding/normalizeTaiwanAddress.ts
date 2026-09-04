@@ -1,4 +1,3 @@
-import { DEFAULT_GEOCODE_CITY } from "@/lib/taiwan-address";
 import type { GeocodeMatchKind } from "@/lib/geocoding/types";
 
 export type TaiwanAddressParts = {
@@ -124,7 +123,7 @@ export function normalizeTaiwanAddress(query: string): NormalizedTaiwanAddress {
   const compact = normalizeHouseToken(stripFloorAndRoom(compactTaiwanText(original)));
   const parts = parseParts(compact);
   if (!parts.city && (parts.road || parts.town)) {
-    parts.city = DEFAULT_GEOCODE_CITY;
+    /* 不預設臺南市；全台搜尋由使用者輸入或 GPS 縣市補齊 */
   }
   const searchAddress = joinParts([
     parts.city,

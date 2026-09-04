@@ -1,14 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { DEFAULT_GEOCODE_CITY } from "@/lib/taiwan-address";
 import { distanceKm } from "@/lib/geo";
 import type { LngLat } from "@/types/domain";
 
 const REQUERY_KM = 2.4;
 
 export function useLocatedRegion(point: LngLat) {
-  const [city, setCity] = useState(DEFAULT_GEOCODE_CITY);
+  const [city, setCity] = useState("");
   const lastQuery = useRef<LngLat | null>(null);
 
   useEffect(() => {

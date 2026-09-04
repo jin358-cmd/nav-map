@@ -1,4 +1,3 @@
-import { DEFAULT_GEOCODE_CITY } from "@/lib/taiwan-address";
 import { queryNlscTownVillage } from "@/services/official-address";
 import type { GeocodeHit, LngLat } from "@/types/domain";
 
@@ -66,7 +65,7 @@ export async function GET(request: Request) {
     queryNlscTownVillage(location),
     nominatimReverse(location),
   ]);
-  const city = (area?.city || DEFAULT_GEOCODE_CITY).replaceAll("台", "臺");
+  const city = (area?.city || "").replaceAll("台", "臺");
   const town = (area?.town || "").replaceAll("台", "臺");
   const name =
     osm?.name?.trim() ||
