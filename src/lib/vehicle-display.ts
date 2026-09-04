@@ -57,7 +57,7 @@ export function stepVehicleDisplay({
   if (stationary) {
     return {
       ...current,
-      heading: lerpAngle(current.heading, target.heading, damp(dtSeconds, 0.45)),
+      heading: lerpAngle(current.heading, target.heading, damp(dtSeconds, 0.28)),
       predictedMeters: 0,
     };
   }
@@ -97,7 +97,7 @@ export function stepVehicleDisplay({
     };
   }
 
-  const tau = jumpMeters > 24 ? 0.18 : 0.24;
+  const tau = jumpMeters > 24 ? 0.12 : 0.16;
   const t = damp(dtSeconds, tau);
 
   return {

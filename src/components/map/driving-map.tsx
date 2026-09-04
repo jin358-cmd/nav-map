@@ -5,6 +5,7 @@ import { LngLatBounds, Map as MapLibreMap, Marker } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import {
   createVehicleMarkerElement,
+  setVehicleMarkerHeading,
   setVehicleMarkerNavigating,
 } from "@/components/map/vehicle-marker";
 import {
@@ -524,7 +525,8 @@ export function DrivingMap({
 
       const headingUp = followOrientationRef.current === "heading-up";
       setVehicleMarkerNavigating(marker.getElement(), navigatingRef.current);
-      marker.setRotation(headingUp ? 0 : display.heading);
+      marker.setRotation(0);
+      setVehicleMarkerHeading(marker.getElement(), headingUp ? 0 : display.heading);
 
       if (navigatingRef.current) {
         if (now - lastArrowUpdateRef.current > 180) {
@@ -592,7 +594,13 @@ export function DrivingMap({
       const visible = layerVisibilityRef.current;
       try {
         applyResolvedTheme(map, resolveMapBasemap(mapDisplayModeRef.current));
-        upsertIntelligenceLayers(map, routeRef.current, trafficRef.current, visible.congestion);
+        upsertIntelligenceLayers(
+          map,
+          routeRef.current,
+          trafficRef.current,
+          visible.congestion,
+          routeMetersRef.current,
+        );
         upsertSpeedEnforcementLayer(map, speedEnforcementRef.current);
         upsertCctvLayer(map, camerasRef.current, selectedRef.current, visible.cctv);
         bindCctvLayerClicks(map, (id) => onCctvSelectRef.current(id));
@@ -812,11 +820,17 @@ export function DrivingMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!readyRef.current || !isStyleReady(map)) return;
-    upsertIntelligenceLayers(map, route, traffic, layerVisibility.congestion);
+    upsertIntelligenceLayers(
+      map,
+      route,
+      traffic,
+      layerVisibility.congestion,
+      navigating ? routeMeters : 0,
+    );
     if (!navigating) {
       upsertGuidanceArrows(map, route, 0, 0, false, 0);
     }
-  }, [layerVisibility.congestion, navigating, route, traffic]);
+  }, [layerVisibility.congestion, navigating, route, routeMeters, traffic]);
 
   useEffect(() => {
     followVehicleRef.current = followVehicle;
@@ -840,7 +854,13 @@ export function DrivingMap({
       try {
         applyResolvedTheme(map, resolved);
         const visible = layerVisibilityRef.current;
-        upsertIntelligenceLayers(map, routeRef.current, trafficRef.current, visible.congestion);
+        upsertIntelligenceLayers(
+          map,
+          routeRef.current,
+          trafficRef.current,
+          visible.congestion,
+          routeMetersRef.current,
+        );
         upsertSpeedEnforcementLayer(map, speedEnforcementRef.current);
         upsertCctvLayer(map, camerasRef.current, selectedRef.current, visible.cctv);
         bindCctvLayerClicks(map, (id) => onCctvSelectRef.current(id));

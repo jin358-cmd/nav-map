@@ -5,6 +5,7 @@ import type {
 } from "maplibre-gl";
 import { CCTV_LAYER_HIT_ID, CCTV_LAYER_ID } from "@/lib/cctv-constants";
 import { MAP_COLORS } from "@/lib/constants";
+import { sliceRouteAhead } from "@/lib/upcoming-route";
 import {
   LEGACY_TRAFFIC_LAYER_ID,
   LEGACY_TRAFFIC_SOURCE_ID,
@@ -92,11 +93,26 @@ export function upsertIntelligenceLayers(
   route: [number, number][],
   traffic: TrafficSegment[],
   trafficVisible = true,
+  routeMeters = 0,
 ) {
+  const remaining =
+    routeMeters > 8 ? sliceRouteAhead(route, routeMeters, 1_000_000) : route;
+  const passed =
+    routeMeters > 8 ? sliceRouteAhead(route, 0, Math.max(0, routeMeters - 4)) : [];
   const routeData = {
-    type: "Feature" as const,
-    properties: {},
-    geometry: { type: "LineString" as const, coordinates: route },
+    type: "FeatureCollection" as const,
+    features: [
+      {
+        type: "Feature" as const,
+        properties: { kind: "remaining" },
+        geometry: { type: "LineString" as const, coordinates: remaining },
+      },
+      {
+        type: "Feature" as const,
+        properties: { kind: "passed" },
+        geometry: { type: "LineString" as const, coordinates: passed },
+      },
+    ],
   };
 
   const trafficData = {
@@ -179,6 +195,7 @@ export function upsertIntelligenceLayers(
       id: "demo-route-glow",
       type: "line",
       source: "demo-route",
+      filter: ["==", ["get", "kind"], "remaining"],
       paint: {
         "line-color": MAP_COLORS.routeGlow,
         "line-width": ["interpolate", ["linear"], ["zoom"], 12, 8, 17, 18],
@@ -189,11 +206,27 @@ export function upsertIntelligenceLayers(
     });
   }
 
+  if (!map.getLayer("demo-route-passed")) {
+    map.addLayer({
+      id: "demo-route-passed",
+      type: "line",
+      source: "demo-route",
+      filter: ["==", ["get", "kind"], "passed"],
+      paint: {
+        "line-color": "#94a3b8",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 12, 2, 17, 4],
+        "line-opacity": 0.22,
+      },
+      layout: { "line-cap": "round", "line-join": "round" },
+    });
+  }
+
   if (!map.getLayer("demo-route-line")) {
     map.addLayer({
       id: "demo-route-line",
       type: "line",
       source: "demo-route",
+      filter: ["==", ["get", "kind"], "remaining"],
       paint: {
         "line-color": MAP_COLORS.route,
         "line-width": ["interpolate", ["linear"], ["zoom"], 12, 3, 17, 7.5],
