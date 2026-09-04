@@ -1,0 +1,2062 @@
+diff --git a/docs/address-data-sources.md b/docs/address-data-sources.md
+new file mode 100644
+index 0000000..a0eb8e1
+--- /dev/null
++++ b/docs/address-data-sources.md
+@@ -0,0 +1,40 @@
++# 全台地址與 POI 資料來源
++
++NavPilot 搜尋不是台南限定。地圖啟動中心可以是台南，但不得當成使用者位置或搜尋預設縣市。
++
++## 已接通（執行期）
++
++| 來源 | 用途 | 授權 | 狀態 |
++| --- | --- | --- | --- |
++| Supabase `address_search_cache` | 已確認查詢快取 | 隨原始來源 | 需 Service Role，僅 server |
++| TGOS | 明確送出後的地址定位 | TGOS 使用條款 | 需 server APPID／APIKEY |
++| NLSC | 門牌／地標／反查 | 國土測繪中心條款 | 執行期 |
++| OSM／Nominatim | 明確送出後的後備搜尋 | ODbL | 不作 autocomplete |
++
++Google Geocoding／Places Web Service 維持 `disabled_by_map_renderer_policy`，不得混入 MapLibre 搜尋鏈。
++
++## 架構已備、資料尚未匯入
++
++| 來源 | 腳本 | 狀態 |
++| --- | --- | --- |
++| 內政部全國路名 | `scripts/import-taiwan-road-names.mjs` | NOT CONFIGURED |
++| 各縣市合法門牌 | `scripts/import-taiwan-doorplates.mjs` | NOT CONFIGURED |
++| Overture Places／Buildings | `scripts/import-overture-places.mjs` | DATASET NOT IMPORTED |
++| Supabase `taiwan_address_index` | `supabase/migrations/20260904_taiwan_address_index.sql` | NOT CONFIGURED |
++
++Overture 只補強店家、地標與建築物，不得標成精確門牌。大型 GeoParquet 只能後端 ETL。
++
++## 精度標示
++
++- exact-house：精確門牌
++- interpolated：推估門牌位置
++- approximate：約略位置
++- lane-center：巷弄位置
++- road-center：道路位置
++- landmark：地標／店家／建築物
++
++除 exact-house 外，畫面不得顯示成精確門牌。
++
++## 座標
++
++統一 WGS84／EPSG:4326。TWD97 必須先轉換並寫入 `coordinate_system`。
+diff --git a/scripts/import-overture-places.mjs b/scripts/import-overture-places.mjs
+new file mode 100644
+index 0000000..aa468e3
+--- /dev/null
++++ b/scripts/import-overture-places.mjs
+@@ -0,0 +1,29 @@
++#!/usr/bin/env node
++/**
++ * Server-side Overture Places / Buildings import.
++ * GeoParquet must never be fetched in the browser.
++ */
++import { writeFileSync } from "node:fs";
++
++const dryRun = !process.argv.includes("--apply");
++const report = {
++  dataset: "Overture Maps Places / Buildings",
++  status: "DATASET NOT IMPORTED",
++  dryRun,
++  usage: ["POI", "building footprint", "landmark name"],
++  notUsedFor: ["official exact house numbers"],
++  total: 0,
++  withCoordinates: 0,
++  withoutCoordinates: 0,
++  duplicates: 0,
++  failed: 0,
++  notes:
++    "Download an official Overture release on a server, convert to WGS84, then upsert taiwan_address_index with accuracy=landmark.",
++};
++
++console.log(JSON.stringify(report, null, 2));
++writeFileSync("address-import-overture-report.json", JSON.stringify(report, null, 2));
++if (!dryRun) {
++  console.error("DATASET NOT IMPORTED: OVERTURE_RELEASE_PATH is not configured.");
++  process.exit(2);
++}
+diff --git a/scripts/import-taiwan-doorplates.mjs b/scripts/import-taiwan-doorplates.mjs
+new file mode 100644
+index 0000000..876133b
+--- /dev/null
++++ b/scripts/import-taiwan-doorplates.mjs
+@@ -0,0 +1,55 @@
++#!/usr/bin/env node
++/**
++ * Per-county doorplate importer. One county failure must not stop others.
++ */
++import { writeFileSync } from "node:fs";
++
++const counties = [
++  "臺北市",
++  "新北市",
++  "桃園市",
++  "臺中市",
++  "臺南市",
++  "高雄市",
++  "基隆市",
++  "新竹市",
++  "新竹縣",
++  "苗栗縣",
++  "彰化縣",
++  "南投縣",
++  "雲林縣",
++  "嘉義市",
++  "嘉義縣",
++  "屏東縣",
++  "宜蘭縣",
++  "花蓮縣",
++  "臺東縣",
++  "澎湖縣",
++  "金門縣",
++  "連江縣",
++];
++
++const dryRun = !process.argv.includes("--apply");
++const report = {
++  dataset: "各縣市合法門牌公開資料",
++  status: "NOT CONFIGURED",
++  dryRun,
++  counties: counties.map((county) => ({
++    county,
++    status: "NOT CONFIGURED",
++    total: 0,
++    withCoordinates: 0,
++    withoutCoordinates: 0,
++    duplicates: 0,
++    failed: 0,
++  })),
++  notes:
++    "Each county uses its own adapter and licensed file path. Missing files skip that county only.",
++};
++
++console.log(JSON.stringify(report, null, 2));
++writeFileSync("address-import-doorplates-report.json", JSON.stringify(report, null, 2));
++if (!dryRun) {
++  console.error("DATASET NOT IMPORTED: no licensed county doorplate files configured.");
++  process.exit(2);
++}
+diff --git a/scripts/import-taiwan-road-names.mjs b/scripts/import-taiwan-road-names.mjs
+new file mode 100644
+index 0000000..478c581
+--- /dev/null
++++ b/scripts/import-taiwan-road-names.mjs
+@@ -0,0 +1,28 @@
++#!/usr/bin/env node
++/**
++ * Dry-run importer for nationwide official road names.
++ * Does not download or invent datasets. Pass --apply only after a licensed file exists.
++ */
++import { writeFileSync } from "node:fs";
++
++const dryRun = !process.argv.includes("--apply");
++const report = {
++  dataset: "內政部全國路名資料",
++  status: "NOT CONFIGURED",
++  dryRun,
++  counties: "all",
++  total: 0,
++  withCoordinates: 0,
++  withoutCoordinates: 0,
++  duplicates: 0,
++  failed: 0,
++  notes:
++    "Set ADDRESS_ROAD_NAMES_PATH to a licensed CSV/JSON extract. No official URL is hardcoded.",
++};
++
++console.log(JSON.stringify(report, null, 2));
++writeFileSync("address-import-road-names-report.json", JSON.stringify(report, null, 2));
++if (!dryRun) {
++  console.error("DATASET NOT IMPORTED: licensed road-name file is not configured.");
++  process.exit(2);
++}
+diff --git a/src/app/api/region/route.ts b/src/app/api/region/route.ts
+index 6c657f2..7b5a606 100644
+--- a/src/app/api/region/route.ts
++++ b/src/app/api/region/route.ts
+@@ -1,4 +1,3 @@
+-import { DEFAULT_GEOCODE_CITY } from "@/lib/taiwan-address";
+ import { queryNlscTownVillage } from "@/services/official-address";
+ import type { LngLat } from "@/types/domain";
+
+@@ -25,7 +24,7 @@ export async function GET(request: Request) {
+   const location = parsePoint(request);
+   if (!location) {
+     return Response.json(
+-      { city: DEFAULT_GEOCODE_CITY, town: "", source: "default" },
++      { city: "", town: "", source: "unavailable" },
+       { status: 400 },
+     );
+   }
+@@ -33,9 +32,9 @@ export async function GET(request: Request) {
+   const area = await queryNlscTownVillage(location);
+   if (!area?.city) {
+     return Response.json({
+-      city: DEFAULT_GEOCODE_CITY,
++      city: "",
+       town: "",
+-      source: "default",
++      source: "unavailable",
+     });
+   }
+
+diff --git a/src/app/api/reverse/route.ts b/src/app/api/reverse/route.ts
+index 151549d..75ccc9e 100644
+--- a/src/app/api/reverse/route.ts
++++ b/src/app/api/reverse/route.ts
+@@ -1,4 +1,3 @@
+-import { DEFAULT_GEOCODE_CITY } from "@/lib/taiwan-address";
+ import { queryNlscTownVillage } from "@/services/official-address";
+ import type { GeocodeHit, LngLat } from "@/types/domain";
+
+@@ -66,7 +65,7 @@ export async function GET(request: Request) {
+     queryNlscTownVillage(location),
+     nominatimReverse(location),
+   ]);
+-  const city = (area?.city || DEFAULT_GEOCODE_CITY).replaceAll("台", "臺");
++  const city = (area?.city || "").replaceAll("台", "臺");
+   const town = (area?.town || "").replaceAll("台", "臺");
+   const name =
+     osm?.name?.trim() ||
+diff --git a/src/app/globals.css b/src/app/globals.css
+index 1068bac..8cd5a09 100644
+--- a/src/app/globals.css
++++ b/src/app/globals.css
+@@ -129,6 +129,46 @@
+   }
+ }
+
++.function-drawer {
++  transform: translateY(0);
++  opacity: 1;
++  transition:
++    transform 240ms ease,
++    opacity 240ms ease;
++}
++
++.function-drawer--closed {
++  transform: translateY(calc(100% + 1.25rem));
++  opacity: 0;
++  pointer-events: none;
++}
++
++@media (prefers-reduced-motion: reduce) {
++  .function-drawer {
++    transition: none;
++  }
++}
++
++.function-drawer {
++  transform: translateY(0);
++  opacity: 1;
++  transition:
++    transform 240ms ease,
++    opacity 240ms ease;
++}
++
++.function-drawer--closed {
++  transform: translateY(calc(100% + 1.25rem));
++  opacity: 0;
++  pointer-events: none;
++}
++
++@media (prefers-reduced-motion: reduce) {
++  .function-drawer {
++    transition: none;
++  }
++}
++
+ .yt-music-mini iframe {
+   width: 100% !important;
+   height: 100% !important;
+@@ -157,29 +197,31 @@
+
+ .vehicle-marker {
+   position: relative;
+-  width: 32px;
+-  height: 38px;
++  width: 40px;
++  height: 40px;
+   pointer-events: none;
+-  filter: drop-shadow(0 3px 6px rgba(250, 204, 21, 0.55));
+ }
+
+-.vehicle-marker__halo {
++.vehicle-marker__ring {
+   position: absolute;
+-  left: 50%;
+-  bottom: 0;
+-  width: 28px;
+-  height: 12px;
+-  transform: translateX(-50%);
++  inset: 0;
+   border-radius: 999px;
+-  background: radial-gradient(circle, rgba(250, 204, 21, 0.55), transparent 72%);
++  border: 2.5px solid rgba(203, 213, 225, 0.68);
++  background: rgba(209, 213, 219, 0.16);
++  box-shadow: 0 0 8px rgba(15, 23, 42, 0.28);
+ }
+
+ .vehicle-marker__triangle {
+-  position: relative;
++  position: absolute;
++  inset: 0;
+   z-index: 1;
++  display: grid;
++  place-items: center;
++  transform-origin: center center;
++  filter: drop-shadow(0 3px 6px rgba(250, 204, 21, 0.55));
+ }
+
+-.vehicle-marker--nav {
++.vehicle-marker--nav .vehicle-marker__triangle {
+   filter: drop-shadow(0 0 10px rgba(250, 204, 21, 0.85));
+ }
+
+diff --git a/src/components/driving/driving-app.tsx b/src/components/driving/driving-app.tsx
+index 9bdefc2..6cd6b0e 100644
+--- a/src/components/driving/driving-app.tsx
++++ b/src/components/driving/driving-app.tsx
+@@ -59,13 +59,12 @@ import {
+ } from "@/lib/favorites";
+ import { pinSelected } from "@/lib/map-visibility";
+ import { resolveMapQueryOrigin } from "@/lib/map-query-origin";
++import { deriveJunctionFocus } from "@/lib/junction-focus";
+ import { pickActiveRouteAlert } from "@/lib/route-events";
+ import { destinationToHit } from "@/lib/poi-search";
+ import { CITY_TRAFFIC_FOCUS_KM } from "@/lib/traffic-constants";
+ import {
+   DEMO_VEHICLE,
+-  JUNCTION_FOCUS_ENTER_METERS,
+-  JUNCTION_FOCUS_EXIT_METERS,
+   YOUTUBE_PLAYLISTS,
+ } from "@/lib/constants";
+ import { distanceKm } from "@/lib/geo";
+@@ -93,6 +92,7 @@ import {
+ } from "@/lib/saved-places";
+ import { deriveTrafficIntel } from "@/lib/traffic-intel";
+ import { GpsFixChip } from "@/components/overlay/gps-fix-chip";
++import { TripStatusCluster } from "@/components/overlay/trip-status-cluster";
+ import {
+   fetchAccidentReports,
+   planDrivingRoute,
+@@ -245,6 +245,7 @@ export function DrivingApp() {
+   const [navigating, setNavigating] = useState(false);
+   const [musicMode, setMusicMode] = useState<"off" | "open" | "mini">("off");
+   const [favoritesOpen, setFavoritesOpen] = useState(false);
++  const [toolsDrawerOpen, setToolsDrawerOpen] = useState<boolean | null>(null);
+   const favorites = useSyncExternalStore(
+     subscribeFavorites,
+     getFavoritesSnapshot,
+@@ -259,6 +260,7 @@ export function DrivingApp() {
+   const workPlace = savedPlaces.find((place) => place.type === "work") ?? null;
+   const trafficFocus5km = true;
+   const landscape = useLandscape();
++  const drawerOpen = toolsDrawerOpen ?? !landscape;
+   const navCardRef = useRef<HTMLDivElement>(null);
+   const [overlayPadding, setOverlayPadding] = useState({
+     top: 90,
+@@ -274,7 +276,6 @@ export function DrivingApp() {
+   const [voiceEnabled, setVoiceEnabled] = useState(true);
+   const [rerouting, setRerouting] = useState(false);
+   const [reroutePending, setReroutePending] = useState(false);
+-  const [junctionFocus, setJunctionFocus] = useState(false);
+   const [navigationProgress, setNavigationProgress] =
+     useState<NavigationProgress | null>(null);
+   const navigationTrackerRef = useRef<NavigationTrackerState | null>(null);
+@@ -333,14 +334,10 @@ export function DrivingApp() {
+     : activeNavigationStep?.cueMeters && activeNavigationStep.cueMeters > 0
+       ? activeNavigationStep.cueMeters
+       : (maneuver?.distanceMeters ?? activeNavigationStep?.distanceMeters ?? 0);
+-  const nextJunctionFocus = navigating
+-    ? junctionFocus
+-      ? distanceToNextMeters <= JUNCTION_FOCUS_EXIT_METERS
+-      : distanceToNextMeters <= JUNCTION_FOCUS_ENTER_METERS
+-    : false;
+-  if (nextJunctionFocus !== junctionFocus) {
+-    setJunctionFocus(nextJunctionFocus);
+-  }
++  const nextJunctionFocus = deriveJunctionFocus(
++    navigating,
++    distanceToNextMeters,
++  );
+   const approachingIntersection = navigating && nextJunctionFocus;
+
+   useNavigationVoice({
+@@ -661,25 +658,21 @@ export function DrivingApp() {
+       } catch (error) {
+         const code = geoErrorCode(error);
+         setGpsError(code);
+-        setGpsStatus(code === "permission_denied" ? "denied" : "unavailable");
+-        if (code === "permission_denied") setGpsPermission("denied");
++        if (code === "permission_denied") {
++          setGpsStatus("denied");
++          setGpsPermission("denied");
++        } else if (origin) {
++          setGpsStatus("active");
++        } else {
++          setGpsStatus("unavailable");
++        }
+         if (!origin) {
+-          const center = viewportRef.current?.center;
+-          if (
+-            center &&
+-            Number.isFinite(center.lng) &&
+-            Number.isFinite(center.lat)
+-          ) {
+-            origin = {
+-              lng: center.lng,
+-              lat: center.lat,
+-              heading: 0,
+-              source: "demo",
+-            };
+-          } else {
+-            setRouteError(geoErrorMessage(code));
+-            return;
+-          }
++          setRouteError(
++            code === "permission_denied"
++              ? geoErrorMessage(code)
++              : "尚未取得真實定位，無法規劃路線。請先允許位置存取。",
++          );
++          return;
+         }
+       }
+       const plan = await planDrivingRoute(
+@@ -769,8 +762,16 @@ export function DrivingApp() {
+     } catch (error) {
+       const code = geoErrorCode(error);
+       setGpsError(code);
+-      setGpsStatus(code === "permission_denied" ? "denied" : "unavailable");
+-      if (code === "permission_denied") setGpsPermission("denied");
++      if (code === "permission_denied") {
++        setGpsStatus("denied");
++        setGpsPermission("denied");
++        return;
++      }
++      if (vehicleRef.current.source === "gps") {
++        setGpsStatus("active");
++        return;
++      }
++      setGpsStatus("unavailable");
+     }
+   }, [followVehicle, readDevicePosition]);
+
+@@ -1297,10 +1298,14 @@ export function DrivingApp() {
+           gpsStatus={gpsStatus}
+           mapDisplayMode={mapDisplayMode}
+           styleMenuOpen={styleMenuOpen}
++          toolsDrawerOpen={drawerOpen}
+           onLocate={() => void locate()}
+           onToggleCamera={() =>
+             setCameraMode((mode) => (mode === "3d" ? "2d" : "3d"))
+           }
++          onToggleToolsDrawer={() =>
++            setToolsDrawerOpen((open) => !(open ?? !landscape))
++          }
+           onMapDisplayMode={(mode) => {
+             writeMapDisplayMode(mode);
+             setMapDisplayMode(mode);
+@@ -1317,14 +1322,52 @@ export function DrivingApp() {
+         </div>
+       ) : null}
+
+-      <div className="pointer-events-none absolute bottom-[5.75rem] left-2 z-20 sm:bottom-36 sm:left-3">
+-        <GpsFixChip
+-          vehicle={vehicle}
+-          status={gpsStatus}
+-          permission={gpsPermission}
+-          error={gpsError}
+-          onRetry={() => void locate()}
+-        />
++      <div
++        className={
++          drawerOpen
++            ? "pointer-events-none absolute bottom-[5.75rem] left-2 z-20 flex flex-col gap-1.5 sm:bottom-36 sm:left-3"
++            : "pointer-events-none absolute bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-2 z-20 flex flex-col gap-1.5 sm:left-3"
++        }
++      >
++        {navigating ? (
++          <TripStatusCluster
++            sample={vehicle}
++            remainingMeters={
++              navigationProgress
++                ? Math.max(
++                    0,
++                    (routeDistanceMeters ?? 0) - navigationProgress.routeMeters,
++                  )
++                : routeDistanceMeters
++            }
++            remainingSeconds={
++              navigationProgress && routeDistanceMeters
++                ? Math.max(
++                    0,
++                    (routeDurationSeconds ?? 0) *
++                      (1 - navigationProgress.routeMeters / Math.max(routeDistanceMeters, 1)),
++                  )
++                : routeDurationSeconds
++            }
++          />
++        ) : (
++          <GpsFixChip
++            vehicle={vehicle}
++            status={gpsStatus}
++            permission={gpsPermission}
++            error={gpsError}
++            onRetry={() => void locate()}
++          />
++        )}
++        {navigating ? (
++          <GpsFixChip
++            vehicle={vehicle}
++            status={gpsStatus}
++            permission={gpsPermission}
++            error={gpsError}
++            onRetry={() => void locate()}
++          />
++        ) : null}
+       </div>
+
+       <footer className="absolute inset-x-0 bottom-0 z-10 flex max-w-[100vw] flex-col items-center gap-1.5 overflow-visible px-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))] pb-[max(0.45rem,env(safe-area-inset-bottom))] sm:p-4 sm:pt-0">
+@@ -1413,6 +1456,10 @@ export function DrivingApp() {
+             }}
+           />
+         ) : null}
++        <div
++          id="navpilot-function-drawer"
++          className={drawerOpen ? "function-drawer" : "function-drawer function-drawer--closed"}
++        >
+         <RoadInformationCard
+           items={intel}
+           origin={origin}
+@@ -1464,6 +1511,7 @@ export function DrivingApp() {
+             });
+           }}
+         />
++        </div>
+       </footer>
+
+       {cctvError || trafficError || speedEnforcementError || disasterError || parkingError ? (
+diff --git a/src/components/map/driving-map.tsx b/src/components/map/driving-map.tsx
+index b8e4f3c..cf323cb 100644
+--- a/src/components/map/driving-map.tsx
++++ b/src/components/map/driving-map.tsx
+@@ -5,6 +5,7 @@ import { LngLatBounds, Map as MapLibreMap, Marker } from "maplibre-gl";
+ import "maplibre-gl/dist/maplibre-gl.css";
+ import {
+   createVehicleMarkerElement,
++  setVehicleMarkerHeading,
+   setVehicleMarkerNavigating,
+ } from "@/components/map/vehicle-marker";
+ import {
+@@ -524,7 +525,8 @@ export function DrivingMap({
+
+       const headingUp = followOrientationRef.current === "heading-up";
+       setVehicleMarkerNavigating(marker.getElement(), navigatingRef.current);
+-      marker.setRotation(headingUp ? 0 : display.heading);
++      marker.setRotation(0);
++      setVehicleMarkerHeading(marker.getElement(), headingUp ? 0 : display.heading);
+
+       if (navigatingRef.current) {
+         if (now - lastArrowUpdateRef.current > 180) {
+@@ -592,7 +594,13 @@ export function DrivingMap({
+       const visible = layerVisibilityRef.current;
+       try {
+         applyResolvedTheme(map, resolveMapBasemap(mapDisplayModeRef.current));
+-        upsertIntelligenceLayers(map, routeRef.current, trafficRef.current, visible.congestion);
++        upsertIntelligenceLayers(
++          map,
++          routeRef.current,
++          trafficRef.current,
++          visible.congestion,
++          routeMetersRef.current,
++        );
+         upsertSpeedEnforcementLayer(map, speedEnforcementRef.current);
+         upsertCctvLayer(map, camerasRef.current, selectedRef.current, visible.cctv);
+         bindCctvLayerClicks(map, (id) => onCctvSelectRef.current(id));
+@@ -812,11 +820,17 @@ export function DrivingMap({
+   useEffect(() => {
+     const map = mapRef.current;
+     if (!readyRef.current || !isStyleReady(map)) return;
+-    upsertIntelligenceLayers(map, route, traffic, layerVisibility.congestion);
++    upsertIntelligenceLayers(
++      map,
++      route,
++      traffic,
++      layerVisibility.congestion,
++      navigating ? routeMeters : 0,
++    );
+     if (!navigating) {
+       upsertGuidanceArrows(map, route, 0, 0, false, 0);
+     }
+-  }, [layerVisibility.congestion, navigating, route, traffic]);
++  }, [layerVisibility.congestion, navigating, route, routeMeters, traffic]);
+
+   useEffect(() => {
+     followVehicleRef.current = followVehicle;
+@@ -840,7 +854,13 @@ export function DrivingMap({
+       try {
+         applyResolvedTheme(map, resolved);
+         const visible = layerVisibilityRef.current;
+-        upsertIntelligenceLayers(map, routeRef.current, trafficRef.current, visible.congestion);
++        upsertIntelligenceLayers(
++          map,
++          routeRef.current,
++          trafficRef.current,
++          visible.congestion,
++          routeMetersRef.current,
++        );
+         upsertSpeedEnforcementLayer(map, speedEnforcementRef.current);
+         upsertCctvLayer(map, camerasRef.current, selectedRef.current, visible.cctv);
+         bindCctvLayerClicks(map, (id) => onCctvSelectRef.current(id));
+diff --git a/src/components/map/map-controls.tsx b/src/components/map/map-controls.tsx
+index 7c1396f..c9c3f70 100644
+--- a/src/components/map/map-controls.tsx
++++ b/src/components/map/map-controls.tsx
+@@ -1,7 +1,7 @@
+ "use client";
+
+ import type { ReactNode } from "react";
+-import { LocateFixed } from "lucide-react";
++import { LayoutGrid, LocateFixed } from "lucide-react";
+ import { MapStyleMenu } from "@/components/overlay/map-style-menu";
+ import { Button } from "@/components/ui/button";
+ import { cn } from "@/lib/utils";
+@@ -19,10 +19,12 @@ type MapControlsProps = {
+   gpsStatus: GpsStatus;
+   mapDisplayMode: MapDisplayMode;
+   styleMenuOpen: boolean;
++  toolsDrawerOpen?: boolean;
+   onLocate: () => void;
+   onToggleCamera: () => void;
+   onMapDisplayMode: (mode: MapDisplayMode) => void;
+   onToggleStyleMenu: () => void;
++  onToggleToolsDrawer?: () => void;
+ };
+
+ export function MapControls({
+@@ -32,10 +34,12 @@ export function MapControls({
+   gpsStatus,
+   mapDisplayMode,
+   styleMenuOpen,
++  toolsDrawerOpen = false,
+   onLocate,
+   onToggleCamera,
+   onMapDisplayMode,
+   onToggleStyleMenu,
++  onToggleToolsDrawer,
+ }: MapControlsProps) {
+   const locating = gpsStatus === "locating";
+   const locateLabel = !followVehicle
+@@ -68,6 +72,17 @@ export function MapControls({
+         onChange={onMapDisplayMode}
+         onToggle={onToggleStyleMenu}
+       />
++      {onToggleToolsDrawer ? (
++        <ControlButton
++          label={toolsDrawerOpen ? "收合功能列" : "開啟功能列"}
++          onClick={onToggleToolsDrawer}
++          active={toolsDrawerOpen}
++          expanded={toolsDrawerOpen}
++          controls="navpilot-function-drawer"
++        >
++          <LayoutGrid className="size-5" />
++        </ControlButton>
++      ) : null}
+     </div>
+   );
+ }
+@@ -77,11 +92,15 @@ function ControlButton({
+   label,
+   onClick,
+   active,
++  expanded,
++  controls,
+ }: {
+   children: ReactNode;
+   label: string;
+   onClick: () => void;
+   active?: boolean;
++  expanded?: boolean;
++  controls?: string;
+ }) {
+   return (
+     <Button
+@@ -90,6 +109,8 @@ function ControlButton({
+       size="icon-lg"
+       aria-label={label}
+       title={label}
++      aria-expanded={expanded}
++      aria-controls={controls}
+       onClick={onClick}
+       className={cn(
+         "size-12 rounded-2xl border-zinc-500/55 bg-zinc-800/92 text-zinc-100 shadow-lg backdrop-blur-md hover:bg-zinc-700 disabled:border-zinc-700 disabled:bg-zinc-900/80 disabled:text-zinc-500 touch-manipulation",
+diff --git a/src/components/map/vehicle-marker.ts b/src/components/map/vehicle-marker.ts
+index af5a09b..c56d3a2 100644
+--- a/src/components/map/vehicle-marker.ts
++++ b/src/components/map/vehicle-marker.ts
+@@ -1,12 +1,12 @@
+ /**
+  * MapLibre Marker 使用 anchor=center、無 offset。
+- * 根節點不做 translate；旋轉只走 marker.setRotation。
++ * 根節點不做 translate；旋轉只走箭頭節點，外圈保持正圓。
+  */
+ export function createVehicleMarkerElement(): HTMLDivElement {
+   const root = document.createElement("div");
+   root.className = "vehicle-marker";
+   root.innerHTML = `
+-    <div class="vehicle-marker__halo"></div>
++    <div class="vehicle-marker__ring" aria-hidden="true"></div>
+     <div class="vehicle-marker__triangle" aria-hidden="true">
+       <svg viewBox="0 0 24 28" width="32" height="38">
+         <path d="M12 2 L22 25 L12 19 L2 25 Z" fill="#facc15" stroke="#fef08a" stroke-width="1.8" stroke-linejoin="round"/>
+@@ -22,3 +22,9 @@ export function setVehicleMarkerNavigating(
+ ) {
+   element.classList.toggle("vehicle-marker--nav", navigating);
+ }
++
++export function setVehicleMarkerHeading(element: HTMLElement, heading: number) {
++  const triangle = element.querySelector<HTMLElement>(".vehicle-marker__triangle");
++  if (!triangle) return;
++  triangle.style.transform = `rotate(${heading}deg)`;
++}
+diff --git a/src/components/overlay/speed-hud.tsx b/src/components/overlay/speed-hud.tsx
+new file mode 100644
+index 0000000..8f9ebd5
+--- /dev/null
++++ b/src/components/overlay/speed-hud.tsx
+@@ -0,0 +1,61 @@
++"use client";
++
++import { useEffect, useRef, useState } from "react";
++import {
++  readableGpsSpeedKmh,
++  smoothSpeedKmh,
++  type SpeedSample,
++} from "@/lib/speed-estimation";
++import {
++  unresolvedSpeedLimit,
++  type SpeedLimitReading,
++} from "@/lib/speed-limit";
++import { cn } from "@/lib/utils";
++
++export function SpeedHud({
++  sample,
++  limit = unresolvedSpeedLimit(),
++}: {
++  sample: SpeedSample;
++  limit?: SpeedLimitReading;
++}) {
++  const previousSample = useRef<SpeedSample | null>(null);
++  const [kmh, setKmh] = useState<number | null>(null);
++
++  useEffect(() => {
++    const raw = readableGpsSpeedKmh(sample, previousSample.current);
++    previousSample.current = sample;
++    setKmh((current) => smoothSpeedKmh(current, raw));
++  }, [sample]);
++
++  const display = kmh == null ? "--" : String(Math.round(kmh));
++  const limitValue = limit.speedLimitKph;
++  const over =
++    kmh != null && limitValue != null && kmh > limitValue + 3;
++
++  return (
++    <div className="pointer-events-none flex items-end gap-2">
++      <div className="min-w-[4.5rem] rounded-2xl border border-white/12 bg-black/72 px-2.5 py-1.5 text-white shadow-lg backdrop-blur-md">
++        <p className={cn("text-[22px] font-black tabular-nums leading-none", over && "text-amber-200")}>
++          {display}
++        </p>
++        <p className="mt-0.5 text-[11px] text-zinc-400">km/h · GPS</p>
++      </div>
++      <div
++        className="flex size-14 flex-col items-center justify-center rounded-full border-[3px] border-red-600 bg-white text-zinc-900 shadow-[0_2px_8px_rgba(0,0,0,0.35)]"
++        title={
++          limit.source === "NOT CONFIGURED"
++            ? "道路限速尚未設定"
++            : `限速來源 ${limit.source}`
++        }
++      >
++        <span className="text-[20px] font-black leading-none tabular-nums">
++          {limitValue ?? "--"}
++        </span>
++        <span className="text-[9px] font-semibold tracking-wide text-zinc-500">
++          限速
++        </span>
++      </div>
++    </div>
++  );
++}
+diff --git a/src/components/overlay/trip-status-cluster.tsx b/src/components/overlay/trip-status-cluster.tsx
+new file mode 100644
+index 0000000..c986914
+--- /dev/null
++++ b/src/components/overlay/trip-status-cluster.tsx
+@@ -0,0 +1,42 @@
++"use client";
++
++import { SpeedHud } from "@/components/overlay/speed-hud";
++import { formatEtaClock } from "@/lib/travel-mode";
++import { unresolvedSpeedLimit } from "@/lib/speed-limit";
++import type { SpeedSample } from "@/lib/speed-estimation";
++
++export function TripStatusCluster({
++  sample,
++  remainingMeters,
++  remainingSeconds,
++}: {
++  sample: SpeedSample;
++  remainingMeters: number | null;
++  remainingSeconds: number | null;
++}) {
++  const minutes =
++    remainingSeconds != null
++      ? Math.max(1, Math.round(remainingSeconds / 60))
++      : null;
++  const km =
++    remainingMeters != null
++      ? remainingMeters >= 10000
++        ? `${(remainingMeters / 1000).toFixed(0)} 公里`
++        : `${(remainingMeters / 1000).toFixed(1)} 公里`
++      : "--";
++  const eta =
++    remainingSeconds != null ? formatEtaClock(remainingSeconds) : "--";
++
++  return (
++    <div className="pointer-events-none flex max-w-[min(16rem,calc(100vw-6.5rem))] flex-col gap-1.5">
++      <SpeedHud sample={sample} limit={unresolvedSpeedLimit()} />
++      <div className="rounded-2xl border border-white/12 bg-black/72 px-3 py-2 text-white shadow-lg backdrop-blur-md">
++        <p className="text-[16px] font-bold leading-tight">
++          {minutes != null ? `剩餘 ${minutes} 分鐘` : "剩餘 --"}
++        </p>
++        <p className="text-[15px] font-semibold tabular-nums text-zinc-100">{km}</p>
++        <p className="text-[13px] text-zinc-300">預計 {eta} 抵達</p>
++      </div>
++    </div>
++  );
++}
+diff --git a/src/hooks/use-cctv-view.ts b/src/hooks/use-cctv-view.ts
+index 7bef012..827bb1f 100644
+--- a/src/hooks/use-cctv-view.ts
++++ b/src/hooks/use-cctv-view.ts
+@@ -60,22 +60,22 @@ export function useCctvView({
+   const heading = quantizeHeading(headingDegrees);
+
+   useEffect(() => {
+-    let cancelled = false;
++    const controller = new AbortController();
+     void fetchCctvCatalog(refreshNonce > 0)
+       .then((result) => {
+-        if (cancelled) return;
++        if (controller.signal.aborted) return;
+         setCatalog(result.cameras);
+         setOrigin(result.origin);
+         setError(null);
+       })
+       .catch(() => {
+-        if (cancelled) return;
++        if (controller.signal.aborted) return;
+         setCatalog([]);
+         setOrigin("unavailable");
+         setError("資料暫時無法取得");
+       });
+     return () => {
+-      cancelled = true;
++      controller.abort();
+     };
+   }, [refreshNonce]);
+
+diff --git a/src/hooks/use-disaster-view.ts b/src/hooks/use-disaster-view.ts
+index b0e0a07..244153c 100644
+--- a/src/hooks/use-disaster-view.ts
++++ b/src/hooks/use-disaster-view.ts
+@@ -8,9 +8,17 @@ import type {
+   DisasterDataOrigin,
+ } from "@/types/domain";
+
+-async function fetchDisasterCatalog(force = false): Promise<DisasterCatalog> {
++const inflightKeys = new Set<string>();
++
++async function fetchDisasterCatalog(
++  force = false,
++  external?: AbortSignal,
++): Promise<DisasterCatalog> {
+   const controller = new AbortController();
+   const timer = window.setTimeout(() => controller.abort(), 12_000);
++  const onAbort = () => controller.abort();
++  if (external?.aborted) controller.abort();
++  else external?.addEventListener("abort", onAbort, { once: true });
+   try {
+     const response = await fetch(
+       force ? "/api/disasters?fresh=1" : "/api/disasters",
+@@ -31,6 +39,7 @@ async function fetchDisasterCatalog(force = false): Promise<DisasterCatalog> {
+     };
+   } finally {
+     window.clearTimeout(timer);
++    external?.removeEventListener("abort", onAbort);
+   }
+ }
+
+@@ -46,31 +55,52 @@ export function useDisasterView(refreshNonce: number) {
+   }, []);
+
+   useEffect(() => {
+-    let cancelled = false;
+-    void fetchDisasterCatalog(refreshNonce > 0)
++    const requestKey = refreshNonce > 0 ? "disasters:fresh" : "disasters:live";
++    if (inflightKeys.has(requestKey)) return;
++    const controller = new AbortController();
++    inflightKeys.add(requestKey);
++    void fetchDisasterCatalog(refreshNonce > 0, controller.signal)
+       .then((result) => {
+-        if (!cancelled) applyCatalog(result);
++        if (controller.signal.aborted) return;
++        applyCatalog(result);
+       })
+       .catch(() => {
+-        if (cancelled) return;
++        if (controller.signal.aborted) return;
+         setAlerts([]);
+         setOrigin("unavailable");
+         setError("資料暫時無法取得");
++      })
++      .finally(() => {
++        inflightKeys.delete(requestKey);
+       });
+     return () => {
+-      cancelled = true;
++      controller.abort();
++      inflightKeys.delete(requestKey);
+     };
+   }, [applyCatalog, refreshNonce]);
+
+   useEffect(() => {
++    const controller = new AbortController();
+     const timer = window.setInterval(() => {
+-      void fetchDisasterCatalog(false)
+-        .then(applyCatalog)
++      if (inflightKeys.has("disasters:live")) return;
++      inflightKeys.add("disasters:live");
++      void fetchDisasterCatalog(false, controller.signal)
++        .then((result) => {
++          if (!controller.signal.aborted) applyCatalog(result);
++        })
+         .catch(() => {
+-          setError("即時災害示警更新失敗，仍顯示上次資料。");
++          if (!controller.signal.aborted) {
++            setError("即時災害示警更新失敗，仍顯示上次資料。");
++          }
++        })
++        .finally(() => {
++          inflightKeys.delete("disasters:live");
+         });
+     }, DISASTER_LIVE_CACHE_MS);
+-    return () => window.clearInterval(timer);
++    return () => {
++      window.clearInterval(timer);
++      controller.abort();
++    };
+   }, [applyCatalog]);
+
+   const reload = useCallback(() => {
+diff --git a/src/hooks/use-located-region.ts b/src/hooks/use-located-region.ts
+index ce64cfc..249a2b0 100644
+--- a/src/hooks/use-located-region.ts
++++ b/src/hooks/use-located-region.ts
+@@ -1,14 +1,13 @@
+ "use client";
+
+ import { useEffect, useRef, useState } from "react";
+-import { DEFAULT_GEOCODE_CITY } from "@/lib/taiwan-address";
+ import { distanceKm } from "@/lib/geo";
+ import type { LngLat } from "@/types/domain";
+
+ const REQUERY_KM = 2.4;
+
+ export function useLocatedRegion(point: LngLat) {
+-  const [city, setCity] = useState(DEFAULT_GEOCODE_CITY);
++  const [city, setCity] = useState("");
+   const lastQuery = useRef<LngLat | null>(null);
+
+   useEffect(() => {
+diff --git a/src/hooks/use-parking-view.ts b/src/hooks/use-parking-view.ts
+index a1cce59..46f2d39 100644
+--- a/src/hooks/use-parking-view.ts
++++ b/src/hooks/use-parking-view.ts
+@@ -1,6 +1,6 @@
+ "use client";
+
+-import { useEffect, useMemo, useRef, useState } from "react";
++import { useEffect, useRef, useState } from "react";
+ import type { LngLat, ParkingCatalog, ParkingLot } from "@/types/domain";
+
+ async function fetchParking(
+@@ -43,39 +43,47 @@ export function useParkingView({
+   const [error, setError] = useState<string | null>(null);
+   const generationRef = useRef(0);
+
+-  const quantized = useMemo(() => {
+-    if (!center) return null;
+-    return {
+-      lat: Math.round(center.lat * 200) / 200,
+-      lng: Math.round(center.lng * 200) / 200,
+-    };
+-  }, [center]);
++  const searchLng = center ? Number((Math.round(center.lng * 200) / 200).toFixed(5)) : null;
++  const searchLat = center ? Number((Math.round(center.lat * 200) / 200).toFixed(5)) : null;
++  const requestKey =
++    searchLng == null || searchLat == null
++      ? null
++      : `${searchLng.toFixed(5)}:${searchLat.toFixed(5)}:${radiusKm}`;
+
+   useEffect(() => {
+-    if (!enabled || !quantized) return;
++    if (!enabled || searchLng == null || searchLat == null || requestKey == null) {
++      return;
++    }
+     const generation = generationRef.current + 1;
+     generationRef.current = generation;
+     const controller = new AbortController();
+-    void fetchParking(quantized, radiusKm, controller.signal)
+-      .then((next) => {
+-        if (generation !== generationRef.current) return;
+-        setCatalog(next);
+-        setError(next.origin === "unavailable" ? "資料暫時無法取得" : null);
+-      })
+-      .catch((caught: unknown) => {
+-        if (generation !== generationRef.current) return;
+-        if (caught instanceof DOMException && caught.name === "AbortError") return;
+-        setCatalog({
+-          origin: "unavailable",
+-          lots: [],
+-          fetchedAt: new Date().toISOString(),
++    const timer = window.setTimeout(() => {
++      void fetchParking(
++        { lng: searchLng, lat: searchLat },
++        radiusKm,
++        controller.signal,
++      )
++        .then((next) => {
++          if (generation !== generationRef.current) return;
++          setCatalog(next);
++          setError(next.origin === "unavailable" ? "資料暫時無法取得" : null);
++        })
++        .catch((caught: unknown) => {
++          if (generation !== generationRef.current) return;
++          if (caught instanceof DOMException && caught.name === "AbortError") return;
++          setCatalog({
++            origin: "unavailable",
++            lots: [],
++            fetchedAt: new Date().toISOString(),
++          });
++          setError("資料暫時無法取得");
+         });
+-        setError("資料暫時無法取得");
+-      });
++    }, 400);
+     return () => {
++      window.clearTimeout(timer);
+       controller.abort();
+     };
+-  }, [enabled, quantized, radiusKm]);
++  }, [enabled, radiusKm, requestKey, searchLat, searchLng]);
+
+   const lots: ParkingLot[] = enabled ? catalog.lots : [];
+
+diff --git a/src/hooks/use-traffic-view.ts b/src/hooks/use-traffic-view.ts
+index ebc3a62..5531fe6 100644
+--- a/src/hooks/use-traffic-view.ts
++++ b/src/hooks/use-traffic-view.ts
+@@ -28,9 +28,17 @@ function quantizeZoom(zoom: number) {
+     CITY_TRAFFIC_ZOOM_REFRESH_DELTA;
+ }
+
+-async function fetchTrafficCatalog(force = false): Promise<TrafficCatalog> {
++const inflightKeys = new Set<string>();
++
++async function fetchTrafficCatalog(
++  force = false,
++  external?: AbortSignal,
++): Promise<TrafficCatalog> {
+   const controller = new AbortController();
+   const timer = window.setTimeout(() => controller.abort(), 12_000);
++  const onAbort = () => controller.abort();
++  if (external?.aborted) controller.abort();
++  else external?.addEventListener("abort", onAbort, { once: true });
+   try {
+     const response = await fetch(
+       force ? "/api/traffic?fresh=1" : "/api/traffic",
+@@ -51,6 +59,7 @@ async function fetchTrafficCatalog(force = false): Promise<TrafficCatalog> {
+     };
+   } finally {
+     window.clearTimeout(timer);
++    external?.removeEventListener("abort", onAbort);
+   }
+ }
+
+@@ -93,31 +102,52 @@ export function useTrafficView({
+   }, []);
+
+   useEffect(() => {
+-    let cancelled = false;
+-    void fetchTrafficCatalog(refreshNonce > 0)
++    const requestKey = refreshNonce > 0 ? "traffic:fresh" : "traffic:live";
++    if (inflightKeys.has(requestKey)) return;
++    const controller = new AbortController();
++    inflightKeys.add(requestKey);
++    void fetchTrafficCatalog(refreshNonce > 0, controller.signal)
+       .then((result) => {
+-        if (!cancelled) applyCatalog(result);
++        if (controller.signal.aborted) return;
++        applyCatalog(result);
+       })
+       .catch(() => {
+-        if (cancelled) return;
++        if (controller.signal.aborted) return;
+         setCatalog([]);
+         setOrigin("unavailable");
+         setError("資料暫時無法取得");
++      })
++      .finally(() => {
++        inflightKeys.delete(requestKey);
+       });
+     return () => {
+-      cancelled = true;
++      controller.abort();
++      inflightKeys.delete(requestKey);
+     };
+   }, [applyCatalog, refreshNonce]);
+
+   useEffect(() => {
++    const controller = new AbortController();
+     const timer = window.setInterval(() => {
+-      void fetchTrafficCatalog(false)
+-        .then(applyCatalog)
++      if (inflightKeys.has("traffic:live")) return;
++      inflightKeys.add("traffic:live");
++      void fetchTrafficCatalog(false, controller.signal)
++        .then((result) => {
++          if (!controller.signal.aborted) applyCatalog(result);
++        })
+         .catch(() => {
+-          setError("即時路況更新失敗，仍顯示上次資料。");
++          if (!controller.signal.aborted) {
++            setError("即時路況更新失敗，仍顯示上次資料。");
++          }
++        })
++        .finally(() => {
++          inflightKeys.delete("traffic:live");
+         });
+     }, TRAFFIC_LIVE_CACHE_MS);
+-    return () => window.clearInterval(timer);
++    return () => {
++      window.clearInterval(timer);
++      controller.abort();
++    };
+   }, [applyCatalog]);
+
+   const scored = useMemo(
+diff --git a/src/lib/address-data/adapters.ts b/src/lib/address-data/adapters.ts
+new file mode 100644
+index 0000000..91766ea
+--- /dev/null
++++ b/src/lib/address-data/adapters.ts
+@@ -0,0 +1,166 @@
++import type {
++  AddressDataRecord,
++  AddressImportStats,
++} from "@/lib/address-data/schema";
++
++export type AddressAdapterInput = {
++  county: string;
++  raw: Record<string, unknown>;
++  source: string;
++  license: string;
++  importedAt: string;
++};
++
++export type AddressAdapter = {
++  name: string;
++  normalize(input: AddressAdapterInput): AddressDataRecord | null;
++};
++
++function text(value: unknown) {
++  return typeof value === "string" && value.trim() ? value.trim() : null;
++}
++
++function finite(value: unknown) {
++  const number = typeof value === "number" ? value : Number(value);
++  return Number.isFinite(number) ? number : null;
++}
++
++function recordId(source: string, sourceRecordId: string | null, address: string) {
++  return `${source}:${sourceRecordId ?? address}`;
++}
++
++export const officialRoadNameAdapter: AddressAdapter = {
++  name: "official-road-name",
++  normalize(input) {
++    const road = text(input.raw.road) ?? text(input.raw.roadName);
++    const county = text(input.raw.county) ?? input.county;
++    if (!road) return null;
++    const normalizedAddress = `${county}${text(input.raw.district) ?? ""}${road}${text(input.raw.section) ?? ""}`;
++    return {
++      id: recordId(input.source, text(input.raw.id), normalizedAddress),
++      countryCode: "TW",
++      county,
++      district: text(input.raw.district),
++      village: text(input.raw.village),
++      neighborhood: text(input.raw.neighborhood),
++      road,
++      section: text(input.raw.section),
++      lane: null,
++      alley: null,
++      houseNumber: null,
++      normalizedAddress,
++      displayAddress: normalizedAddress,
++      latitude: finite(input.raw.latitude ?? input.raw.lat),
++      longitude: finite(input.raw.longitude ?? input.raw.lng),
++      accuracy: "road-center",
++      source: input.source,
++      sourceRecordId: text(input.raw.id) ?? undefined,
++      importedAt: input.importedAt,
++      license: input.license,
++      coordinateSystem: "EPSG:4326",
++    };
++  },
++};
++
++export const officialDoorplateAdapter: AddressAdapter = {
++  name: "official-doorplate",
++  normalize(input) {
++    const houseNumber = text(input.raw.houseNumber) ?? text(input.raw.number);
++    const road = text(input.raw.road);
++    const county = text(input.raw.county) ?? input.county;
++    if (!road && !houseNumber) return null;
++    const normalizedAddress = [
++      county,
++      text(input.raw.district),
++      road,
++      text(input.raw.section),
++      text(input.raw.lane),
++      text(input.raw.alley),
++      houseNumber,
++    ]
++      .filter(Boolean)
++      .join("");
++    const latitude = finite(input.raw.latitude ?? input.raw.lat);
++    const longitude = finite(input.raw.longitude ?? input.raw.lng);
++    return {
++      id: recordId(input.source, text(input.raw.id), normalizedAddress),
++      countryCode: "TW",
++      county,
++      district: text(input.raw.district),
++      village: text(input.raw.village),
++      neighborhood: text(input.raw.neighborhood),
++      road,
++      section: text(input.raw.section),
++      lane: text(input.raw.lane),
++      alley: text(input.raw.alley),
++      houseNumber,
++      normalizedAddress,
++      displayAddress: normalizedAddress,
++      latitude,
++      longitude,
++      accuracy: latitude != null && longitude != null && houseNumber
++        ? "exact-house"
++        : houseNumber
++          ? "approximate"
++          : "road-center",
++      source: input.source,
++      sourceRecordId: text(input.raw.id) ?? undefined,
++      importedAt: input.importedAt,
++      license: input.license,
++      coordinateSystem: "EPSG:4326",
++    };
++  },
++};
++
++export const overturePlaceAdapter: AddressAdapter = {
++  name: "overture-place",
++  normalize(input) {
++    const name = text(input.raw.name) ?? text(input.raw.primaryName);
++    const latitude = finite(input.raw.latitude ?? input.raw.lat);
++    const longitude = finite(input.raw.longitude ?? input.raw.lng);
++    if (!name || latitude == null || longitude == null) return null;
++    return {
++      id: recordId(input.source, text(input.raw.id), name),
++      countryCode: "TW",
++      county: text(input.raw.county) ?? input.county,
++      district: text(input.raw.district),
++      village: null,
++      neighborhood: null,
++      road: text(input.raw.road),
++      section: null,
++      lane: null,
++      alley: null,
++      houseNumber: null,
++      normalizedAddress: name,
++      displayAddress: name,
++      latitude,
++      longitude,
++      accuracy: "landmark",
++      source: input.source,
++      sourceRecordId: text(input.raw.id) ?? undefined,
++      importedAt: input.importedAt,
++      license: input.license,
++      coordinateSystem: "EPSG:4326",
++    };
++  },
++};
++
++export function emptyStats(
++  county: string,
++  datasetName: string,
++  source: string,
++  license: string,
++): AddressImportStats {
++  return {
++    county,
++    datasetName,
++    source,
++    license,
++    total: 0,
++    withCoordinates: 0,
++    withoutCoordinates: 0,
++    duplicates: 0,
++    failed: 0,
++    updatedAt: new Date().toISOString(),
++  };
++}
+diff --git a/src/lib/address-data/manifest.ts b/src/lib/address-data/manifest.ts
+new file mode 100644
+index 0000000..9e8125e
+--- /dev/null
++++ b/src/lib/address-data/manifest.ts
+@@ -0,0 +1,88 @@
++import type { AddressSourceManifest } from "@/lib/address-data/schema";
++import { TAIWAN_COUNTIES } from "@/lib/address-data/schema";
++
++const CHECKED_AT = "2026-09-04";
++
++function countyDoorplate(county: string): AddressSourceManifest {
++  return {
++    county,
++    datasetName: `${county}門牌公開資料`,
++    sourceUrl: "NOT CONFIGURED",
++    license: "各縣市政府開放資料授權，匯入前須核對條款",
++    coordinateSystem: "unknown",
++    lastCheckedAt: CHECKED_AT,
++    enabled: false,
++    status: "not_configured",
++    notes: "不得在未核准前寫死下載網址或偽造門牌座標。",
++  };
++}
++
++export const ADDRESS_SOURCE_MANIFEST: AddressSourceManifest[] = [
++  {
++    county: "全國",
++    datasetName: "內政部全國路名資料",
++    sourceUrl: "NOT CONFIGURED",
++    license: "政府資料開放授權條款，實際條款以資料集頁面為準",
++    coordinateSystem: "EPSG:4326",
++    lastCheckedAt: CHECKED_AT,
++    enabled: false,
++    status: "not_configured",
++    notes: "僅接受官方公開下載。匯入腳本支援 dry-run，正式網址尚未核准。",
++  },
++  {
++    county: "全國",
++    datasetName: "TGOS 地址定位",
++    sourceUrl: "https://api.tgos.tw/",
++    license: "內政部國土測繪中心 TGOS 使用條款",
++    coordinateSystem: "EPSG:4326",
++    lastCheckedAt: CHECKED_AT,
++    enabled: true,
++    status: "enabled",
++    notes: "執行期搜尋。APPID／APIKEY 僅限 server。",
++  },
++  {
++    county: "全國",
++    datasetName: "NLSC 門牌／地標模糊檢索",
++    sourceUrl: "https://api.nlsc.gov.tw/",
++    license: "國土測繪中心服務條款",
++    coordinateSystem: "EPSG:4326",
++    lastCheckedAt: CHECKED_AT,
++    enabled: true,
++    status: "enabled",
++    notes: "執行期搜尋與反查。",
++  },
++  {
++    county: "全國",
++    datasetName: "OpenStreetMap／Nominatim",
++    sourceUrl: "https://nominatim.openstreetmap.org/",
++    license: "ODbL",
++    coordinateSystem: "EPSG:4326",
++    lastCheckedAt: CHECKED_AT,
++    enabled: true,
++    status: "enabled",
++    notes: "僅在使用者明確送出搜尋後呼叫，不作逐字 autocomplete。",
++  },
++  {
++    county: "全國",
++    datasetName: "Overture Maps Places／Buildings",
++    sourceUrl: "https://docs.overturemaps.org/",
++    license: "CDLA Permissive 2.0（Places 等以官方 release 為準）",
++    coordinateSystem: "EPSG:4326",
++    lastCheckedAt: CHECKED_AT,
++    enabled: false,
++    status: "dataset_not_imported",
++    notes: "只可後端 ETL。不得當官方精確門牌，也不得打包進前端。",
++  },
++  {
++    county: "全國",
++    datasetName: "Supabase 已確認地址索引",
++    sourceUrl: "NOT CONFIGURED",
++    license: "自有快取，來源授權隨原始紀錄",
++    coordinateSystem: "EPSG:4326",
++    lastCheckedAt: CHECKED_AT,
++    enabled: false,
++    status: "not_configured",
++    notes: "需套用 supabase/migrations 與 SUPABASE_SERVICE_ROLE_KEY。",
++  },
++  ...TAIWAN_COUNTIES.map((county) => countyDoorplate(county)),
++];
+diff --git a/src/lib/address-data/schema.ts b/src/lib/address-data/schema.ts
+new file mode 100644
+index 0000000..78ca7db
+--- /dev/null
++++ b/src/lib/address-data/schema.ts
+@@ -0,0 +1,90 @@
++export type AddressAccuracy =
++  | "exact-house"
++  | "interpolated"
++  | "approximate"
++  | "lane-center"
++  | "road-center"
++  | "landmark";
++
++export type AddressCoordinateSystem = "EPSG:4326" | "TWD97" | "unknown";
++
++export type AddressSourceStatus =
++  | "enabled"
++  | "not_configured"
++  | "dataset_not_imported"
++  | "disabled";
++
++export type AddressDataRecord = {
++  id: string;
++  countryCode: "TW";
++  county: string | null;
++  district: string | null;
++  village: string | null;
++  neighborhood: string | null;
++  road: string | null;
++  section: string | null;
++  lane: string | null;
++  alley: string | null;
++  houseNumber: string | null;
++  normalizedAddress: string;
++  displayAddress: string;
++  latitude: number | null;
++  longitude: number | null;
++  accuracy: AddressAccuracy;
++  source: string;
++  sourceRecordId?: string;
++  sourceUpdatedAt?: string;
++  importedAt: string;
++  license?: string;
++  coordinateSystem: AddressCoordinateSystem;
++};
++
++export type AddressSourceManifest = {
++  county: string;
++  datasetName: string;
++  sourceUrl: string;
++  license: string;
++  coordinateSystem: AddressCoordinateSystem;
++  lastCheckedAt: string;
++  enabled: boolean;
++  status: AddressSourceStatus;
++  notes: string;
++};
++
++export type AddressImportStats = {
++  county: string;
++  datasetName: string;
++  source: string;
++  license: string;
++  total: number;
++  withCoordinates: number;
++  withoutCoordinates: number;
++  duplicates: number;
++  failed: number;
++  updatedAt: string;
++};
++
++export const TAIWAN_COUNTIES = [
++  "臺北市",
++  "新北市",
++  "桃園市",
++  "臺中市",
++  "臺南市",
++  "高雄市",
++  "基隆市",
++  "新竹市",
++  "新竹縣",
++  "苗栗縣",
++  "彰化縣",
++  "南投縣",
++  "雲林縣",
++  "嘉義市",
++  "嘉義縣",
++  "屏東縣",
++  "宜蘭縣",
++  "花蓮縣",
++  "臺東縣",
++  "澎湖縣",
++  "金門縣",
++  "連江縣",
++] as const;
+diff --git a/src/lib/geocoding/normalizeTaiwanAddress.ts b/src/lib/geocoding/normalizeTaiwanAddress.ts
+index e9b4379..a2ac2dd 100644
+--- a/src/lib/geocoding/normalizeTaiwanAddress.ts
++++ b/src/lib/geocoding/normalizeTaiwanAddress.ts
+@@ -1,4 +1,3 @@
+-import { DEFAULT_GEOCODE_CITY } from "@/lib/taiwan-address";
+ import type { GeocodeMatchKind } from "@/lib/geocoding/types";
+
+ export type TaiwanAddressParts = {
+@@ -124,7 +123,7 @@ export function normalizeTaiwanAddress(query: string): NormalizedTaiwanAddress {
+   const compact = normalizeHouseToken(stripFloorAndRoom(compactTaiwanText(original)));
+   const parts = parseParts(compact);
+   if (!parts.city && (parts.road || parts.town)) {
+-    parts.city = DEFAULT_GEOCODE_CITY;
++    /* 不預設臺南市；全台搜尋由使用者輸入或 GPS 縣市補齊 */
+   }
+   const searchAddress = joinParts([
+     parts.city,
+diff --git a/src/lib/geocoding/orchestrator.ts b/src/lib/geocoding/orchestrator.ts
+index f29646c..3488bc7 100644
+--- a/src/lib/geocoding/orchestrator.ts
++++ b/src/lib/geocoding/orchestrator.ts
+@@ -11,6 +11,10 @@ import {
+   readAddressCache,
+   writeAddressCache,
+ } from "@/lib/geocoding/providers/cache";
++import {
++  createOfficialIndexProvider,
++  officialIndexEnabled,
++} from "@/lib/geocoding/providers/official-index";
+ import { createNlscProvider } from "@/lib/geocoding/providers/nlsc";
+ import { createOsmProvider } from "@/lib/geocoding/providers/osm";
+ import { createTgosProvider, tgosEnabled } from "@/lib/geocoding/providers/tgos";
+@@ -142,11 +146,13 @@ function sortResults(
+       };
+   const sourceRank: Record<GeocodeSource, number> = {
+     cache: 0,
+-    tgos: 1,
+-    nlsc: 2,
+-    google: 3,
++    index: 1,
++    tgos: 2,
++    nlsc: 3,
+     local: 4,
+-    osm: 5,
++    overture: 5,
++    osm: 6,
++    google: 7,
+   };
+   return [...rows].sort((a, b) => {
+     if (a.exactHouseNumber !== b.exactHouseNumber) {
+@@ -210,6 +216,8 @@ function skippedRemoteStatuses(): Partial<Record<GeocodeSource, GeocodeProviderS
+     tgos: "disabled",
+     nlsc: "disabled",
+     osm: "disabled",
++    index: "disabled",
++    overture: "disabled",
+     google: "disabled_by_map_renderer_policy",
+   };
+ }
+@@ -242,6 +250,8 @@ export async function searchGeocode(
+           google: "disabled_by_map_renderer_policy",
+           nlsc: "empty",
+           osm: "empty",
++          index: officialIndexEnabled() ? "empty" : "disabled",
++          overture: "disabled",
+           cache: "empty",
+           local: "empty",
+         };
+@@ -290,6 +300,7 @@ export async function searchGeocode(
+   const tgos = createTgosProvider(parsed);
+   const nlsc = createNlscProvider(parsed);
+   const osm = createOsmProvider(parsed);
++  const officialIndex = createOfficialIndexProvider();
+   const collected: GeocodeResult[] = [...locals];
+   const deadline = Date.now() + OVERALL_TIMEOUT_MS;
+
+@@ -297,6 +308,7 @@ export async function searchGeocode(
+   for (const step of relaxations) {
+     if (Date.now() > deadline || options.signal?.aborted) break;
+     const official = await Promise.allSettled([
++      runProvider(officialIndex, step.query, options, statuses),
+       runProvider(tgos, step.query, options, statuses),
+       runProvider(nlsc, step.query, options, statuses),
+     ]);
+diff --git a/src/lib/geocoding/providers/official-index.ts b/src/lib/geocoding/providers/official-index.ts
+new file mode 100644
+index 0000000..bff4d15
+--- /dev/null
++++ b/src/lib/geocoding/providers/official-index.ts
+@@ -0,0 +1,68 @@
++import "server-only";
++
++import type { GeocodeProvider, GeocodeResult } from "@/lib/geocoding/types";
++
++function supabaseConfig() {
++  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "";
++  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ?? "";
++  if (!url || !serviceKey) return null;
++  return { url: url.replace(/\/$/, ""), serviceKey };
++}
++
++export function officialIndexEnabled() {
++  return Boolean(supabaseConfig());
++}
++
++export function createOfficialIndexProvider(): GeocodeProvider {
++  const config = supabaseConfig();
++  return {
++    name: "index",
++    enabled: Boolean(config),
++    async search(query, options) {
++      if (!config || query.trim().length < 2) return [];
++      const params = new URLSearchParams({
++        select:
++          "id,display_address,normalized_address,latitude,longitude,accuracy,source,county,district,road",
++        normalized_address: `ilike.*${query.trim()}*`,
++        limit: "12",
++      });
++      const response = await fetch(
++        `${config.url}/rest/v1/taiwan_address_index?${params}`,
++        {
++          headers: {
++            apikey: config.serviceKey,
++            Authorization: `Bearer ${config.serviceKey}`,
++          },
++          cache: "no-store",
++          signal: options?.signal,
++        },
++      );
++      if (!response.ok) return [];
++      const rows = (await response.json()) as Array<{
++        id?: string;
++        display_address?: string;
++        normalized_address?: string;
++        latitude?: number | null;
++        longitude?: number | null;
++        accuracy?: GeocodeResult["matchKind"];
++        source?: string;
++      }>;
++      return rows
++        .filter(
++          (row) =>
++            Number.isFinite(row.latitude) && Number.isFinite(row.longitude),
++        )
++        .map((row) => ({
++          id: `index-${row.id ?? row.normalized_address}`,
++          label: row.display_address || row.normalized_address || query,
++          formattedAddress: row.display_address || row.normalized_address || query,
++          latitude: Number(row.latitude),
++          longitude: Number(row.longitude),
++          source: "index" as const,
++          confidence: row.accuracy === "exact-house" ? 0.86 : 0.62,
++          exactHouseNumber: row.accuracy === "exact-house",
++          matchKind: row.accuracy ?? "approximate",
++        }));
++    },
++  };
++}
+diff --git a/src/lib/geocoding/types.ts b/src/lib/geocoding/types.ts
+index e6420f8..0532ee6 100644
+--- a/src/lib/geocoding/types.ts
++++ b/src/lib/geocoding/types.ts
+@@ -1,4 +1,12 @@
+-export type GeocodeSource = "cache" | "tgos" | "nlsc" | "osm" | "google" | "local";
++export type GeocodeSource =
++  | "cache"
++  | "index"
++  | "tgos"
++  | "nlsc"
++  | "osm"
++  | "google"
++  | "local"
++  | "overture";
+
+ export type GeocodeMatchKind =
+   | "exact-house"
+diff --git a/src/lib/junction-focus.ts b/src/lib/junction-focus.ts
+new file mode 100644
+index 0000000..c3a861e
+--- /dev/null
++++ b/src/lib/junction-focus.ts
+@@ -0,0 +1,17 @@
++import {
++  JUNCTION_FOCUS_ENTER_METERS,
++  JUNCTION_FOCUS_EXIT_METERS,
++} from "@/lib/constants";
++
++let latched = false;
++
++export function deriveJunctionFocus(navigating: boolean, distanceMeters: number) {
++  if (!navigating) {
++    latched = false;
++    return false;
++  }
++  latched = latched
++    ? distanceMeters <= JUNCTION_FOCUS_EXIT_METERS
++    : distanceMeters <= JUNCTION_FOCUS_ENTER_METERS;
++  return latched;
++}
+diff --git a/src/lib/map-layers.ts b/src/lib/map-layers.ts
+index d0de302..83c2a4a 100644
+--- a/src/lib/map-layers.ts
++++ b/src/lib/map-layers.ts
+@@ -5,6 +5,7 @@ import type {
+ } from "maplibre-gl";
+ import { CCTV_LAYER_HIT_ID, CCTV_LAYER_ID } from "@/lib/cctv-constants";
+ import { MAP_COLORS } from "@/lib/constants";
++import { sliceRouteAhead } from "@/lib/upcoming-route";
+ import {
+   LEGACY_TRAFFIC_LAYER_ID,
+   LEGACY_TRAFFIC_SOURCE_ID,
+@@ -92,11 +93,26 @@ export function upsertIntelligenceLayers(
+   route: [number, number][],
+   traffic: TrafficSegment[],
+   trafficVisible = true,
++  routeMeters = 0,
+ ) {
++  const remaining =
++    routeMeters > 8 ? sliceRouteAhead(route, routeMeters, 1_000_000) : route;
++  const passed =
++    routeMeters > 8 ? sliceRouteAhead(route, 0, Math.max(0, routeMeters - 4)) : [];
+   const routeData = {
+-    type: "Feature" as const,
+-    properties: {},
+-    geometry: { type: "LineString" as const, coordinates: route },
++    type: "FeatureCollection" as const,
++    features: [
++      {
++        type: "Feature" as const,
++        properties: { kind: "remaining" },
++        geometry: { type: "LineString" as const, coordinates: remaining },
++      },
++      {
++        type: "Feature" as const,
++        properties: { kind: "passed" },
++        geometry: { type: "LineString" as const, coordinates: passed },
++      },
++    ],
+   };
+
+   const trafficData = {
+@@ -179,6 +195,7 @@ export function upsertIntelligenceLayers(
+       id: "demo-route-glow",
+       type: "line",
+       source: "demo-route",
++      filter: ["==", ["get", "kind"], "remaining"],
+       paint: {
+         "line-color": MAP_COLORS.routeGlow,
+         "line-width": ["interpolate", ["linear"], ["zoom"], 12, 8, 17, 18],
+@@ -189,11 +206,27 @@ export function upsertIntelligenceLayers(
+     });
+   }
+
++  if (!map.getLayer("demo-route-passed")) {
++    map.addLayer({
++      id: "demo-route-passed",
++      type: "line",
++      source: "demo-route",
++      filter: ["==", ["get", "kind"], "passed"],
++      paint: {
++        "line-color": "#94a3b8",
++        "line-width": ["interpolate", ["linear"], ["zoom"], 12, 2, 17, 4],
++        "line-opacity": 0.22,
++      },
++      layout: { "line-cap": "round", "line-join": "round" },
++    });
++  }
++
+   if (!map.getLayer("demo-route-line")) {
+     map.addLayer({
+       id: "demo-route-line",
+       type: "line",
+       source: "demo-route",
++      filter: ["==", ["get", "kind"], "remaining"],
+       paint: {
+         "line-color": MAP_COLORS.route,
+         "line-width": ["interpolate", ["linear"], ["zoom"], 12, 3, 17, 7.5],
+diff --git a/src/lib/speed-estimation.ts b/src/lib/speed-estimation.ts
+new file mode 100644
+index 0000000..25d505e
+--- /dev/null
++++ b/src/lib/speed-estimation.ts
+@@ -0,0 +1,59 @@
++export type SpeedSample = {
++  speedMps?: number;
++  lng: number;
++  lat: number;
++  accuracy?: number;
++  fixedAt?: number;
++};
++
++const MAX_KMH = 160;
++const STALE_MS = 8_000;
++const POOR_ACCURACY_M = 45;
++
++export function speedMpsToKmh(speedMps?: number) {
++  if (speedMps == null || !Number.isFinite(speedMps) || speedMps < 0) return null;
++  const kmh = speedMps * 3.6;
++  if (kmh > MAX_KMH) return null;
++  return kmh;
++}
++
++export function fallbackSpeedKmh(
++  previous: SpeedSample | null,
++  current: SpeedSample,
++) {
++  if (!previous?.fixedAt || !current.fixedAt) return null;
++  const dt = (current.fixedAt - previous.fixedAt) / 1000;
++  if (dt < 0.4 || dt > 6) return null;
++  const meters = haversineMeters(previous, current);
++  const kmh = (meters / dt) * 3.6;
++  if (!Number.isFinite(kmh) || kmh < 0 || kmh > MAX_KMH) return null;
++  return kmh;
++}
++
++function haversineMeters(a: SpeedSample, b: SpeedSample) {
++  const toRad = Math.PI / 180;
++  const dLat = (b.lat - a.lat) * toRad;
++  const dLng = (b.lng - a.lng) * toRad;
++  const lat1 = a.lat * toRad;
++  const lat2 = b.lat * toRad;
++  const h =
++    Math.sin(dLat / 2) ** 2 +
++    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
++  return 6371000 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
++}
++
++export function smoothSpeedKmh(previous: number | null, next: number | null) {
++  if (next == null) return previous == null ? null : previous * 0.72;
++  if (previous == null) return next;
++  const alpha = next < 3 ? 0.45 : 0.28;
++  const mixed = previous + (next - previous) * alpha;
++  return mixed < 0.8 ? 0 : mixed;
++}
++
++export function readableGpsSpeedKmh(sample: SpeedSample, previous: SpeedSample | null) {
++  const stale = !sample.fixedAt || Date.now() - sample.fixedAt > STALE_MS;
++  const poor =
++    typeof sample.accuracy === "number" && sample.accuracy > POOR_ACCURACY_M;
++  if (stale || poor) return null;
++  return speedMpsToKmh(sample.speedMps) ?? fallbackSpeedKmh(previous, sample);
++}
+diff --git a/src/lib/speed-limit.ts b/src/lib/speed-limit.ts
+new file mode 100644
+index 0000000..a821fd2
+--- /dev/null
++++ b/src/lib/speed-limit.ts
+@@ -0,0 +1,39 @@
++export type SpeedLimitReading = {
++  speedLimitKph: number | null;
++  source: "route" | "osm" | "NOT CONFIGURED";
++  updatedAt: string | null;
++  confidence: number;
++  status: "live" | "stale" | "unknown" | "not_configured";
++};
++
++export function unresolvedSpeedLimit(): SpeedLimitReading {
++  return {
++    speedLimitKph: null,
++    source: "NOT CONFIGURED",
++    updatedAt: null,
++    confidence: 0,
++    status: "not_configured",
++  };
++}
++
++export function speedLimitFromRouteAttribute(
++  maxspeed: number | string | null | undefined,
++  updatedAt?: string | null,
++): SpeedLimitReading {
++  const value =
++    typeof maxspeed === "number"
++      ? maxspeed
++      : typeof maxspeed === "string"
++        ? Number(maxspeed.replace(/[^\d.]/g, ""))
++        : NaN;
++  if (!Number.isFinite(value) || value <= 0 || value > 140) {
++    return unresolvedSpeedLimit();
++  }
++  return {
++    speedLimitKph: Math.round(value),
++    source: "route",
++    updatedAt: updatedAt ?? null,
++    confidence: 0.7,
++    status: "live",
++  };
++}
+diff --git a/src/lib/taiwan-address.ts b/src/lib/taiwan-address.ts
+index c1eaa91..a683a6f 100644
+--- a/src/lib/taiwan-address.ts
++++ b/src/lib/taiwan-address.ts
+@@ -11,7 +11,7 @@ export type ParsedTaiwanAddress = {
+ const ADDRESS_RE =
+   /^(.+?[縣市])?(.+?[區市鎮鄉])?(.+?(?:路|街|大道|道))([0-9一二三四五六七八九十]+段)?(\d+巷)?(\d+弄)?(\d+(?:之\d+)?號)?$/u;
+
+-/** 本產品示範範圍；門牌沒寫縣市時補上，避免命中外縣市同名路。 */
++/** 僅供地圖啟動畫面中心與缺資料後備標籤，不得當搜尋預設縣市。 */
+ export const DEFAULT_GEOCODE_CITY = "臺南市";
+
+ export function parseTaiwanAddress(query: string): ParsedTaiwanAddress | null {
+@@ -61,11 +61,10 @@ export function expandTaiwanGeocodeQueries(query: string): string[] {
+   const parsed = parseTaiwanAddress(compact);
+   if (!parsed) {
+     pushOne(compact);
+-    if (!mentionsTainanCity(compact)) push(`${DEFAULT_GEOCODE_CITY}${compact}`);
+     return ordered.slice(0, 4);
+   }
+
+-  const city = parsed.city || DEFAULT_GEOCODE_CITY;
++  const city = parsed.city;
+   const { town, road, section, lane, alley } = parsed;
+
+   if (alley) {
+@@ -86,8 +85,7 @@ export function officialAddressQuery(query: string) {
+   const compact = query.trim().replace(/\s+/g, "");
+   const parsed = parseTaiwanAddress(compact);
+   if (!parsed) return compact;
+-  if (parsed.city) return compact;
+-  return `${DEFAULT_GEOCODE_CITY}${compact}`;
++  return compact;
+ }
+
+ export function describeRelaxedMatch(
+diff --git a/src/lib/vehicle-display.ts b/src/lib/vehicle-display.ts
+index bd4d485..f0700b5 100644
+--- a/src/lib/vehicle-display.ts
++++ b/src/lib/vehicle-display.ts
+@@ -57,7 +57,7 @@ export function stepVehicleDisplay({
+   if (stationary) {
+     return {
+       ...current,
+-      heading: lerpAngle(current.heading, target.heading, damp(dtSeconds, 0.45)),
++      heading: lerpAngle(current.heading, target.heading, damp(dtSeconds, 0.28)),
+       predictedMeters: 0,
+     };
+   }
+@@ -97,7 +97,7 @@ export function stepVehicleDisplay({
+     };
+   }
+
+-  const tau = jumpMeters > 24 ? 0.18 : 0.24;
++  const tau = jumpMeters > 24 ? 0.12 : 0.16;
+   const t = damp(dtSeconds, tau);
+
+   return {
+diff --git a/src/services/geolocation.ts b/src/services/geolocation.ts
+index 46b2c0e..d586051 100644
+--- a/src/services/geolocation.ts
++++ b/src/services/geolocation.ts
+@@ -296,9 +296,15 @@ export function requestCurrentPosition(): Promise<VehiclePose> {
+           denied = true;
+           emitStatus("denied");
+           emitPermission("denied");
+-        } else if (!lastFix) {
+-          emitStatus("unavailable");
++          reject(error);
++          return;
++        }
++        if (lastFix?.source === "gps") {
++          emitStatus("active");
++          resolve(lastFix);
++          return;
+         }
++        emitStatus("unavailable");
+         reject(error);
+       },
+       ONCE_OPTIONS,
+diff --git a/src/types/domain.ts b/src/types/domain.ts
+index bdb1f5d..db33830 100644
+--- a/src/types/domain.ts
++++ b/src/types/domain.ts
+@@ -294,7 +294,15 @@ export type GeocodeHit = {
+   name: string;
+   address: string;
+   location: LngLat;
+-  source?: "cache" | "tgos" | "nlsc" | "osm" | "google" | "local";
++  source?:
++    | "cache"
++    | "index"
++    | "tgos"
++    | "nlsc"
++    | "osm"
++    | "google"
++    | "local"
++    | "overture";
+   exactHouseNumber?: boolean;
+   matchKind?: GeocodeMatchKind;
+   confidence?: number;
+diff --git a/supabase/migrations/20260904_taiwan_address_index.sql b/supabase/migrations/20260904_taiwan_address_index.sql
+new file mode 100644
+index 0000000..896cdde
+--- /dev/null
++++ b/supabase/migrations/20260904_taiwan_address_index.sql
+@@ -0,0 +1,43 @@
++create extension if not exists pg_trgm;
++create extension if not exists postgis;
++
++create table if not exists public.taiwan_address_index (
++  id text primary key,
++  country_code text not null default 'TW',
++  county text,
++  district text,
++  village text,
++  neighborhood text,
++  road text,
++  section text,
++  lane text,
++  alley text,
++  house_number text,
++  normalized_address text not null,
++  display_address text not null,
++  latitude double precision,
++  longitude double precision,
++  accuracy text not null,
++  source text not null,
++  source_record_id text,
++  source_updated_at timestamptz,
++  imported_at timestamptz not null default now(),
++  license text,
++  coordinate_system text not null default 'EPSG:4326',
++  geom geography(point, 4326)
++);
++
++create unique index if not exists taiwan_address_index_source_record_idx
++  on public.taiwan_address_index (source, source_record_id)
++  where source_record_id is not null;
++
++create index if not exists taiwan_address_index_normalized_trgm_idx
++  on public.taiwan_address_index using gin (normalized_address gin_trgm_ops);
++
++create index if not exists taiwan_address_index_place_idx
++  on public.taiwan_address_index (county, district, road);
++
++create index if not exists taiwan_address_index_geom_idx
++  on public.taiwan_address_index using gist (geom);
++
++alter table public.taiwan_address_index enable row level security;
