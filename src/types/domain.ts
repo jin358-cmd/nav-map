@@ -8,6 +8,7 @@ export type VehiclePose = LngLat & {
   accuracy?: number;
   speedMps?: number;
   source: "demo" | "gps";
+  fixedAt?: number;
 };
 
 /** 畫面上黃色箭頭用的位置；不得回寫 GPS。 */
@@ -24,6 +25,19 @@ export type GpsStatus =
   | "active"
   | "denied"
   | "unavailable";
+
+export type GpsPermissionState =
+  | "prompt"
+  | "granted"
+  | "denied"
+  | "unsupported";
+
+export type GpsErrorCode =
+  | "permission_denied"
+  | "position_unavailable"
+  | "timeout"
+  | "unsupported"
+  | null;
 
 export type CameraMode = "2d" | "3d";
 export type FollowOrientation = "heading-up" | "north-up";

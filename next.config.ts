@@ -12,6 +12,12 @@ const nextConfig: NextConfig = {
           { key: "Service-Worker-Allowed", value: "/" },
         ],
       },
+      {
+        source: "/:path*",
+        headers: [
+          { key: "Permissions-Policy", value: "geolocation=(self)" },
+        ],
+      },
     ];
   },
   outputFileTracingIncludes: {

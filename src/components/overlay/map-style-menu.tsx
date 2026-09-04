@@ -32,7 +32,7 @@ export function MapStyleMenu({
         aria-label="地圖顯示模式"
         title="地圖顯示模式"
         onClick={onToggle}
-        className="size-12 rounded-2xl border-white/12 bg-black/55 text-zinc-100 shadow-lg backdrop-blur-md hover:bg-black/70"
+        className="size-12 rounded-2xl border-zinc-500/55 bg-zinc-800/92 text-zinc-100 shadow-lg backdrop-blur-md hover:bg-zinc-700"
       >
         <Layers className="size-5" />
       </Button>

@@ -88,7 +88,16 @@ export function stepVehicleDisplay({
     }
   }
 
-  const tau = jumpMeters > 350 ? 0.12 : jumpMeters > 80 ? 0.18 : 0.24;
+  if (jumpMeters > 80) {
+    return {
+      lng: desired.lng,
+      lat: desired.lat,
+      heading: desiredHeading,
+      predictedMeters: 0,
+    };
+  }
+
+  const tau = jumpMeters > 24 ? 0.18 : 0.24;
   const t = damp(dtSeconds, tau);
 
   return {

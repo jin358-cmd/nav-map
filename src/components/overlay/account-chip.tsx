@@ -76,14 +76,14 @@ export function AccountChip({
         disabled={Boolean(busy && configured)}
         onClick={onSignIn}
         className={cn(
-          "flex max-w-[9.5rem] items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] touch-manipulation",
+          "flex size-9 items-center justify-center rounded-full border text-[11px] touch-manipulation min-[431px]:size-auto min-[431px]:max-w-[9.5rem] min-[431px]:gap-1.5 min-[431px]:px-2.5 min-[431px]:py-1.5",
           blocked
             ? "cursor-not-allowed border-white/8 bg-white/4 text-zinc-500"
             : "border-white/15 bg-white/8 text-white hover:bg-white/12",
         )}
       >
         <GoogleMark />
-        <span className="truncate font-medium">
+        <span className="hidden truncate font-medium min-[431px]:inline">
           {busy && configured ? "登入中…" : blocked ? "無法使用" : "Google 登入"}
         </span>
       </button>

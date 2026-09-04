@@ -38,13 +38,16 @@ function TurnGlyph({
   return <ArrowUp className={className} />;
 }
 
-function guidanceLine(step: RouteStep | null) {
+function shortTurn(step: RouteStep | null) {
   if (!step) return "繼續前行";
-  if (step.type === "arrive") {
-    return step.roadName ? `抵達${step.roadName}` : "即將抵達";
-  }
-  if (step.roadName) return `${step.action}進入${step.roadName}`;
-  return step.action;
+  if (step.type === "arrive") return "即將抵達";
+  return step.action || "繼續前行";
+}
+
+function shortGuidance(step: RouteStep | null, distanceMeters: number) {
+  const turn = shortTurn(step);
+  if (step?.type === "arrive") return turn;
+  return `${formatDistance(distanceMeters)}後${turn}`;
 }
 
 export const NextIntersectionHud = forwardRef<
@@ -109,8 +112,18 @@ export const NextIntersectionHud = forwardRef<
               junctionFocus ? "text-[#1a1400]" : "text-white",
             )}
           >
-            {guidanceLine(step)}
+            {shortGuidance(step, distanceMeters)}
           </p>
+          {step?.roadName ? (
+            <p
+              className={cn(
+                "navigation-road-name truncate",
+                junctionFocus ? "text-[#3a2a00]" : "text-zinc-300",
+              )}
+            >
+              {step.roadName}
+            </p>
+          ) : null}
           {rerouting ? (
             <p
               className={cn(

@@ -162,8 +162,8 @@ export function RoadInformationCard({
         </div>
       ) : null}
 
-      <div className="inline-flex w-fit max-w-[min(36rem,calc(100vw-0.75rem))] items-center justify-center gap-1.5 rounded-full border border-white/10 bg-black/55 px-1.5 py-1 shadow-[0_10px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl">
-        <div className="flex items-center gap-1.5">
+      <div className="inline-flex w-full max-w-[min(36rem,calc(100vw-env(safe-area-inset-left)-env(safe-area-inset-right)-0.75rem))] items-center justify-center gap-1 rounded-full border border-white/10 bg-black/55 px-1 py-1 shadow-[0_10px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl min-[431px]:w-fit min-[431px]:gap-1.5 min-[431px]:px-1.5">
+        <div className="flex min-w-0 items-center gap-1 min-[431px]:gap-1.5">
           {groups.map((group) => {
             const meta = KIND_META[group.kind];
             const Icon = meta.icon;
@@ -191,13 +191,13 @@ export function RoadInformationCard({
                   });
                 }}
                 className={cn(
-                  "relative flex size-11 items-center justify-center rounded-full border touch-manipulation",
+                  "relative flex size-9 items-center justify-center rounded-full border touch-manipulation min-[431px]:size-11",
                   layerOn ? meta.activeClass : meta.className,
                   !layerOn && "opacity-55",
                   active && selectedKind === group.kind && "ring-2 ring-white/30",
                 )}
               >
-                <Icon className="size-5" />
+                <Icon className="size-4 min-[431px]:size-5" />
                 <span className="absolute -top-0.5 -right-0.5 flex min-w-4 items-center justify-center rounded-full bg-black/80 px-1 text-[10px] leading-4 text-zinc-200">
                   {group.items.length}
                 </span>
@@ -214,7 +214,7 @@ export function RoadInformationCard({
           onSignIn={() => onSignIn?.()}
           onSignOut={() => onSignOut?.()}
         />
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1 min-[431px]:gap-1.5">
           <FavoriteHeartButton
             pressed={favoritesOpen || isCurrentFavorite}
             count={favorites.length}
@@ -256,13 +256,13 @@ function FavoriteHeartButton({
       title="加入最愛"
       onClick={onToggle}
       className={cn(
-        "relative flex size-10 items-center justify-center rounded-full border touch-manipulation",
+        "relative flex size-9 items-center justify-center rounded-full border touch-manipulation min-[431px]:size-10",
         pressed
           ? "border-rose-300/80 bg-rose-500/35 text-rose-100"
           : "border-rose-400/40 bg-rose-500/15 text-rose-200 hover:bg-rose-500/30",
       )}
     >
-      <Heart className={cn("size-5", pressed && "fill-rose-500")} />
+      <Heart className={cn("size-4 min-[431px]:size-5", pressed && "fill-rose-500")} />
       {count > 0 ? (
         <span className="absolute -top-0.5 -right-0.5 flex min-w-4 items-center justify-center rounded-full bg-black/80 px-1 text-[10px] leading-4 text-zinc-200">
           {count}
@@ -364,7 +364,7 @@ function YouTubeMusicButton({
       title="YouTube Music"
       onClick={onToggle}
       className={cn(
-        "relative flex size-10 items-center justify-center rounded-full border touch-manipulation",
+        "relative flex size-9 items-center justify-center rounded-full border touch-manipulation min-[431px]:size-10",
         pressed
           ? "border-red-300/70 bg-[#ff0033]/40"
           : "border-red-400/35 bg-[#ff0033]/20 hover:bg-[#ff0033]/35",

@@ -92,8 +92,8 @@ function ControlButton({
       title={label}
       onClick={onClick}
       className={cn(
-        "size-12 rounded-2xl border-white/12 bg-black/55 text-zinc-100 shadow-lg backdrop-blur-md hover:bg-black/70 touch-manipulation",
-        active && "border-cyan-300/50 text-cyan-200",
+        "size-12 rounded-2xl border-zinc-500/55 bg-zinc-800/92 text-zinc-100 shadow-lg backdrop-blur-md hover:bg-zinc-700 disabled:border-zinc-700 disabled:bg-zinc-900/80 disabled:text-zinc-500 touch-manipulation",
+        active && "border-cyan-300/80 bg-zinc-700 text-cyan-200",
       )}
     >
       {children}

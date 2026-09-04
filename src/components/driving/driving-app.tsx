@@ -90,12 +90,18 @@ import {
   upsertSavedPlace,
 } from "@/lib/saved-places";
 import { deriveTrafficIntel } from "@/lib/traffic-intel";
+import { GpsFixChip } from "@/components/overlay/gps-fix-chip";
 import {
   fetchAccidentReports,
   planDrivingRoute,
   requestCurrentPosition,
   watchVehiclePosition,
 } from "@/services";
+import {
+  geoErrorCode,
+  geoErrorMessage,
+  queryGeolocationPermission,
+} from "@/services/geolocation";
 import { fetchConstructionEvents } from "@/services/construction";
 import { reversePlace } from "@/services/routing";
 import type {
@@ -105,6 +111,8 @@ import type {
   ConstructionEvent,
   EventDataOrigin,
   GeocodeHit,
+  GpsErrorCode,
+  GpsPermissionState,
   GpsStatus,
   LayerKindVisibility,
   MapFocusTarget,
@@ -173,7 +181,7 @@ export function DrivingApp() {
   const [cameraMode, setCameraMode] = useState<CameraMode>("3d");
   const [followOrientation, setFollowOrientation] =
     useState<FollowOrientation>("heading-up");
-  const [followVehicle, setFollowVehicle] = useState(true);
+  const [followVehicle, setFollowVehicle] = useState(false);
   const [mapDisplayMode, setMapDisplayMode] = useState<MapDisplayMode>(() =>
     typeof window === "undefined" ? "dark" : readMapDisplayMode(),
   );
@@ -190,6 +198,9 @@ export function DrivingApp() {
   } | null>(null);
   const [pickAddress, setPickAddress] = useState<string | null>(null);
   const [gpsStatus, setGpsStatus] = useState<GpsStatus>("idle");
+  const [gpsError, setGpsError] = useState<GpsErrorCode>(null);
+  const [gpsPermission, setGpsPermission] =
+    useState<GpsPermissionState>("prompt");
   const [viewport, setViewport] = useState<MapViewport | null>(null);
   const [refreshNonce, setRefreshNonce] = useState(0);
   const [accidents, setAccidents] = useState<AccidentReport[]>([]);
@@ -272,6 +283,7 @@ export function DrivingApp() {
   const rerouteGenerationRef = useRef(0);
   const destinationRef = useRef<RouteDestination | null>(null);
   const vehicleRef = useRef(vehicle);
+  const sawGpsFixRef = useRef(false);
 
   const routeProgressModel = useMemo(
     () => createRouteProgressModel(route, routeSteps),
@@ -426,9 +438,14 @@ export function DrivingApp() {
   }, []);
 
   useEffect(() => {
+    void queryGeolocationPermission().then(setGpsPermission);
     const stop = watchVehiclePosition({
       onFix: (pose) => {
         setVehicle(pose);
+        if (!sawGpsFixRef.current) {
+          sawGpsFixRef.current = true;
+          setFollowVehicle(true);
+        }
         const context = navigationContextRef.current;
         if (!context.navigating || !context.routeProgressModel) {
           setDisplayVehicle(null);
@@ -451,6 +468,8 @@ export function DrivingApp() {
         );
       },
       onStatus: setGpsStatus,
+      onError: setGpsError,
+      onPermission: setGpsPermission,
     });
     return stop;
   }, []);
@@ -590,6 +609,16 @@ export function DrivingApp() {
     });
   }, []);
 
+  const readDevicePosition = useCallback(async () => {
+    const pose = await requestCurrentPosition();
+    sawGpsFixRef.current = true;
+    setVehicle(pose);
+    setGpsStatus("active");
+    setGpsError(null);
+    setGpsPermission("granted");
+    return pose;
+  }, []);
+
   const applyRoute = useCallback(async (hit: GeocodeHit, mode = travelMode) => {
     rememberAddress(hit);
     lastRouteHitRef.current = hit;
@@ -599,8 +628,21 @@ export function DrivingApp() {
     setSelectedEvent(null);
     setEventListKind(null);
     try {
+      let origin = vehicleRef.current.source === "gps" ? vehicleRef.current : null;
+      try {
+        origin = await readDevicePosition();
+      } catch (error) {
+        const code = geoErrorCode(error);
+        setGpsError(code);
+        setGpsStatus(code === "permission_denied" ? "denied" : "unavailable");
+        if (code === "permission_denied") setGpsPermission("denied");
+        if (!origin) {
+          setRouteError(geoErrorMessage(code));
+          return;
+        }
+      }
       const plan = await planDrivingRoute(
-        { lng: vehicle.lng, lat: vehicle.lat },
+        { lng: origin.lng, lat: origin.lat },
         hit,
         undefined,
         mode,
@@ -627,7 +669,7 @@ export function DrivingApp() {
     } finally {
       setRouting(false);
     }
-  }, [travelMode, vehicle.lat, vehicle.lng]);
+  }, [readDevicePosition, travelMode]);
 
   const handleLongPress = useCallback(
     async (location: { lng: number; lat: number }) => {
@@ -673,30 +715,44 @@ export function DrivingApp() {
   const locate = useCallback(async () => {
     setGpsStatus("locating");
     try {
-      const pose = await requestCurrentPosition();
-      setVehicle(pose);
+      const pose = await readDevicePosition();
       if (!followVehicle) {
         setFollowOrientation("heading-up");
         setFollowVehicle(true);
-      } else {
+      } else if (pose.source === "gps") {
         setFollowOrientation((current) =>
           current === "heading-up" ? "north-up" : "heading-up",
         );
         setFollowVehicle(true);
       }
-      setGpsStatus("active");
       setRefreshNonce((value) => value + 1);
-    } catch {
-      setGpsStatus("denied");
+    } catch (error) {
+      const code = geoErrorCode(error);
+      setGpsError(code);
+      setGpsStatus(code === "permission_denied" ? "denied" : "unavailable");
+      if (code === "permission_denied") setGpsPermission("denied");
     }
-  }, [followVehicle]);
+  }, [followVehicle, readDevicePosition]);
 
-  const startNavigation = useCallback(() => {
+  const startNavigation = useCallback(async () => {
+    let pose = vehicleRef.current;
+    if (pose.source !== "gps") {
+      try {
+        pose = await readDevicePosition();
+      } catch (error) {
+        const code = geoErrorCode(error);
+        setGpsError(code);
+        setGpsStatus(code === "permission_denied" ? "denied" : "unavailable");
+        if (code === "permission_denied") setGpsPermission("denied");
+        setRouteError(geoErrorMessage(code));
+        return;
+      }
+    }
     const next = routeProgressModel
       ? updateNavigationProgress({
           model: routeProgressModel,
           steps: routeSteps,
-          vehicle,
+          vehicle: pose,
           previous: null,
         })
       : null;
@@ -705,7 +761,7 @@ export function DrivingApp() {
     setDisplayVehicle(
       routeProgressModel
         ? snapVehicleToRoute({
-            raw: vehicle,
+            raw: pose,
             model: routeProgressModel,
             previousRouteMeters: next?.routeMeters,
           })
@@ -718,7 +774,7 @@ export function DrivingApp() {
     setSelectedEvent(null);
     setEventListKind(null);
     setIntelCollapse((value) => value + 1);
-  }, [routeProgressModel, routeSteps, vehicle]);
+  }, [readDevicePosition, routeProgressModel, routeSteps]);
 
   const exitNavigation = useCallback(() => {
     rerouteAbortRef.current?.abort();
@@ -1192,7 +1248,16 @@ export function DrivingApp() {
         </div>
       ) : null}
 
-      <footer className="absolute inset-x-0 bottom-0 z-10 flex flex-col items-center gap-2 px-2 pb-[max(0.45rem,env(safe-area-inset-bottom))] sm:p-4 sm:pt-0">
+      <div className="pointer-events-none absolute bottom-[5.75rem] left-2 z-20 sm:bottom-36 sm:left-3">
+        <GpsFixChip
+          vehicle={vehicle}
+          status={gpsStatus}
+          permission={gpsPermission}
+          error={gpsError}
+        />
+      </div>
+
+      <footer className="absolute inset-x-0 bottom-0 z-10 flex max-w-[100vw] flex-col items-center gap-2 overflow-x-hidden px-[max(0.35rem,env(safe-area-inset-left))] pr-[max(0.35rem,env(safe-area-inset-right))] pb-[max(0.45rem,env(safe-area-inset-bottom))] sm:p-4 sm:pt-0">
         {parkingOpen ? (
           <ParkingPanel
             lots={parkingLots}
