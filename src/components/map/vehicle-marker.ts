@@ -1,12 +1,12 @@
 /**
  * MapLibre Marker 使用 anchor=center、無 offset。
- * 根節點不做 translate；旋轉只走 marker.setRotation。
+ * 根節點不做 translate；旋轉只走箭頭節點，外圈保持正圓。
  */
 export function createVehicleMarkerElement(): HTMLDivElement {
   const root = document.createElement("div");
   root.className = "vehicle-marker";
   root.innerHTML = `
-    <div class="vehicle-marker__halo"></div>
+    <div class="vehicle-marker__ring" aria-hidden="true"></div>
     <div class="vehicle-marker__triangle" aria-hidden="true">
       <svg viewBox="0 0 24 28" width="32" height="38">
         <path d="M12 2 L22 25 L12 19 L2 25 Z" fill="#facc15" stroke="#fef08a" stroke-width="1.8" stroke-linejoin="round"/>
@@ -21,4 +21,10 @@ export function setVehicleMarkerNavigating(
   navigating: boolean,
 ) {
   element.classList.toggle("vehicle-marker--nav", navigating);
+}
+
+export function setVehicleMarkerHeading(element: HTMLElement, heading: number) {
+  const triangle = element.querySelector<HTMLElement>(".vehicle-marker__triangle");
+  if (!triangle) return;
+  triangle.style.transform = `rotate(${heading}deg)`;
 }
