@@ -8,9 +8,17 @@ import type {
   DisasterDataOrigin,
 } from "@/types/domain";
 
-async function fetchDisasterCatalog(force = false): Promise<DisasterCatalog> {
+const inflightKeys = new Set<string>();
+
+async function fetchDisasterCatalog(
+  force = false,
+  external?: AbortSignal,
+): Promise<DisasterCatalog> {
   const controller = new AbortController();
   const timer = window.setTimeout(() => controller.abort(), 12_000);
+  const onAbort = () => controller.abort();
+  if (external?.aborted) controller.abort();
+  else external?.addEventListener("abort", onAbort, { once: true });
   try {
     const response = await fetch(
       force ? "/api/disasters?fresh=1" : "/api/disasters",
@@ -31,6 +39,7 @@ async function fetchDisasterCatalog(force = false): Promise<DisasterCatalog> {
     };
   } finally {
     window.clearTimeout(timer);
+    external?.removeEventListener("abort", onAbort);
   }
 }
 
@@ -46,31 +55,52 @@ export function useDisasterView(refreshNonce: number) {
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    void fetchDisasterCatalog(refreshNonce > 0)
+    const requestKey = refreshNonce > 0 ? "disasters:fresh" : "disasters:live";
+    if (inflightKeys.has(requestKey)) return;
+    const controller = new AbortController();
+    inflightKeys.add(requestKey);
+    void fetchDisasterCatalog(refreshNonce > 0, controller.signal)
       .then((result) => {
-        if (!cancelled) applyCatalog(result);
+        if (controller.signal.aborted) return;
+        applyCatalog(result);
       })
       .catch(() => {
-        if (cancelled) return;
+        if (controller.signal.aborted) return;
         setAlerts([]);
         setOrigin("unavailable");
         setError("資料暫時無法取得");
+      })
+      .finally(() => {
+        inflightKeys.delete(requestKey);
       });
     return () => {
-      cancelled = true;
+      controller.abort();
+      inflightKeys.delete(requestKey);
     };
   }, [applyCatalog, refreshNonce]);
 
   useEffect(() => {
+    const controller = new AbortController();
     const timer = window.setInterval(() => {
-      void fetchDisasterCatalog(false)
-        .then(applyCatalog)
+      if (inflightKeys.has("disasters:live")) return;
+      inflightKeys.add("disasters:live");
+      void fetchDisasterCatalog(false, controller.signal)
+        .then((result) => {
+          if (!controller.signal.aborted) applyCatalog(result);
+        })
         .catch(() => {
-          setError("即時災害示警更新失敗，仍顯示上次資料。");
+          if (!controller.signal.aborted) {
+            setError("即時災害示警更新失敗，仍顯示上次資料。");
+          }
+        })
+        .finally(() => {
+          inflightKeys.delete("disasters:live");
         });
     }, DISASTER_LIVE_CACHE_MS);
-    return () => window.clearInterval(timer);
+    return () => {
+      window.clearInterval(timer);
+      controller.abort();
+    };
   }, [applyCatalog]);
 
   const reload = useCallback(() => {

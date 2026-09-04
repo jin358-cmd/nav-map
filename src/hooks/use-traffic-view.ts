@@ -28,9 +28,17 @@ function quantizeZoom(zoom: number) {
     CITY_TRAFFIC_ZOOM_REFRESH_DELTA;
 }
 
-async function fetchTrafficCatalog(force = false): Promise<TrafficCatalog> {
+const inflightKeys = new Set<string>();
+
+async function fetchTrafficCatalog(
+  force = false,
+  external?: AbortSignal,
+): Promise<TrafficCatalog> {
   const controller = new AbortController();
   const timer = window.setTimeout(() => controller.abort(), 12_000);
+  const onAbort = () => controller.abort();
+  if (external?.aborted) controller.abort();
+  else external?.addEventListener("abort", onAbort, { once: true });
   try {
     const response = await fetch(
       force ? "/api/traffic?fresh=1" : "/api/traffic",
@@ -51,6 +59,7 @@ async function fetchTrafficCatalog(force = false): Promise<TrafficCatalog> {
     };
   } finally {
     window.clearTimeout(timer);
+    external?.removeEventListener("abort", onAbort);
   }
 }
 
@@ -93,31 +102,52 @@ export function useTrafficView({
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    void fetchTrafficCatalog(refreshNonce > 0)
+    const requestKey = refreshNonce > 0 ? "traffic:fresh" : "traffic:live";
+    if (inflightKeys.has(requestKey)) return;
+    const controller = new AbortController();
+    inflightKeys.add(requestKey);
+    void fetchTrafficCatalog(refreshNonce > 0, controller.signal)
       .then((result) => {
-        if (!cancelled) applyCatalog(result);
+        if (controller.signal.aborted) return;
+        applyCatalog(result);
       })
       .catch(() => {
-        if (cancelled) return;
+        if (controller.signal.aborted) return;
         setCatalog([]);
         setOrigin("unavailable");
         setError("資料暫時無法取得");
+      })
+      .finally(() => {
+        inflightKeys.delete(requestKey);
       });
     return () => {
-      cancelled = true;
+      controller.abort();
+      inflightKeys.delete(requestKey);
     };
   }, [applyCatalog, refreshNonce]);
 
   useEffect(() => {
+    const controller = new AbortController();
     const timer = window.setInterval(() => {
-      void fetchTrafficCatalog(false)
-        .then(applyCatalog)
+      if (inflightKeys.has("traffic:live")) return;
+      inflightKeys.add("traffic:live");
+      void fetchTrafficCatalog(false, controller.signal)
+        .then((result) => {
+          if (!controller.signal.aborted) applyCatalog(result);
+        })
         .catch(() => {
-          setError("即時路況更新失敗，仍顯示上次資料。");
+          if (!controller.signal.aborted) {
+            setError("即時路況更新失敗，仍顯示上次資料。");
+          }
+        })
+        .finally(() => {
+          inflightKeys.delete("traffic:live");
         });
     }, TRAFFIC_LIVE_CACHE_MS);
-    return () => window.clearInterval(timer);
+    return () => {
+      window.clearInterval(timer);
+      controller.abort();
+    };
   }, [applyCatalog]);
 
   const scored = useMemo(

@@ -296,9 +296,15 @@ export function requestCurrentPosition(): Promise<VehiclePose> {
           denied = true;
           emitStatus("denied");
           emitPermission("denied");
-        } else if (!lastFix) {
-          emitStatus("unavailable");
+          reject(error);
+          return;
         }
+        if (lastFix?.source === "gps") {
+          emitStatus("active");
+          resolve(lastFix);
+          return;
+        }
+        emitStatus("unavailable");
         reject(error);
       },
       ONCE_OPTIONS,

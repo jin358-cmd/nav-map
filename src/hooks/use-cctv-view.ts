@@ -60,22 +60,22 @@ export function useCctvView({
   const heading = quantizeHeading(headingDegrees);
 
   useEffect(() => {
-    let cancelled = false;
+    const controller = new AbortController();
     void fetchCctvCatalog(refreshNonce > 0)
       .then((result) => {
-        if (cancelled) return;
+        if (controller.signal.aborted) return;
         setCatalog(result.cameras);
         setOrigin(result.origin);
         setError(null);
       })
       .catch(() => {
-        if (cancelled) return;
+        if (controller.signal.aborted) return;
         setCatalog([]);
         setOrigin("unavailable");
         setError("資料暫時無法取得");
       });
     return () => {
-      cancelled = true;
+      controller.abort();
     };
   }, [refreshNonce]);
 

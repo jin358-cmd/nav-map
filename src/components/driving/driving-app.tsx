@@ -661,25 +661,21 @@ export function DrivingApp() {
       } catch (error) {
         const code = geoErrorCode(error);
         setGpsError(code);
-        setGpsStatus(code === "permission_denied" ? "denied" : "unavailable");
-        if (code === "permission_denied") setGpsPermission("denied");
+        if (code === "permission_denied") {
+          setGpsStatus("denied");
+          setGpsPermission("denied");
+        } else if (origin) {
+          setGpsStatus("active");
+        } else {
+          setGpsStatus("unavailable");
+        }
         if (!origin) {
-          const center = viewportRef.current?.center;
-          if (
-            center &&
-            Number.isFinite(center.lng) &&
-            Number.isFinite(center.lat)
-          ) {
-            origin = {
-              lng: center.lng,
-              lat: center.lat,
-              heading: 0,
-              source: "demo",
-            };
-          } else {
-            setRouteError(geoErrorMessage(code));
-            return;
-          }
+          setRouteError(
+            code === "permission_denied"
+              ? geoErrorMessage(code)
+              : "尚未取得真實定位，無法規劃路線。請先允許位置存取。",
+          );
+          return;
         }
       }
       const plan = await planDrivingRoute(
@@ -769,8 +765,16 @@ export function DrivingApp() {
     } catch (error) {
       const code = geoErrorCode(error);
       setGpsError(code);
-      setGpsStatus(code === "permission_denied" ? "denied" : "unavailable");
-      if (code === "permission_denied") setGpsPermission("denied");
+      if (code === "permission_denied") {
+        setGpsStatus("denied");
+        setGpsPermission("denied");
+        return;
+      }
+      if (vehicleRef.current.source === "gps") {
+        setGpsStatus("active");
+        return;
+      }
+      setGpsStatus("unavailable");
     }
   }, [followVehicle, readDevicePosition]);
 
