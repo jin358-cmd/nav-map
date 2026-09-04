@@ -15,7 +15,7 @@ const nextConfig: NextConfig = {
       {
         source: "/:path*",
         headers: [
-          { key: "Permissions-Policy", value: "geolocation=(self)" },
+          { key: "Permissions-Policy", value: "geolocation=(self), microphone=(self)" },
         ],
       },
     ];

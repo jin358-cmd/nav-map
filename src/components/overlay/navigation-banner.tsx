@@ -79,7 +79,7 @@ export const NextIntersectionHud = forwardRef<
     <div
       ref={ref}
       className={cn(
-        "navigation-instruction-card pointer-events-auto shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl",
+        "navigation-instruction-card pointer-events-auto w-full min-w-0 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl",
         junctionFocus
           ? "navigation-instruction-card--junction border border-amber-700/40 text-[#1a1400]"
           : "border border-cyan-300/25 bg-black/78 text-white",
@@ -95,35 +95,17 @@ export const NextIntersectionHud = forwardRef<
           <TurnGlyph step={step} junction={junctionFocus} />
         </div>
         <div className="min-w-0 text-left">
-          <p
-            className={cn(
-              "navigation-next-label tracking-wide",
-              junctionFocus ? "text-[#3a2a00]" : "text-cyan-200/90",
-            )}
-          >
-            {junctionFocus ? "即將轉向" : "下一個路口"}
-          </p>
-          <p className="navigation-distance truncate tabular-nums tracking-tight">
-            {formatDistance(distanceMeters)}
-          </p>
-          <p
-            className={cn(
-              "navigation-street-name font-medium",
-              junctionFocus ? "text-[#1a1400]" : "text-white",
-            )}
-          >
+          <p className="navigation-guidance truncate tabular-nums tracking-tight">
             {shortGuidance(step, distanceMeters)}
           </p>
-          {step?.roadName ? (
-            <p
-              className={cn(
-                "navigation-road-name truncate",
-                junctionFocus ? "text-[#3a2a00]" : "text-zinc-300",
-              )}
-            >
-              {step.roadName}
-            </p>
-          ) : null}
+          <p
+            className={cn(
+              "navigation-road-name truncate",
+              junctionFocus ? "text-[#3a2a00]" : "text-zinc-300",
+            )}
+          >
+            {step?.roadName || (step?.type === "arrive" ? "目的地" : "沿目前道路")}
+          </p>
           {rerouting ? (
             <p
               className={cn(

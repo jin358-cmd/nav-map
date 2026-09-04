@@ -59,6 +59,7 @@ import {
 } from "@/lib/favorites";
 import { pinSelected } from "@/lib/map-visibility";
 import { resolveMapQueryOrigin } from "@/lib/map-query-origin";
+import { pickActiveRouteAlert } from "@/lib/route-events";
 import { destinationToHit } from "@/lib/poi-search";
 import { CITY_TRAFFIC_FOCUS_KM } from "@/lib/traffic-constants";
 import {
@@ -242,7 +243,6 @@ export function DrivingApp() {
   const [selectedCctv, setSelectedCctv] = useState<CctvCamera | null>(null);
   const demoEnabled = isDemoDataEnabled();
   const [navigating, setNavigating] = useState(false);
-  const [intelCollapse, setIntelCollapse] = useState(0);
   const [musicMode, setMusicMode] = useState<"off" | "open" | "mini">("off");
   const [favoritesOpen, setFavoritesOpen] = useState(false);
   const favorites = useSyncExternalStore(
@@ -290,6 +290,7 @@ export function DrivingApp() {
   const lastViewportCenterRef = useRef<{ lng: number; lat: number } | null>(
     null,
   );
+  const viewportRef = useRef(viewport);
 
   const routeProgressModel = useMemo(
     () => createRouteProgressModel(route, routeSteps),
@@ -317,7 +318,8 @@ export function DrivingApp() {
     };
     destinationRef.current = destination;
     vehicleRef.current = vehicle;
-  }, [destination, navigating, routeProgressModel, routeSteps, vehicle]);
+    viewportRef.current = viewport;
+  }, [destination, navigating, routeProgressModel, routeSteps, vehicle, viewport]);
 
   const fallbackStep = useMemo(
     () => nextIntersectionStep(routeSteps),
@@ -662,8 +664,22 @@ export function DrivingApp() {
         setGpsStatus(code === "permission_denied" ? "denied" : "unavailable");
         if (code === "permission_denied") setGpsPermission("denied");
         if (!origin) {
-          setRouteError(geoErrorMessage(code));
-          return;
+          const center = viewportRef.current?.center;
+          if (
+            center &&
+            Number.isFinite(center.lng) &&
+            Number.isFinite(center.lat)
+          ) {
+            origin = {
+              lng: center.lng,
+              lat: center.lat,
+              heading: 0,
+              source: "demo",
+            };
+          } else {
+            setRouteError(geoErrorMessage(code));
+            return;
+          }
         }
       }
       const plan = await planDrivingRoute(
@@ -714,13 +730,8 @@ export function DrivingApp() {
     setSelectedEvent(null);
     setEventListKind(null);
     setMusicMode((mode) => (mode === "open" ? "mini" : mode));
-    if (currentPlace && !isFavorite(currentPlace)) {
-      addFavorite(currentPlace);
-      setFavoritesOpen(true);
-      return;
-    }
     setFavoritesOpen((open) => !open);
-  }, [currentPlace]);
+  }, []);
 
   const clearRoute = useCallback(() => {
     setDestination(null);
@@ -804,7 +815,6 @@ export function DrivingApp() {
     setSelectedCctv(null);
     setSelectedEvent(null);
     setEventListKind(null);
-    setIntelCollapse((value) => value + 1);
   }, [readDevicePosition, routeProgressModel, routeSteps]);
 
   const exitNavigation = useCallback(() => {
@@ -897,6 +907,31 @@ export function DrivingApp() {
     void rerouteFromHere();
   }, [navigating, navigationProgress?.offRoute, rerouteFromHere]);
 
+  const routeAlert = useMemo(
+    () =>
+      navigating
+        ? pickActiveRouteAlert({
+            model: routeProgressModel,
+            routeMeters: navigationProgress?.routeMeters ?? 0,
+            accidents,
+            constructions,
+            disasters,
+            traffic: trafficScored,
+          })
+        : null,
+    [
+      accidents,
+      constructions,
+      disasters,
+      navigating,
+      navigationProgress?.routeMeters,
+      routeProgressModel,
+      trafficScored,
+    ],
+  );
+
+  const hasRouteAlert = Boolean(routeAlert);
+
   useEffect(() => {
     if (!navigating) return;
     const el = navCardRef.current;
@@ -907,7 +942,7 @@ export function DrivingApp() {
         top: Math.max(90, Math.round(rect.height + 24)),
         left: Math.max(24, Math.round(rect.width + 24)),
         right: 88,
-        bottom: 130,
+        bottom: hasRouteAlert ? 148 : 96,
       });
     };
     update();
@@ -920,7 +955,7 @@ export function DrivingApp() {
       window.removeEventListener("resize", update);
       window.removeEventListener("orientationchange", update);
     };
-  }, [landscape, navigating]);
+  }, [hasRouteAlert, landscape, navigating]);
 
   const intelByKind = useMemo(() => {
     const groups: Record<RoadIntelKind, RoadIntelItem[]> = {
@@ -1184,7 +1219,7 @@ export function DrivingApp() {
 
       {destination && navigating ? (
         <>
-          <div className="absolute top-[calc(env(safe-area-inset-top,0px)+12px)] left-[calc(env(safe-area-inset-left,0px)+12px)] z-30">
+          <div className="absolute top-[max(0.45rem,env(safe-area-inset-top))] left-[max(0.5rem,env(safe-area-inset-left))] right-[max(3.75rem,calc(env(safe-area-inset-right)+3.25rem))] z-30 min-w-0">
             <NextIntersectionHud
               ref={navCardRef}
               step={activeNavigationStep}
@@ -1209,13 +1244,7 @@ export function DrivingApp() {
           </Button>
         </>
       ) : (
-        <div
-          className={
-            destination
-              ? "absolute top-[max(0.5rem,env(safe-area-inset-top))] right-3 left-3 z-20 sm:right-24"
-              : "absolute top-[max(0.5rem,env(safe-area-inset-top))] right-[4.4rem] left-3 z-20 sm:right-24"
-          }
-        >
+        <div className="pointer-events-auto absolute top-[max(0.45rem,env(safe-area-inset-top))] left-[max(0.5rem,env(safe-area-inset-left))] right-[max(0.5rem,env(safe-area-inset-right))] z-20 min-w-0 max-w-full sm:right-[max(5.5rem,calc(env(safe-area-inset-right)+4.75rem))]">
           {destination ? (
             <RouteConfirmBar
               destination={destination}
@@ -1294,10 +1323,11 @@ export function DrivingApp() {
           status={gpsStatus}
           permission={gpsPermission}
           error={gpsError}
+          onRetry={() => void locate()}
         />
       </div>
 
-      <footer className="absolute inset-x-0 bottom-0 z-10 flex max-w-[100vw] flex-col items-center gap-2 overflow-x-hidden px-[max(0.35rem,env(safe-area-inset-left))] pr-[max(0.35rem,env(safe-area-inset-right))] pb-[max(0.45rem,env(safe-area-inset-bottom))] sm:p-4 sm:pt-0">
+      <footer className="absolute inset-x-0 bottom-0 z-10 flex max-w-[100vw] flex-col items-center gap-1.5 overflow-visible px-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))] pb-[max(0.45rem,env(safe-area-inset-bottom))] sm:p-4 sm:pt-0">
         {parkingOpen ? (
           <ParkingPanel
             lots={parkingLots}
@@ -1384,7 +1414,6 @@ export function DrivingApp() {
           />
         ) : null}
         <RoadInformationCard
-          key={intelCollapse}
           items={intel}
           origin={origin}
           trafficOrigin={trafficOrigin}
@@ -1399,6 +1428,8 @@ export function DrivingApp() {
           favoritesOpen={favoritesOpen}
           canFavorite={Boolean(currentPlace)}
           isCurrentFavorite={isCurrentFavorite}
+          routeAlert={routeAlert}
+          compact
           onHeartClick={handleHeartClick}
           onAddFavorite={() => {
             if (currentPlace) addFavorite(currentPlace);
@@ -1426,7 +1457,6 @@ export function DrivingApp() {
             setFavoritesOpen(false);
             setSelectedCctv(null);
             setSelectedEvent(null);
-            setIntelCollapse((value) => value + 1);
             setMusicMode((mode) => {
               if (mode === "off") return "open";
               if (mode === "open") return "mini";

@@ -32,7 +32,10 @@ export function MapStyleMenu({
         aria-label="地圖顯示模式"
         title="地圖顯示模式"
         onClick={onToggle}
-        className="size-12 rounded-2xl border-zinc-500/55 bg-zinc-800/92 text-zinc-100 shadow-lg backdrop-blur-md hover:bg-zinc-700"
+        className={cn(
+          "size-12 rounded-2xl border-zinc-500/55 bg-zinc-800/92 text-zinc-100 shadow-lg backdrop-blur-md hover:bg-zinc-700 disabled:border-zinc-700 disabled:bg-zinc-900/80 disabled:text-zinc-500",
+          open && "border-cyan-300/80 bg-zinc-700 text-cyan-200",
+        )}
       >
         <Layers className="size-5" />
       </Button>
@@ -46,8 +49,8 @@ export function MapStyleMenu({
               className={cn(
                 "h-9 min-w-16 rounded-xl px-3 text-left text-sm",
                 mode === option.id
-                  ? "bg-cyan-400/20 text-cyan-100"
-                  : "text-zinc-200 hover:bg-white/8",
+                  ? "bg-zinc-700 text-cyan-200 ring-1 ring-cyan-300/70"
+                  : "bg-zinc-800/80 text-zinc-200 hover:bg-zinc-700",
               )}
             >
               {option.label}

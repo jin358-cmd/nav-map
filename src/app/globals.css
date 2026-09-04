@@ -121,11 +121,11 @@
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground;
-  }
   html {
-    @apply font-sans;
+    @apply max-w-full overflow-x-hidden font-sans;
+  }
+  body {
+    @apply max-w-full overflow-x-hidden bg-background text-foreground;
   }
 }
 
@@ -358,11 +358,11 @@
 
 .navigation-instruction-card {
   position: relative;
-  width: min(520px, 40vw);
-  max-width: calc(100vw - 96px);
-  max-height: min(320px, 38vh);
-  padding: 18px 20px;
-  border-radius: 24px;
+  width: min(520px, 42vw);
+  max-width: calc(100vw - 5.5rem);
+  max-height: min(220px, 32vh);
+  padding: 14px 16px;
+  border-radius: 22px;
   overflow: hidden;
 }
 
@@ -373,42 +373,28 @@
 
 .navigation-instruction-content {
   display: grid;
-  grid-template-columns: 90px minmax(0, 1fr) 44px;
+  grid-template-columns: 64px minmax(0, 1fr) 40px;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
 }
 
 .navigation-turn-icon {
-  width: 90px;
-  height: 90px;
+  width: 64px;
+  height: 64px;
 }
 
-.navigation-distance {
-  font-size: clamp(40px, 5vw, 64px);
-  line-height: 1;
+.navigation-guidance {
+  font-size: clamp(18px, 4.6vw, 28px);
+  line-height: 1.15;
   font-weight: 800;
 }
 
-.navigation-instruction-card--junction .navigation-distance {
-  font-size: clamp(46px, 6vw, 72px);
+.navigation-instruction-card--junction .navigation-guidance {
   color: #111;
 }
 
-.navigation-next-label {
-  font-size: clamp(16px, 1.8vw, 24px);
-  line-height: 1.2;
-}
-
-.navigation-street-name {
-  font-size: clamp(16px, 1.8vw, 24px);
-  line-height: 1.25;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 .navigation-road-name {
-  font-size: clamp(13px, 1.4vw, 18px);
+  font-size: clamp(13px, 3.2vw, 16px);
   line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
@@ -416,55 +402,45 @@
 }
 
 .navigation-audio-button {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
 }
 
 @media (orientation: portrait) {
   .navigation-instruction-card {
-    width: min(400px, calc(100vw - 1.5rem));
-    max-width: calc(100vw - 1.5rem);
-    max-height: 260px;
-    padding: 15px 16px;
-    border-radius: 20px;
+    width: 100%;
+    max-width: 100%;
+    max-height: 168px;
+    padding: 12px 12px;
+    border-radius: 18px;
   }
 
   .navigation-instruction-content {
-    grid-template-columns: 70px minmax(0, 1fr) 40px;
-    gap: 12px;
+    grid-template-columns: 52px minmax(0, 1fr) 36px;
+    gap: 8px;
   }
 
   .navigation-turn-icon {
-    width: 70px;
-    height: 70px;
+    width: 52px;
+    height: 52px;
   }
 
-  .navigation-distance {
-    font-size: clamp(36px, 8vw, 50px);
-  }
-
-  .navigation-next-label {
-    font-size: clamp(15px, 3.8vw, 20px);
-  }
-
-  .navigation-street-name {
-    font-size: clamp(15px, 3.6vw, 20px);
+  .navigation-guidance {
+    font-size: clamp(16px, 4.8vw, 22px);
   }
 
   .navigation-road-name {
-    font-size: clamp(12px, 3.2vw, 15px);
+    font-size: clamp(12px, 3.3vw, 14px);
   }
 
   .navigation-audio-button {
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
   }
 }
 
 @media (max-width: 390px) {
   .navigation-instruction-card {
-    width: min(340px, calc(100vw - 1.25rem));
-    max-width: calc(100vw - 1.25rem);
-    padding: 12px 14px;
+    padding: 10px 10px;
   }
 }

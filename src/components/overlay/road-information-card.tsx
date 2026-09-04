@@ -31,6 +31,7 @@ import type {
   RoadIntelKind,
   TrafficDataOrigin,
 } from "@/types/domain";
+import type { RouteAlert } from "@/lib/route-events";
 
 const KIND_ORDER: RoadIntelKind[] = [
   "congestion",
@@ -92,6 +93,8 @@ export function RoadInformationCard({
   favoritesOpen = false,
   canFavorite = false,
   isCurrentFavorite = false,
+  routeAlert = null,
+  compact = true,
   onHeartClick,
   onAddFavorite,
   onCloseFavorites,
@@ -126,6 +129,8 @@ export function RoadInformationCard({
   onCloseFavorites?: () => void;
   onSelectFavorite?: (hit: GeocodeHit) => void;
   onRemoveFavorite?: (hit: GeocodeHit) => void;
+  routeAlert?: RouteAlert | null;
+  compact?: boolean;
   account?: GoogleAccount | null;
   accountBusy?: boolean;
   accountHint?: string | null;
@@ -162,7 +167,16 @@ export function RoadInformationCard({
         </div>
       ) : null}
 
-      <div className="inline-flex w-full max-w-[min(36rem,calc(100vw-env(safe-area-inset-left)-env(safe-area-inset-right)-0.75rem))] items-center justify-center gap-1 rounded-full border border-white/10 bg-black/55 px-1 py-1 shadow-[0_10px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl min-[431px]:w-fit min-[431px]:gap-1.5 min-[431px]:px-1.5">
+      {routeAlert ? (
+        <div className="mb-1.5 w-[min(22rem,calc(100vw-1.25rem))] rounded-2xl border border-amber-300/30 bg-zinc-900/90 px-3 py-2 text-left shadow-[0_10px_28px_rgba(0,0,0,0.45)]">
+          <p className="truncate text-sm font-semibold text-amber-100">
+            {routeAlert.emoji} {routeAlert.headline}
+          </p>
+          <p className="truncate text-[11px] text-zinc-400">{routeAlert.detail}</p>
+        </div>
+      ) : null}
+
+      <div className="inline-flex w-full max-w-[min(36rem,calc(100vw-env(safe-area-inset-left)-env(safe-area-inset-right)-0.75rem))] items-center justify-center gap-1 rounded-full border border-zinc-500/40 bg-zinc-900/88 px-1 py-1 shadow-[0_10px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl min-[431px]:w-fit min-[431px]:gap-1.5 min-[431px]:px-1.5">
         <div className="flex min-w-0 items-center gap-1 min-[431px]:gap-1.5">
           {groups.map((group) => {
             const meta = KIND_META[group.kind];
@@ -232,9 +246,11 @@ export function RoadInformationCard({
           />
         </div>
       </div>
-      <p className="mt-1 max-w-[min(36rem,calc(100vw-0.75rem))] truncate text-center text-[10px] text-zinc-500">
-        CCTV {cctvOriginLabel(origin)} · 路況 {trafficOriginLabel(trafficOrigin)} · 災害 {disasterOriginLabel(disasterOrigin)}
-      </p>
+      {!compact ? (
+        <p className="mt-1 max-w-[min(36rem,calc(100vw-0.75rem))] truncate text-center text-[10px] text-zinc-500">
+          CCTV {cctvOriginLabel(origin)} · 路況 {trafficOriginLabel(trafficOrigin)} · 災害 {disasterOriginLabel(disasterOrigin)}
+        </p>
+      ) : null}
     </section>
   );
 }
@@ -251,9 +267,9 @@ function FavoriteHeartButton({
   return (
     <button
       type="button"
-      aria-label={pressed ? "最愛書籤" : "加入最愛"}
+      aria-label="最愛書籤"
       aria-pressed={pressed}
-      title="加入最愛"
+      title="最愛書籤"
       onClick={onToggle}
       className={cn(
         "relative flex size-9 items-center justify-center rounded-full border touch-manipulation min-[431px]:size-10",

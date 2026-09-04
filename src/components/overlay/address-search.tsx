@@ -55,6 +55,7 @@ export function AddressSearch({
   const [query, setQuery] = useState("");
   const [composing, setComposing] = useState(false);
   const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
   const history = useSyncExternalStore(
     subscribeAddressHistory,
     getAddressHistorySnapshot,
@@ -126,6 +127,27 @@ export function AddressSearch({
   }, [speech.stop]);
 
   useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: PointerEvent) => {
+      const root = rootRef.current;
+      if (!root || root.contains(event.target as Node)) return;
+      speechStopRef.current();
+      setOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      speechStopRef.current();
+      setOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown, true);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown, true);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  useEffect(() => {
     if (!pendingVoiceSubmitRef.current || composing) return;
     pendingVoiceSubmitRef.current = false;
     runFormalSearch(false);
@@ -151,9 +173,13 @@ export function AddressSearch({
       : null;
 
   return (
-    <div className="pointer-events-auto w-full max-w-xl">
+    <div
+      ref={rootRef}
+      className="pointer-events-auto w-full min-w-0 max-w-full"
+    >
       <div className="rounded-2xl border border-white/12 bg-black/60 shadow-[0_10px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl">
-        <div className="flex items-center gap-2 px-2.5 py-2">
+        <div className="flex min-w-0 items-center gap-1 px-2 py-2 sm:gap-2 sm:px-2.5">
+          <Search className="ml-1 size-4 shrink-0 text-zinc-400" aria-hidden />
           <Input
             value={query}
             onChange={(event) => {
@@ -175,7 +201,7 @@ export function AddressSearch({
             }}
             placeholder={speech.listening ? "正在聽…請說出目的地" : "地址、店家、公司、品牌或縮寫"}
             aria-label="目的地搜尋"
-            className="h-10 border-0 bg-transparent px-1 text-sm text-white shadow-none placeholder:text-zinc-500 focus-visible:ring-0"
+            className="h-10 min-w-0 flex-1 border-0 bg-transparent px-1 text-sm text-white shadow-none placeholder:text-zinc-500 focus-visible:ring-0"
           />
           <Button
             type="button"
@@ -229,7 +255,7 @@ export function AddressSearch({
       </div>
 
       {open ? (
-        <div className="mt-1.5 overflow-hidden rounded-2xl border border-white/10 bg-black/78 shadow-xl backdrop-blur-xl">
+        <div className="mt-1.5 max-h-[min(62dvh,calc(100dvh-8rem))] overflow-x-hidden overflow-y-auto rounded-2xl border border-white/10 bg-black/78 shadow-xl backdrop-blur-xl">
           <p className="px-3 pt-2 text-[11px] text-zinc-500">
             {speech.listening
               ? "正在聽取語音…說完後會查門牌與地圖"

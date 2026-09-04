@@ -1,12 +1,19 @@
 import type { GeocodeHit } from "@/types/domain";
 
 const STORAGE_KEY = "navpilot.favorites.v1";
+const LEGACY_STORAGE_KEYS = [
+  "smart-road-taiwan.favorites.v1",
+  "navpilot.favorites",
+  "navpilot.bookmarks.v1",
+  "smart-road-taiwan.bookmarks.v1",
+];
 const CHANGE_EVENT = "navpilot-favorites";
 const MAX_ITEMS = 16;
 const EMPTY: GeocodeHit[] = [];
 
 let cachedRaw: string | null | undefined;
 let cached = EMPTY;
+let legacyHydrated = false;
 
 function isGeocodeHit(value: unknown): value is GeocodeHit {
   if (!value || typeof value !== "object") return false;
@@ -36,6 +43,37 @@ function readStored(raw: string | null) {
   }
 }
 
+function readLegacyHits() {
+  const hits: GeocodeHit[] = [];
+  for (const key of LEGACY_STORAGE_KEYS) {
+    try {
+      hits.push(...readStored(window.localStorage.getItem(key)));
+    } catch {
+      /* 舊 key 讀取失敗時保留現有資料 */
+    }
+  }
+  return hits;
+}
+
+function hydrateLegacyFavorites(current: GeocodeHit[]) {
+  if (legacyHydrated || typeof window === "undefined") return current;
+  legacyHydrated = true;
+  const merged = new Map<string, GeocodeHit>();
+  for (const item of [...current, ...readLegacyHits()]) {
+    const key = placeKey(item);
+    if (!merged.has(key)) merged.set(key, item);
+  }
+  const next = [...merged.values()].slice(0, MAX_ITEMS);
+  if (next.length === current.length) return current;
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  } catch {
+    return next;
+  }
+  cachedRaw = undefined;
+  return next;
+}
+
 export function getFavoritesSnapshot() {
   if (typeof window === "undefined") return EMPTY;
   let raw: string | null;
@@ -44,9 +82,9 @@ export function getFavoritesSnapshot() {
   } catch {
     return EMPTY;
   }
-  if (raw === cachedRaw) return cached;
+  if (raw === cachedRaw && legacyHydrated) return cached;
   cachedRaw = raw;
-  cached = readStored(raw);
+  cached = hydrateLegacyFavorites(readStored(raw));
   return cached;
 }
 

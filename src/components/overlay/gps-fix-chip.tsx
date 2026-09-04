@@ -25,11 +25,13 @@ export function GpsFixChip({
   status,
   permission,
   error,
+  onRetry,
 }: {
   vehicle: VehiclePose;
   status: GpsStatus;
   permission: GpsPermissionState;
   error: GpsErrorCode;
+  onRetry?: () => void;
 }) {
   const live = vehicle.source === "gps";
   const accuracy =
@@ -40,17 +42,32 @@ export function GpsFixChip({
     status === "locating"
       ? "定位中…"
       : status === "denied"
-        ? "定位權限被拒"
+        ? "定位權限被拒，點此或右上定位鍵再試"
         : status === "unavailable" && error
           ? geoErrorMessage(error)
           : live
             ? `精度 ${accuracy}`
-            : "尚未取得 GPS";
+            : "點右上定位鍵開啟真實 GPS";
+  const retryable = Boolean(onRetry) && !live;
 
   return (
     <div
+      role={retryable ? "button" : undefined}
+      tabIndex={retryable ? 0 : undefined}
+      onClick={retryable ? onRetry : undefined}
+      onKeyDown={
+        retryable
+          ? (event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                onRetry?.();
+              }
+            }
+          : undefined
+      }
       className={cn(
-        "pointer-events-none max-w-[min(18rem,calc(100vw-5.5rem))] rounded-xl border px-2 py-1.5 text-[10px] leading-tight shadow-lg backdrop-blur-md",
+        "max-w-[min(18rem,calc(100vw-5.5rem))] rounded-xl border px-2 py-1.5 text-[10px] leading-tight shadow-lg backdrop-blur-md",
+        retryable ? "pointer-events-auto cursor-pointer" : "pointer-events-none",
         live
           ? "border-emerald-400/25 bg-zinc-900/78 text-emerald-100"
           : "border-white/12 bg-zinc-900/78 text-zinc-200",
