@@ -59,13 +59,12 @@ import {
 } from "@/lib/favorites";
 import { pinSelected } from "@/lib/map-visibility";
 import { resolveMapQueryOrigin } from "@/lib/map-query-origin";
+import { deriveJunctionFocus } from "@/lib/junction-focus";
 import { pickActiveRouteAlert } from "@/lib/route-events";
 import { destinationToHit } from "@/lib/poi-search";
 import { CITY_TRAFFIC_FOCUS_KM } from "@/lib/traffic-constants";
 import {
   DEMO_VEHICLE,
-  JUNCTION_FOCUS_ENTER_METERS,
-  JUNCTION_FOCUS_EXIT_METERS,
   YOUTUBE_PLAYLISTS,
 } from "@/lib/constants";
 import { distanceKm } from "@/lib/geo";
@@ -93,6 +92,7 @@ import {
 } from "@/lib/saved-places";
 import { deriveTrafficIntel } from "@/lib/traffic-intel";
 import { GpsFixChip } from "@/components/overlay/gps-fix-chip";
+import { TripStatusCluster } from "@/components/overlay/trip-status-cluster";
 import {
   fetchAccidentReports,
   planDrivingRoute,
@@ -245,6 +245,7 @@ export function DrivingApp() {
   const [navigating, setNavigating] = useState(false);
   const [musicMode, setMusicMode] = useState<"off" | "open" | "mini">("off");
   const [favoritesOpen, setFavoritesOpen] = useState(false);
+  const [toolsDrawerOpen, setToolsDrawerOpen] = useState<boolean | null>(null);
   const favorites = useSyncExternalStore(
     subscribeFavorites,
     getFavoritesSnapshot,
@@ -259,6 +260,7 @@ export function DrivingApp() {
   const workPlace = savedPlaces.find((place) => place.type === "work") ?? null;
   const trafficFocus5km = true;
   const landscape = useLandscape();
+  const drawerOpen = toolsDrawerOpen ?? !landscape;
   const navCardRef = useRef<HTMLDivElement>(null);
   const [overlayPadding, setOverlayPadding] = useState({
     top: 90,
@@ -274,7 +276,6 @@ export function DrivingApp() {
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [rerouting, setRerouting] = useState(false);
   const [reroutePending, setReroutePending] = useState(false);
-  const [junctionFocus, setJunctionFocus] = useState(false);
   const [navigationProgress, setNavigationProgress] =
     useState<NavigationProgress | null>(null);
   const navigationTrackerRef = useRef<NavigationTrackerState | null>(null);
@@ -333,14 +334,10 @@ export function DrivingApp() {
     : activeNavigationStep?.cueMeters && activeNavigationStep.cueMeters > 0
       ? activeNavigationStep.cueMeters
       : (maneuver?.distanceMeters ?? activeNavigationStep?.distanceMeters ?? 0);
-  const nextJunctionFocus = navigating
-    ? junctionFocus
-      ? distanceToNextMeters <= JUNCTION_FOCUS_EXIT_METERS
-      : distanceToNextMeters <= JUNCTION_FOCUS_ENTER_METERS
-    : false;
-  if (nextJunctionFocus !== junctionFocus) {
-    setJunctionFocus(nextJunctionFocus);
-  }
+  const nextJunctionFocus = deriveJunctionFocus(
+    navigating,
+    distanceToNextMeters,
+  );
   const approachingIntersection = navigating && nextJunctionFocus;
 
   useNavigationVoice({
@@ -1301,9 +1298,13 @@ export function DrivingApp() {
           gpsStatus={gpsStatus}
           mapDisplayMode={mapDisplayMode}
           styleMenuOpen={styleMenuOpen}
+          toolsDrawerOpen={drawerOpen}
           onLocate={() => void locate()}
           onToggleCamera={() =>
             setCameraMode((mode) => (mode === "3d" ? "2d" : "3d"))
+          }
+          onToggleToolsDrawer={() =>
+            setToolsDrawerOpen((open) => !(open ?? !landscape))
           }
           onMapDisplayMode={(mode) => {
             writeMapDisplayMode(mode);
@@ -1321,14 +1322,52 @@ export function DrivingApp() {
         </div>
       ) : null}
 
-      <div className="pointer-events-none absolute bottom-[5.75rem] left-2 z-20 sm:bottom-36 sm:left-3">
-        <GpsFixChip
-          vehicle={vehicle}
-          status={gpsStatus}
-          permission={gpsPermission}
-          error={gpsError}
-          onRetry={() => void locate()}
-        />
+      <div
+        className={
+          drawerOpen
+            ? "pointer-events-none absolute bottom-[5.75rem] left-2 z-20 flex flex-col gap-1.5 sm:bottom-36 sm:left-3"
+            : "pointer-events-none absolute bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-2 z-20 flex flex-col gap-1.5 sm:left-3"
+        }
+      >
+        {navigating ? (
+          <TripStatusCluster
+            sample={vehicle}
+            remainingMeters={
+              navigationProgress
+                ? Math.max(
+                    0,
+                    (routeDistanceMeters ?? 0) - navigationProgress.routeMeters,
+                  )
+                : routeDistanceMeters
+            }
+            remainingSeconds={
+              navigationProgress && routeDistanceMeters
+                ? Math.max(
+                    0,
+                    (routeDurationSeconds ?? 0) *
+                      (1 - navigationProgress.routeMeters / Math.max(routeDistanceMeters, 1)),
+                  )
+                : routeDurationSeconds
+            }
+          />
+        ) : (
+          <GpsFixChip
+            vehicle={vehicle}
+            status={gpsStatus}
+            permission={gpsPermission}
+            error={gpsError}
+            onRetry={() => void locate()}
+          />
+        )}
+        {navigating ? (
+          <GpsFixChip
+            vehicle={vehicle}
+            status={gpsStatus}
+            permission={gpsPermission}
+            error={gpsError}
+            onRetry={() => void locate()}
+          />
+        ) : null}
       </div>
 
       <footer className="absolute inset-x-0 bottom-0 z-10 flex max-w-[100vw] flex-col items-center gap-1.5 overflow-visible px-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))] pb-[max(0.45rem,env(safe-area-inset-bottom))] sm:p-4 sm:pt-0">
@@ -1417,6 +1456,10 @@ export function DrivingApp() {
             }}
           />
         ) : null}
+        <div
+          id="navpilot-function-drawer"
+          className={drawerOpen ? "function-drawer" : "function-drawer function-drawer--closed"}
+        >
         <RoadInformationCard
           items={intel}
           origin={origin}
@@ -1468,6 +1511,7 @@ export function DrivingApp() {
             });
           }}
         />
+        </div>
       </footer>
 
       {cctvError || trafficError || speedEnforcementError || disasterError || parkingError ? (
