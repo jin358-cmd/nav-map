@@ -26,7 +26,7 @@ function TurnGlyph({
   const type = step?.type ?? "";
   const modifier = step?.modifier ?? "";
   const className = junction
-    ? "size-12 text-[#1a1400]"
+    ? "size-12 text-[#fff7ed]"
     : "size-10 text-cyan-200";
   if (type === "arrive") return <Flag className={className} />;
   if (type.includes("roundabout") || type.includes("rotary")) {
@@ -81,7 +81,7 @@ export const NextIntersectionHud = forwardRef<
       className={cn(
         "navigation-instruction-card pointer-events-auto w-full min-w-0 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl",
         junctionFocus
-          ? "navigation-instruction-card--junction border border-amber-700/40 text-[#1a1400]"
+          ? "navigation-instruction-card--junction border border-orange-300/50 text-[#fff7ed]"
           : "border border-cyan-300/25 bg-black/78 text-white",
       )}
     >
@@ -89,7 +89,9 @@ export const NextIntersectionHud = forwardRef<
         <div
           className={cn(
             "navigation-turn-icon flex shrink-0 items-center justify-center rounded-2xl",
-            junctionFocus ? "bg-black/12" : "bg-cyan-400/15",
+            junctionFocus
+              ? "navigation-turn-icon--signal bg-black/12"
+              : "bg-cyan-400/15",
           )}
         >
           <TurnGlyph step={step} junction={junctionFocus} />
@@ -101,7 +103,7 @@ export const NextIntersectionHud = forwardRef<
           <p
             className={cn(
               "navigation-road-name truncate",
-              junctionFocus ? "text-[#3a2a00]" : "text-zinc-300",
+              junctionFocus ? "text-[#ffedd5]" : "text-zinc-300",
             )}
           >
             {step?.roadName || (step?.type === "arrive" ? "目的地" : "沿目前道路")}
@@ -110,7 +112,7 @@ export const NextIntersectionHud = forwardRef<
             <p
               className={cn(
                 "mt-0.5 truncate text-[12px] font-medium",
-                junctionFocus ? "text-[#5a3d00]" : "text-amber-300",
+                junctionFocus ? "text-[#ffedd5]" : "text-amber-300",
               )}
             >
               {reroutePending ? "仍在重新規劃路線" : "正在重新規劃路線"}
@@ -119,7 +121,7 @@ export const NextIntersectionHud = forwardRef<
             <p
               className={cn(
                 "mt-0.5 truncate text-[12px] font-medium",
-                junctionFocus ? "text-[#5a3d00]" : "text-amber-300",
+                junctionFocus ? "text-[#ffedd5]" : "text-amber-300",
               )}
             >
               偏離路線，即將重算
@@ -136,7 +138,7 @@ export const NextIntersectionHud = forwardRef<
           className={cn(
             "navigation-audio-button shrink-0 hover:bg-white/10",
             junctionFocus
-              ? "text-[#1a1400] hover:text-[#1a1400]"
+              ? "text-[#fff7ed] hover:text-white"
               : "text-zinc-300 hover:text-white",
           )}
         >

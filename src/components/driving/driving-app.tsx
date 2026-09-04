@@ -59,7 +59,11 @@ import {
 } from "@/lib/favorites";
 import { pinSelected } from "@/lib/map-visibility";
 import { resolveMapQueryOrigin } from "@/lib/map-query-origin";
-import { deriveJunctionFocus } from "@/lib/junction-focus";
+import {
+  deriveManeuverAlertPhase,
+  isTurnManeuver,
+  maneuverAlertActive,
+} from "@/lib/maneuver-guidance";
 import { pickActiveRouteAlert } from "@/lib/route-events";
 import { destinationToHit } from "@/lib/poi-search";
 import { CITY_TRAFFIC_FOCUS_KM } from "@/lib/traffic-constants";
@@ -227,6 +231,7 @@ export function DrivingApp() {
   const [maneuver, setManeuver] = useState<NavigationManeuver | null>(null);
   const [destination, setDestination] = useState<RouteDestination | null>(null);
   const [routeSteps, setRouteSteps] = useState<RouteStep[]>([]);
+  const [routeEpoch, setRouteEpoch] = useState(0);
   const [fitRouteKey, setFitRouteKey] = useState(0);
   const [routing, setRouting] = useState(false);
   const [routeError, setRouteError] = useState<string | null>(null);
@@ -334,11 +339,13 @@ export function DrivingApp() {
     : activeNavigationStep?.cueMeters && activeNavigationStep.cueMeters > 0
       ? activeNavigationStep.cueMeters
       : (maneuver?.distanceMeters ?? activeNavigationStep?.distanceMeters ?? 0);
-  const nextJunctionFocus = deriveJunctionFocus(
+  const turnManeuver = isTurnManeuver(activeNavigationStep);
+  const nextAlertPhase = deriveManeuverAlertPhase(
     navigating,
+    turnManeuver,
     distanceToNextMeters,
   );
-  const approachingIntersection = navigating && nextJunctionFocus;
+  const approachingIntersection = maneuverAlertActive(nextAlertPhase);
 
   useNavigationVoice({
     enabled: voiceEnabled,
@@ -347,6 +354,7 @@ export function DrivingApp() {
     distanceMeters: distanceToNextMeters,
     offRoute: navigationProgress?.offRoute ?? false,
     destinationLabel: destination?.label ?? "",
+    routeGeneration: routeEpoch,
   });
 
   const queryOrigin = useMemo(
@@ -685,6 +693,7 @@ export function DrivingApp() {
       setDestination(plan.destination);
       setManeuver(plan.maneuver);
       setRouteSteps(plan.steps ?? []);
+      setRouteEpoch((value) => value + 1);
       setRouteDurationSeconds(plan.durationSeconds);
       setRouteDistanceMeters(plan.distanceMeters);
       setTravelMode(plan.travelMode);
@@ -884,6 +893,7 @@ export function DrivingApp() {
       setDestination(plan.destination);
       setManeuver(plan.maneuver);
       setRouteSteps(plan.steps ?? []);
+      setRouteEpoch((value) => value + 1);
       setRouteDurationSeconds(plan.durationSeconds);
       setRouteDistanceMeters(plan.distanceMeters);
       navigationTrackerRef.current = null;
@@ -1078,6 +1088,14 @@ export function DrivingApp() {
         distanceToNextMeters={distanceToNextMeters}
         approachingIntersection={approachingIntersection}
         junctionCue={activeNavigationStep?.location ?? null}
+        isTurnManeuver={turnManeuver}
+        maneuverCueMeters={
+          routeProgressModel && navigationProgress
+            ? (routeProgressModel.stepMeters[navigationProgress.stepIndex] ?? 0)
+            : 0
+        }
+        maneuverStepId={activeNavigationStep?.id ?? null}
+        maneuverAlertPhase={nextAlertPhase}
         destination={destination}
         overlayPadding={navigating ? overlayPadding : null}
         fitRouteKey={fitRouteKey}
@@ -1228,7 +1246,7 @@ export function DrivingApp() {
               offRoute={navigationProgress?.offRoute ?? false}
               rerouting={rerouting}
               reroutePending={reroutePending}
-              junctionFocus={nextJunctionFocus}
+              junctionFocus={approachingIntersection}
               voiceEnabled={voiceEnabled}
               onToggleVoice={() => setVoiceEnabled((value) => !value)}
             />

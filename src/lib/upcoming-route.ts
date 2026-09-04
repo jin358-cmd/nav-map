@@ -1,8 +1,9 @@
 import {
   GUIDANCE_ARROW_APPROACH_METERS,
   INTERSECTION_APPROACH_METERS,
-  JUNCTION_FOCUS_ENTER_METERS,
   JUNCTION_FOCUS_MAX_ZOOM_METERS,
+  MANEUVER_AFTER_TURN_METERS,
+  MANEUVER_APPROACH_METERS,
 } from "@/lib/constants";
 import { bearingDegrees, distanceKm } from "@/lib/geo";
 import type { LngLat } from "@/types/domain";
@@ -71,11 +72,11 @@ export function guidanceArrowsAlong(
   line: [number, number][],
   spacingMeters: number,
   phase = 0,
+  intensity = 1,
 ): GuidanceArrow[] {
-  void phase;
   if (line.length < 2) return [];
   const arrows: GuidanceArrow[] = [];
-  let leftover = 0;
+  let leftover = spacingMeters * 0.35;
 
   for (let index = 1; index < line.length; index += 1) {
     const from = { lng: line[index - 1][0], lat: line[index - 1][1] };
@@ -91,7 +92,7 @@ export function guidanceArrowsAlong(
           lng: from.lng + (to.lng - from.lng) * ratio,
           lat: from.lat + (to.lat - from.lat) * ratio,
           bearing,
-          opacity: 0.96,
+          opacity: 1,
         });
       }
       cursor += spacingMeters;
@@ -99,24 +100,36 @@ export function guidanceArrowsAlong(
     leftover = cursor - length;
   }
 
-  return arrows;
+  const count = arrows.length;
+  if (count === 0) return arrows;
+  const cycle = ((phase % 1) + 1) % 1;
+  return arrows.map((arrow, index) => {
+    const wave = 0.5 + 0.5 * Math.cos(2 * Math.PI * (index / count - cycle));
+    return {
+      ...arrow,
+      opacity: Math.max(0.18, Math.min(1, intensity * (0.28 + 0.72 * wave))),
+    };
+  });
 }
 
 export function approachLookaheadMeters(distanceToNext: number) {
-  return Math.max(16, Math.min(32, distanceToNext));
+  return Math.min(
+    160,
+    Math.max(36, distanceToNext + MANEUVER_AFTER_TURN_METERS),
+  );
 }
 
 export function isApproachingIntersection(distanceToNext: number) {
   return Number.isFinite(distanceToNext) && distanceToNext <= INTERSECTION_APPROACH_METERS;
 }
 
-/** 50 公尺開始放大，越近越接近最大 Zoom（0～1）。 */
+/** 100 公尺開始放大，越近越接近最大 Zoom（0～1）。 */
 export function junctionZoomProgress(distanceToNext: number) {
   if (!Number.isFinite(distanceToNext)) return 0;
-  const span = JUNCTION_FOCUS_ENTER_METERS - JUNCTION_FOCUS_MAX_ZOOM_METERS;
+  const span = MANEUVER_APPROACH_METERS - JUNCTION_FOCUS_MAX_ZOOM_METERS;
   return Math.max(
     0,
-    Math.min(1, (JUNCTION_FOCUS_ENTER_METERS - distanceToNext) / span),
+    Math.min(1, (MANEUVER_APPROACH_METERS - distanceToNext) / span),
   );
 }
 

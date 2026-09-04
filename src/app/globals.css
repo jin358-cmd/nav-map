@@ -409,8 +409,28 @@
 }
 
 .navigation-instruction-card--junction {
-  background: #f5c400;
-  color: #1a1400;
+  background: #ea580c;
+  color: #fff7ed;
+}
+
+.navigation-turn-icon--signal {
+  animation: turn-signal 0.7s ease-in-out infinite;
+}
+
+@keyframes turn-signal {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.28;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navigation-turn-icon--signal {
+    animation: none;
+  }
 }
 
 .navigation-instruction-content {
@@ -432,7 +452,7 @@
 }
 
 .navigation-instruction-card--junction .navigation-guidance {
-  color: #111;
+  color: #fff7ed;
 }
 
 .navigation-road-name {

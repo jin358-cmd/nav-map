@@ -94,6 +94,7 @@ export function upsertIntelligenceLayers(
   traffic: TrafficSegment[],
   trafficVisible = true,
   routeMeters = 0,
+  maneuverRoute: [number, number][] = [],
 ) {
   const remaining =
     routeMeters > 8 ? sliceRouteAhead(route, routeMeters, 1_000_000) : route;
@@ -111,6 +112,11 @@ export function upsertIntelligenceLayers(
         type: "Feature" as const,
         properties: { kind: "passed" },
         geometry: { type: "LineString" as const, coordinates: passed },
+      },
+      {
+        type: "Feature" as const,
+        properties: { kind: "maneuver" },
+        geometry: { type: "LineString" as const, coordinates: maneuverRoute },
       },
     ],
   };
@@ -231,6 +237,21 @@ export function upsertIntelligenceLayers(
         "line-color": MAP_COLORS.route,
         "line-width": ["interpolate", ["linear"], ["zoom"], 12, 3, 17, 7.5],
         "line-opacity": 0.95,
+      },
+      layout: { "line-cap": "round", "line-join": "round" },
+    });
+  }
+
+  if (!map.getLayer("demo-route-maneuver")) {
+    map.addLayer({
+      id: "demo-route-maneuver",
+      type: "line",
+      source: "demo-route",
+      filter: ["==", ["get", "kind"], "maneuver"],
+      paint: {
+        "line-color": MAP_COLORS.maneuver,
+        "line-width": ["interpolate", ["linear"], ["zoom"], 12, 4.2, 17, 8.6],
+        "line-opacity": 0.94,
       },
       layout: { "line-cap": "round", "line-join": "round" },
     });

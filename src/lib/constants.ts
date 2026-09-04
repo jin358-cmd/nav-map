@@ -29,8 +29,16 @@ export const INTERSECTION_APPROACH_METERS = 95;
 export const JUNCTION_FOCUS_ENTER_METERS = 50;
 export const JUNCTION_FOCUS_EXIT_METERS = 65;
 export const JUNCTION_FOCUS_MAX_ZOOM_METERS = 12;
-/** 跑馬燈箭頭：接近路口約 30 公尺才顯現 */
-export const GUIDANCE_ARROW_APPROACH_METERS = 30;
+/** 三段轉向：200 橘色路段／100 接近放大／30 最後提醒 */
+export const MANEUVER_PREPARE_METERS = 200;
+export const MANEUVER_PREPARE_EXIT_METERS = 220;
+export const MANEUVER_APPROACH_METERS = 100;
+export const MANEUVER_APPROACH_EXIT_METERS = 118;
+export const MANEUVER_IMMINENT_METERS = 30;
+export const MANEUVER_AFTER_TURN_METERS = 48;
+export const MANEUVER_RECOVER_MS = 2800;
+/** 3D 路口走馬燈：100 公尺開始，30 公尺加強 */
+export const GUIDANCE_ARROW_APPROACH_METERS = 100;
 
 /** 車子約在可見駕駛區下方 30%：上方 padding 約 40% 拉開前方視野 */
 export const DRIVING_PADDING_RATIO = 0.4;
@@ -49,6 +57,8 @@ export const MAP_COLORS = {
   roadLabel: "#8ea0b8",
   route: "#3ee0ff",
   routeGlow: "#1ad0ff",
+  maneuver: "#f97316",
+  maneuverGlow: "#fdba74",
   cctv: "#c084fc",
   accident: "#ff3b3b",
   congestion: "#ff6b35",

@@ -21,6 +21,12 @@ import {
   OVERVIEW_PITCH,
   TAINAN_CENTER,
 } from "@/lib/constants";
+import { MANEUVER_RECOVER_MS } from "@/lib/constants";
+import {
+  maneuverOrangeRouteActive,
+  sliceManeuverHighlight,
+  type ManeuverAlertPhase,
+} from "@/lib/maneuver-guidance";
 import { junctionZoomProgress } from "@/lib/upcoming-route";
 import { bindCctvLayerClicks, upsertCctvLayer } from "@/lib/cctv-layer";
 import {
@@ -101,6 +107,10 @@ type DrivingMapProps = {
   distanceToNextMeters: number;
   approachingIntersection: boolean;
   junctionCue?: LngLat | null;
+  isTurnManeuver?: boolean;
+  maneuverCueMeters?: number;
+  maneuverStepId?: string | null;
+  maneuverAlertPhase?: ManeuverAlertPhase;
   destination: RouteDestination | null;
   overlayPadding?: {
     top: number;
@@ -179,11 +189,13 @@ function cameraOptions(
   distanceToNext = Number.POSITIVE_INFINITY,
   junctionCue: LngLat | null = null,
   followOrientation: FollowOrientation = "heading-up",
+  recoverBlend = 0,
 ) {
   const height = map.getContainer().clientHeight;
   const width = map.getContainer().clientWidth;
   const compact = isCompactViewport(width);
-  const blend = approaching ? junctionZoomProgress(distanceToNext) : 0;
+  const approachBlend = approaching ? junctionZoomProgress(distanceToNext) : 0;
+  const blend = Math.max(approachBlend, recoverBlend);
   const cruiseZoom = compact ? DRIVING_ZOOM_MOBILE : DRIVING_ZOOM;
   const focusZoom = compact ? INTERSECTION_ZOOM_MOBILE : INTERSECTION_ZOOM;
   const navZoom = lerp(cruiseZoom, focusZoom, blend);
@@ -198,7 +210,27 @@ function cameraOptions(
     pitch: mode === "3d" ? lerp(cruisePitch, INTERSECTION_PITCH, blend) : 0,
     zoom: mode === "3d" ? navZoom : OVERHEAD_ZOOM,
     padding: drivingPadding(height, width, mode, navigating, overlay),
+    blend,
   };
+}
+
+function recoverBlendAt(now: number, until: number, from: number) {
+  if (until <= now || from <= 0) return 0;
+  const remaining = Math.max(0, Math.min(1, (until - now) / MANEUVER_RECOVER_MS));
+  return from * remaining * remaining;
+}
+
+function currentManeuverOverlay(
+  navigating: boolean,
+  isTurn: boolean,
+  phase: ManeuverAlertPhase,
+  route: [number, number][],
+  routeMeters: number,
+  cueMeters: number,
+  distanceToNext: number,
+) {
+  if (!navigating || !isTurn || !maneuverOrangeRouteActive(phase)) return [];
+  return sliceManeuverHighlight(route, routeMeters, cueMeters, distanceToNext);
 }
 
 function createDestinationPin(label: string): HTMLDivElement {
@@ -285,6 +317,10 @@ export function DrivingMap({
   distanceToNextMeters,
   approachingIntersection,
   junctionCue = null,
+  isTurnManeuver = false,
+  maneuverCueMeters = 0,
+  maneuverStepId = null,
+  maneuverAlertPhase = "cruise",
   destination,
   overlayPadding = null,
   fitRouteKey,
@@ -347,6 +383,14 @@ export function DrivingMap({
   const navigatingRef = useRef(navigating);
   const approachingRef = useRef(approachingIntersection);
   const junctionCueRef = useRef(junctionCue);
+  const isTurnRef = useRef(isTurnManeuver);
+  const cueMetersRef = useRef(maneuverCueMeters);
+  const stepIdRef = useRef(maneuverStepId);
+  const alertPhaseRef = useRef(maneuverAlertPhase);
+  const recoverUntilRef = useRef(0);
+  const recoverFromRef = useRef(0);
+  const lastStepIdRef = useRef(maneuverStepId);
+  const lastBlendRef = useRef(0);
   const routeMetersRef = useRef(routeMeters);
   const distanceToNextRef = useRef(distanceToNextMeters);
   const pinchingRef = useRef(false);
@@ -401,6 +445,10 @@ export function DrivingMap({
     navigatingRef.current = navigating;
     approachingRef.current = approachingIntersection;
     junctionCueRef.current = junctionCue;
+    isTurnRef.current = isTurnManeuver;
+    cueMetersRef.current = maneuverCueMeters;
+    stepIdRef.current = maneuverStepId;
+    alertPhaseRef.current = maneuverAlertPhase;
     routeMetersRef.current = routeMeters;
     distanceToNextRef.current = distanceToNextMeters;
     overlayPaddingRef.current = overlayPadding;
@@ -439,6 +487,10 @@ export function DrivingMap({
     navigating,
     approachingIntersection,
     junctionCue,
+    isTurnManeuver,
+    maneuverCueMeters,
+    maneuverStepId,
+    maneuverAlertPhase,
     routeMeters,
     distanceToNextMeters,
     overlayPadding,
@@ -529,6 +581,18 @@ export function DrivingMap({
       setVehicleMarkerHeading(marker.getElement(), headingUp ? 0 : display.heading);
 
       if (navigatingRef.current) {
+        const stepId = stepIdRef.current;
+        if (stepId !== lastStepIdRef.current) {
+          const consecutive =
+            isTurnRef.current && distanceToNextRef.current <= 100;
+          if (consecutive) {
+            recoverUntilRef.current = 0;
+          } else if (lastBlendRef.current > 0.05) {
+            recoverUntilRef.current = now + MANEUVER_RECOVER_MS;
+            recoverFromRef.current = lastBlendRef.current;
+          }
+          lastStepIdRef.current = stepId;
+        }
         if (now - lastArrowUpdateRef.current > 180) {
           lastArrowUpdateRef.current = now;
           try {
@@ -538,12 +602,20 @@ export function DrivingMap({
               routeMetersRef.current,
               distanceToNextRef.current,
               true,
-              0,
+              (now / 1600) % 1,
+              {
+                cameraMode: modeRef.current,
+                isTurn: isTurnRef.current,
+                cueMeters: cueMetersRef.current,
+              },
             );
           } catch {
             /* style may still be swapping */
           }
         }
+      } else {
+        lastStepIdRef.current = stepIdRef.current;
+        recoverUntilRef.current = 0;
       }
 
       if (followVehicleRef.current) {
@@ -553,6 +625,11 @@ export function DrivingMap({
           lat: display.lat,
           heading: display.heading,
         };
+        const recoverBlend = recoverBlendAt(
+          now,
+          recoverUntilRef.current,
+          recoverFromRef.current,
+        );
         const wanted = cameraOptions(
           mapNow,
           displayPose,
@@ -563,7 +640,9 @@ export function DrivingMap({
           distanceToNextRef.current,
           junctionCueRef.current,
           followOrientationRef.current,
+          recoverBlend,
         );
+        lastBlendRef.current = wanted.blend;
         const center = mapNow.getCenter();
         const zoomTarget = pinchingRef.current
           ? mapNow.getZoom()
@@ -600,6 +679,15 @@ export function DrivingMap({
           trafficRef.current,
           visible.congestion,
           routeMetersRef.current,
+          currentManeuverOverlay(
+            navigatingRef.current,
+            isTurnRef.current,
+            alertPhaseRef.current,
+            routeRef.current,
+            routeMetersRef.current,
+            cueMetersRef.current,
+            distanceToNextRef.current,
+          ),
         );
         upsertSpeedEnforcementLayer(map, speedEnforcementRef.current);
         upsertCctvLayer(map, camerasRef.current, selectedRef.current, visible.cctv);
@@ -826,11 +914,34 @@ export function DrivingMap({
       traffic,
       layerVisibility.congestion,
       navigating ? routeMeters : 0,
+      currentManeuverOverlay(
+        navigating,
+        isTurnManeuver,
+        maneuverAlertPhase,
+        route,
+        navigating ? routeMeters : 0,
+        maneuverCueMeters,
+        distanceToNextMeters,
+      ),
     );
     if (!navigating) {
-      upsertGuidanceArrows(map, route, 0, 0, false, 0);
+      upsertGuidanceArrows(map, route, 0, 0, false, 0, {
+        cameraMode,
+        isTurn: false,
+      });
     }
-  }, [layerVisibility.congestion, navigating, route, routeMeters, traffic]);
+  }, [
+    cameraMode,
+    distanceToNextMeters,
+    isTurnManeuver,
+    layerVisibility.congestion,
+    maneuverAlertPhase,
+    maneuverCueMeters,
+    navigating,
+    route,
+    routeMeters,
+    traffic,
+  ]);
 
   useEffect(() => {
     followVehicleRef.current = followVehicle;
@@ -860,6 +971,15 @@ export function DrivingMap({
           trafficRef.current,
           visible.congestion,
           routeMetersRef.current,
+          currentManeuverOverlay(
+            navigatingRef.current,
+            isTurnRef.current,
+            alertPhaseRef.current,
+            routeRef.current,
+            routeMetersRef.current,
+            cueMetersRef.current,
+            distanceToNextRef.current,
+          ),
         );
         upsertSpeedEnforcementLayer(map, speedEnforcementRef.current);
         upsertCctvLayer(map, camerasRef.current, selectedRef.current, visible.cctv);

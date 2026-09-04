@@ -2,17 +2,19 @@
 
 import { useEffect, useRef } from "react";
 import {
-  spokenInstruction,
-  voicePhaseForDistance,
-  type VoicePhase,
-} from "@/lib/nav-voice";
+  isTurnManeuver,
+  takeManeuverVoiceCue,
+  type ManeuverVoiceFlags,
+} from "@/lib/maneuver-guidance";
+import { spokenInstruction, type VoicePhase } from "@/lib/nav-voice";
 import type { RouteStep } from "@/types/domain";
 
-async function speakWithChatGpt(text: string) {
+async function speakWithChatGpt(text: string, signal: AbortSignal) {
   const response = await fetch("/api/voice", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ text }),
+    signal,
   });
   if (response.status === 204 || !response.ok) {
     throw new Error("chatgpt-voice-unavailable");
@@ -22,11 +24,23 @@ async function speakWithChatGpt(text: string) {
   const url = URL.createObjectURL(blob);
   await new Promise<void>((resolve, reject) => {
     const audio = new Audio(url);
+    const onAbort = () => {
+      audio.pause();
+      URL.revokeObjectURL(url);
+      resolve();
+    };
+    if (signal.aborted) {
+      onAbort();
+      return;
+    }
+    signal.addEventListener("abort", onAbort, { once: true });
     audio.onended = () => {
+      signal.removeEventListener("abort", onAbort);
       URL.revokeObjectURL(url);
       resolve();
     };
     audio.onerror = () => {
+      signal.removeEventListener("abort", onAbort);
       URL.revokeObjectURL(url);
       reject(new Error("audio-play-failed"));
     };
@@ -62,6 +76,7 @@ export function useNavigationVoice({
   distanceMeters,
   offRoute,
   destinationLabel,
+  routeGeneration,
 }: {
   enabled: boolean;
   navigating: boolean;
@@ -69,64 +84,124 @@ export function useNavigationVoice({
   distanceMeters: number;
   offRoute: boolean;
   destinationLabel: string;
+  routeGeneration?: number;
 }) {
-  const lastKeyRef = useRef("");
+  const flagsRef = useRef<ManeuverVoiceFlags | null>(null);
   const speakingRef = useRef(false);
   const startedRef = useRef(false);
+  const arrivePlayedRef = useRef(false);
+  const offRoutePlayedRef = useRef(false);
+  const pendingRef = useRef<{ phase: VoicePhase; text: string } | null>(null);
+  const generationRef = useRef(routeGeneration ?? 0);
+  const abortRef = useRef<AbortController | null>(null);
+  const playRef = useRef<(item: { phase: VoicePhase; text: string }) => void>(
+    () => undefined,
+  );
 
   useEffect(() => {
+    const play = (item: { phase: VoicePhase; text: string }) => {
+      if (!item.text) return;
+      if (speakingRef.current) {
+        if (item.phase !== "start") pendingRef.current = item;
+        return;
+      }
+      speakingRef.current = true;
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      void (async () => {
+        try {
+          await speakWithChatGpt(item.text, controller.signal);
+        } catch {
+          if (!controller.signal.aborted) await speakWithSystem(item.text);
+        } finally {
+          if (abortRef.current === controller) {
+            speakingRef.current = false;
+            const pending = pendingRef.current;
+            pendingRef.current = null;
+            if (pending?.text) play(pending);
+          }
+        }
+      })();
+    };
+    playRef.current = play;
+    return () => {
+      abortRef.current?.abort();
+      if (typeof window !== "undefined") window.speechSynthesis?.cancel();
+    };
+  }, []);
+
+  useEffect(() => {
+    if ((routeGeneration ?? 0) !== generationRef.current) {
+      generationRef.current = routeGeneration ?? 0;
+      flagsRef.current = null;
+      startedRef.current = false;
+      arrivePlayedRef.current = false;
+      offRoutePlayedRef.current = false;
+      pendingRef.current = null;
+    }
+
     if (!enabled || !navigating) {
       startedRef.current = false;
-      lastKeyRef.current = "";
+      flagsRef.current = null;
+      arrivePlayedRef.current = false;
+      offRoutePlayedRef.current = false;
+      pendingRef.current = null;
+      abortRef.current?.abort();
       if (typeof window !== "undefined") window.speechSynthesis?.cancel();
       return;
     }
 
-    const queue: { phase: VoicePhase; text: string }[] = [];
     if (!startedRef.current) {
       startedRef.current = true;
-      queue.push({
+      playRef.current({
         phase: "start",
-        text: spokenInstruction(step, distanceMeters, destinationLabel, "start"),
+        text: spokenInstruction(step, destinationLabel, "start"),
       });
     }
+
     if (offRoute) {
-      queue.push({
-        phase: "offroute",
-        text: spokenInstruction(step, distanceMeters, destinationLabel, "offroute"),
-      });
-    } else {
-      const phase = voicePhaseForDistance(distanceMeters, step?.type);
-      if (phase) {
-        queue.push({
-          phase,
-          text: spokenInstruction(step, distanceMeters, destinationLabel, phase),
+      if (!offRoutePlayedRef.current) {
+        offRoutePlayedRef.current = true;
+        playRef.current({
+          phase: "offroute",
+          text: spokenInstruction(step, destinationLabel, "offroute"),
         });
       }
+      return;
     }
 
-    const next = queue[queue.length - 1];
-    if (!next?.text || speakingRef.current) return;
-    const key = `${step?.id ?? "nav"}:${next.phase}:${next.text}`;
-    if (key === lastKeyRef.current) return;
-    lastKeyRef.current = key;
-    speakingRef.current = true;
+    offRoutePlayedRef.current = false;
+    if (step?.type === "arrive" && distanceMeters <= 40 && !arrivePlayedRef.current) {
+      arrivePlayedRef.current = true;
+      playRef.current({
+        phase: "arrive",
+        text: spokenInstruction(step, destinationLabel, "arrive"),
+      });
+      return;
+    }
 
-    void (async () => {
-      try {
-        await speakWithChatGpt(next.text);
-      } catch {
-        await speakWithSystem(next.text);
-      } finally {
-        speakingRef.current = false;
-      }
-    })();
+    const taken = takeManeuverVoiceCue(
+      flagsRef.current,
+      step?.id ?? "",
+      distanceMeters,
+      isTurnManeuver(step),
+    );
+    flagsRef.current = taken.flags;
+    if (taken.cue) {
+      playRef.current({
+        phase: taken.cue,
+        text: spokenInstruction(step, destinationLabel, taken.cue),
+      });
+    }
   }, [
     destinationLabel,
     distanceMeters,
     enabled,
     navigating,
     offRoute,
+    routeGeneration,
     step,
   ]);
 }

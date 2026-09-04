@@ -3,19 +3,23 @@ import type {
   GeoJSONSource,
   Map as MapLibreMap,
 } from "maplibre-gl";
+import { MAP_COLORS } from "@/lib/constants";
 import {
-  approachLookaheadMeters,
+  maneuverMarqueeIntensity,
+  sliceManeuverHighlight,
+} from "@/lib/maneuver-guidance";
+import {
   guidanceArrowsAlong,
   shouldShowGuidanceArrows,
-  sliceRouteAhead,
 } from "@/lib/upcoming-route";
+import type { CameraMode } from "@/types/domain";
 
 export const GUIDANCE_SOURCE_ID = "guidance-arrows";
 export const GUIDANCE_PATH_SOURCE_ID = "guidance-path";
 export const GUIDANCE_LAYER_ID = "guidance-arrows-layer";
 export const GUIDANCE_PATH_LAYER_ID = "guidance-path-layer";
 export const GUIDANCE_PATH_GLOW_ID = "guidance-path-glow";
-const ARROW_IMAGE_ID = "guidance-hover-arrow-3d-v3";
+const CHEVRON_IMAGE_ID = "maneuver-marquee-chevron-v1";
 
 function emptyCollection() {
   return { type: "FeatureCollection" as const, features: [] };
@@ -29,30 +33,8 @@ function emptyLine() {
   };
 }
 
-function drawPolygon(
-  ctx: CanvasRenderingContext2D,
-  points: [number, number][],
-  fill: string,
-  stroke?: string,
-  lineWidth = 3,
-) {
-  ctx.beginPath();
-  ctx.moveTo(points[0][0], points[0][1]);
-  for (const point of points.slice(1)) ctx.lineTo(point[0], point[1]);
-  ctx.closePath();
-  ctx.fillStyle = fill;
-  ctx.fill();
-  if (stroke) {
-    ctx.strokeStyle = stroke;
-    ctx.lineWidth = lineWidth;
-    ctx.lineJoin = "round";
-    ctx.lineCap = "round";
-    ctx.stroke();
-  }
-}
-
-function createHoverArrowImage() {
-  const size = 256;
+function createChevronImage() {
+  const size = 128;
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
@@ -62,101 +44,60 @@ function createHoverArrowImage() {
   ctx.clearRect(0, 0, size, size);
   ctx.translate(size / 2, size / 2);
 
-  ctx.save();
-  ctx.fillStyle = "rgba(120, 53, 15, 0.32)";
+  ctx.fillStyle = "rgba(124, 45, 18, 0.28)";
   ctx.beginPath();
-  ctx.ellipse(8, 98, 46, 12, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 28, 22, 7, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.restore();
-
-  const depth: [number, number] = [14, 16];
-  const front: [number, number][] = [
-    [0, -92],
-    [78, 18],
-    [32, 18],
-    [32, 58],
-    [-32, 58],
-    [-32, 18],
-    [-78, 18],
-  ];
-  const back = front.map(([x, y]) => [x + depth[0], y + depth[1]] as [number, number]);
-
-  drawPolygon(ctx, [
-    back[0],
-    back[1],
-    front[1],
-    front[0],
-  ], "#92400e");
-  drawPolygon(ctx, [
-    back[1],
-    back[2],
-    front[2],
-    front[1],
-  ], "#a16207");
-  drawPolygon(ctx, [
-    back[2],
-    back[3],
-    front[3],
-    front[2],
-  ], "#854d0e");
-  drawPolygon(ctx, [
-    back[3],
-    back[4],
-    front[4],
-    front[3],
-  ], "#713f12");
-  drawPolygon(ctx, [
-    back[0],
-    back[6],
-    front[6],
-    front[0],
-  ], "#ca8a04");
-
-  drawPolygon(ctx, front, "#facc15", "#fff7c2", 5);
-
-  drawPolygon(
-    ctx,
-    [
-      [0, -70],
-      [28, -2],
-      [12, -2],
-      [12, 38],
-      [-12, 38],
-      [-12, -2],
-      [-28, -2],
-    ],
-    "rgba(254, 249, 195, 0.92)",
-  );
 
   ctx.beginPath();
-  ctx.moveTo(0, -88);
-  ctx.lineTo(14, -28);
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.55)";
+  ctx.moveTo(0, -38);
+  ctx.lineTo(30, 10);
+  ctx.lineTo(14, 10);
+  ctx.lineTo(14, 34);
+  ctx.lineTo(-14, 34);
+  ctx.lineTo(-14, 10);
+  ctx.lineTo(-30, 10);
+  ctx.closePath();
+  ctx.fillStyle = MAP_COLORS.maneuver;
+  ctx.fill();
+  ctx.strokeStyle = "#ffedd5";
   ctx.lineWidth = 4;
-  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
   ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(0, -24);
+  ctx.lineTo(12, 2);
+  ctx.lineTo(5, 2);
+  ctx.lineTo(5, 22);
+  ctx.lineTo(-5, 22);
+  ctx.lineTo(-5, 2);
+  ctx.lineTo(-12, 2);
+  ctx.closePath();
+  ctx.fillStyle = "rgba(255, 237, 213, 0.55)";
+  ctx.fill();
 
   return ctx.getImageData(0, 0, size, size);
 }
 
 function ensureImages(map: MapLibreMap) {
-  if (map.hasImage(ARROW_IMAGE_ID)) return;
-  const image = createHoverArrowImage();
+  if (map.hasImage(CHEVRON_IMAGE_ID)) return;
+  const image = createChevronImage();
   if (!image) return;
-  map.addImage(ARROW_IMAGE_ID, image, { pixelRatio: 2 });
+  map.addImage(CHEVRON_IMAGE_ID, image, { pixelRatio: 2 });
 }
 
-function ensureArrowLayer(map: MapLibreMap) {
+function ensureChevronLayer(map: MapLibreMap) {
   const size = [
     "interpolate",
     ["linear"],
     ["zoom"],
     14,
-    2.7,
+    0.52,
     17,
-    4.1,
+    0.78,
     19,
-    5.4,
+    0.92,
   ] as ExpressionSpecification;
 
   if (!map.getLayer(GUIDANCE_LAYER_ID)) {
@@ -165,10 +106,9 @@ function ensureArrowLayer(map: MapLibreMap) {
       type: "symbol",
       source: GUIDANCE_SOURCE_ID,
       layout: {
-        "icon-image": ARROW_IMAGE_ID,
+        "icon-image": CHEVRON_IMAGE_ID,
         "icon-size": size,
-        "icon-anchor": "bottom",
-        "icon-offset": [0, -56],
+        "icon-anchor": "center",
         "icon-rotate": ["get", "bearing"],
         "icon-rotation-alignment": "map",
         "icon-pitch-alignment": "map",
@@ -177,17 +117,16 @@ function ensureArrowLayer(map: MapLibreMap) {
       },
       paint: {
         "icon-opacity": ["get", "opacity"],
-        "icon-halo-color": "#fef08a",
-        "icon-halo-width": 2,
+        "icon-halo-color": MAP_COLORS.maneuverGlow,
+        "icon-halo-width": 1.2,
       },
     });
     return;
   }
 
-  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-image", ARROW_IMAGE_ID);
+  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-image", CHEVRON_IMAGE_ID);
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-size", size);
-  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-anchor", "bottom");
-  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-offset", [0, -56]);
+  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-anchor", "center");
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-pitch-alignment", "map");
 }
 
@@ -198,22 +137,40 @@ export function upsertGuidanceArrows(
   distanceToNext: number,
   navigating: boolean,
   phase: number,
+  options: {
+    cameraMode?: CameraMode;
+    isTurn?: boolean;
+    cueMeters?: number;
+  } = {},
 ) {
   ensureImages(map);
 
-  const show = navigating && shouldShowGuidanceArrows(distanceToNext);
-  const ahead = show
-    ? sliceRouteAhead(route, routeMeters, approachLookaheadMeters(distanceToNext))
-    : [];
-  const arrows = show ? guidanceArrowsAlong(ahead, 22, phase) : [];
+  const intensity = maneuverMarqueeIntensity(distanceToNext);
+  const show =
+    navigating &&
+    options.cameraMode !== "2d" &&
+    options.isTurn !== false &&
+    shouldShowGuidanceArrows(distanceToNext) &&
+    intensity > 0;
 
-  const pathData = ahead.length >= 2
-    ? {
-        type: "Feature" as const,
-        properties: {},
-        geometry: { type: "LineString" as const, coordinates: ahead },
-      }
-    : emptyLine();
+  const ahead = show
+    ? sliceManeuverHighlight(
+        route,
+        routeMeters,
+        options.cueMeters ?? routeMeters + distanceToNext,
+        distanceToNext,
+      )
+    : [];
+  const arrows = show ? guidanceArrowsAlong(ahead, 18, phase, intensity) : [];
+
+  const pathData =
+    ahead.length >= 2
+      ? {
+          type: "Feature" as const,
+          properties: {},
+          geometry: { type: "LineString" as const, coordinates: ahead },
+        }
+      : emptyLine();
 
   const arrowData = {
     type: "FeatureCollection" as const,
@@ -222,7 +179,7 @@ export function upsertGuidanceArrows(
       id: index,
       properties: {
         bearing: arrow.bearing,
-        opacity: 0.55 + arrow.opacity * 0.45,
+        opacity: arrow.opacity,
       },
       geometry: {
         type: "Point" as const,
@@ -251,10 +208,10 @@ export function upsertGuidanceArrows(
       type: "line",
       source: GUIDANCE_PATH_SOURCE_ID,
       paint: {
-        "line-color": "#fde047",
-        "line-width": ["interpolate", ["linear"], ["zoom"], 14, 7, 19, 18],
-        "line-opacity": 0.22,
-        "line-blur": 8,
+        "line-color": MAP_COLORS.maneuverGlow,
+        "line-width": ["interpolate", ["linear"], ["zoom"], 14, 8, 19, 16],
+        "line-opacity": 0.2,
+        "line-blur": 7,
       },
       layout: { "line-cap": "round", "line-join": "round" },
     });
@@ -266,17 +223,32 @@ export function upsertGuidanceArrows(
       type: "line",
       source: GUIDANCE_PATH_SOURCE_ID,
       paint: {
-        "line-color": "#facc15",
-        "line-width": ["interpolate", ["linear"], ["zoom"], 14, 3.2, 19, 8],
-        "line-opacity": 0.9,
+        "line-color": MAP_COLORS.maneuver,
+        "line-width": ["interpolate", ["linear"], ["zoom"], 14, 2.4, 19, 5.5],
+        "line-opacity": 0.55,
       },
       layout: { "line-cap": "round", "line-join": "round" },
     });
   }
 
-  ensureArrowLayer(map);
+  ensureChevronLayer(map);
 
-  for (const id of ["demo-route-glow", "demo-route-line"]) {
+  if (map.getLayer(GUIDANCE_PATH_GLOW_ID)) {
+    map.setPaintProperty(
+      GUIDANCE_PATH_GLOW_ID,
+      "line-opacity",
+      show ? 0.12 + intensity * 0.16 : 0,
+    );
+  }
+  if (map.getLayer(GUIDANCE_PATH_LAYER_ID)) {
+    map.setPaintProperty(
+      GUIDANCE_PATH_LAYER_ID,
+      "line-opacity",
+      show ? 0.28 + intensity * 0.32 : 0,
+    );
+  }
+
+  for (const id of ["demo-route-glow", "demo-route-line", "demo-route-maneuver"]) {
     if (map.getLayer(id)) map.moveLayer(id);
   }
   for (const id of [GUIDANCE_PATH_GLOW_ID, GUIDANCE_PATH_LAYER_ID, GUIDANCE_LAYER_ID]) {
