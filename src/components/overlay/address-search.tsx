@@ -40,7 +40,7 @@ import { rememberGeocodeSelection } from "@/services/routing";
 import type { GeocodeHit, LngLat } from "@/types/domain";
 
 type AddressSearchProps = {
-  bias: LngLat;
+  bias: LngLat | null;
   busy: boolean;
   error: string | null;
   onSelect: (hit: GeocodeHit) => void;
@@ -67,19 +67,21 @@ export function AddressSearch({
   );
   const needle = query.trim();
   const speechStopRef = useRef<() => void>(() => undefined);
-  const biasBucket = useMemo(
-    () => ({
-      lng: Math.round(bias.lng * 50) / 50,
-      lat: Math.round(bias.lat * 50) / 50,
-    }),
-    [bias.lat, bias.lng],
-  );
+  const biasLng = bias?.lng;
+  const biasLat = bias?.lat;
+  const biasBucket = useMemo(() => {
+    if (biasLng == null || biasLat == null) return null;
+    return {
+      lng: Math.round(biasLng * 50) / 50,
+      lat: Math.round(biasLat * 50) / 50,
+    };
+  }, [biasLat, biasLng]);
   const instantHits = useMemo(
     () =>
       needle.length < 1
         ? []
-        : instantKeywordHits(needle, bias, [...history, ...favorites]),
-    [bias, favorites, history, needle],
+        : instantKeywordHits(needle, biasBucket, [...history, ...favorites]),
+    [biasBucket, favorites, history, needle],
   );
 
   const selectHit = useCallback(
@@ -88,7 +90,7 @@ export function AddressSearch({
       setQuery(hit.name);
       setOpen(false);
       rememberAddress(hit);
-      void rememberGeocodeSelection(hit.name, biasBucket);
+      void rememberGeocodeSelection(hit.name, biasBucket ?? undefined);
       onSelect(hit);
     },
     [biasBucket, onSelect],
@@ -138,7 +140,7 @@ export function AddressSearch({
       : rankSearchHits(
           mergeSearchHits([...instantHits, ...previewHits], 24),
           needle,
-          bias,
+          biasBucket,
         );
   const chips = useMemo(() => TAIWAN_LANDMARKS.slice(0, 5), []);
   const emptyHint =

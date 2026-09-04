@@ -2,7 +2,6 @@ import { searchGeocode, toGeocodeHits } from "@/lib/geocoding/orchestrator";
 import { normalizeTaiwanAddress } from "@/lib/geocoding/normalizeTaiwanAddress";
 import { rememberAddressCacheHit } from "@/lib/geocoding/providers/cache";
 import type { GeocodeLookupMode } from "@/lib/geocoding/types";
-import { TAINAN_CENTER } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -16,8 +15,8 @@ export async function GET(request: Request) {
   const mode = lookupMode(url.searchParams.get("mode"));
   const biasLng = Number(url.searchParams.get("lng"));
   const biasLat = Number(url.searchParams.get("lat"));
-  const latitude = Number.isFinite(biasLat) ? biasLat : TAINAN_CENTER.lat;
-  const longitude = Number.isFinite(biasLng) ? biasLng : TAINAN_CENTER.lng;
+  const latitude = Number.isFinite(biasLat) ? biasLat : undefined;
+  const longitude = Number.isFinite(biasLng) ? biasLng : undefined;
 
   if (query.length < 2) {
     const parsed = normalizeTaiwanAddress(query);

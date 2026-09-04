@@ -20,15 +20,16 @@ export function isCityWideDisaster(alert: DisasterAlert) {
 export function mapVisibleDisasters(
   alerts: DisasterAlert[],
   viewport: MapViewport | null,
-  origin: LngLat,
+  origin: LngLat | null,
 ): DisasterAlert[] {
   const ranked = [...alerts]
     .map((alert) => ({
       alert,
-      km: distanceKm(origin, alert.location),
+      km: origin ? distanceKm(origin, alert.location) : Number.POSITIVE_INFINITY,
     }))
     .filter(
-      ({ alert, km }) => isCityWideDisaster(alert) || km <= DISASTER_NEARBY_KM,
+      ({ alert, km }) =>
+        isCityWideDisaster(alert) || (origin != null && km <= DISASTER_NEARBY_KM),
     )
     .sort((a, b) => {
       const severity =

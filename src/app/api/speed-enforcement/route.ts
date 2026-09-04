@@ -29,6 +29,13 @@ export async function GET(request: Request) {
     );
   }
 
+  console.info("speed-enforcement request", {
+    lng,
+    lat,
+    radiusMeters,
+    fresh: force,
+  });
+
   try {
     const catalog = await loadNearbySpeedEnforcement({
       lng,

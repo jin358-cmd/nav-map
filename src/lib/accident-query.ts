@@ -10,12 +10,14 @@ import type {
 export function mapVisibleAccidents(
   accidents: AccidentReport[],
   viewport: MapViewport | null,
-  origin: LngLat,
+  origin: LngLat | null,
 ): AccidentReport[] {
-  const ranked = [...accidents].sort(
-    (a, b) =>
-      distanceKm(origin, a.location) - distanceKm(origin, b.location),
-  );
+  const ranked = origin
+    ? [...accidents].sort(
+        (a, b) =>
+          distanceKm(origin, a.location) - distanceKm(origin, b.location),
+      )
+    : [...accidents];
   return pickVisiblePoints(ranked, {
     location: (accident) => accident.location,
     viewport,
@@ -25,8 +27,9 @@ export function mapVisibleAccidents(
 
 export function deriveAccidentIntel(
   accidents: AccidentReport[],
-  origin: LngLat,
+  origin: LngLat | null,
 ): RoadIntelItem[] {
+  if (!origin) return [];
   return accidents.map((accident) => ({
     id: `intel-accident-${accident.id}`,
     eventId: accident.id,

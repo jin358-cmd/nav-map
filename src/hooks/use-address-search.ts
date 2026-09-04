@@ -8,7 +8,7 @@ const SUGGEST_DEBOUNCE_MS = 350;
 
 export function useAddressSearch(
   query: string,
-  bias: LngLat,
+  bias: LngLat | null,
   composing: boolean,
 ) {
   const [suggestHits, setSuggestHits] = useState<GeocodeHit[]>([]);
@@ -20,6 +20,8 @@ export function useAddressSearch(
   const suggestGenerationRef = useRef(0);
   const searchGenerationRef = useRef(0);
   const searchAbortRef = useRef<AbortController | null>(null);
+  const biasLng = bias?.lng;
+  const biasLat = bias?.lat;
   const needle = query.trim();
   const submitted = submittedQuery.length > 0 && submittedQuery === needle;
 
@@ -31,9 +33,13 @@ export function useAddressSearch(
     const generation = suggestGenerationRef.current + 1;
     suggestGenerationRef.current = generation;
     const controller = new AbortController();
+    const origin =
+      biasLng != null && biasLat != null
+        ? { lng: biasLng, lat: biasLat }
+        : undefined;
     const timer = window.setTimeout(() => {
       setSuggesting(true);
-      void searchAddresses(needle, bias, controller.signal, "suggest")
+      void searchAddresses(needle, origin, controller.signal, "suggest")
         .then((rows) => {
           if (generation !== suggestGenerationRef.current) return;
           setSuggestHits(rows);
@@ -52,7 +58,7 @@ export function useAddressSearch(
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [bias, composing, needle]);
+  }, [biasLat, biasLng, composing, needle]);
 
   useEffect(() => {
     if (!submittedQuery || needle === submittedQuery) return;
@@ -78,8 +84,12 @@ export function useAddressSearch(
       setSubmittedQuery(next);
       setSearching(true);
       setError(null);
+      const origin =
+        biasLng != null && biasLat != null
+          ? { lng: biasLng, lat: biasLat }
+          : undefined;
 
-      void searchAddresses(next, bias, controller.signal, "search")
+      void searchAddresses(next, origin, controller.signal, "search")
         .then((rows) => {
           if (generation !== searchGenerationRef.current) return;
           setRemoteHits(rows);
@@ -97,7 +107,7 @@ export function useAddressSearch(
           if (generation === searchGenerationRef.current) setSearching(false);
         });
     },
-    [bias],
+    [biasLat, biasLng],
   );
 
   return {

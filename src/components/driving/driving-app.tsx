@@ -58,6 +58,7 @@ import {
   subscribeFavorites,
 } from "@/lib/favorites";
 import { pinSelected } from "@/lib/map-visibility";
+import { resolveMapQueryOrigin } from "@/lib/map-query-origin";
 import { destinationToHit } from "@/lib/poi-search";
 import { CITY_TRAFFIC_FOCUS_KM } from "@/lib/traffic-constants";
 import {
@@ -182,6 +183,7 @@ export function DrivingApp() {
   const [followOrientation, setFollowOrientation] =
     useState<FollowOrientation>("heading-up");
   const [followVehicle, setFollowVehicle] = useState(false);
+  const [userAdjustedMap, setUserAdjustedMap] = useState(false);
   const [mapDisplayMode, setMapDisplayMode] = useState<MapDisplayMode>(() =>
     typeof window === "undefined" ? "dark" : readMapDisplayMode(),
   );
@@ -284,6 +286,10 @@ export function DrivingApp() {
   const destinationRef = useRef<RouteDestination | null>(null);
   const vehicleRef = useRef(vehicle);
   const sawGpsFixRef = useRef(false);
+  const panIntentRef = useRef(false);
+  const lastViewportCenterRef = useRef<{ lng: number; lat: number } | null>(
+    null,
+  );
 
   const routeProgressModel = useMemo(
     () => createRouteProgressModel(route, routeSteps),
@@ -344,6 +350,38 @@ export function DrivingApp() {
     destinationLabel: destination?.label ?? "",
   });
 
+  const queryOrigin = useMemo(
+    () =>
+      resolveMapQueryOrigin({
+        gpsReady: gpsStatus === "active" && vehicle.source === "gps",
+        vehicleLng: vehicle.lng,
+        vehicleLat: vehicle.lat,
+        viewportLng: viewport?.center.lng ?? null,
+        viewportLat: viewport?.center.lat ?? null,
+        userAdjustedMap,
+      }),
+    [
+      gpsStatus,
+      userAdjustedMap,
+      vehicle.lat,
+      vehicle.lng,
+      vehicle.source,
+      viewport?.center.lat,
+      viewport?.center.lng,
+    ],
+  );
+  const queryLng = queryOrigin?.lng ?? null;
+  const queryLat = queryOrigin?.lat ?? null;
+  const searchOrigin = useMemo(
+    () =>
+      queryLng == null || queryLat == null
+        ? null
+        : { lng: queryLng, lat: queryLat },
+    [queryLat, queryLng],
+  );
+  const liveHeading =
+    gpsStatus === "active" && vehicle.source === "gps" ? vehicle.heading : 0;
+
   const {
     origin,
     visible,
@@ -351,8 +389,8 @@ export function DrivingApp() {
     cameraById,
     reload,
   } = useCctvView({
-    vehicle,
-    gpsStatus,
+    queryOrigin: searchOrigin,
+    headingDegrees: liveHeading,
     viewport,
     route,
     refreshNonce,
@@ -365,8 +403,7 @@ export function DrivingApp() {
     error: trafficError,
     reload: reloadTraffic,
   } = useTrafficView({
-    vehicle,
-    gpsStatus,
+    queryOrigin: searchOrigin,
     viewport,
     route,
     refreshNonce,
@@ -378,7 +415,7 @@ export function DrivingApp() {
     error: speedEnforcementError,
     reload: reloadSpeedEnforcement,
   } = useSpeedEnforcementView({
-    vehicle,
+    searchOrigin,
     viewport,
     refreshNonce,
   });
@@ -444,7 +481,9 @@ export function DrivingApp() {
         setVehicle(pose);
         if (!sawGpsFixRef.current) {
           sawGpsFixRef.current = true;
+          panIntentRef.current = false;
           setFollowVehicle(true);
+          setUserAdjustedMap(false);
         }
         const context = navigationContextRef.current;
         if (!context.navigating || !context.routeProgressModel) {
@@ -475,34 +514,23 @@ export function DrivingApp() {
   }, []);
 
   const visibleAccidents = useMemo(
-    () =>
-      mapVisibleAccidents(accidents, viewport, {
-        lng: vehicle.lng,
-        lat: vehicle.lat,
-      }),
-    [accidents, vehicle.lat, vehicle.lng, viewport],
+    () => mapVisibleAccidents(accidents, viewport, searchOrigin),
+    [accidents, searchOrigin, viewport],
   );
 
   const visibleDisasters = useMemo(
     () =>
       pinSelected(
-        mapVisibleDisasters(disasters, viewport, {
-          lng: vehicle.lng,
-          lat: vehicle.lat,
-        }),
+        mapVisibleDisasters(disasters, viewport, searchOrigin),
         selectedEvent?.kind === "disaster" ? selectedEvent.id : null,
         disasters,
       ),
-    [disasters, selectedEvent, vehicle.lat, vehicle.lng, viewport],
+    [disasters, searchOrigin, selectedEvent, viewport],
   );
 
   const visibleConstructions = useMemo(
-    () =>
-      mapVisibleConstruction(constructions, viewport, {
-        lng: vehicle.lng,
-        lat: vehicle.lat,
-      }),
-    [constructions, vehicle.lat, vehicle.lng, viewport],
+    () => mapVisibleConstruction(constructions, viewport, searchOrigin),
+    [constructions, searchOrigin, viewport],
   );
 
   const mapCameras = useMemo(
@@ -529,7 +557,7 @@ export function DrivingApp() {
         item.kind !== "accident" &&
         item.kind !== "construction",
     );
-    const origin = { lng: vehicle.lng, lat: vehicle.lat };
+    const origin = searchOrigin;
     return [
       ...trafficItems,
       ...cameras,
@@ -540,37 +568,32 @@ export function DrivingApp() {
     ];
   }, [
     baseIntel,
+    searchOrigin,
     trafficFocus5km,
     trafficScored,
-    vehicle.lat,
-    vehicle.lng,
     visible,
     visibleAccidents,
     visibleConstructions,
     visibleDisasters,
   ]);
 
-  const searchBias = useMemo(
-    () => ({ lng: vehicle.lng, lat: vehicle.lat }),
-    [vehicle.lat, vehicle.lng],
-  );
+  const searchBias = searchOrigin;
 
   const selectCamera = useCallback(
     (id: string) => {
       const camera = cameraById(id);
       if (!camera) return;
-      const center =
-        gpsStatus === "active"
-          ? { lng: vehicle.lng, lat: vehicle.lat }
-          : (viewport?.center ?? { lng: vehicle.lng, lat: vehicle.lat });
+      const center = searchOrigin ?? viewport?.center ?? null;
       setSelectedEvent({ kind: "cctv", id });
       setEventListKind(null);
       setSelectedCctv({
         ...camera,
-        distanceKm: camera.distanceKm ?? distanceKm(center, camera.location),
+        distanceKm:
+          camera.distanceKm ??
+          (center ? distanceKm(center, camera.location) : undefined),
       });
     },
-    [cameraById, gpsStatus, vehicle.lat, vehicle.lng, viewport?.center],
+    [cameraById, searchOrigin, viewport?.center],
   );
 
   const selectedDisaster = useMemo(() => {
@@ -612,10 +635,12 @@ export function DrivingApp() {
   const readDevicePosition = useCallback(async () => {
     const pose = await requestCurrentPosition();
     sawGpsFixRef.current = true;
+    panIntentRef.current = false;
     setVehicle(pose);
     setGpsStatus("active");
     setGpsError(null);
     setGpsPermission("granted");
+    setUserAdjustedMap(false);
     return pose;
   }, []);
 
@@ -704,6 +729,8 @@ export function DrivingApp() {
     setManeuver(null);
     setRouteSteps([]);
     setFollowVehicle(true);
+    setUserAdjustedMap(false);
+    panIntentRef.current = false;
     setNavigating(false);
     navigationTrackerRef.current = null;
     setNavigationProgress(null);
@@ -725,6 +752,8 @@ export function DrivingApp() {
         );
         setFollowVehicle(true);
       }
+      setUserAdjustedMap(false);
+      panIntentRef.current = false;
       setRefreshNonce((value) => value + 1);
     } catch (error) {
       const code = geoErrorCode(error);
@@ -770,6 +799,8 @@ export function DrivingApp() {
     setNavigating(true);
     setCameraMode("3d");
     setFollowVehicle(true);
+    setUserAdjustedMap(false);
+    panIntentRef.current = false;
     setSelectedCctv(null);
     setSelectedEvent(null);
     setEventListKind(null);
@@ -1041,8 +1072,17 @@ export function DrivingApp() {
         }}
         onUserPan={() => {
           setFollowVehicle(false);
+          panIntentRef.current = true;
         }}
-        onViewportChange={setViewport}
+        onViewportChange={(next) => {
+          setViewport(next);
+          const previous = lastViewportCenterRef.current;
+          lastViewportCenterRef.current = next.center;
+          if (!panIntentRef.current || !previous) return;
+          if (distanceKm(previous, next.center) >= 0.12) {
+            setUserAdjustedMap(true);
+          }
+        }}
         onLongPress={(location) => void handleLongPress(location)}
         onPickLocation={(location) => {
           setPickLocation(location);

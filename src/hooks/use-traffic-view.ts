@@ -8,13 +8,11 @@ import {
 } from "@/lib/traffic-constants";
 import { mapVisibleTraffic, scoreTraffic } from "@/lib/traffic-query";
 import type {
-  GpsStatus,
   LngLat,
   MapViewport,
   TrafficCatalog,
   TrafficDataOrigin,
   TrafficSegment,
-  VehiclePose,
 } from "@/types/domain";
 
 function quantizeCenter(point: LngLat, km = CITY_TRAFFIC_MOVE_REFRESH_KM): LngLat {
@@ -57,15 +55,13 @@ async function fetchTrafficCatalog(force = false): Promise<TrafficCatalog> {
 }
 
 export function useTrafficView({
-  vehicle,
-  gpsStatus,
+  queryOrigin,
   viewport,
   route,
   refreshNonce,
   nearbyFocusKm,
 }: {
-  vehicle: VehiclePose;
-  gpsStatus: GpsStatus;
+  queryOrigin: LngLat | null;
   viewport: MapViewport | null;
   route: [number, number][];
   refreshNonce: number;
@@ -75,13 +71,18 @@ export function useTrafficView({
   const [origin, setOrigin] = useState<TrafficDataOrigin>("unavailable");
   const [error, setError] = useState<string | null>(null);
 
-  const centerLng =
-    gpsStatus === "active" ? vehicle.lng : (viewport?.center.lng ?? vehicle.lng);
-  const centerLat =
-    gpsStatus === "active" ? vehicle.lat : (viewport?.center.lat ?? vehicle.lat);
+  const searchLng = queryOrigin
+    ? Number(quantizeCenter(queryOrigin).lng.toFixed(5))
+    : null;
+  const searchLat = queryOrigin
+    ? Number(quantizeCenter(queryOrigin).lat.toFixed(5))
+    : null;
   const searchCenter = useMemo(
-    () => quantizeCenter({ lng: centerLng, lat: centerLat }),
-    [centerLat, centerLng],
+    () =>
+      searchLng == null || searchLat == null
+        ? null
+        : { lng: searchLng, lat: searchLat },
+    [searchLat, searchLng],
   );
   const zoom = quantizeZoom(viewport?.zoom ?? 16.5);
 
@@ -120,7 +121,10 @@ export function useTrafficView({
   }, [applyCatalog]);
 
   const scored = useMemo(
-    () => (catalog.length ? scoreTraffic(catalog, searchCenter, route) : []),
+    () =>
+      catalog.length && searchCenter
+        ? scoreTraffic(catalog, searchCenter, route)
+        : [],
     [catalog, route, searchCenter],
   );
 

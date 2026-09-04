@@ -34,9 +34,10 @@ export function expandKeywordQueries(query: string): string[] {
 
 export function filterWithinSearchRadius(
   hits: GeocodeHit[],
-  origin: LngLat,
+  origin: LngLat | null,
   radiusKm = SEARCH_RADIUS_KM,
 ): GeocodeHit[] {
+  if (!origin) return hits;
   return hits.filter(
     (hit) => distanceKm(origin, hit.location) <= radiusKm,
   );
@@ -94,7 +95,7 @@ export function matchSavedPlaces(query: string, places: GeocodeHit[]) {
 
 export function instantKeywordHits(
   query: string,
-  origin: LngLat,
+  origin: LngLat | null,
   extras: GeocodeHit[] = [],
   limit = 8,
 ): GeocodeHit[] {
@@ -118,24 +119,25 @@ export function instantKeywordHits(
 export function rankSearchHits(
   hits: GeocodeHit[],
   query: string,
-  origin: LngLat,
+  origin: LngLat | null,
 ): GeocodeHit[] {
   return [...hits].sort((a, b) => {
     const nameDelta =
       scoreNameMatch(query, b.name) - scoreNameMatch(query, a.name);
     if (nameDelta !== 0) return nameDelta;
+    if (!origin) return 0;
     return distanceKm(origin, a.location) - distanceKm(origin, b.location);
   });
 }
 
 export function matchLocalPois(
   query: string,
-  origin: LngLat,
+  origin: LngLat | null,
   limit = SEARCH_RESULT_LIMIT,
 ): GeocodeHit[] {
   const variants = expandKeywordQueries(query).map(normalizeSearchKey);
   const rows = TAINAN_POIS.filter((poi) => {
-    if (distanceKm(origin, poi.location) > SEARCH_RADIUS_KM) return false;
+    if (origin && distanceKm(origin, poi.location) > SEARCH_RADIUS_KM) return false;
     const hay = normalizeSearchKey(
       `${poi.name} ${poi.address} ${poi.aliases.join(" ")}`,
     );

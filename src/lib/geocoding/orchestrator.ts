@@ -45,7 +45,7 @@ function localResults(
   const origin =
     latitude != null && longitude != null
       ? { lat: latitude, lng: longitude }
-      : { lat: 22.99721, lng: 120.21258 };
+      : null;
   return [...matchLandmarks(query, 8), ...matchLocalPois(query, origin, 12)].map(
     (hit) => ({
       id: hit.id,

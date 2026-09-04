@@ -10,12 +10,14 @@ import type {
 export function mapVisibleConstruction(
   items: ConstructionEvent[],
   viewport: MapViewport | null,
-  origin: LngLat,
+  origin: LngLat | null,
 ): ConstructionEvent[] {
-  const ranked = [...items].sort(
-    (a, b) =>
-      distanceKm(origin, a.location) - distanceKm(origin, b.location),
-  );
+  const ranked = origin
+    ? [...items].sort(
+        (a, b) =>
+          distanceKm(origin, a.location) - distanceKm(origin, b.location),
+      )
+    : [...items];
   return pickVisiblePoints(ranked, {
     location: (item) => item.location,
     viewport,
@@ -25,8 +27,9 @@ export function mapVisibleConstruction(
 
 export function deriveConstructionIntel(
   items: ConstructionEvent[],
-  origin: LngLat,
+  origin: LngLat | null,
 ): RoadIntelItem[] {
+  if (!origin) return [];
   return items
     .map((item) => ({
       id: `intel-construction-${item.id}`,

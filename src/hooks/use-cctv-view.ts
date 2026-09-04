@@ -11,10 +11,8 @@ import { fetchCctvCatalog } from "@/services/cctv";
 import type {
   CctvCamera,
   CctvDataOrigin,
-  GpsStatus,
   LngLat,
   MapViewport,
-  VehiclePose,
 } from "@/types/domain";
 
 function quantizeCenter(point: LngLat, km = CCTV_MOVE_REFRESH_KM): LngLat {
@@ -30,14 +28,14 @@ function quantizeHeading(heading: number) {
 }
 
 export function useCctvView({
-  vehicle,
-  gpsStatus,
+  queryOrigin,
+  headingDegrees,
   viewport,
   route,
   refreshNonce,
 }: {
-  vehicle: VehiclePose;
-  gpsStatus: GpsStatus;
+  queryOrigin: LngLat | null;
+  headingDegrees: number;
   viewport: MapViewport | null;
   route: [number, number][];
   refreshNonce: number;
@@ -46,15 +44,20 @@ export function useCctvView({
   const [origin, setOrigin] = useState<CctvDataOrigin>("snapshot");
   const [error, setError] = useState<string | null>(null);
 
-  const centerLng =
-    gpsStatus === "active" ? vehicle.lng : (viewport?.center.lng ?? vehicle.lng);
-  const centerLat =
-    gpsStatus === "active" ? vehicle.lat : (viewport?.center.lat ?? vehicle.lat);
+  const searchLng = queryOrigin
+    ? Number(quantizeCenter(queryOrigin).lng.toFixed(5))
+    : null;
+  const searchLat = queryOrigin
+    ? Number(quantizeCenter(queryOrigin).lat.toFixed(5))
+    : null;
   const searchCenter = useMemo(
-    () => quantizeCenter({ lng: centerLng, lat: centerLat }),
-    [centerLat, centerLng],
+    () =>
+      searchLng == null || searchLat == null
+        ? null
+        : { lng: searchLng, lat: searchLat },
+    [searchLat, searchLng],
   );
-  const heading = quantizeHeading(vehicle.heading);
+  const heading = quantizeHeading(headingDegrees);
 
   useEffect(() => {
     let cancelled = false;
@@ -78,7 +81,7 @@ export function useCctvView({
 
   const scored = useMemo(
     () =>
-      catalog.length
+      catalog.length && searchCenter
         ? scoreCameras(catalog, searchCenter, heading, route)
         : [],
     [catalog, heading, route, searchCenter],
