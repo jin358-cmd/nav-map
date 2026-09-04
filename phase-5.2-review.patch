@@ -203,6 +203,61 @@ index 0000000..72b38a2
 +4. 用一般視窗（非 iframe）開啟 App
 +5. 先 Google 登入，再授權 YouTube
 +6. 不要把 Client Secret 貼進任何 `NEXT_PUBLIC_` 變數
+diff --git a/next.config.ts b/next.config.ts
+index 2d41e40..d169a8c 100644
+--- a/next.config.ts
++++ b/next.config.ts
+@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
+ 
+ const nextConfig: NextConfig = {
+   reactStrictMode: true,
++  allowedDevOrigins: ["127.0.0.1", "localhost"],
+   async headers() {
+     return [
+       {
+@@ -11,6 +12,12 @@ const nextConfig: NextConfig = {
+           { key: "Service-Worker-Allowed", value: "/" },
+         ],
+       },
++      {
++        source: "/:path*",
++        headers: [
++          { key: "Permissions-Policy", value: "geolocation=(self)" },
++        ],
++      },
+     ];
+   },
+   outputFileTracingIncludes: {
+diff --git a/public/sw.js b/public/sw.js
+index 217624d..d25df07 100644
+--- a/public/sw.js
++++ b/public/sw.js
+@@ -1,4 +1,4 @@
+-const CACHE = "navpilot-shell-v1";
++const CACHE = "navpilot-shell-v2";
+ 
+ self.addEventListener("install", (event) => {
+   event.waitUntil(
+@@ -23,7 +23,18 @@ self.addEventListener("fetch", (event) => {
+   const url = new URL(event.request.url);
+   if (url.origin !== self.location.origin) return;
+   if (url.pathname.startsWith("/api/")) return;
++  if (url.pathname.startsWith("/_next/")) return;
++  if (url.pathname.startsWith("/maplibre/")) return;
++  if (url.pathname.startsWith("/__nextjs")) return;
++
++  if (event.request.mode === "navigate") {
++    event.respondWith(
++      fetch(event.request).catch(() => caches.match("/").then((hit) => hit || Response.error())),
++    );
++    return;
++  }
++
+   event.respondWith(
+-    fetch(event.request).catch(() => caches.match(event.request).then((hit) => hit || caches.match("/"))),
++    fetch(event.request).catch(() => caches.match(event.request).then((hit) => hit || Response.error())),
+   );
+ });
 diff --git a/src/app/api/accidents/route.ts b/src/app/api/accidents/route.ts
 new file mode 100644
 index 0000000..3b03152
@@ -471,10 +526,10 @@ index 2e67ffa..58f35d0 100644
        {
          source,
 diff --git a/src/app/globals.css b/src/app/globals.css
-index 93bf982..ea72c6d 100644
+index 93bf982..0b299cf 100644
 --- a/src/app/globals.css
 +++ b/src/app/globals.css
-@@ -358,39 +358,49 @@
+@@ -358,34 +358,44 @@
  
  .navigation-instruction-card {
    position: relative;
@@ -529,15 +584,18 @@ index 93bf982..ea72c6d 100644
    line-height: 1.2;
  }
  
- .navigation-street-name {
--  font-size: clamp(16px, 1.8vw, 24px);
-+  font-size: clamp(18px, 2vw, 28px);
-   line-height: 1.25;
-   white-space: nowrap;
-   overflow: hidden;
-@@ -398,49 +408,49 @@
+@@ -397,50 +407,64 @@
+   text-overflow: ellipsis;
  }
  
++.navigation-road-name {
++  font-size: clamp(13px, 1.4vw, 18px);
++  line-height: 1.2;
++  white-space: nowrap;
++  overflow: hidden;
++  text-overflow: ellipsis;
++}
++
  .navigation-audio-button {
 -  width: 36px;
 -  height: 36px;
@@ -551,7 +609,8 @@ index 93bf982..ea72c6d 100644
 -    max-height: 230px;
 -    padding: 12px 14px;
 -    border-radius: 18px;
-+    width: min(400px, calc(100vw - 80px));
++    width: min(400px, calc(100vw - 1.5rem));
++    max-width: calc(100vw - 1.5rem);
 +    max-height: 260px;
 +    padding: 15px 16px;
 +    border-radius: 20px;
@@ -583,7 +642,11 @@ index 93bf982..ea72c6d 100644
  
    .navigation-street-name {
 -    font-size: clamp(14px, 3.8vw, 18px);
-+    font-size: clamp(16px, 4vw, 22px);
++    font-size: clamp(15px, 3.6vw, 20px);
++  }
++
++  .navigation-road-name {
++    font-size: clamp(12px, 3.2vw, 15px);
    }
  
    .navigation-audio-button {
@@ -598,13 +661,14 @@ index 93bf982..ea72c6d 100644
    .navigation-instruction-card {
 -    width: min(292px, calc(100vw - 76px));
 -    padding: 10px 12px;
-+    width: min(340px, calc(100vw - 68px));
++    width: min(340px, calc(100vw - 1.25rem));
++    max-width: calc(100vw - 1.25rem);
 +    padding: 12px 14px;
    }
  }
 \ No newline at end of file
 diff --git a/src/components/driving/driving-app.tsx b/src/components/driving/driving-app.tsx
-index 2923bbb..213490a 100644
+index 2923bbb..b73d2ec 100644
 --- a/src/components/driving/driving-app.tsx
 +++ b/src/components/driving/driving-app.tsx
 @@ -13,8 +13,18 @@ import { X } from "lucide-react";
@@ -656,7 +720,7 @@ index 2923bbb..213490a 100644
    YOUTUBE_PLAYLISTS,
  } from "@/lib/constants";
  import { distanceKm } from "@/lib/geo";
-@@ -56,32 +74,65 @@ import {
+@@ -56,34 +74,95 @@ import {
    type NavigationProgress,
    type NavigationTrackerState,
  } from "@/lib/route-progress";
@@ -676,6 +740,7 @@ index 2923bbb..213490a 100644
 +  upsertSavedPlace,
 +} from "@/lib/saved-places";
  import { deriveTrafficIntel } from "@/lib/traffic-intel";
++import { GpsFixChip } from "@/components/overlay/gps-fix-chip";
  import {
    fetchAccidentReports,
 -  fetchAheadIntel,
@@ -685,6 +750,11 @@ index 2923bbb..213490a 100644
    requestCurrentPosition,
    watchVehiclePosition,
  } from "@/services";
++import {
++  geoErrorCode,
++  geoErrorMessage,
++  queryGeolocationPermission,
++} from "@/services/geolocation";
 +import { fetchConstructionEvents } from "@/services/construction";
  import { reversePlace } from "@/services/routing";
  import type {
@@ -695,6 +765,8 @@ index 2923bbb..213490a 100644
 +  ConstructionEvent,
 +  EventDataOrigin,
    GeocodeHit,
++  GpsErrorCode,
++  GpsPermissionState,
    GpsStatus,
 +  LayerKindVisibility,
 +  MapFocusTarget,
@@ -723,18 +795,42 @@ index 2923bbb..213490a 100644
 +  disaster: true,
 +};
 +
++function MapChunkError() {
++  return (
++    <div className="absolute inset-0 bg-[#0b0d11]">
++      <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center text-sm text-zinc-400">
++        <p>地圖模組載入失敗，請重新整理。</p>
++        <button
++          type="button"
++          className="rounded-full border border-white/15 bg-white/8 px-4 py-1.5 text-zinc-100"
++          onClick={() => window.location.reload()}
++        >
++          重新載入地圖
++        </button>
++      </div>
++    </div>
++  );
++}
++
  const DrivingMap = dynamic(
-   () => import("@/components/map/driving-map").then((mod) => mod.DrivingMap),
+-  () => import("@/components/map/driving-map").then((mod) => mod.DrivingMap),
++  () =>
++    import("@/components/map/driving-map")
++      .then((mod) => mod.DrivingMap)
++      .catch(() => MapChunkError),
    {
-@@ -98,29 +149,65 @@ const DrivingMap = dynamic(
+     ssr: false,
+     loading: () => (
+@@ -98,29 +177,68 @@ const DrivingMap = dynamic(
  
  export function DrivingApp() {
    const [vehicle, setVehicle] = useState<VehiclePose>(DEMO_VEHICLE);
 +  const [displayVehicle, setDisplayVehicle] = useState<DisplayPose | null>(null);
    const [cameraMode, setCameraMode] = useState<CameraMode>("3d");
+-  const [followVehicle, setFollowVehicle] = useState(true);
 +  const [followOrientation, setFollowOrientation] =
 +    useState<FollowOrientation>("heading-up");
-   const [followVehicle, setFollowVehicle] = useState(true);
++  const [followVehicle, setFollowVehicle] = useState(false);
 +  const [mapDisplayMode, setMapDisplayMode] = useState<MapDisplayMode>(() =>
 +    typeof window === "undefined" ? "dark" : readMapDisplayMode(),
 +  );
@@ -751,6 +847,9 @@ index 2923bbb..213490a 100644
 +  } | null>(null);
 +  const [pickAddress, setPickAddress] = useState<string | null>(null);
    const [gpsStatus, setGpsStatus] = useState<GpsStatus>("idle");
++  const [gpsError, setGpsError] = useState<GpsErrorCode>(null);
++  const [gpsPermission, setGpsPermission] =
++    useState<GpsPermissionState>("prompt");
    const [viewport, setViewport] = useState<MapViewport | null>(null);
    const [refreshNonce, setRefreshNonce] = useState(0);
    const [accidents, setAccidents] = useState<AccidentReport[]>([]);
@@ -800,7 +899,7 @@ index 2923bbb..213490a 100644
    const [navigating, setNavigating] = useState(false);
    const [intelCollapse, setIntelCollapse] = useState(0);
    const [musicMode, setMusicMode] = useState<"off" | "open" | "mini">("off");
-@@ -130,6 +217,13 @@ export function DrivingApp() {
+@@ -130,6 +248,13 @@ export function DrivingApp() {
      getFavoritesSnapshot,
      getServerFavoritesSnapshot,
    );
@@ -814,7 +913,7 @@ index 2923bbb..213490a 100644
    const trafficFocus5km = true;
    const landscape = useLandscape();
    const navCardRef = useRef<HTMLDivElement>(null);
-@@ -140,14 +234,22 @@ export function DrivingApp() {
+@@ -140,16 +265,25 @@ export function DrivingApp() {
      bottom: 130,
    });
    const googleAccount = useGoogleAccount();
@@ -837,8 +936,11 @@ index 2923bbb..213490a 100644
 +  const rerouteGenerationRef = useRef(0);
    const destinationRef = useRef<RouteDestination | null>(null);
    const vehicleRef = useRef(vehicle);
++  const sawGpsFixRef = useRef(false);
  
-@@ -161,6 +263,14 @@ export function DrivingApp() {
+   const routeProgressModel = useMemo(
+     () => createRouteProgressModel(route, routeSteps),
+@@ -161,6 +295,14 @@ export function DrivingApp() {
      routeSteps,
    });
  
@@ -853,7 +955,7 @@ index 2923bbb..213490a 100644
    useEffect(() => {
      navigationContextRef.current = {
        navigating,
-@@ -183,8 +293,15 @@ export function DrivingApp() {
+@@ -183,8 +325,15 @@ export function DrivingApp() {
      : activeNavigationStep?.cueMeters && activeNavigationStep.cueMeters > 0
        ? activeNavigationStep.cueMeters
        : (maneuver?.distanceMeters ?? activeNavigationStep?.distanceMeters ?? 0);
@@ -871,7 +973,7 @@ index 2923bbb..213490a 100644
  
    useNavigationVoice({
      enabled: voiceEnabled,
-@@ -241,33 +358,50 @@ export function DrivingApp() {
+@@ -241,42 +390,67 @@ export function DrivingApp() {
      reload: reloadDisasters,
    } = useDisasterView(refreshNonce);
  
@@ -936,9 +1038,15 @@ index 2923bbb..213490a 100644
      };
    }, []);
  
-@@ -276,7 +410,10 @@ export function DrivingApp() {
+   useEffect(() => {
++    void queryGeolocationPermission().then(setGpsPermission);
+     const stop = watchVehiclePosition({
        onFix: (pose) => {
          setVehicle(pose);
++        if (!sawGpsFixRef.current) {
++          sawGpsFixRef.current = true;
++          setFollowVehicle(true);
++        }
          const context = navigationContextRef.current;
 -        if (!context.navigating || !context.routeProgressModel) return;
 +        if (!context.navigating || !context.routeProgressModel) {
@@ -948,7 +1056,7 @@ index 2923bbb..213490a 100644
          const next = updateNavigationProgress({
            model: context.routeProgressModel,
            steps: context.routeSteps,
-@@ -285,6 +422,13 @@ export function DrivingApp() {
+@@ -285,8 +459,17 @@ export function DrivingApp() {
          });
          navigationTrackerRef.current = next;
          setNavigationProgress(next);
@@ -961,8 +1069,12 @@ index 2923bbb..213490a 100644
 +        );
        },
        onStatus: setGpsStatus,
++      onError: setGpsError,
++      onPermission: setGpsPermission,
      });
-@@ -307,10 +451,19 @@ export function DrivingApp() {
+     return stop;
+   }, []);
+@@ -307,10 +490,19 @@ export function DrivingApp() {
            lng: vehicle.lng,
            lat: vehicle.lat,
          }),
@@ -984,7 +1096,7 @@ index 2923bbb..213490a 100644
    );
  
    const mapCameras = useMemo(
-@@ -325,7 +478,7 @@ export function DrivingApp() {
+@@ -325,7 +517,7 @@ export function DrivingApp() {
  
    const intel = useMemo(() => {
      const cameras = roadIntelFromCameras(visible);
@@ -993,7 +1105,7 @@ index 2923bbb..213490a 100644
        trafficScored,
        trafficFocus5km ? CITY_TRAFFIC_FOCUS_KM : undefined,
      );
-@@ -334,12 +487,14 @@ export function DrivingApp() {
+@@ -334,12 +526,14 @@ export function DrivingApp() {
          item.kind !== "cctv" &&
          item.kind !== "congestion" &&
          item.kind !== "disaster" &&
@@ -1010,7 +1122,7 @@ index 2923bbb..213490a 100644
        ...deriveAccidentIntel(visibleAccidents, origin),
        ...deriveDisasterIntel(visibleDisasters, origin),
        ...extras,
-@@ -352,6 +507,7 @@ export function DrivingApp() {
+@@ -352,6 +546,7 @@ export function DrivingApp() {
      vehicle.lng,
      visible,
      visibleAccidents,
@@ -1018,7 +1130,7 @@ index 2923bbb..213490a 100644
      visibleDisasters,
    ]);
  
-@@ -368,7 +524,8 @@ export function DrivingApp() {
+@@ -368,7 +563,8 @@ export function DrivingApp() {
          gpsStatus === "active"
            ? { lng: vehicle.lng, lat: vehicle.lat }
            : (viewport?.center ?? { lng: vehicle.lng, lat: vehicle.lat });
@@ -1028,7 +1140,7 @@ index 2923bbb..213490a 100644
        setSelectedCctv({
          ...camera,
          distanceKm: camera.distanceKm ?? distanceKm(center, camera.location),
-@@ -377,32 +534,80 @@ export function DrivingApp() {
+@@ -377,32 +573,103 @@ export function DrivingApp() {
      [cameraById, gpsStatus, vehicle.lat, vehicle.lng, viewport?.center],
    );
  
@@ -1069,6 +1181,16 @@ index 2923bbb..213490a 100644
 +    });
 +  }, []);
 +
++  const readDevicePosition = useCallback(async () => {
++    const pose = await requestCurrentPosition();
++    sawGpsFixRef.current = true;
++    setVehicle(pose);
++    setGpsStatus("active");
++    setGpsError(null);
++    setGpsPermission("granted");
++    return pose;
++  }, []);
++
 +  const applyRoute = useCallback(async (hit: GeocodeHit, mode = travelMode) => {
      rememberAddress(hit);
 +    lastRouteHitRef.current = hit;
@@ -1079,8 +1201,22 @@ index 2923bbb..213490a 100644
 +    setSelectedEvent(null);
 +    setEventListKind(null);
      try {
++      let origin = vehicleRef.current.source === "gps" ? vehicleRef.current : null;
++      try {
++        origin = await readDevicePosition();
++      } catch (error) {
++        const code = geoErrorCode(error);
++        setGpsError(code);
++        setGpsStatus(code === "permission_denied" ? "denied" : "unavailable");
++        if (code === "permission_denied") setGpsPermission("denied");
++        if (!origin) {
++          setRouteError(geoErrorMessage(code));
++          return;
++        }
++      }
        const plan = await planDrivingRoute(
-         { lng: vehicle.lng, lat: vehicle.lat },
+-        { lng: vehicle.lng, lat: vehicle.lat },
++        { lng: origin.lng, lat: origin.lat },
          hit,
 +        undefined,
 +        mode,
@@ -1109,11 +1245,11 @@ index 2923bbb..213490a 100644
        setRouting(false);
      }
 -  }, [vehicle.lat, vehicle.lng]);
-+  }, [travelMode, vehicle.lat, vehicle.lng]);
++  }, [readDevicePosition, travelMode]);
  
    const handleLongPress = useCallback(
      async (location: { lng: number; lat: number }) => {
-@@ -419,7 +624,8 @@ export function DrivingApp() {
+@@ -419,7 +686,8 @@ export function DrivingApp() {
  
    const handleHeartClick = useCallback(() => {
      setSelectedCctv(null);
@@ -1123,7 +1259,7 @@ index 2923bbb..213490a 100644
      setMusicMode((mode) => (mode === "open" ? "mini" : mode));
      if (currentPlace && !isFavorite(currentPlace)) {
        addFavorite(currentPlace);
-@@ -432,27 +638,38 @@ export function DrivingApp() {
+@@ -432,51 +700,88 @@ export function DrivingApp() {
    const clearRoute = useCallback(() => {
      setDestination(null);
      setRouteError(null);
@@ -1145,36 +1281,62 @@ index 2923bbb..213490a 100644
    const locate = useCallback(async () => {
      setGpsStatus("locating");
      try {
-       const pose = await requestCurrentPosition();
-       setVehicle(pose);
+-      const pose = await requestCurrentPosition();
+-      setVehicle(pose);
 -      setFollowVehicle(true);
+-      setGpsStatus("active");
++      const pose = await readDevicePosition();
 +      if (!followVehicle) {
 +        setFollowOrientation("heading-up");
 +        setFollowVehicle(true);
-+      } else {
++      } else if (pose.source === "gps") {
 +        setFollowOrientation((current) =>
 +          current === "heading-up" ? "north-up" : "heading-up",
 +        );
 +        setFollowVehicle(true);
 +      }
-       setGpsStatus("active");
        setRefreshNonce((value) => value + 1);
-     } catch {
-       setGpsStatus("denied");
+-    } catch {
+-      setGpsStatus("denied");
++    } catch (error) {
++      const code = geoErrorCode(error);
++      setGpsError(code);
++      setGpsStatus(code === "permission_denied" ? "denied" : "unavailable");
++      if (code === "permission_denied") setGpsPermission("denied");
      }
 -  }, []);
-+  }, [followVehicle]);
++  }, [followVehicle, readDevicePosition]);
  
-   const startNavigation = useCallback(() => {
+-  const startNavigation = useCallback(() => {
++  const startNavigation = useCallback(async () => {
++    let pose = vehicleRef.current;
++    if (pose.source !== "gps") {
++      try {
++        pose = await readDevicePosition();
++      } catch (error) {
++        const code = geoErrorCode(error);
++        setGpsError(code);
++        setGpsStatus(code === "permission_denied" ? "denied" : "unavailable");
++        if (code === "permission_denied") setGpsPermission("denied");
++        setRouteError(geoErrorMessage(code));
++        return;
++      }
++    }
      const next = routeProgressModel
-@@ -465,18 +682,30 @@ export function DrivingApp() {
+       ? updateNavigationProgress({
+           model: routeProgressModel,
+           steps: routeSteps,
+-          vehicle,
++          vehicle: pose,
+           previous: null,
+         })
        : null;
      navigationTrackerRef.current = next;
      setNavigationProgress(next);
 +    setDisplayVehicle(
 +      routeProgressModel
 +        ? snapVehicleToRoute({
-+            raw: vehicle,
++            raw: pose,
 +            model: routeProgressModel,
 +            previousRouteMeters: next?.routeMeters,
 +          })
@@ -1188,7 +1350,8 @@ index 2923bbb..213490a 100644
 +    setSelectedEvent(null);
 +    setEventListKind(null);
      setIntelCollapse((value) => value + 1);
-   }, [routeProgressModel, routeSteps, vehicle]);
+-  }, [routeProgressModel, routeSteps, vehicle]);
++  }, [readDevicePosition, routeProgressModel, routeSteps]);
  
    const exitNavigation = useCallback(() => {
 +    rerouteAbortRef.current?.abort();
@@ -1199,7 +1362,7 @@ index 2923bbb..213490a 100644
      setFollowVehicle(false);
      setFitRouteKey((value) => value + 1);
    }, []);
-@@ -500,10 +729,26 @@ export function DrivingApp() {
+@@ -500,10 +805,26 @@ export function DrivingApp() {
      const dest = destinationRef.current;
      const here = vehicleRef.current;
      if (!dest || reroutingRef.current) return;
@@ -1228,7 +1391,7 @@ index 2923bbb..213490a 100644
      try {
        const plan = await planDrivingRoute(
          { lng: here.lng, lat: here.lat },
-@@ -513,20 +758,32 @@ export function DrivingApp() {
+@@ -513,20 +834,32 @@ export function DrivingApp() {
            address: dest.address,
            location: dest.location,
          },
@@ -1264,7 +1427,7 @@ index 2923bbb..213490a 100644
  
    useEffect(() => {
      if (!navigating || !navigationProgress?.offRoute) return;
-@@ -558,12 +815,99 @@ export function DrivingApp() {
+@@ -558,12 +891,99 @@ export function DrivingApp() {
      };
    }, [landscape, navigating]);
  
@@ -1364,7 +1527,7 @@ index 2923bbb..213490a 100644
          navigating={navigating}
          selectedCctvId={selectedCctv?.id ?? null}
          selectedDisasterId={selectedDisaster?.id ?? null}
-@@ -572,28 +916,156 @@ export function DrivingApp() {
+@@ -572,28 +992,156 @@ export function DrivingApp() {
          traffic={traffic}
          disasters={visibleDisasters}
          accidents={visibleAccidents}
@@ -1522,7 +1685,7 @@ index 2923bbb..213490a 100644
        {destination && navigating ? (
          <>
            <div className="absolute top-[calc(env(safe-area-inset-top,0px)+12px)] left-[calc(env(safe-area-inset-left,0px)+12px)] z-30">
-@@ -603,6 +1075,8 @@ export function DrivingApp() {
+@@ -603,6 +1151,8 @@ export function DrivingApp() {
                distanceMeters={distanceToNextMeters}
                offRoute={navigationProgress?.offRoute ?? false}
                rerouting={rerouting}
@@ -1531,7 +1694,7 @@ index 2923bbb..213490a 100644
                voiceEnabled={voiceEnabled}
                onToggleVoice={() => setVoiceEnabled((value) => !value)}
              />
-@@ -630,17 +1104,42 @@ export function DrivingApp() {
+@@ -630,17 +1180,42 @@ export function DrivingApp() {
              <RouteConfirmBar
                destination={destination}
                maneuver={maneuver}
@@ -1581,7 +1744,7 @@ index 2923bbb..213490a 100644
            )}
          </div>
        )}
-@@ -648,11 +1147,22 @@ export function DrivingApp() {
+@@ -648,11 +1223,22 @@ export function DrivingApp() {
        <div className="pointer-events-auto absolute top-[42%] right-[max(0.65rem,env(safe-area-inset-right))] z-20 -translate-y-1/2 sm:top-28 sm:translate-y-0">
          <MapControls
            cameraMode={cameraMode}
@@ -1604,10 +1767,21 @@ index 2923bbb..213490a 100644
          />
        </div>
  
-@@ -663,18 +1173,69 @@ export function DrivingApp() {
+@@ -662,19 +1248,79 @@ export function DrivingApp() {
+         </div>
        ) : null}
  
-       <footer className="absolute inset-x-0 bottom-0 z-10 flex flex-col items-center gap-2 px-2 pb-[max(0.45rem,env(safe-area-inset-bottom))] sm:p-4 sm:pt-0">
+-      <footer className="absolute inset-x-0 bottom-0 z-10 flex flex-col items-center gap-2 px-2 pb-[max(0.45rem,env(safe-area-inset-bottom))] sm:p-4 sm:pt-0">
++      <div className="pointer-events-none absolute bottom-[5.75rem] left-2 z-20 sm:bottom-36 sm:left-3">
++        <GpsFixChip
++          vehicle={vehicle}
++          status={gpsStatus}
++          permission={gpsPermission}
++          error={gpsError}
++        />
++      </div>
++
++      <footer className="absolute inset-x-0 bottom-0 z-10 flex max-w-[100vw] flex-col items-center gap-2 overflow-x-hidden px-[max(0.35rem,env(safe-area-inset-left))] pr-[max(0.35rem,env(safe-area-inset-right))] pb-[max(0.45rem,env(safe-area-inset-bottom))] sm:p-4 sm:pt-0">
 +        {parkingOpen ? (
 +          <ParkingPanel
 +            lots={parkingLots}
@@ -1680,7 +1854,7 @@ index 2923bbb..213490a 100644
            />
          ) : null}
          {musicMode !== "off" ? (
-@@ -686,6 +1247,7 @@ export function DrivingApp() {
+@@ -686,6 +1332,7 @@ export function DrivingApp() {
                  : YOUTUBE_PLAYLISTS
              }
              libraryStatus={youtubeLibrary.status}
@@ -1688,7 +1862,7 @@ index 2923bbb..213490a 100644
              signedIn={Boolean(googleAccount.account)}
              onClose={() => {
                setMusicMode("off");
-@@ -704,6 +1266,9 @@ export function DrivingApp() {
+@@ -704,6 +1351,9 @@ export function DrivingApp() {
            disasterOrigin={disasterOrigin}
            emptyHint="目前畫面內尚無 CCTV、事故或災害情報。"
            onSelectCctv={selectCamera}
@@ -1698,7 +1872,7 @@ index 2923bbb..213490a 100644
            musicOpen={musicMode !== "off"}
            favorites={favorites}
            favoritesOpen={favoritesOpen}
-@@ -729,13 +1294,13 @@ export function DrivingApp() {
+@@ -729,13 +1379,13 @@ export function DrivingApp() {
            onPreviewOpen={() => {
              setFavoritesOpen(false);
              setSelectedCctv(null);
@@ -1714,7 +1888,7 @@ index 2923bbb..213490a 100644
              setIntelCollapse((value) => value + 1);
              setMusicMode((mode) => {
                if (mode === "off") return "open";
-@@ -746,14 +1311,9 @@ export function DrivingApp() {
+@@ -746,14 +1396,9 @@ export function DrivingApp() {
          />
        </footer>
  
@@ -1731,7 +1905,7 @@ index 2923bbb..213490a 100644
          </div>
        ) : null}
      </div>
-@@ -770,7 +1330,9 @@ function Legend() {
+@@ -770,7 +1415,9 @@ function Legend() {
      { color: "bg-[#7f1d1d]", label: "接近停止" },
      { color: "bg-[#c084fc]", label: "CCTV" },
      { color: "bg-[#fbbf24]", label: "測速執法" },
@@ -1743,7 +1917,7 @@ index 2923bbb..213490a 100644
    ];
  
 diff --git a/src/components/map/driving-map.tsx b/src/components/map/driving-map.tsx
-index 231d903..2d40061 100644
+index 231d903..b8e4f3c 100644
 --- a/src/components/map/driving-map.tsx
 +++ b/src/components/map/driving-map.tsx
 @@ -16,47 +16,90 @@ import {
@@ -1840,7 +2014,7 @@ index 231d903..2d40061 100644
    destination: RouteDestination | null;
    overlayPadding?: {
      top: number;
-@@ -67,9 +110,14 @@ type DrivingMapProps = {
+@@ -67,15 +110,28 @@ type DrivingMapProps = {
    fitRouteKey: number;
    onCctvSelect: (cameraId: string) => void;
    onDisasterSelect: (alertId: string) => void;
@@ -1855,7 +2029,21 @@ index 231d903..2d40061 100644
  };
  
  function isCompactViewport(width: number) {
-@@ -119,45 +167,31 @@ function cameraOptions(
+   return width < 640;
+ }
+ 
++function isStyleReady(map: MapLibreMap | null): map is MapLibreMap {
++  try {
++    return Boolean(map && map.isStyleLoaded());
++  } catch {
++    return false;
++  }
++}
++
+ function drivingPadding(
+   height: number,
+   width: number,
+@@ -119,45 +175,31 @@ function cameraOptions(
    navigating = false,
    approaching = false,
    overlay?: DrivingMapProps["overlayPadding"],
@@ -1916,7 +2104,7 @@ index 231d903..2d40061 100644
  function createDestinationPin(label: string): HTMLDivElement {
    const el = document.createElement("div");
    el.className = "destination-pin";
-@@ -214,28 +248,47 @@ function readViewport(map: MapLibreMap): MapViewport {
+@@ -214,28 +256,47 @@ function readViewport(map: MapLibreMap): MapViewport {
  
  export function DrivingMap({
    vehicle,
@@ -1964,7 +2152,7 @@ index 231d903..2d40061 100644
  }: DrivingMapProps) {
    const containerRef = useRef<HTMLDivElement | null>(null);
    const mapRef = useRef<MapLibreMap | null>(null);
-@@ -244,21 +297,47 @@ export function DrivingMap({
+@@ -244,21 +305,47 @@ export function DrivingMap({
    const destMarkerRef = useRef<Marker | null>(null);
    const onCctvSelectRef = useRef(onCctvSelect);
    const onDisasterSelectRef = useRef(onDisasterSelect);
@@ -2012,7 +2200,7 @@ index 231d903..2d40061 100644
    const routeMetersRef = useRef(routeMeters);
    const distanceToNextRef = useRef(distanceToNextMeters);
    const pinchingRef = useRef(false);
-@@ -274,40 +353,83 @@ export function DrivingMap({
+@@ -274,40 +361,83 @@ export function DrivingMap({
    useEffect(() => {
      onCctvSelectRef.current = onCctvSelect;
      onDisasterSelectRef.current = onDisasterSelect;
@@ -2096,7 +2284,7 @@ index 231d903..2d40061 100644
      routeMeters,
      distanceToNextMeters,
      overlayPadding,
-@@ -320,7 +442,7 @@ export function DrivingMap({
+@@ -320,7 +450,7 @@ export function DrivingMap({
  
      const map = new MapLibreMap({
        container: containerRef.current,
@@ -2105,7 +2293,7 @@ index 231d903..2d40061 100644
        center: [TAINAN_CENTER.lng, TAINAN_CENTER.lat],
        zoom: DRIVING_ZOOM,
        pitch: DRIVING_PITCH,
-@@ -377,22 +499,24 @@ export function DrivingMap({
+@@ -377,22 +507,24 @@ export function DrivingMap({
        const dt = Math.min(0.05, (now - last) / 1000);
        lastFrameRef.current = now;
  
@@ -2145,7 +2333,7 @@ index 231d903..2d40061 100644
  
        if (navigatingRef.current) {
          if (now - lastArrowUpdateRef.current > 180) {
-@@ -413,26 +537,36 @@ export function DrivingMap({
+@@ -413,63 +545,115 @@ export function DrivingMap({
        }
  
        if (followVehicleRef.current) {
@@ -2171,37 +2359,49 @@ index 231d903..2d40061 100644
          const zoomTarget = pinchingRef.current
            ? mapNow.getZoom()
            : (userZoomRef.current ?? wanted.zoom);
-+        const followT = damp(dt, 0.22);
-         mapNow.jumpTo({
-           center: [
+-        mapNow.jumpTo({
+-          center: [
 -            lerp(center.lng, wanted.center[0], t),
 -            lerp(center.lat, wanted.center[1], t),
-+            lerp(center.lng, wanted.center[0], followT),
-+            lerp(center.lat, wanted.center[1], followT),
-           ],
+-          ],
 -          bearing: lerpAngle(mapNow.getBearing(), wanted.bearing, t),
 -          pitch: lerp(mapNow.getPitch(), wanted.pitch, t),
 -          zoom: lerp(mapNow.getZoom(), zoomTarget, pinchingRef.current ? 0 : t),
-+          bearing: lerpAngle(mapNow.getBearing(), wanted.bearing, followT),
-+          pitch: lerp(mapNow.getPitch(), wanted.pitch, followT),
-+          zoom: lerp(mapNow.getZoom(), zoomTarget, pinchingRef.current ? 0 : followT),
-           padding: wanted.padding,
-         });
+-          padding: wanted.padding,
+-        });
++        const followT = damp(dt, 0.22);
++        try {
++          mapNow.jumpTo({
++            center: [
++              lerp(center.lng, wanted.center[0], followT),
++              lerp(center.lat, wanted.center[1], followT),
++            ],
++            bearing: lerpAngle(mapNow.getBearing(), wanted.bearing, followT),
++            pitch: lerp(mapNow.getPitch(), wanted.pitch, followT),
++            zoom: lerp(mapNow.getZoom(), zoomTarget, pinchingRef.current ? 0 : followT),
++            padding: wanted.padding,
++          });
++        } catch {
++          /* style may still be swapping */
++        }
          emitViewport();
-@@ -441,18 +575,39 @@ export function DrivingMap({
+       }
+ 
        rafRef.current = requestAnimationFrame(tick);
      };
  
 -    const onLoad = () => {
 -      applyDarkDrivingTheme(map);
 -      upsertIntelligenceLayers(map, routeRef.current, trafficRef.current);
+-      upsertSpeedEnforcementLayer(map, speedEnforcementRef.current);
 +    const attachCustomLayers = () => {
++      if (!isStyleReady(map)) return;
 +      const visible = layerVisibilityRef.current;
-+      applyResolvedTheme(map, resolveMapBasemap(mapDisplayModeRef.current));
-+      upsertIntelligenceLayers(map, routeRef.current, trafficRef.current, visible.congestion);
-       upsertSpeedEnforcementLayer(map, speedEnforcementRef.current);
        try {
 -        upsertCctvLayer(map, camerasRef.current, selectedRef.current);
++        applyResolvedTheme(map, resolveMapBasemap(mapDisplayModeRef.current));
++        upsertIntelligenceLayers(map, routeRef.current, trafficRef.current, visible.congestion);
++        upsertSpeedEnforcementLayer(map, speedEnforcementRef.current);
 +        upsertCctvLayer(map, camerasRef.current, selectedRef.current, visible.cctv);
          bindCctvLayerClicks(map, (id) => onCctvSelectRef.current(id));
 -        upsertDisasterLayer(map, disastersRef.current, selectedDisasterRef.current);
@@ -2229,15 +2429,40 @@ index 231d903..2d40061 100644
        }
 +    };
 +
-+    const onLoad = () => {
++    const markReady = () => {
 +      attachCustomLayers();
++      if (readyRef.current) return;
        readyRef.current = true;
-       map.jumpTo(
-         cameraOptions(
-@@ -469,7 +624,17 @@ export function DrivingMap({
+-      map.jumpTo(
+-        cameraOptions(
+-          map,
+-          vehicleRef.current,
+-          modeRef.current,
+-          navigatingRef.current,
+-          approachingRef.current,
+-          overlayPaddingRef.current,
+-        ),
+-      );
++      try {
++        map.jumpTo(
++          cameraOptions(
++            map,
++            vehicleRef.current,
++            modeRef.current,
++            navigatingRef.current,
++            approachingRef.current,
++            overlayPaddingRef.current,
++          ),
++        );
++      } catch {
++        /* camera restore is optional until the next frame */
++      }
+       emitViewport(true);
+       lastFrameRef.current = performance.now();
        rafRef.current = requestAnimationFrame(tick);
      };
  
+-    map.on("load", onLoad);
 +    const onMapClick = (event: { lngLat: { lng: number; lat: number } }) => {
 +      if (!pickModeRef.current) return;
 +      const { lng, lat } = event.lngLat;
@@ -2247,12 +2472,13 @@ index 231d903..2d40061 100644
 +        .addTo(map);
 +      onPickLocationRef.current?.({ lng, lat });
 +    };
-     map.on("load", onLoad);
++    map.on("style.load", markReady);
++    map.on("load", markReady);
 +    map.on("click", onMapClick);
      map.on("error", (event) => {
        console.error("MapLibre error", event.error);
      });
-@@ -611,6 +776,8 @@ export function DrivingMap({
+@@ -611,6 +795,8 @@ export function DrivingMap({
        canvas.removeEventListener("contextmenu", onContextMenu);
        cancelAnimationFrame(rafRef.current);
        readyRef.current = false;
@@ -2261,11 +2487,13 @@ index 231d903..2d40061 100644
        vehicleMarkerRef.current?.remove();
        vehicleMarkerRef.current = null;
        destMarkerRef.current?.remove();
-@@ -626,32 +793,92 @@ export function DrivingMap({
+@@ -625,12 +811,12 @@ export function DrivingMap({
+ 
    useEffect(() => {
      const map = mapRef.current;
-     if (!map || !readyRef.current) return;
+-    if (!map || !readyRef.current) return;
 -    upsertIntelligenceLayers(map, route, traffic);
++    if (!readyRef.current || !isStyleReady(map)) return;
 +    upsertIntelligenceLayers(map, route, traffic, layerVisibility.congestion);
      if (!navigating) {
        upsertGuidanceArrows(map, route, 0, 0, false, 0);
@@ -2275,12 +2503,10 @@ index 231d903..2d40061 100644
  
    useEffect(() => {
      followVehicleRef.current = followVehicle;
-     if (followVehicle) userZoomRef.current = null;
-   }, [followVehicle]);
- 
-+  useEffect(() => {
-+    const map = mapRef.current;
-+    if (!map || !readyRef.current) return;
+@@ -640,42 +826,127 @@ export function DrivingMap({
+   useEffect(() => {
+     const map = mapRef.current;
+     if (!map || !readyRef.current) return;
 +    const resolved = resolveMapBasemap(mapDisplayMode);
 +    if (resolved === styleKeyRef.current) return;
 +    const camera = {
@@ -2290,9 +2516,10 @@ index 231d903..2d40061 100644
 +      bearing: map.getBearing(),
 +    };
 +    const onStyle = () => {
++      if (!isStyleReady(map)) return;
 +      styleKeyRef.current = resolved;
-+      applyResolvedTheme(map, resolved);
 +      try {
++        applyResolvedTheme(map, resolved);
 +        const visible = layerVisibilityRef.current;
 +        upsertIntelligenceLayers(map, routeRef.current, trafficRef.current, visible.congestion);
 +        upsertSpeedEnforcementLayer(map, speedEnforcementRef.current);
@@ -2319,7 +2546,11 @@ index 231d903..2d40061 100644
 +      } catch {
 +        onStyleFallbackRef.current?.("地圖圖層重新掛載失敗，已保留目前畫面。");
 +      }
-+      map.jumpTo(camera);
++      try {
++        map.jumpTo(camera);
++      } catch {
++        /* keep the newly loaded style even if camera restore fails */
++      }
 +      if (vehicleMarkerRef.current) vehicleMarkerRef.current.addTo(map);
 +      if (destMarkerRef.current) destMarkerRef.current.addTo(map);
 +    };
@@ -2338,9 +2569,9 @@ index 231d903..2d40061 100644
 +    pickMarkerRef.current = null;
 +  }, [pickMode]);
 +
-   useEffect(() => {
-     const map = mapRef.current;
-     if (!map || !readyRef.current) return;
++  useEffect(() => {
++    const map = mapRef.current;
++    if (!readyRef.current || !isStyleReady(map)) return;
      try {
 -      upsertCctvLayer(map, cameras, selectedCctvId);
 +      upsertCctvLayer(map, cameras, selectedCctvId, layerVisibility.cctv);
@@ -2352,22 +2583,43 @@ index 231d903..2d40061 100644
  
    useEffect(() => {
      const map = mapRef.current;
-     if (!map || !readyRef.current) return;
+-    if (!map || !readyRef.current) return;
 -    upsertDisasterLayer(map, disasters, selectedDisasterId);
 -  }, [disasters, selectedDisasterId]);
++    if (!readyRef.current || !isStyleReady(map)) return;
 +    upsertDisasterLayer(map, disasters, selectedDisasterId, layerVisibility.disaster);
 +  }, [disasters, layerVisibility.disaster, selectedDisasterId]);
  
    useEffect(() => {
      const map = mapRef.current;
-@@ -663,19 +890,36 @@ export function DrivingMap({
+-    if (!map || !readyRef.current) return;
++    if (!readyRef.current || !isStyleReady(map)) return;
+     upsertSpeedEnforcementLayer(map, speedEnforcement);
+   }, [speedEnforcement]);
+ 
+   useEffect(() => {
      const map = mapRef.current;
-     if (!map) return;
+-    if (!map) return;
++    if (!readyRef.current || !isStyleReady(map)) return;
++    try {
++      upsertAccidentLayer(map, accidents, selectedAccidentId, layerVisibility.accident);
++    } catch (error) {
++      console.error("Accident layer update skipped", error);
++    }
++  }, [accidents, layerVisibility.accident, selectedAccidentId]);
  
 -    for (const marker of intelMarkersRef.current) marker.remove();
 -    intelMarkersRef.current = [];
-+    upsertAccidentLayer(map, accidents, selectedAccidentId, layerVisibility.accident);
-+  }, [accidents, layerVisibility.accident, selectedAccidentId]);
++  useEffect(() => {
++    const map = mapRef.current;
++    if (!readyRef.current || !isStyleReady(map)) return;
++    upsertConstructionLayer(
++      map,
++      constructions,
++      selectedConstructionId,
++      layerVisibility.construction,
++    );
++  }, [constructions, layerVisibility.construction, selectedConstructionId]);
  
 -    for (const accident of accidents) {
 -      const el = markerEl("intel-marker--accident", "!", accident.title);
@@ -2379,22 +2631,11 @@ index 231d903..2d40061 100644
 -    }
 +  useEffect(() => {
 +    const map = mapRef.current;
-+    if (!map || !readyRef.current) return;
-+    upsertConstructionLayer(
-+      map,
-+      constructions,
-+      selectedConstructionId,
-+      layerVisibility.construction,
-+    );
-+  }, [constructions, layerVisibility.construction, selectedConstructionId]);
- 
--  }, [accidents]);
-+  useEffect(() => {
-+    const map = mapRef.current;
-+    if (!map || !readyRef.current) return;
++    if (!readyRef.current || !isStyleReady(map)) return;
 +    upsertParkingLayer(map, parkingLots, selectedParkingId, parkingVisible);
 +  }, [parkingLots, parkingVisible, selectedParkingId]);
-+
+ 
+-  }, [accidents]);
 +  useEffect(() => {
 +    const map = mapRef.current;
 +    if (!map || !readyRef.current || !focusTarget) return;
@@ -2409,7 +2650,7 @@ index 231d903..2d40061 100644
    useEffect(() => {
      const map = mapRef.current;
 diff --git a/src/components/map/map-controls.tsx b/src/components/map/map-controls.tsx
-index 2973faa..33f8186 100644
+index 2973faa..7c1396f 100644
 --- a/src/components/map/map-controls.tsx
 +++ b/src/components/map/map-controls.tsx
 @@ -2,31 +2,54 @@
@@ -2489,6 +2730,17 @@ index 2973faa..33f8186 100644
      </div>
    );
  }
+@@ -63,8 +92,8 @@ function ControlButton({
+       title={label}
+       onClick={onClick}
+       className={cn(
+-        "size-12 rounded-2xl border-white/12 bg-black/55 text-zinc-100 shadow-lg backdrop-blur-md hover:bg-black/70 touch-manipulation",
+-        active && "border-cyan-300/50 text-cyan-200",
++        "size-12 rounded-2xl border-zinc-500/55 bg-zinc-800/92 text-zinc-100 shadow-lg backdrop-blur-md hover:bg-zinc-700 disabled:border-zinc-700 disabled:bg-zinc-900/80 disabled:text-zinc-500 touch-manipulation",
++        active && "border-cyan-300/80 bg-zinc-700 text-cyan-200",
+       )}
+     >
+       {children}
 diff --git a/src/components/map/vehicle-marker.ts b/src/components/map/vehicle-marker.ts
 index 1e7edba..af5a09b 100644
 --- a/src/components/map/vehicle-marker.ts
@@ -2501,6 +2753,27 @@ index 1e7edba..af5a09b 100644
  export function createVehicleMarkerElement(): HTMLDivElement {
    const root = document.createElement("div");
    root.className = "vehicle-marker";
+diff --git a/src/components/overlay/account-chip.tsx b/src/components/overlay/account-chip.tsx
+index 8f1e297..e2da55c 100644
+--- a/src/components/overlay/account-chip.tsx
++++ b/src/components/overlay/account-chip.tsx
+@@ -76,14 +76,14 @@ export function AccountChip({
+         disabled={Boolean(busy && configured)}
+         onClick={onSignIn}
+         className={cn(
+-          "flex max-w-[9.5rem] items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] touch-manipulation",
++          "flex size-9 items-center justify-center rounded-full border text-[11px] touch-manipulation min-[431px]:size-auto min-[431px]:max-w-[9.5rem] min-[431px]:gap-1.5 min-[431px]:px-2.5 min-[431px]:py-1.5",
+           blocked
+             ? "cursor-not-allowed border-white/8 bg-white/4 text-zinc-500"
+             : "border-white/15 bg-white/8 text-white hover:bg-white/12",
+         )}
+       >
+         <GoogleMark />
+-        <span className="truncate font-medium">
++        <span className="hidden truncate font-medium min-[431px]:inline">
+           {busy && configured ? "登入中…" : blocked ? "無法使用" : "Google 登入"}
+         </span>
+       </button>
 diff --git a/src/components/overlay/disaster-detail-card.tsx b/src/components/overlay/disaster-detail-card.tsx
 index dcf39d7..641e176 100644
 --- a/src/components/overlay/disaster-detail-card.tsx
@@ -2794,9 +3067,87 @@ index 0000000..b38d641
 +    </section>
 +  );
 +}
+diff --git a/src/components/overlay/gps-fix-chip.tsx b/src/components/overlay/gps-fix-chip.tsx
+new file mode 100644
+index 0000000..f29389d
+--- /dev/null
++++ b/src/components/overlay/gps-fix-chip.tsx
+@@ -0,0 +1,72 @@
++"use client";
++
++import type { GpsErrorCode, GpsPermissionState, GpsStatus, VehiclePose } from "@/types/domain";
++import { geoErrorMessage } from "@/services/geolocation";
++import { cn } from "@/lib/utils";
++
++function permissionLabel(state: GpsPermissionState) {
++  if (state === "granted") return "granted";
++  if (state === "denied") return "denied";
++  if (state === "unsupported") return "unsupported";
++  return "prompt";
++}
++
++function formatCoord(value: number) {
++  return value.toFixed(5);
++}
++
++function formatClock(value?: number) {
++  if (!value) return "--:--:--";
++  return new Date(value).toLocaleTimeString("zh-TW", { hour12: false });
++}
++
++export function GpsFixChip({
++  vehicle,
++  status,
++  permission,
++  error,
++}: {
++  vehicle: VehiclePose;
++  status: GpsStatus;
++  permission: GpsPermissionState;
++  error: GpsErrorCode;
++}) {
++  const live = vehicle.source === "gps";
++  const accuracy =
++    live && typeof vehicle.accuracy === "number"
++      ? `${Math.round(vehicle.accuracy)}m`
++      : "--";
++  const headline =
++    status === "locating"
++      ? "定位中…"
++      : status === "denied"
++        ? "定位權限被拒"
++        : status === "unavailable" && error
++          ? geoErrorMessage(error)
++          : live
++            ? `精度 ${accuracy}`
++            : "尚未取得 GPS";
++
++  return (
++    <div
++      className={cn(
++        "pointer-events-none max-w-[min(18rem,calc(100vw-5.5rem))] rounded-xl border px-2 py-1.5 text-[10px] leading-tight shadow-lg backdrop-blur-md",
++        live
++          ? "border-emerald-400/25 bg-zinc-900/78 text-emerald-100"
++          : "border-white/12 bg-zinc-900/78 text-zinc-200",
++      )}
++      title="定位狀態"
++    >
++      <p className="truncate font-medium">{headline}</p>
++      <p className="truncate tabular-nums text-zinc-300">
++        {live
++          ? `${formatCoord(vehicle.lat)}, ${formatCoord(vehicle.lng)}`
++          : "等待裝置座標"}
++      </p>
++      <p className="truncate text-zinc-500">
++        {formatClock(vehicle.fixedAt)} · {permissionLabel(permission)}
++        {error ? ` · ${error}` : ""}
++      </p>
++    </div>
++  );
++}
 diff --git a/src/components/overlay/map-style-menu.tsx b/src/components/overlay/map-style-menu.tsx
 new file mode 100644
-index 0000000..4052e89
+index 0000000..872440c
 --- /dev/null
 +++ b/src/components/overlay/map-style-menu.tsx
 @@ -0,0 +1,60 @@
@@ -2834,12 +3185,12 @@ index 0000000..4052e89
 +        aria-label="地圖顯示模式"
 +        title="地圖顯示模式"
 +        onClick={onToggle}
-+        className="size-12 rounded-2xl border-white/12 bg-black/55 text-zinc-100 shadow-lg backdrop-blur-md hover:bg-black/70"
++        className="size-12 rounded-2xl border-zinc-500/55 bg-zinc-800/92 text-zinc-100 shadow-lg backdrop-blur-md hover:bg-zinc-700"
 +      >
 +        <Layers className="size-5" />
 +      </Button>
 +      {open ? (
-+        <div className="absolute top-0 right-14 flex flex-col gap-1 rounded-2xl border border-white/12 bg-black/80 p-1.5 shadow-xl backdrop-blur-xl">
++        <div className="absolute top-0 right-14 z-50 flex flex-col gap-1 rounded-2xl border border-white/12 bg-black/80 p-1.5 shadow-xl backdrop-blur-xl">
 +          {OPTIONS.map((option) => (
 +            <button
 +              key={option.id}
@@ -2861,7 +3212,7 @@ index 0000000..4052e89
 +  );
 +}
 diff --git a/src/components/overlay/navigation-banner.tsx b/src/components/overlay/navigation-banner.tsx
-index 463bcab..376e380 100644
+index 463bcab..70abf22 100644
 --- a/src/components/overlay/navigation-banner.tsx
 +++ b/src/components/overlay/navigation-banner.tsx
 @@ -16,10 +16,18 @@ import { formatDistance } from "@/lib/format";
@@ -2885,7 +3236,30 @@ index 463bcab..376e380 100644
    if (type === "arrive") return <Flag className={className} />;
    if (type.includes("roundabout") || type.includes("rotary")) {
      return <RotateCw className={className} />;
-@@ -46,6 +54,8 @@ export const NextIntersectionHud = forwardRef<
+@@ -30,13 +38,16 @@ function TurnGlyph({ step }: { step: RouteStep | null }) {
+   return <ArrowUp className={className} />;
+ }
+ 
+-function guidanceLine(step: RouteStep | null) {
++function shortTurn(step: RouteStep | null) {
+   if (!step) return "繼續前行";
+-  if (step.type === "arrive") {
+-    return step.roadName ? `抵達${step.roadName}` : "即將抵達";
+-  }
+-  if (step.roadName) return `${step.action}進入${step.roadName}`;
+-  return step.action;
++  if (step.type === "arrive") return "即將抵達";
++  return step.action || "繼續前行";
++}
++
++function shortGuidance(step: RouteStep | null, distanceMeters: number) {
++  const turn = shortTurn(step);
++  if (step?.type === "arrive") return turn;
++  return `${formatDistance(distanceMeters)}後${turn}`;
+ }
+ 
+ export const NextIntersectionHud = forwardRef<
+@@ -46,6 +57,8 @@ export const NextIntersectionHud = forwardRef<
      distanceMeters: number;
      offRoute: boolean;
      rerouting?: boolean;
@@ -2894,7 +3268,7 @@ index 463bcab..376e380 100644
      voiceEnabled: boolean;
      onToggleVoice: () => void;
    }
-@@ -55,6 +65,8 @@ export const NextIntersectionHud = forwardRef<
+@@ -55,6 +68,8 @@ export const NextIntersectionHud = forwardRef<
      distanceMeters,
      offRoute,
      rerouting = false,
@@ -2903,7 +3277,7 @@ index 463bcab..376e380 100644
      voiceEnabled,
      onToggleVoice,
    },
-@@ -63,28 +75,58 @@ export const NextIntersectionHud = forwardRef<
+@@ -63,28 +78,68 @@ export const NextIntersectionHud = forwardRef<
    return (
      <div
        ref={ref}
@@ -2941,14 +3315,25 @@ index 463bcab..376e380 100644
              {formatDistance(distanceMeters)}
            </p>
 -          <p className="navigation-street-name font-medium text-white">
+-            {guidanceLine(step)}
 +          <p
 +            className={cn(
 +              "navigation-street-name font-medium",
 +              junctionFocus ? "text-[#1a1400]" : "text-white",
 +            )}
 +          >
-             {guidanceLine(step)}
++            {shortGuidance(step, distanceMeters)}
            </p>
++          {step?.roadName ? (
++            <p
++              className={cn(
++                "navigation-road-name truncate",
++                junctionFocus ? "text-[#3a2a00]" : "text-zinc-300",
++              )}
++            >
++              {step.roadName}
++            </p>
++          ) : null}
            {rerouting ? (
 -            <p className="mt-0.5 truncate text-[12px] font-medium text-amber-300">
 -              正在更新路線…
@@ -2971,7 +3356,7 @@ index 463bcab..376e380 100644
                偏離路線，即將重算
              </p>
            ) : null}
-@@ -97,13 +139,16 @@ export const NextIntersectionHud = forwardRef<
+@@ -97,13 +152,16 @@ export const NextIntersectionHud = forwardRef<
            aria-pressed={voiceEnabled}
            onClick={onToggleVoice}
            className={cn(
@@ -3368,7 +3753,7 @@ index 0000000..5764e8c
 +  );
 +}
 diff --git a/src/components/overlay/road-information-card.tsx b/src/components/overlay/road-information-card.tsx
-index b6a8dc5..a20e3ef 100644
+index b6a8dc5..62399bc 100644
 --- a/src/components/overlay/road-information-card.tsx
 +++ b/src/components/overlay/road-information-card.tsx
 @@ -2,20 +2,22 @@
@@ -3520,8 +3905,8 @@ index b6a8dc5..a20e3ef 100644
 -            const meta = KIND_META[previewItem.kind];
 +      ) : null}
 +
-+      <div className="inline-flex w-fit max-w-[min(36rem,calc(100vw-0.75rem))] items-center justify-center gap-1.5 rounded-full border border-white/10 bg-black/55 px-1.5 py-1 shadow-[0_10px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl">
-+        <div className="flex items-center gap-1.5">
++      <div className="inline-flex w-full max-w-[min(36rem,calc(100vw-env(safe-area-inset-left)-env(safe-area-inset-right)-0.75rem))] items-center justify-center gap-1 rounded-full border border-white/10 bg-black/55 px-1 py-1 shadow-[0_10px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl min-[431px]:w-fit min-[431px]:gap-1.5 min-[431px]:px-1.5">
++        <div className="flex min-w-0 items-center gap-1 min-[431px]:gap-1.5">
 +          {groups.map((group) => {
 +            const meta = KIND_META[group.kind];
              const Icon = meta.icon;
@@ -3555,7 +3940,7 @@ index b6a8dc5..a20e3ef 100644
 -                  "flex w-full items-center gap-2 text-left",
 -                  clickable && "touch-manipulation",
 -                  !clickable && "cursor-default",
-+                  "relative flex size-11 items-center justify-center rounded-full border touch-manipulation",
++                  "relative flex size-9 items-center justify-center rounded-full border touch-manipulation min-[431px]:size-11",
 +                  layerOn ? meta.activeClass : meta.className,
 +                  !layerOn && "opacity-55",
 +                  active && selectedKind === group.kind && "ring-2 ring-white/30",
@@ -3577,7 +3962,7 @@ index b6a8dc5..a20e3ef 100644
 -                </div>
 -                <span className="shrink-0 text-[11px] text-zinc-400">
 -                  {formatDistance(previewItem.distanceMeters)}
-+                <Icon className="size-5" />
++                <Icon className="size-4 min-[431px]:size-5" />
 +                <span className="absolute -top-0.5 -right-0.5 flex min-w-4 items-center justify-center rounded-full bg-black/80 px-1 text-[10px] leading-4 text-zinc-200">
 +                  {group.items.length}
                  </span>
@@ -3631,6 +4016,15 @@ index b6a8dc5..a20e3ef 100644
          </div>
          <AccountChip
            account={account}
+@@ -261,7 +214,7 @@ export function RoadInformationCard({
+           onSignIn={() => onSignIn?.()}
+           onSignOut={() => onSignOut?.()}
+         />
+-        <div className="flex items-center gap-1.5">
++        <div className="flex items-center gap-1 min-[431px]:gap-1.5">
+           <FavoriteHeartButton
+             pressed={favoritesOpen || isCurrentFavorite}
+             count={favorites.length}
 @@ -279,6 +232,9 @@ export function RoadInformationCard({
            />
          </div>
@@ -3641,6 +4035,31 @@ index b6a8dc5..a20e3ef 100644
      </section>
    );
  }
+@@ -300,13 +256,13 @@ function FavoriteHeartButton({
+       title="加入最愛"
+       onClick={onToggle}
+       className={cn(
+-        "relative flex size-10 items-center justify-center rounded-full border touch-manipulation",
++        "relative flex size-9 items-center justify-center rounded-full border touch-manipulation min-[431px]:size-10",
+         pressed
+           ? "border-rose-300/80 bg-rose-500/35 text-rose-100"
+           : "border-rose-400/40 bg-rose-500/15 text-rose-200 hover:bg-rose-500/30",
+       )}
+     >
+-      <Heart className={cn("size-5", pressed && "fill-rose-500")} />
++      <Heart className={cn("size-4 min-[431px]:size-5", pressed && "fill-rose-500")} />
+       {count > 0 ? (
+         <span className="absolute -top-0.5 -right-0.5 flex min-w-4 items-center justify-center rounded-full bg-black/80 px-1 text-[10px] leading-4 text-zinc-200">
+           {count}
+@@ -408,7 +364,7 @@ function YouTubeMusicButton({
+       title="YouTube Music"
+       onClick={onToggle}
+       className={cn(
+-        "relative flex size-10 items-center justify-center rounded-full border touch-manipulation",
++        "relative flex size-9 items-center justify-center rounded-full border touch-manipulation min-[431px]:size-10",
+         pressed
+           ? "border-red-300/70 bg-[#ff0033]/40"
+           : "border-red-400/35 bg-[#ff0033]/20 hover:bg-[#ff0033]/35",
 diff --git a/src/components/overlay/route-preview.tsx b/src/components/overlay/route-preview.tsx
 index b9644f5..595bbaa 100644
 --- a/src/components/overlay/route-preview.tsx
@@ -3996,6 +4415,38 @@ index 759deca..c47fe13 100644
                  </button>
                ) : null}
                {error ? (
+diff --git a/src/components/pwa/install-bootstrap.tsx b/src/components/pwa/install-bootstrap.tsx
+index 584cb45..85f3a57 100644
+--- a/src/components/pwa/install-bootstrap.tsx
++++ b/src/components/pwa/install-bootstrap.tsx
+@@ -2,9 +2,27 @@
+ 
+ import { useEffect } from "react";
+ 
++const DEV_SW_CLEARED_KEY = "navpilot.dev.sw-cleared";
++
+ export function InstallBootstrap() {
+   useEffect(() => {
+     if (!("serviceWorker" in navigator)) return;
++
++    if (process.env.NODE_ENV !== "production") {
++      void navigator.serviceWorker.getRegistrations().then(async (registrations) => {
++        if (registrations.length === 0) return;
++        await Promise.all(registrations.map((registration) => registration.unregister()));
++        try {
++          if (sessionStorage.getItem(DEV_SW_CLEARED_KEY)) return;
++          sessionStorage.setItem(DEV_SW_CLEARED_KEY, "1");
++        } catch {
++          return;
++        }
++        window.location.reload();
++      });
++      return;
++    }
++
+     const register = () => {
+       void navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+     };
 diff --git a/src/hooks/use-cctv-view.ts b/src/hooks/use-cctv-view.ts
 index dcfe6d9..ae1bd3d 100644
 --- a/src/hooks/use-cctv-view.ts
@@ -4922,10 +5373,10 @@ index 0000000..44d8382
 +}
 diff --git a/src/lib/event-layer.ts b/src/lib/event-layer.ts
 new file mode 100644
-index 0000000..a406cfd
+index 0000000..6d8aec6
 --- /dev/null
 +++ b/src/lib/event-layer.ts
-@@ -0,0 +1,143 @@
+@@ -0,0 +1,144 @@
 +import type {
 +  GeoJSONSource,
 +  Map as MapLibreMap,
@@ -4994,6 +5445,7 @@ index 0000000..a406cfd
 +  selectedId: string | null,
 +  visible = true,
 +) {
++  if (!map.isStyleLoaded()) return;
 +  ensureIcons(map);
 +  const source = map.getSource(ACCIDENT_SOURCE_ID);
 +  if (source?.type === "geojson") (source as GeoJSONSource).setData(data(accidents));
@@ -5436,6 +5888,65 @@ index c802714..d0de302 100644
  
    if (!map.getLayer("demo-route-glow")) {
      map.addLayer({
+diff --git a/src/lib/map-style.ts b/src/lib/map-style.ts
+index 2de7c7a..bd45aaf 100644
+--- a/src/lib/map-style.ts
++++ b/src/lib/map-style.ts
+@@ -69,28 +69,32 @@ export function applyDarkDrivingTheme(map: MapLibreMap) {
+   }
+ 
+   if (!map.getLayer("building-3d") && map.getSource("openmaptiles")) {
+-    map.addLayer({
+-      id: "building-3d",
+-      source: "openmaptiles",
+-      "source-layer": "building",
+-      type: "fill-extrusion",
+-      minzoom: 14,
+-      paint: {
+-        "fill-extrusion-color": MAP_COLORS.buildingExtrusion,
+-        "fill-extrusion-height": [
+-          "coalesce",
+-          ["get", "render_height"],
+-          ["get", "height"],
+-          10,
+-        ],
+-        "fill-extrusion-base": [
+-          "coalesce",
+-          ["get", "render_min_height"],
+-          0,
+-        ],
+-        "fill-extrusion-opacity": 0.78,
+-      },
+-    });
++    try {
++      map.addLayer({
++        id: "building-3d",
++        source: "openmaptiles",
++        "source-layer": "building",
++        type: "fill-extrusion",
++        minzoom: 14,
++        paint: {
++          "fill-extrusion-color": MAP_COLORS.buildingExtrusion,
++          "fill-extrusion-height": [
++            "coalesce",
++            ["get", "render_height"],
++            ["get", "height"],
++            10,
++          ],
++          "fill-extrusion-base": [
++            "coalesce",
++            ["get", "render_min_height"],
++            0,
++          ],
++          "fill-extrusion-opacity": 0.78,
++        },
++      });
++    } catch {
++      // 底圖尚未準備好 3D 建物時略過，不阻擋地圖載入。
++    }
+   }
+ 
+   try {
 diff --git a/src/lib/parking-layer.ts b/src/lib/parking-layer.ts
 new file mode 100644
 index 0000000..94800e3
@@ -6169,10 +6680,10 @@ index 379479e..6017510 100644
      Number.isFinite(distanceToNext) &&
 diff --git a/src/lib/vehicle-display.ts b/src/lib/vehicle-display.ts
 new file mode 100644
-index 0000000..f5d51c4
+index 0000000..bd4d485
 --- /dev/null
 +++ b/src/lib/vehicle-display.ts
-@@ -0,0 +1,100 @@
+@@ -0,0 +1,109 @@
 +import { damp, distanceKm, lerp, lerpAngle } from "@/lib/geo";
 +import { pointAtRouteMeters, type RouteProgressModel } from "@/lib/route-progress";
 +import type { DisplayPose, VehiclePose } from "@/types/domain";
@@ -6263,7 +6774,16 @@ index 0000000..f5d51c4
 +    }
 +  }
 +
-+  const tau = jumpMeters > 350 ? 0.12 : jumpMeters > 80 ? 0.18 : 0.24;
++  if (jumpMeters > 80) {
++    return {
++      lng: desired.lng,
++      lat: desired.lat,
++      heading: desiredHeading,
++      predictedMeters: 0,
++    };
++  }
++
++  const tau = jumpMeters > 24 ? 0.18 : 0.24;
 +  const t = damp(dtSeconds, tau);
 +
 +  return {
@@ -6618,6 +7138,238 @@ index 5dbb8e5..46fa384 100644
        fetchedAt,
      };
      catalogCacheAt = Date.now();
+diff --git a/src/services/geolocation.ts b/src/services/geolocation.ts
+index e5ff153..4bc632f 100644
+--- a/src/services/geolocation.ts
++++ b/src/services/geolocation.ts
+@@ -1,9 +1,23 @@
+ import { bearingDegrees, distanceKm } from "@/lib/geo";
+-import type { GpsStatus, VehiclePose } from "@/types/domain";
++import type { GpsErrorCode, GpsPermissionState, GpsStatus, VehiclePose } from "@/types/domain";
+ 
+ export type GeoWatchHandlers = {
+   onFix: (pose: VehiclePose) => void;
+   onStatus: (status: GpsStatus) => void;
++  onError?: (code: GpsErrorCode) => void;
++  onPermission?: (state: GpsPermissionState) => void;
++};
++
++const WATCH_OPTIONS: PositionOptions = {
++  enableHighAccuracy: true,
++  maximumAge: 0,
++  timeout: 25_000,
++};
++
++const ONCE_OPTIONS: PositionOptions = {
++  enableHighAccuracy: true,
++  maximumAge: 0,
++  timeout: 20_000,
+ };
+ 
+ function toHeading(value: number | null): number | null {
+@@ -16,63 +30,137 @@ function toSpeed(value: number | null): number | undefined {
+   return value;
+ }
+ 
++function toPose(position: GeolocationPosition, heading: number): VehiclePose {
++  return {
++    lng: position.coords.longitude,
++    lat: position.coords.latitude,
++    heading,
++    accuracy: position.coords.accuracy,
++    speedMps: toSpeed(position.coords.speed),
++    source: "gps",
++    fixedAt: position.timestamp || Date.now(),
++  };
++}
++
++export function geoErrorCode(error: unknown): GpsErrorCode {
++  if (typeof error === "object" && error && "code" in error) {
++    const code = (error as GeolocationPositionError).code;
++    if (code === 1) return "permission_denied";
++    if (code === 2) return "position_unavailable";
++    if (code === 3) return "timeout";
++  }
++  if (error instanceof Error && error.message === "geolocation-unavailable") {
++    return "unsupported";
++  }
++  return "position_unavailable";
++}
++
++export function geoErrorMessage(code: GpsErrorCode): string {
++  if (code === "permission_denied") return "定位權限被拒，請在瀏覽器允許位置存取。";
++  if (code === "timeout") return "定位逾時，請到空曠處再試一次。";
++  if (code === "unsupported") return "此瀏覽器不支援定位。";
++  return "目前無法取得位置。";
++}
++
++export async function queryGeolocationPermission(): Promise<GpsPermissionState> {
++  if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
++    return "unsupported";
++  }
++  try {
++    if (!navigator.permissions?.query) return "prompt";
++    const result = await navigator.permissions.query({ name: "geolocation" });
++    if (result.state === "granted" || result.state === "denied") return result.state;
++    return "prompt";
++  } catch {
++    return "prompt";
++  }
++}
++
+ /** Browser GPS. Returns an unsubscribe function. */
+ export function watchVehiclePosition({
+   onFix,
+   onStatus,
++  onError,
++  onPermission,
+ }: GeoWatchHandlers): () => void {
+   if (typeof window === "undefined" || !("geolocation" in navigator)) {
+     onStatus("unavailable");
++    onError?.("unsupported");
++    onPermission?.("unsupported");
+     return () => undefined;
+   }
+ 
++  let cancelled = false;
++  let watchId: number | null = null;
++  let restartTimer = 0;
++  let last: { lng: number; lat: number; heading: number } | null = null;
++  let hasFix = false;
++
+   onStatus("locating");
++  void queryGeolocationPermission().then((state) => {
++    if (!cancelled) onPermission?.(state);
++  });
+ 
+-  let last: { lng: number; lat: number; heading: number } | null = null;
++  const start = () => {
++    if (cancelled || !("geolocation" in navigator)) return;
++    if (watchId !== null) {
++      navigator.geolocation.clearWatch(watchId);
++      watchId = null;
++    }
++    watchId = navigator.geolocation.watchPosition(
++      (position) => {
++        const lng = position.coords.longitude;
++        const lat = position.coords.latitude;
++        const gpsHeading = toHeading(position.coords.heading);
++        let heading = gpsHeading ?? last?.heading ?? 0;
+ 
+-  const watchId = navigator.geolocation.watchPosition(
+-    (position) => {
+-      const lng = position.coords.longitude;
+-      const lat = position.coords.latitude;
+-      const gpsHeading = toHeading(position.coords.heading);
+-      let heading = gpsHeading ?? last?.heading ?? 0;
+-
+-      if (last) {
+-        const movedKm = distanceKm(last, { lng, lat });
+-        const fromMove = bearingDegrees(last, { lng, lat });
+-        if (gpsHeading === null && movedKm > 0.004) {
+-          heading = fromMove;
+-        } else if (gpsHeading !== null && movedKm < 0.002) {
+-          heading = last.heading;
++        if (last) {
++          const movedKm = distanceKm(last, { lng, lat });
++          const fromMove = bearingDegrees(last, { lng, lat });
++          if (gpsHeading === null && movedKm > 0.004) {
++            heading = fromMove;
++          } else if (gpsHeading !== null && movedKm < 0.002) {
++            heading = last.heading;
++          }
+         }
+-      }
+-
+-      last = { lng, lat, heading };
+-      onFix({
+-        lng,
+-        lat,
+-        heading,
+-        accuracy: position.coords.accuracy,
+-        speedMps: toSpeed(position.coords.speed),
+-        source: "gps",
+-      });
+-      onStatus("active");
+-    },
+-    (error) => {
+-      if (error.code === error.PERMISSION_DENIED) {
+-        onStatus("denied");
+-        return;
+-      }
+-      onStatus("unavailable");
+-    },
+-    {
+-      enableHighAccuracy: true,
+-      maximumAge: 400,
+-      timeout: 10_000,
+-    },
+-  );
+-
+-  return () => navigator.geolocation.clearWatch(watchId);
++
++        last = { lng, lat, heading };
++        hasFix = true;
++        onFix(toPose(position, heading));
++        onStatus("active");
++        onPermission?.("granted");
++        onError?.(null);
++      },
++      (error) => {
++        const code = geoErrorCode(error);
++        onError?.(code);
++        if (code === "permission_denied") {
++          onStatus("denied");
++          onPermission?.("denied");
++          return;
++        }
++        if (code === "unsupported") {
++          onStatus("unavailable");
++          onPermission?.("unsupported");
++          return;
++        }
++        if (!hasFix) onStatus("unavailable");
++        if (!cancelled) {
++          window.clearTimeout(restartTimer);
++          restartTimer = window.setTimeout(start, 1_600);
++        }
++      },
++      WATCH_OPTIONS,
++    );
++  };
++
++  start();
++
++  return () => {
++    cancelled = true;
++    window.clearTimeout(restartTimer);
++    if (watchId !== null) navigator.geolocation.clearWatch(watchId);
++  };
+ }
+ 
+ export function requestCurrentPosition(): Promise<VehiclePose> {
+@@ -84,17 +172,12 @@ export function requestCurrentPosition(): Promise<VehiclePose> {
+ 
+     navigator.geolocation.getCurrentPosition(
+       (position) => {
+-        resolve({
+-          lng: position.coords.longitude,
+-          lat: position.coords.latitude,
+-          heading: position.coords.heading ?? 0,
+-          accuracy: position.coords.accuracy,
+-          speedMps: toSpeed(position.coords.speed),
+-          source: "gps",
+-        });
++        resolve(
++          toPose(position, toHeading(position.coords.heading) ?? 0),
++        );
+       },
+       (error) => reject(error),
+-      { enableHighAccuracy: true, timeout: 10_000, maximumAge: 800 },
++      ONCE_OPTIONS,
+     );
+   });
+ }
 diff --git a/src/services/index.ts b/src/services/index.ts
 index 2363ddc..fbcef2d 100644
 --- a/src/services/index.ts
@@ -7265,27 +8017,42 @@ index 1ab832b..b517381 100644
      );
      return null;
 diff --git a/src/types/domain.ts b/src/types/domain.ts
-index ceee715..a464b13 100644
+index ceee715..bdb1f5d 100644
 --- a/src/types/domain.ts
 +++ b/src/types/domain.ts
-@@ -10,6 +10,14 @@ export type VehiclePose = LngLat & {
+@@ -8,6 +8,15 @@ export type VehiclePose = LngLat & {
+   accuracy?: number;
+   speedMps?: number;
    source: "demo" | "gps";
- };
- 
++  fixedAt?: number;
++};
++
 +/** 畫面上黃色箭頭用的位置；不得回寫 GPS。 */
 +export type DisplayPose = LngLat & {
 +  heading: number;
 +  routeMeters: number;
 +  snapConfidence: number;
 +  snapped: boolean;
-+};
-+
+ };
+ 
  export type GpsStatus =
-   | "idle"
-   | "locating"
-@@ -18,10 +26,24 @@ export type GpsStatus =
+@@ -17,11 +26,38 @@ export type GpsStatus =
+   | "denied"
    | "unavailable";
  
++export type GpsPermissionState =
++  | "prompt"
++  | "granted"
++  | "denied"
++  | "unsupported";
++
++export type GpsErrorCode =
++  | "permission_denied"
++  | "position_unavailable"
++  | "timeout"
++  | "unsupported"
++  | null;
++
  export type CameraMode = "2d" | "3d";
 +export type FollowOrientation = "heading-up" | "north-up";
 +export type MapDisplayMode = "light" | "dark" | "auto" | "satellite";
@@ -7309,7 +8076,7 @@ index ceee715..a464b13 100644
  
  export type CctvCamera = {
    id: string;
-@@ -65,8 +87,8 @@ export type TrafficLevel =
+@@ -65,8 +101,8 @@ export type TrafficLevel =
    | "severe"
    | "blocked";
  export type TrafficSourceType = "city" | "freeway";
@@ -7320,7 +8087,7 @@ index ceee715..a464b13 100644
  
  export type TrafficSegment = {
    id: string;
-@@ -121,8 +143,8 @@ export type DisasterKind =
+@@ -121,8 +157,8 @@ export type DisasterKind =
    | "strong-wind"
    | "landslide"
    | "other";
@@ -7331,7 +8098,7 @@ index ceee715..a464b13 100644
  export type DisasterSeverity = "watch" | "warning" | "emergency";
  
  export type DisasterAlert = {
-@@ -150,14 +172,63 @@ export type DisasterCatalog = {
+@@ -150,14 +186,63 @@ export type DisasterCatalog = {
    fetchedAt: string;
  };
  
@@ -7349,9 +8116,8 @@ index ceee715..a464b13 100644
 +  severity?: string;
 +  source?: string;
 +  freshness?: DataFreshness;
- };
- 
--export type RoadIntelKind = "cctv" | "construction" | "congestion" | "accident" | "disaster";
++};
++
 +export type ConstructionEvent = {
 +  id: string;
 +  title: string;
@@ -7387,8 +8153,9 @@ index ceee715..a464b13 100644
 +  lng: number;
 +  lat: number;
 +  key: number;
-+};
-+
+ };
+ 
+-export type RoadIntelKind = "cctv" | "construction" | "congestion" | "accident" | "disaster";
 +export type SelectedMapEvent = {
 +  kind: RoadIntelKind;
 +  id: string;
@@ -7396,7 +8163,7 @@ index ceee715..a464b13 100644
  
  export type RoadIntelItem = {
    id: string;
-@@ -166,6 +237,9 @@ export type RoadIntelItem = {
+@@ -166,6 +251,9 @@ export type RoadIntelItem = {
    detail: string;
    distanceMeters: number;
    cameraId?: string;
@@ -7406,7 +8173,7 @@ index ceee715..a464b13 100644
  };
  
  export type NavigationManeuver = {
-@@ -219,6 +293,37 @@ export type RouteDestination = {
+@@ -219,6 +307,37 @@ export type RouteDestination = {
    location: LngLat;
  };
  
@@ -7444,7 +8211,7 @@ index ceee715..a464b13 100644
  export type RoutePlan = {
    coordinates: [number, number][];
    distanceMeters: number;
-@@ -226,4 +331,5 @@ export type RoutePlan = {
+@@ -226,4 +345,5 @@ export type RoutePlan = {
    destination: RouteDestination;
    maneuver: NavigationManeuver;
    steps: RouteStep[];

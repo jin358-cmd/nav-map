@@ -4,6 +4,8 @@
 
 - 基礎分支：`cursor/feat-phase-5-1-search-oauth-nav-ui-5225`（`eb0e19f`，Phase 5.1 已驗證）
 - Phase 5.2 分支：`feat/phase-5-2-navigation-experience`
+- HEAD：`66bbdfc` `fix(android): restore live GPS tracking and compact portrait HUD`
+- 相對 Phase 5.1：79 files, +5192 / −683（不含本報告與 patch）
 - 各批次 commit：
   - `b7f298f` `feat(navigation): add route snapping and smooth tracking`
   - `f4515a4` `feat(navigation): add fast reroute and junction focus`
@@ -14,9 +16,15 @@
   - `92fe982` `fix(youtube): repair playlist authorization and deployment setup`
   - `4c7685a` `chore: keep Phase 5.2 lint clean and refresh README`
   - `ffaa480` `chore: strip trailing whitespace from Phase 5.2 docs`
-- 是否 push：否
-- 是否 merge：否（未 merge `main`）
-- git status：工作區乾淨；報告與 patch 另以文件提交
+  - `a66091d` `docs: add Phase 5.2 implementation report and review patch`
+  - `795c1da` `fix(map): wait for MapLibre style before attaching layers`
+  - `71fbb59` `fix(pwa): stop the service worker from blocking MapLibre chunks`
+  - `66bbdfc` `fix(android): restore live GPS tracking and compact portrait HUD`
+- 是否 push GitHub：是（僅功能分支 `feat/phase-5-2-navigation-experience`）
+- 是否 merge `main`：否
+- 是否 Production Deploy：否
+- 是否建立 PR：否
+- git status：功能碼已提交；本 bundle 為驗收附件
 
 ## 2. 導航貼路
 
@@ -34,7 +42,7 @@
 
 - 插值方式：`requestAnimationFrame` + `stepVehicleDisplay`；經緯度 `lerp`，方向角 `lerpAngle`（處理 359→1）。
 - 更新頻率：每幀，`dt` 上限 0.05s。GPS 更新只改目標，不重開衝突動畫。
-- Camera 跟隨方式：跟隨中用 damped `jumpTo` 逐步靠近目標，不用每次定位硬切。手動拖曳暫停跟隨。
+- Camera 跟隨方式：跟隨中用 damped `jumpTo` 逐步靠近目標。位移超過約 80m（首次真實 GPS 從開機中心跳到實位）改為瞬間對齊，避免從台南示範中心慢慢插值。手動拖曳暫停跟隨。
 - 預測限制：依車速短預測，上限約 16m，不得無限外推；新 GPS 到達後重設預測並校正。靜止不漂移。
 - 高頻更新走 ref／Marker API，不每幀整頁 setState。PASS
 
@@ -48,7 +56,7 @@
 ## 5. 路口強化
 
 - 50 公尺進入條件：`distanceToNextMeters <= 50`；退出 `> 65`，避免 49～51 閃爍。
-- 黃色提示卡：`.navigation-instruction-card--junction`，高對比深色字與粗箭頭，距離最醒目；保留轉向、道路名、語音鈕。一般狀態維持原主題。提示卡約放大 20%–30%，左上角 + safe-area，橫向寬度 ≤ 40vw，不用 `transform: scale`。ResizeObserver 同步 Camera padding。
+- 黃色提示卡：`.navigation-instruction-card--junction`，高對比深色字與粗箭頭，距離最醒目。Portrait 改短句：主句「200 公尺後右轉」，道路名稱較小第二行並 ellipsis。一般狀態維持原主題。提示卡約放大 20%–30%，左上角 + safe-area，橫向寬度 ≤ 40vw，不用 `transform: scale`。ResizeObserver 同步 Camera padding。
 - Zoom 範圍：一般巡航 zoom 漸進插值到路口 zoom（約 18.25–18.65）；中心兼顧車輛、轉彎點與轉彎後短路線。
 - 通過路口後恢復方式：離開 65m 門檻後 `junctionZoomProgress` 回 0，平順回到一般導航 zoom。不改北向上／車頭向上。PASS
 
@@ -58,8 +66,8 @@
 - 自訂名稱：只改 `displayName`，不改經緯度。可修改與刪除。
 - 經緯度選點：地圖點擊立即放 Pin，顯示 lat／lng 至 6 位；反查不到地址仍保留座標；確認後才儲存。衛星模式可選點。
 - 亮／暗／自動／衛星：自動 06:00–16:59 亮、其餘暗，裝置時區，後備 `Asia/Taipei`，跨過門檻會切。衛星為 Esri World Imagery + CARTO 路名，非 Google 圖磚，有 attribution。style 重載後重掛自訂圖層；失敗退回暗色並提示。
-- 2D／3D：圖示尺寸不變，文字約 18px；只改 pitch。
-- 定位按鈕狀態：第一下定位＋車頭向上跟隨；第二下北向上跟隨；再點循環。手動拖曳暫停，再點恢復。PASS
+- 2D／3D：圖示尺寸不變，文字約 18px；只改 pitch。右側固定鍵改暗灰底，active 仍青色邊，不改事件圖層分類色。
+- 定位按鈕狀態：第一下定位＋車頭向上跟隨；第二下北向上跟隨；再點循環。手動拖曳暫停，再點恢復。必須先取得真實 GPS，不得把台南開機座標當成目前位置。PASS
 
 ## 7. 汽車與機車
 
@@ -68,6 +76,7 @@
   - 機車：僅在伺服器設定 `MOTORCYCLE_ROUTING_URL` 時啟用。未設定回 501 `NOT CONFIGURED`。禁止用腳踏車 profile 冒充機車。
 - 是否真實支援兩種模式：汽車 PASS。機車 NOT CONFIGURED（未提供機車路由端點）。
 - 時間、距離與 ETA：路線預覽顯示交通模式、距離、行駛時間、預計抵達時鐘、開始導航。切換模式會重新規劃。PARTIAL PASS
+- 路線起點：規劃與開始導航必須使用裝置 `navigator.geolocation` 真實座標。沒有 GPS fix 時顯示權限／逾時／無法取得，不使用地圖中心或台南示範點。
 
 ## 8. 事件資料
 
@@ -92,8 +101,8 @@
 | 測速 | `speed-enforcement-source` | `speed-enforcement-layer`, `speed-enforcement-label-layer` |
 | 停車場 | `parking-source` | `parking-layer`, `parking-layer-label`, `parking-cluster-layer`, `parking-cluster-count-layer`, `parking-hit-layer` |
 
-- 狀態列聯動：五個圖示可開關圖層；1 筆 flyTo＋資訊卡；多筆距離列表；Marker 與卡共用 `selectedEvent`。資訊卡含類型、道路、方向、說明、發布／更新、影響、來源、一鍵導航、缺漏顯示「未提供」、freshness `live`／`stale`／`unavailable`。正式環境不用 demo 狀態。
-- 圖示修改：壅塞三車排隊、CCTV 鏡頭、施工柵欄、事故紅三角驚嘆號；44px 點擊、aria-label／title、無 emoji。PASS
+- 狀態列聯動：五個圖示可開關圖層；1 筆 flyTo＋資訊卡；多筆距離列表；Marker 與卡共用 `selectedEvent`。資訊卡含類型、道路、方向、說明、發布／更新、影響、來源、一鍵導航、缺漏顯示「未提供」、freshness `live`／`stale`／`unavailable`。正式環境不用 demo 狀態。Portrait 縮小 icon／gap／padding；Google 未設定時只顯示圖示，避免超出 360–430px viewport。
+- 圖示修改：壅塞三車排隊、CCTV 鏡頭、施工柵欄、事故紅三角驚嘆號；44px 點擊（小螢幕約 36px）、aria-label／title、無 emoji。PASS
 
 ## 9. 停車場
 
@@ -110,8 +119,20 @@
 - OAuth 架構：沿用 GIS token client。登入 scope 為 openid／email／profile／Drive appdata。YouTube 另要 `youtube.readonly`。已授權且 token 未過期則重用。登入不在 iframe。Token 只放 sessionStorage，不放 localStorage，不輸出到正式 console。無 Client Secret。
 - 所需人工設定：見 `docs/youtube-playlist-oauth-setup.md`（Origins、YouTube Data API、Vercel `NEXT_PUBLIC_GOOGLE_CLIENT_ID`）。
 - 播放清單測試結果：此環境未設定 Client ID，狀態應為「尚未設定」。完整同意畫面／origin／過期路徑需人工。NOT CONFIGURED
+- Google OAuth 未設定、麥克風權限失敗不得影響 GPS。
 
-## 11. 檢查
+## 11. Android Preview 後續修正
+
+- MapLibre：事故圖層不得在 style 未載入時 `addSource`；`style.load` 即可開始跟隨。PASS
+- PWA：service worker 不攔截 `/_next`／`/maplibre`；開發模式會 unregister，避免動態 import 卡在「載入駕駛地圖…」。PASS
+- GPS（P0）：
+  - `watchPosition` 持續更新；`enableHighAccuracy: true`、`maximumAge: 0`、timeout 20–25s
+  - TIMEOUT／POSITION_UNAVAILABLE 重啟 watcher；PERMISSION_DENIED 才停止
+  - 規劃路線與開始導航必須用裝置真實 GPS，禁止台南示範點／地圖中心當起點
+  - 左下精簡定位狀態：latitude、longitude、accuracy、timestamp、permission
+- Portrait HUD（P1）：底部狀態列不超出 100vw；導航短句；右側控制鍵暗灰。PASS（程式）／PARTIAL PASS（待 Android 真機複驗）
+
+## 12. 檢查
 
 | 項目 | 結果 |
 | --- | --- |
@@ -120,11 +141,11 @@
 | test | NOT AVAILABLE（`package.json` 無 `test` script） |
 | build | PASS |
 | git diff --check | PASS |
+| Vercel Preview | PASS（`66bbdfc`，類型 Preview，非 Production） |
 
-瀏覽器實機／指定解析度路跑：此雲端環境無法完成實車 GPS、轉向與手機旋轉。NOT AVAILABLE  
-程式與靜態檢查已完成。Preview 伺服器可開 HUD 做畫面驗收。
+Preview URL：`https://nav-map-git-feat-phase-5-2-navigation-experience-tjc1.vercel.app`
 
-## 12. 尚待人工設定
+## 13. 尚待人工設定
 
 - Vercel 環境變數：`NEXT_PUBLIC_GOOGLE_CLIENT_ID`；伺服器端 `TDX_CLIENT_ID`／`TDX_CLIENT_SECRET`；選填 `TGOS_APP_ID`／`TGOS_API_KEY`、`NCDR_ALERT_FEED_URL`。禁止 `NEXT_PUBLIC_` 包秘密。`NEXT_PUBLIC_ENABLE_DEMO` 正式環境必須關閉。
 - Google Cloud：OAuth Web Client、Authorized JavaScript Origins（本機 `http://127.0.0.1:43145`、Preview、Production）。
@@ -132,9 +153,10 @@
 - Routing Provider：汽車已用公開 OSRM driving。機車需自備 `MOTORCYCLE_ROUTING_URL`。
 - 停車資料 API：TDX 停車或台南市府動態；未設定時可能無點位。
 - 衛星圖資授權：目前 Esri World Imagery + CARTO 路名與 attribution。若日後改商用授權來源需再確認條款。
+- Android Chrome：必須允許該 Preview 網域的位置權限後才能複驗跟隨。
 
-## 13. 最終結論
+## 14. 最終結論
 
 CONDITIONAL PASS
 
-理由：Phase 5.2 七個功能批次已在驗證過的 5.1 分支上實作，lint／typecheck／build 通過，正式環境不再自動灌假資料。機車路由、Google／YouTube OAuth、TDX 即時車位與實車導航／直橫向路跑仍需人工設定與實機驗收。未 push、未 merge `main`。等待「開始驗收 Phase 5.2」。
+理由：Phase 5.2 七個功能批次已在驗證過的 5.1 分支上實作；後續補上 MapLibre style 載入、PWA chunk、Android GPS／portrait HUD。lint／typecheck／build 通過。正式環境不再自動灌假資料。機車路由、Google／YouTube OAuth、TDX 即時車位仍需人工設定。Android 真機複驗進行中。未 merge `main`、未建立 PR、未 Production Deploy。
