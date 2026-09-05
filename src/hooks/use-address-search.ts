@@ -82,6 +82,7 @@ export function useAddressSearch(
       const controller = new AbortController();
       searchAbortRef.current = controller;
       setSubmittedQuery(next);
+      setRemoteHits([]);
       setSearching(true);
       setError(null);
       const origin =
@@ -93,9 +94,7 @@ export function useAddressSearch(
         .then((rows) => {
           if (generation !== searchGenerationRef.current) return;
           setRemoteHits(rows);
-          setError(
-            rows.length ? null : "找不到店家、公司或地址，已改查附近巷弄或道路。",
-          );
+          setError(rows.length ? null : "找不到符合的地點");
           onSettled?.(rows);
         })
         .catch((cause: unknown) => {

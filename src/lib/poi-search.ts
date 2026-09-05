@@ -1,52 +1,16 @@
-import { matchLandmarks } from "@/data/landmarks";
-import { BRAND_ALIASES, TAINAN_POIS } from "@/data/tainan-pois";
 import { formatTaiwanDisplayAddress } from "@/lib/geocoding/format-taiwan-display-address";
 import { distanceKm } from "@/lib/geo";
-import { SEARCH_RADIUS_KM, SEARCH_RESULT_LIMIT } from "@/lib/search-constants";
+import { expandPoiQueries, normalizePoiKey } from "@/lib/poi/aliases";
+import { classifyPoiQuery, isDoorplateQuery, prefersNearby } from "@/lib/poi/intent";
+import { SEARCH_RESULT_LIMIT } from "@/lib/search-constants";
 import type { GeocodeHit, LngLat } from "@/types/domain";
 
-export function normalizeSearchKey(value: string) {
-  return value
-    .toLowerCase()
-    .replaceAll("臺", "台")
-    .replace(/[\s\-_.＋+]/g, "");
-}
-
-export function isDoorplateQuery(query: string) {
-  return /[路街巷弄段號大道]/.test(query) && /\d/.test(query);
-}
-
-export function expandKeywordQueries(query: string): string[] {
-  const compact = query.trim();
-  const needle = normalizeSearchKey(compact);
-  const names = new Set<string>([compact]);
-  if (needle.length < 1) return [compact];
-
-  for (const brand of BRAND_ALIASES) {
-    const hit = brand.keys.some((key) => {
-      const token = normalizeSearchKey(key);
-      return needle === token || needle.includes(token) || token.includes(needle);
-    });
-    if (!hit) continue;
-    for (const name of brand.names) names.add(name);
-  }
-  return [...names];
-}
-
-export function filterWithinSearchRadius(
-  hits: GeocodeHit[],
-  origin: LngLat | null,
-  radiusKm = SEARCH_RADIUS_KM,
-): GeocodeHit[] {
-  if (!origin) return hits;
-  return hits.filter(
-    (hit) => distanceKm(origin, hit.location) <= radiusKm,
-  );
-}
+export { isDoorplateQuery } from "@/lib/poi/intent";
+export { expandPoiQueries as expandKeywordQueries, normalizePoiKey as normalizeSearchKey } from "@/lib/poi/aliases";
 
 export function scoreNameMatch(query: string, name: string) {
-  const variants = expandKeywordQueries(query).map(normalizeSearchKey);
-  const hay = normalizeSearchKey(name);
+  const variants = expandPoiQueries(query).map(normalizePoiKey);
+  const hay = normalizePoiKey(name);
   if (!hay) return 0;
   let best = 0;
   for (const needle of variants) {
@@ -55,19 +19,11 @@ export function scoreNameMatch(query: string, name: string) {
     else if (hay.startsWith(needle) || needle.startsWith(hay)) best = Math.max(best, 6);
     else if (hay.includes(needle)) best = Math.max(best, 5);
   }
-  const brandNames = expandKeywordQueries(query)
-    .slice(1)
-    .map(normalizeSearchKey);
-  if (brandNames.some((brand) => brand.length >= 2 && hay.includes(brand))) {
-    best = Math.max(best, 10);
-  }
   if (isDoorplateQuery(query)) {
     const qDigits = query.replace(/\D/g, "");
     const nDigits = name.replace(/\D/g, "");
     if (qDigits && nDigits.endsWith(qDigits)) best = Math.max(best, 12);
-    if (hay.includes(normalizeSearchKey(query))) best = Math.max(best, 10);
-  } else if (/^\d+$/.test(hay) || /\d+號/.test(name)) {
-    best -= 6;
+    if (hay.includes(normalizePoiKey(query))) best = Math.max(best, 10);
   }
   return best;
 }
@@ -76,7 +32,7 @@ export function mergeSearchHits(rows: GeocodeHit[], limit = SEARCH_RESULT_LIMIT)
   const seen = new Set<string>();
   const out: GeocodeHit[] = [];
   for (const hit of rows) {
-    const key = `${hit.name}|${hit.location.lng.toFixed(5)}|${hit.location.lat.toFixed(5)}`;
+    const key = `${normalizePoiKey(hit.name)}|${hit.location.lng.toFixed(4)}|${hit.location.lat.toFixed(4)}`;
     if (seen.has(key)) continue;
     seen.add(key);
     out.push(hit);
@@ -85,9 +41,9 @@ export function mergeSearchHits(rows: GeocodeHit[], limit = SEARCH_RESULT_LIMIT)
 }
 
 export function matchSavedPlaces(query: string, places: GeocodeHit[]) {
-  const variants = expandKeywordQueries(query).map(normalizeSearchKey);
+  const variants = expandPoiQueries(query).map(normalizePoiKey);
   return places.filter((hit) => {
-    const hay = normalizeSearchKey(`${hit.name} ${hit.address}`);
+    const hay = normalizePoiKey(`${hit.name} ${hit.address}`);
     return variants.some(
       (needle) => needle.length >= 1 && (hay.includes(needle) || needle.includes(hay)),
     );
@@ -100,21 +56,10 @@ export function instantKeywordHits(
   extras: GeocodeHit[] = [],
   limit = 8,
 ): GeocodeHit[] {
-  return rankSearchHits(
-    filterWithinSearchRadius(
-      mergeSearchHits(
-        [
-          ...matchLandmarks(query, 8),
-          ...matchLocalPois(query, origin, 12),
-          ...matchSavedPlaces(query, extras),
-        ],
-        24,
-      ),
-      origin,
-    ),
-    query,
-    origin,
-  ).slice(0, limit);
+  return rankSearchHits(mergeSearchHits(matchSavedPlaces(query, extras), 24), query, origin).slice(
+    0,
+    limit,
+  );
 }
 
 export function rankSearchHits(
@@ -122,37 +67,23 @@ export function rankSearchHits(
   query: string,
   origin: LngLat | null,
 ): GeocodeHit[] {
+  const intent = classifyPoiQuery(query);
+  const nearby = Boolean(origin && prefersNearby(intent));
   return [...hits].sort((a, b) => {
-    const nameDelta =
-      scoreNameMatch(query, b.name) - scoreNameMatch(query, a.name);
+    const nameDelta = scoreNameMatch(query, b.name) - scoreNameMatch(query, a.name);
+    if (nearby && origin) {
+      if (nameDelta >= 4) return nameDelta;
+      const da = a.distanceMeters ?? distanceKm(origin, a.location) * 1000;
+      const db = b.distanceMeters ?? distanceKm(origin, b.location) * 1000;
+      if (da !== db) return da - db;
+    }
     if (nameDelta !== 0) return nameDelta;
     if (!origin) return 0;
-    return distanceKm(origin, a.location) - distanceKm(origin, b.location);
+    return (
+      (a.distanceMeters ?? distanceKm(origin, a.location) * 1000) -
+      (b.distanceMeters ?? distanceKm(origin, b.location) * 1000)
+    );
   });
-}
-
-export function matchLocalPois(
-  query: string,
-  origin: LngLat | null,
-  limit = SEARCH_RESULT_LIMIT,
-): GeocodeHit[] {
-  const variants = expandKeywordQueries(query).map(normalizeSearchKey);
-  const rows = TAINAN_POIS.filter((poi) => {
-    if (origin && distanceKm(origin, poi.location) > SEARCH_RADIUS_KM) return false;
-    const hay = normalizeSearchKey(
-      `${poi.name} ${poi.address} ${poi.aliases.join(" ")}`,
-    );
-    return variants.some(
-      (needle) => needle.length >= 1 && (hay.includes(needle) || needle.includes(normalizeSearchKey(poi.name))),
-    );
-  }).map((poi) => ({
-    id: poi.id,
-    name: poi.name,
-    address: poi.address,
-    location: poi.location,
-  }));
-
-  return rankSearchHits(rows, query, origin).slice(0, limit);
 }
 
 export function destinationToHit(destination: {
@@ -166,4 +97,11 @@ export function destinationToHit(destination: {
     address: formatTaiwanDisplayAddress(destination.address),
     location: destination.location,
   };
+}
+
+export function nearbyCategoryHint(query: string) {
+  const intent = classifyPoiQuery(query);
+  if (intent === "brand") return "便利商店";
+  if (intent === "category") return query.trim();
+  return "便利商店";
 }

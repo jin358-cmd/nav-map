@@ -33,11 +33,15 @@ import {
   sameTaiwanDisplayTitle,
 } from "@/lib/geocoding/format-taiwan-display-address";
 import { matchKindLabel } from "@/lib/geocoding/normalizeTaiwanAddress";
+import { formatDistance } from "@/lib/format";
+import { distanceKm } from "@/lib/geo";
 import {
   instantKeywordHits,
   mergeSearchHits,
+  nearbyCategoryHint,
   rankSearchHits,
 } from "@/lib/poi-search";
+import { SEARCH_FIRST_SCREEN } from "@/lib/search-constants";
 import { useAddressSearch } from "@/hooks/use-address-search";
 import { useSpeechToText } from "@/hooks/use-speech-to-text";
 import { cn } from "@/lib/utils";
@@ -60,6 +64,7 @@ export function AddressSearch({
   const [query, setQuery] = useState("");
   const [composing, setComposing] = useState(false);
   const [open, setOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const history = useSyncExternalStore(
     subscribeAddressHistory,
@@ -165,7 +170,9 @@ export function AddressSearch({
 
   const searching = lookup.searching;
   const suggesting = lookup.suggesting && !lookup.submitted;
-  const previewHits = lookup.submitted ? lookup.remoteHits : lookup.suggestHits;
+  const previewHits = lookup.submitted
+    ? mergeSearchHits([...lookup.suggestHits, ...lookup.remoteHits], 24)
+    : lookup.suggestHits;
   const visibleHits =
     needle.length < 1
       ? []
@@ -174,6 +181,7 @@ export function AddressSearch({
           needle,
           biasBucket,
         );
+  const shownHits = expanded ? visibleHits : visibleHits.slice(0, SEARCH_FIRST_SCREEN);
   const userFavorites = useMemo(
     () => favorites.filter((hit) => !isDemoLandmarkPreset(hit)),
     [favorites],
@@ -181,8 +189,8 @@ export function AddressSearch({
   const emptyHint =
     needle.length >= 1 && !searching && !busy && visibleHits.length === 0
       ? lookup.submitted
-        ? lookup.error
-        : "輸入時會先找紀錄、快取與附近店家。按搜尋或 Enter 再查門牌地圖。"
+        ? "找不到符合的地點"
+        : "輸入時會先找本機索引與紀錄。按搜尋或 Enter 再查門牌地圖。"
       : null;
 
   return (
@@ -197,6 +205,7 @@ export function AddressSearch({
             value={query}
             onChange={(event) => {
               setQuery(event.target.value);
+              setExpanded(false);
               setOpen(true);
             }}
             onCompositionStart={() => setComposing(true)}
@@ -389,9 +398,15 @@ export function AddressSearch({
             </div>
           ) : null}
 
-          {!busy && visibleHits.length > 0 ? (
+          {!busy && shownHits.length > 0 ? (
             <ul className="max-h-56 overflow-y-auto py-1">
-              {visibleHits.map((hit) => (
+              {shownHits.map((hit) => {
+                const meters =
+                  hit.distanceMeters ??
+                  (biasBucket
+                    ? Math.round(distanceKm(biasBucket, hit.location) * 1000)
+                    : undefined);
+                return (
                 <li key={hit.id} className="flex items-start">
                   <button
                     type="button"
@@ -409,6 +424,11 @@ export function AddressSearch({
                       !sameTaiwanDisplayTitle(hit.name, hit.address) ? (
                         <span className="block truncate text-[11px] text-zinc-500">
                           {formatTaiwanDisplayAddress(hit.address)}
+                        </span>
+                      ) : null}
+                      {meters != null ? (
+                        <span className="mt-0.5 block text-[11px] text-cyan-200/90">
+                          {formatDistance(meters)}
                         </span>
                       ) : null}
                       {hit.matchKind ? (
@@ -442,19 +462,61 @@ export function AddressSearch({
                     />
                   </button>
                 </li>
-              ))}
+                );
+              })}
             </ul>
           ) : null}
 
-          {!busy && visibleHits.length === 0 && (emptyHint || error) ? (
-            <p
-              className={cn(
-                "px-3 py-3 text-sm",
-                error ? "text-amber-200" : "text-zinc-400",
-              )}
+          {!busy && !expanded && visibleHits.length > SEARCH_FIRST_SCREEN ? (
+            <button
+              type="button"
+              onClick={() => setExpanded(true)}
+              className="mx-3 mb-2 w-[calc(100%-1.5rem)] rounded-xl bg-white/8 px-3 py-2 text-sm text-white hover:bg-white/12 touch-manipulation"
             >
-              {error ?? emptyHint}
-            </p>
+              顯示更多（{visibleHits.length - SEARCH_FIRST_SCREEN}）
+            </button>
+          ) : null}
+
+          {!busy && visibleHits.length === 0 && (emptyHint || error) ? (
+            <div className="px-3 py-3">
+              <p className={cn("text-sm", error ? "text-amber-200" : "text-zinc-200")}>
+                {error ?? emptyHint}
+              </p>
+              {lookup.submitted ? (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpen(true);
+                    }}
+                    className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] text-zinc-100 touch-manipulation"
+                  >
+                    修改關鍵字
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQuery((current) => current);
+                      runFormalSearch(false);
+                    }}
+                    className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] text-zinc-100 touch-manipulation"
+                  >
+                    地址搜尋
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = nearbyCategoryHint(needle);
+                      setQuery(next);
+                      setOpen(true);
+                    }}
+                    className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] text-zinc-100 touch-manipulation"
+                  >
+                    查看附近同類型
+                  </button>
+                </div>
+              ) : null}
+            </div>
           ) : null}
         </div>
       ) : null}

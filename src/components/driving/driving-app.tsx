@@ -104,6 +104,7 @@ import {
   fetchAccidentReports,
   planDrivingRoute,
   requestCurrentPosition,
+  searchAddresses,
   watchVehiclePosition,
 } from "@/services";
 import {
@@ -666,6 +667,32 @@ export function DrivingApp() {
   }, []);
 
   const applyRoute = useCallback(async (hit: GeocodeHit, mode = travelMode) => {
+    const reliable =
+      Number.isFinite(hit.location.lng) &&
+      Number.isFinite(hit.location.lat) &&
+      Math.abs(hit.location.lng) > 0.2 &&
+      Math.abs(hit.location.lat) > 0.2;
+    if (!reliable) {
+      if (!hit.address && !hit.name) {
+        setRouteError("此地點沒有可靠座標，無法開始導航。");
+        return;
+      }
+      try {
+        const rows = await searchAddresses(hit.address || hit.name);
+        const located =
+          rows.find((row) => row.exactHouseNumber) ??
+          rows.find((row) => Number.isFinite(row.location.lng)) ??
+          null;
+        if (!located) {
+          setRouteError("此地點沒有可靠座標，無法開始導航。");
+          return;
+        }
+        hit = { ...hit, location: located.location, address: located.address || hit.address };
+      } catch {
+        setRouteError("此地點沒有可靠座標，無法開始導航。");
+        return;
+      }
+    }
     rememberAddress(hit);
     lastRouteHitRef.current = hit;
     setRouting(true);

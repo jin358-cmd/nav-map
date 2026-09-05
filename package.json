@@ -8,7 +8,8 @@
     "start": "next start --port 43145",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "update:speed-enforcement": "node scripts/update-speed-enforcement-data.mjs"
+    "update:speed-enforcement": "node scripts/update-speed-enforcement-data.mjs",
+    "ingest:pois": "node scripts/ingest-taiwan-pois.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

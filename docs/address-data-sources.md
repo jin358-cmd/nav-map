@@ -10,6 +10,7 @@ NavPilot 搜尋不是台南限定。地圖啟動中心可以是台南，但不�
 | TGOS | 明確送出後的地址定位 | TGOS 使用條款 | 需 server APPID／APIKEY |
 | NLSC | 門牌／地標／反查 | 國土測繪中心條款 | 執行期 |
 | OSM／Nominatim | 明確送出後的後備搜尋 | ODbL | 不作 autocomplete |
+| OSM POI 索引（Photon／Nominatim 批次） | 全台店家／類別 Local Index | ODbL | server-only `taiwan_poi_index` |
 
 Google Geocoding／Places Web Service 維持 `disabled_by_map_renderer_policy`，不得混入 MapLibre 搜尋鏈。
 
@@ -21,6 +22,7 @@ Google Geocoding／Places Web Service 維持 `disabled_by_map_renderer_policy`�
 | 各縣市合法門牌 | `scripts/import-taiwan-doorplates.mjs` | NOT CONFIGURED |
 | Overture Places／Buildings | `scripts/import-overture-places.mjs` | DATASET NOT IMPORTED |
 | Supabase `taiwan_address_index` | `supabase/migrations/20260904_taiwan_address_index.sql` | NOT CONFIGURED |
+| Supabase `taiwan_poi_index` | `supabase/migrations/20260905_taiwan_poi_index.sql` | NOT CONFIGURED（本機 JSON 索引可先用） |
 
 Overture 只補強店家、地標與建築物，不得標成精確門牌。大型 GeoParquet 只能後端 ETL。
 

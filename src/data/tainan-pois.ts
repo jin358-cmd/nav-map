@@ -4,43 +4,7 @@ export type PoiRecord = GeocodeHit & {
   aliases: string[];
 };
 
-/** 常見連鎖／公司縮寫 → 正式名稱，供關鍵字展開。 */
-export const BRAND_ALIASES: { keys: string[]; names: string[] }[] = [
-  { keys: ["711", "7-11", "7-eleven", "7eleven", "小七", "七十一"], names: ["統一超商", "7-Eleven"] },
-  { keys: ["全家", "familymart", "family mart"], names: ["全家便利商店", "FamilyMart"] },
-  { keys: ["萊爾富", "hilife", "hi-life"], names: ["萊爾富"] },
-  { keys: ["ok超商", "okmart", "ok mart"], names: ["OK超商"] },
-  { keys: ["星巴克", "starbucks", "sbux"], names: ["星巴克", "Starbucks"] },
-  { keys: ["麥當勞", "麥當", "mcdonalds", "mcdonald", "mcd"], names: ["麥當勞"] },
-  { keys: ["肯德基", "kfc"], names: ["肯德基"] },
-  { keys: ["摩斯", "mos"], names: ["摩斯漢堡"] },
-  { keys: ["丹丹"], names: ["丹丹漢堡"] },
-  { keys: ["必勝客", "pizzahut", "pizza hut"], names: ["必勝客"] },
-  { keys: ["全聯", "pxmart", "px"], names: ["全聯福利中心"] },
-  { keys: ["家樂福", "carrefour"], names: ["家樂福"] },
-  { keys: ["好市多", "costco"], names: ["好市多"] },
-  { keys: ["大潤發", "rtmart"], names: ["大潤發"] },
-  { keys: ["愛買", "amart"], names: ["愛買"] },
-  { keys: ["新光三越", "新光"], names: ["新光三越"] },
-  { keys: ["南紡", "南紡夢時代"], names: ["南紡購物中心"] },
-  { keys: ["focus"], names: ["Focus時尚流行館"] },
-  { keys: ["遠百", "大遠百"], names: ["台南大遠百"] },
-  { keys: ["ikea", "宜家"], names: ["IKEA"] },
-  { keys: ["台積", "台積電", "tsmc"], names: ["台灣積體電路", "台積電"] },
-  { keys: ["南科", "科學園區"], names: ["南部科學園區"] },
-  { keys: ["成大", "ncku"], names: ["國立成功大學"] },
-  { keys: ["成大醫院", "nckuh"], names: ["成大醫院"] },
-  { keys: ["高鐵", "thsr"], names: ["台南高鐵站"] },
-  { keys: ["市府", "市政府"], names: ["臺南市政府"] },
-  { keys: ["春水堂"], names: ["春水堂"] },
-  { keys: ["50嵐", "五十嵐"], names: ["50嵐"] },
-  { keys: ["清心"], names: ["清心福全"] },
-  { keys: ["路易莎", "louisa"], names: ["路易莎咖啡"] },
-  { keys: ["cama"], names: ["Cama café"] },
-  { keys: ["85度c", "85c", "85度"], names: ["85度C"] },
-  { keys: ["中華電", "中華電信"], names: ["中華電信"] },
-  { keys: ["郵局"], names: ["中華郵政"] },
-];
+export { BRAND_ALIASES } from "@/lib/poi/aliases";
 
 export const TAINAN_POIS: PoiRecord[] = [
   {

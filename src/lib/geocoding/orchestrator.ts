@@ -19,7 +19,8 @@ import {
 import { createNlscProvider } from "@/lib/geocoding/providers/nlsc";
 import { createOsmProvider } from "@/lib/geocoding/providers/osm";
 import { createTgosProvider, tgosEnabled } from "@/lib/geocoding/providers/tgos";
-import { matchLocalPois } from "@/lib/poi-search";
+import { classifyPoiQuery } from "@/lib/poi/intent";
+import { searchTaiwanPoiIndex } from "@/lib/poi/server-index";
 import { SEARCH_RESULT_LIMIT } from "@/lib/search-constants";
 import type {
   GeocodeLookupMode,
@@ -42,28 +43,29 @@ function inTaiwan(lat: number, lng: number) {
   return lng >= 118 && lng <= 123 && lat >= 20 && lat <= 27;
 }
 
-function localResults(
+async function localResults(
   query: string,
   latitude?: number,
   longitude?: number,
-): GeocodeResult[] {
+  signal?: AbortSignal,
+): Promise<GeocodeResult[]> {
   const origin =
     latitude != null && longitude != null
       ? { lat: latitude, lng: longitude }
-      : null;
-  return [...matchLandmarks(query, 8), ...matchLocalPois(query, origin, 12)].map(
-    (hit) => ({
-      id: hit.id,
-      label: hit.name,
-      formattedAddress: hit.address,
-      latitude: hit.location.lat,
-      longitude: hit.location.lng,
-      source: "local" as const,
-      confidence: 0.7,
-      exactHouseNumber: false,
-      matchKind: "landmark" as const,
-    }),
-  );
+      : undefined;
+  const indexRows = await searchTaiwanPoiIndex(query, origin, signal);
+  const landmarks = matchLandmarks(query, 6).map((hit) => ({
+    id: hit.id,
+    label: hit.name,
+    formattedAddress: hit.address,
+    latitude: hit.location.lat,
+    longitude: hit.location.lng,
+    source: "local" as const,
+    confidence: 0.68,
+    exactHouseNumber: false,
+    matchKind: "landmark" as const,
+  }));
+  return mergeResults([...indexRows, ...landmarks]);
 }
 
 async function runProvider(
@@ -192,9 +194,11 @@ function withDistance(
     distanceMeters: Math.round(
       distanceKm(origin, { lat: item.latitude, lng: item.longitude }) * 1000,
     ),
-    formattedAddress: item.formattedAddress.includes(matchKindLabel(item.matchKind))
-      ? item.formattedAddress
-      : `${item.formattedAddress} · ${matchKindLabel(item.matchKind)}`,
+    formattedAddress:
+      item.matchKind === "landmark" ||
+      item.formattedAddress.includes(matchKindLabel(item.matchKind))
+        ? item.formattedAddress
+        : `${item.formattedAddress} · ${matchKindLabel(item.matchKind)}`,
   }));
 }
 
@@ -257,65 +261,59 @@ export async function searchGeocode(
           local: "empty",
         };
 
-  const cached = await readAddressCache(parsed.normalizedAddress, key);
-  if (cached?.length) {
-    statuses.cache = "ok";
-    const locals = mode === "suggest" ? localResults(query, options.latitude, options.longitude) : [];
-    if (locals.length) statuses.local = "ok";
-    return {
-      query,
-      normalizedQuery: parsed.normalizedAddress,
-      cacheHit: true,
-      results: sortResults(
-        withDistance(mode === "suggest" ? mergeResults([...cached, ...locals]) : cached, origin),
-        parsed.parts.city,
-        parsed.parts.town,
-        parsed.hasLaneOrAlley,
-        origin,
-      ).slice(0, SEARCH_RESULT_LIMIT),
-      providers: statuses,
-    };
-  }
-
-  if (mode === "suggest") {
-    const locals = localResults(query, options.latitude, options.longitude);
-    if (locals.length) statuses.local = "ok";
-    return {
-      query,
-      normalizedQuery: parsed.normalizedAddress,
-      cacheHit: false,
-      results: sortResults(
-        withDistance(locals, origin),
-        parsed.parts.city,
-        parsed.parts.town,
-        parsed.hasLaneOrAlley,
-        origin,
-      ).slice(0, SEARCH_RESULT_LIMIT),
-      providers: statuses,
-    };
-  }
-
-  const locals = localResults(query, options.latitude, options.longitude);
+  const intent = classifyPoiQuery(query);
+  const locals = await localResults(
+    query,
+    options.latitude,
+    options.longitude,
+    options.signal,
+  );
   if (locals.length) statuses.local = "ok";
+
+  const cached = await readAddressCache(parsed.normalizedAddress, key);
+  if (cached?.length) statuses.cache = "ok";
+
+  const rankedLocals = withDistance(
+    mergeResults([...locals, ...(cached ?? [])]),
+    origin,
+  ).slice(0, SEARCH_RESULT_LIMIT);
+  const qualityCount = rankedLocals.filter((item) => (item.confidence ?? 0) >= 0.7).length;
+  const localReady =
+    intent !== "address" &&
+    (qualityCount >= 4 || (intent === "exact" && qualityCount >= 1));
+
+  if (mode === "suggest" || localReady) {
+    return {
+      query,
+      normalizedQuery: parsed.normalizedAddress,
+      cacheHit: Boolean(cached?.length),
+      results: rankedLocals,
+      providers: statuses,
+    };
+  }
 
   const tgos = createTgosProvider(parsed);
   const nlsc = createNlscProvider(parsed);
   const osm = createOsmProvider(parsed);
   const officialIndex = createOfficialIndexProvider();
-  const collected: GeocodeResult[] = [...locals];
+  const collected: GeocodeResult[] = [...rankedLocals];
   const deadline = Date.now() + OVERALL_TIMEOUT_MS;
   const relaxations = relaxedAddressQueries(parsed);
   const firstQuery = relaxations[0]?.query ?? parsed.searchAddress;
+  const remoteOptions =
+    intent === "exact"
+      ? { ...options, latitude: undefined, longitude: undefined }
+      : options;
   let ranOsm = false;
 
   if (Date.now() <= deadline && !options.signal?.aborted) {
     const [official, osmRows] = await Promise.all([
       Promise.allSettled([
-        runProvider(officialIndex, firstQuery, options, statuses),
-        runProvider(tgos, firstQuery, options, statuses),
-        runProvider(nlsc, firstQuery, options, statuses),
+        runProvider(officialIndex, firstQuery, remoteOptions, statuses),
+        runProvider(tgos, firstQuery, remoteOptions, statuses),
+        runProvider(nlsc, firstQuery, remoteOptions, statuses),
       ]),
-      runProvider(osm, firstQuery, options, statuses),
+      runProvider(osm, firstQuery, remoteOptions, statuses),
     ]);
     ranOsm = true;
     for (const outcome of official) {
@@ -337,9 +335,9 @@ export async function searchGeocode(
     for (const step of relaxations.slice(1)) {
       if (Date.now() > deadline || options.signal?.aborted) break;
       const official = await Promise.allSettled([
-        runProvider(officialIndex, step.query, options, statuses),
-        runProvider(tgos, step.query, options, statuses),
-        runProvider(nlsc, step.query, options, statuses),
+        runProvider(officialIndex, step.query, remoteOptions, statuses),
+        runProvider(tgos, step.query, remoteOptions, statuses),
+        runProvider(nlsc, step.query, remoteOptions, statuses),
       ]);
       for (const outcome of official) {
         if (outcome.status === "fulfilled") collected.push(...outcome.value);
@@ -354,7 +352,7 @@ export async function searchGeocode(
     Date.now() < deadline &&
     !options.signal?.aborted
   ) {
-    const osmRows = await runProvider(osm, firstQuery, options, statuses);
+    const osmRows = await runProvider(osm, firstQuery, remoteOptions, statuses);
     collected.push(...osmRows);
   }
 

@@ -1,0 +1,32 @@
+{
+  "dataset": "taiwan_poi_index",
+  "source": "OpenStreetMap via Nominatim/Photon",
+  "license": "ODbL",
+  "total": 546,
+  "failed": 0,
+  "bySource": {
+    "osm": 546
+  },
+  "byCategory": {
+    "convenience": 155,
+    "fuel": 37,
+    "parking": 62,
+    "pharmacy": 57,
+    "hospital": 73,
+    "landmark": 34,
+    "restaurant": 61,
+    "cafe": 67
+  },
+  "byCounty": {
+    "臺北市": 78,
+    "新北市": 60,
+    "桃園市": 75,
+    "臺中市": 80,
+    "臺南市": 76,
+    "高雄市": 74,
+    "花蓮縣": 42,
+    "澎湖縣": 29,
+    "未知": 32
+  },
+  "written": "src/data/taiwan-poi-index.json"
+}
