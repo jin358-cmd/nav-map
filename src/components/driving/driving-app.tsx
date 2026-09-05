@@ -97,6 +97,7 @@ import {
 } from "@/lib/saved-places";
 import { deriveTrafficIntel } from "@/lib/traffic-intel";
 import { GpsFixChip } from "@/components/overlay/gps-fix-chip";
+import { MapAttribution } from "@/components/overlay/map-attribution";
 import { SpeedHud } from "@/components/overlay/speed-hud";
 import { TripStatusCluster } from "@/components/overlay/trip-status-cluster";
 import { unresolvedSpeedLimit } from "@/lib/speed-limit";
@@ -1448,6 +1449,8 @@ export function DrivingApp() {
           <Legend />
         </div>
       ) : null}
+
+      <MapAttribution mapDisplayMode={pendingMapDisplayMode ?? mapDisplayMode} />
 
       <div className={navigating ? "hud-anchor-gps" : "hud-anchor-gps hud-anchor-gps--browse"}>
         <GpsFixChip

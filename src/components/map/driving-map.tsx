@@ -579,7 +579,7 @@ export function DrivingMap({
       pitch: DRIVING_PITCH,
       bearing: vehicle.heading,
       maxPitch: 80,
-      attributionControl: { compact: true },
+      attributionControl: false,
       fadeDuration: 0,
       dragPan: {
         linearity: 0.28,
