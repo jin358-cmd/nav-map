@@ -58,9 +58,15 @@ import {
   waitForBasemapStyle,
 } from "@/lib/map-style-switch";
 import { damp, lerp, lerpAngle } from "@/lib/geo";
+import {
+  ensureHeadingConeLayers,
+  shouldShowHeadingCone,
+  upsertHeadingCone,
+} from "@/lib/heading-cone";
 import { createRouteProgressModel } from "@/lib/route-progress";
 import {
   createVehicleDisplayState,
+  presentationFollowTau,
   stepVehicleDisplay,
   type VehicleDisplayState,
 } from "@/lib/vehicle-display";
@@ -103,6 +109,7 @@ type DrivingMapProps = {
   styleRevision?: number;
   pickMode?: boolean;
   navigating: boolean;
+  rerouting?: boolean;
   selectedCctvId: string | null;
   selectedDisasterId: string | null;
   selectedAccidentId?: string | null;
@@ -331,6 +338,7 @@ export function DrivingMap({
   styleRevision = 0,
   pickMode = false,
   navigating,
+  rerouting = false,
   selectedCctvId,
   selectedDisasterId,
   selectedAccidentId = null,
@@ -420,6 +428,7 @@ export function DrivingMap({
   const layerVisibilityRef = useRef(layerVisibility);
   const followVehicleRef = useRef(followVehicle);
   const navigatingRef = useRef(navigating);
+  const reroutingRef = useRef(rerouting);
   const approachingRef = useRef(approachingIntersection);
   const junctionCueRef = useRef(junctionCue);
   const isTurnRef = useRef(isTurnManeuver);
@@ -465,7 +474,6 @@ export function DrivingMap({
     if (fixKey !== lastFixKeyRef.current) {
       lastFixKeyRef.current = fixKey;
       lastFixAtRef.current = performance.now();
-      displayStateRef.current.predictedMeters = 0;
     }
     routeRef.current = route;
     const routeSig = routeGeometrySignature(route);
@@ -473,6 +481,9 @@ export function DrivingMap({
       routeSigRef.current = routeSig;
       resetGuidanceArrowCache();
       recoverUntilRef.current = 0;
+      displayStateRef.current = createVehicleDisplayState(
+        displayVehicle ?? vehicle,
+      );
     }
     trafficRef.current = traffic;
     camerasRef.current = cameras;
@@ -489,6 +500,7 @@ export function DrivingMap({
     selectedConstructionRef.current = selectedConstructionId;
     layerVisibilityRef.current = layerVisibility;
     navigatingRef.current = navigating;
+    reroutingRef.current = rerouting;
     approachingRef.current = approachingIntersection;
     junctionCueRef.current = junctionCue;
     isTurnRef.current = isTurnManeuver;
@@ -532,6 +544,7 @@ export function DrivingMap({
     parkingVisible,
     layerVisibility,
     navigating,
+    rerouting,
     approachingIntersection,
     junctionCue,
     isTurnManeuver,
@@ -627,6 +640,24 @@ export function DrivingMap({
       marker.setRotation(0);
       setVehicleMarkerHeading(marker.getElement(), headingUp ? 0 : display.heading);
 
+      try {
+        ensureHeadingConeLayers(mapNow);
+        const showCone = shouldShowHeadingCone({
+          navigating: navigatingRef.current,
+          rerouting: reroutingRef.current,
+          source: raw.source,
+          headingAvailable: raw.headingAvailable,
+        });
+        upsertHeadingCone(
+          mapNow,
+          showCone ? { lng: display.lng, lat: display.lat } : null,
+          display.heading,
+          showCone,
+        );
+      } catch {
+        /* style may still be swapping */
+      }
+
       if (navigatingRef.current) {
         const stepId = stepIdRef.current;
         if (stepId !== lastStepIdRef.current) {
@@ -700,16 +731,19 @@ export function DrivingMap({
         const zoomTarget = pinchingRef.current
           ? mapNow.getZoom()
           : (userZoomRef.current ?? wanted.zoom);
-        const followT = damp(dt, wanted.blend > 0.02 ? 0.11 : 0.18);
+        const followTau = presentationFollowTau(raw.speedMps ?? 0, wanted.blend);
+        const posT = damp(dt, followTau.posTau);
+        const zoomT = pinchingRef.current ? 0 : damp(dt, followTau.zoomTau);
+        const bearingT = damp(dt, followTau.bearingTau);
         try {
           mapNow.jumpTo({
             center: [
-              lerp(center.lng, wanted.center[0], followT),
-              lerp(center.lat, wanted.center[1], followT),
+              lerp(center.lng, wanted.center[0], posT),
+              lerp(center.lat, wanted.center[1], posT),
             ],
-            bearing: lerpAngle(mapNow.getBearing(), wanted.bearing, followT),
-            pitch: lerp(mapNow.getPitch(), wanted.pitch, followT),
-            zoom: lerp(mapNow.getZoom(), zoomTarget, pinchingRef.current ? 0 : followT),
+            bearing: lerpAngle(mapNow.getBearing(), wanted.bearing, bearingT),
+            pitch: lerp(mapNow.getPitch(), wanted.pitch, damp(dt, 0.14)),
+            zoom: lerp(mapNow.getZoom(), zoomTarget, zoomT),
             padding: wanted.padding,
           });
         } catch {
@@ -726,6 +760,7 @@ export function DrivingMap({
       const visible = layerVisibilityRef.current;
       try {
         applyResolvedTheme(map, styleKeyRef.current);
+        ensureHeadingConeLayers(map);
         upsertIntelligenceLayers(
           map,
           routeRef.current,
@@ -1062,6 +1097,7 @@ export function DrivingMap({
       try {
         applyResolvedTheme(map, resolved);
         const visible = layerVisibilityRef.current;
+        ensureHeadingConeLayers(map);
         upsertIntelligenceLayers(
           map,
           routeRef.current,

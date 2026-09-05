@@ -47,6 +47,32 @@ export function damp(dtSeconds: number, tau: number): number {
   return 1 - Math.exp(-dtSeconds / Math.max(tau, 0.016));
 }
 
+/** Destination from a point along a bearing. Presentation / cone geometry only. */
+export function destinationPoint(
+  from: LngLat,
+  distanceMeters: number,
+  bearingDeg: number,
+): LngLat {
+  const distRatio = distanceMeters / 1000 / EARTH_RADIUS_KM;
+  const brng = toRadians(bearingDeg);
+  const lat1 = toRadians(from.lat);
+  const lng1 = toRadians(from.lng);
+  const lat2 = Math.asin(
+    Math.sin(lat1) * Math.cos(distRatio) +
+      Math.cos(lat1) * Math.sin(distRatio) * Math.cos(brng),
+  );
+  const lng2 =
+    lng1 +
+    Math.atan2(
+      Math.sin(brng) * Math.sin(distRatio) * Math.cos(lat1),
+      Math.cos(distRatio) - Math.sin(lat1) * Math.sin(lat2),
+    );
+  return {
+    lat: (lat2 * 180) / Math.PI,
+    lng: (((lng2 * 180) / Math.PI + 540) % 360) - 180,
+  };
+}
+
 export function isPointInBounds(
   point: LngLat,
   bounds: { west: number; south: number; east: number; north: number },

@@ -5,6 +5,8 @@ export type LngLat = {
 
 export type VehiclePose = LngLat & {
   heading: number;
+  /** True only when the device reported a real heading. Never guessed. */
+  headingAvailable?: boolean;
   accuracy?: number;
   speedMps?: number;
   source: "demo" | "gps";

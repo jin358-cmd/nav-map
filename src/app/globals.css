@@ -130,6 +130,7 @@
 }
 
 .function-drawer {
+  position: relative;
   transform: translateY(0);
   opacity: 1;
   transition:
@@ -138,9 +139,31 @@
 }
 
 .function-drawer--closed {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
   transform: translateY(calc(100% + 1.25rem));
   opacity: 0;
+  visibility: hidden;
   pointer-events: none;
+}
+
+.function-chip {
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+}
+
+.function-chip__icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.function-chip__badge {
+  top: 0.125rem;
+  right: 0.125rem;
 }
 
 @media (prefers-reduced-motion: reduce) {

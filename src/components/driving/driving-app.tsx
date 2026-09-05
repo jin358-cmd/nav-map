@@ -1108,6 +1108,7 @@ export function DrivingApp() {
         styleRevision={styleRevision}
         pickMode={pickMode}
         navigating={navigating}
+        rerouting={rerouting}
         selectedCctvId={selectedCctv?.id ?? null}
         selectedDisasterId={selectedDisaster?.id ?? null}
         cameras={mapCameras}

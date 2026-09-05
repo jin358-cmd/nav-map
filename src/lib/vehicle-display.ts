@@ -7,6 +7,8 @@ export type VehicleDisplayState = {
   lat: number;
   heading: number;
   predictedMeters: number;
+  holdLng: number;
+  holdLat: number;
 };
 
 const MAX_PREDICT_METERS = 16;
@@ -21,12 +23,48 @@ export function createVehicleDisplayState(
     lat: pose.lat,
     heading: pose.heading,
     predictedMeters: 0,
+    holdLng: pose.lng,
+    holdLat: pose.lat,
   };
 }
 
+export function presentationFollowTau(speedMps: number, approachBlend: number) {
+  const kmh = speedMps * 3.6;
+  let posTau = 0.18;
+  if (kmh >= 90) posTau = 0.07;
+  else if (kmh >= 55) posTau = 0.09;
+  else if (kmh >= 25) posTau = 0.11;
+  else if (kmh >= 8) posTau = 0.14;
+  else posTau = 0.22;
+  return {
+    posTau,
+    zoomTau: approachBlend > 0.02 ? 0.07 : posTau,
+    bearingTau: kmh < 6 ? 0.16 : Math.min(posTau, 0.1),
+  };
+}
+
+function positionTau(speedMps: number, jumpMeters: number) {
+  const kmh = speedMps * 3.6;
+  if (jumpMeters > 28 || kmh >= 90) return 0.08;
+  if (kmh >= 55) return 0.09;
+  if (kmh >= 25) return 0.11;
+  if (kmh >= 8) return 0.14;
+  return 0.2;
+}
+
+function headingTau(speedMps: number) {
+  if (speedMps < 0.8) return 0.2;
+  if (speedMps < 4) return 0.12;
+  return 0.09;
+}
+
+function isNoisyFix(accuracy: number | undefined, jumpMeters: number, speedMps: number) {
+  if (accuracy == null || accuracy <= 24) return false;
+  return jumpMeters < Math.min(accuracy * 0.6, 20) && speedMps < 3;
+}
+
 /**
- * 將畫面箭頭平順移向目標。GPS 更新只改目標，不重開動畫。
- * 吸附成功時可沿路線做很短的速度預測，新 GPS 到達後會立刻往回校正。
+ * Presentation-only interpolation. GPS / snap / route progress stay on Raw GPS.
  */
 export function stepVehicleDisplay({
   current,
@@ -49,7 +87,12 @@ export function stepVehicleDisplay({
   const confidence = "snapConfidence" in target ? target.snapConfidence : 0;
   const speedMps = raw.speedMps ?? 0;
   const here = { lng: current.lng, lat: current.lat };
-  const goal = { lng: target.lng, lat: target.lat };
+  const incoming = { lng: target.lng, lat: target.lat };
+  const incomingJump = distanceKm(here, incoming) * 1000;
+  const noisy = isNoisyFix(raw.accuracy, incomingJump, speedMps);
+  const goal = noisy
+    ? { lng: current.holdLng, lat: current.holdLat }
+    : incoming;
   const jumpMeters = distanceKm(here, goal) * 1000;
   const stationary =
     speedMps < STATIONARY_SPEED_MPS && jumpMeters < STATIONARY_HOLD_METERS;
@@ -57,14 +100,16 @@ export function stepVehicleDisplay({
   if (stationary) {
     return {
       ...current,
-      heading: lerpAngle(current.heading, target.heading, damp(dtSeconds, 0.28)),
+      heading: lerpAngle(current.heading, target.heading, damp(dtSeconds, 0.26)),
       predictedMeters: 0,
+      holdLng: noisy ? current.holdLng : goal.lng,
+      holdLat: noisy ? current.holdLat : goal.lat,
     };
   }
 
   let desired = goal;
   let desiredHeading = target.heading;
-  let predictedMeters = 0;
+  let predictedMeters = current.predictedMeters;
 
   if (
     navigating &&
@@ -76,7 +121,7 @@ export function stepVehicleDisplay({
   ) {
     predictedMeters = Math.min(
       MAX_PREDICT_METERS,
-      Math.max(0, speedMps * elapsedSinceFixSeconds),
+      Math.max(current.predictedMeters, speedMps * elapsedSinceFixSeconds),
     );
     const along = pointAtRouteMeters(model, target.routeMeters + predictedMeters);
     if (along) {
@@ -86,7 +131,12 @@ export function stepVehicleDisplay({
         desiredHeading = along.heading;
       }
     }
+  } else {
+    predictedMeters = 0;
   }
+
+  const holdLng = noisy ? current.holdLng : desired.lng;
+  const holdLat = noisy ? current.holdLat : desired.lat;
 
   if (jumpMeters > 80) {
     return {
@@ -94,16 +144,20 @@ export function stepVehicleDisplay({
       lat: desired.lat,
       heading: desiredHeading,
       predictedMeters: 0,
+      holdLng,
+      holdLat,
     };
   }
 
-  const tau = jumpMeters > 24 ? 0.12 : 0.16;
-  const t = damp(dtSeconds, tau);
+  const posT = damp(dtSeconds, positionTau(speedMps, jumpMeters));
+  const headT = damp(dtSeconds, headingTau(speedMps));
 
   return {
-    lng: lerp(current.lng, desired.lng, t),
-    lat: lerp(current.lat, desired.lat, t),
-    heading: lerpAngle(current.heading, desiredHeading, t),
+    lng: lerp(current.lng, desired.lng, posT),
+    lat: lerp(current.lat, desired.lat, posT),
+    heading: lerpAngle(current.heading, desiredHeading, headT),
     predictedMeters,
+    holdLng,
+    holdLat,
   };
 }

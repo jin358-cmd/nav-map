@@ -1,3 +1,4 @@
+import { isDemoLandmarkPreset } from "@/data/landmarks";
 import type { GeocodeHit } from "@/types/domain";
 
 const STORAGE_KEY = "navpilot.favorites.v1";
@@ -32,12 +33,16 @@ function placeKey(hit: Pick<GeocodeHit, "name" | "location">) {
   return `${hit.name.replaceAll("臺", "台")}|${hit.location.lng.toFixed(5)}|${hit.location.lat.toFixed(5)}`;
 }
 
+function withoutDemoPresets(hits: GeocodeHit[]) {
+  return hits.filter((hit) => !isDemoLandmarkPreset(hit));
+}
+
 function readStored(raw: string | null) {
   if (!raw) return EMPTY;
   try {
     const value = JSON.parse(raw) as unknown;
     if (!Array.isArray(value)) return EMPTY;
-    return value.filter(isGeocodeHit).slice(0, MAX_ITEMS);
+    return withoutDemoPresets(value.filter(isGeocodeHit)).slice(0, MAX_ITEMS);
   } catch {
     return EMPTY;
   }
@@ -63,7 +68,7 @@ function hydrateLegacyFavorites(current: GeocodeHit[]) {
     const key = placeKey(item);
     if (!merged.has(key)) merged.set(key, item);
   }
-  const next = [...merged.values()].slice(0, MAX_ITEMS);
+  const next = withoutDemoPresets([...merged.values()]).slice(0, MAX_ITEMS);
   if (next.length === current.length) return current;
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
@@ -84,7 +89,7 @@ export function getFavoritesSnapshot() {
   }
   if (raw === cachedRaw && legacyHydrated) return cached;
   cachedRaw = raw;
-  cached = hydrateLegacyFavorites(readStored(raw));
+  cached = withoutDemoPresets(hydrateLegacyFavorites(readStored(raw)));
   return cached;
 }
 
@@ -106,8 +111,9 @@ export function subscribeFavorites(onChange: () => void) {
 }
 
 function writeFavorites(next: GeocodeHit[]) {
+  const clean = withoutDemoPresets(next.filter(isGeocodeHit)).slice(0, MAX_ITEMS);
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(clean));
   } catch {
     return;
   }

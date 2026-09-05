@@ -180,8 +180,8 @@ export function RoadInformationCard({
         </div>
       ) : null}
 
-      <div className="inline-flex w-full max-w-[min(36rem,calc(100vw-env(safe-area-inset-left)-env(safe-area-inset-right)-0.75rem))] items-center justify-center gap-1 rounded-full border border-zinc-500/40 bg-zinc-900/88 px-1 py-1 shadow-[0_10px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl min-[431px]:w-fit min-[431px]:gap-1.5 min-[431px]:px-1.5">
-        <div className="flex min-w-0 items-center gap-1 min-[431px]:gap-1.5">
+      <div className="inline-flex w-full max-w-[min(36rem,calc(100vw-env(safe-area-inset-left)-env(safe-area-inset-right)-0.75rem))] items-center justify-center gap-1.5 rounded-full border border-zinc-500/40 bg-zinc-900/88 px-1.5 py-1 shadow-[0_10px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl min-[431px]:w-fit">
+        <div className="flex min-w-0 items-center gap-1.5">
           {groups.map((group) => {
             const meta = KIND_META[group.kind];
             const Icon = meta.icon;
@@ -209,14 +209,14 @@ export function RoadInformationCard({
                   });
                 }}
                 className={cn(
-                  "relative flex size-9 items-center justify-center rounded-full border touch-manipulation min-[431px]:size-11",
+                  "function-chip relative flex items-center justify-center rounded-full border touch-manipulation",
                   layerOn ? meta.activeClass : meta.className,
                   !layerOn && "opacity-55",
                   active && selectedKind === group.kind && "ring-2 ring-white/30",
                 )}
               >
-                <Icon className="size-4 min-[431px]:size-5" />
-                <span className="absolute -top-0.5 -right-0.5 flex min-w-4 items-center justify-center rounded-full bg-black/80 px-1 text-[10px] leading-4 text-zinc-200">
+                <Icon className="function-chip__icon" />
+                <span className="function-chip__badge absolute flex min-w-4 items-center justify-center rounded-full bg-black/80 px-1 text-[10px] leading-4 text-zinc-200">
                   {group.items.length}
                 </span>
               </button>
@@ -232,7 +232,7 @@ export function RoadInformationCard({
           onSignIn={() => onSignIn?.()}
           onSignOut={() => onSignOut?.()}
         />
-        <div className="flex items-center gap-1 min-[431px]:gap-1.5">
+        <div className="flex items-center gap-1.5">
           <FavoriteHeartButton
             pressed={favoritesOpen || isCurrentFavorite}
             count={favorites.length}
@@ -276,15 +276,15 @@ function FavoriteHeartButton({
       title="最愛書籤"
       onClick={onToggle}
       className={cn(
-        "relative flex size-9 items-center justify-center rounded-full border touch-manipulation min-[431px]:size-10",
+        "function-chip relative flex items-center justify-center rounded-full border touch-manipulation",
         pressed
           ? "border-rose-300/80 bg-rose-500/35 text-rose-100"
           : "border-rose-400/40 bg-rose-500/15 text-rose-200 hover:bg-rose-500/30",
       )}
     >
-      <Heart className={cn("size-4 min-[431px]:size-5", pressed && "fill-rose-500")} />
+      <Heart className={cn("function-chip__icon", pressed && "fill-rose-500")} />
       {count > 0 ? (
-        <span className="absolute -top-0.5 -right-0.5 flex min-w-4 items-center justify-center rounded-full bg-black/80 px-1 text-[10px] leading-4 text-zinc-200">
+        <span className="function-chip__badge absolute flex min-w-4 items-center justify-center rounded-full bg-black/80 px-1 text-[10px] leading-4 text-zinc-200">
           {count}
         </span>
       ) : null}
@@ -386,7 +386,7 @@ function YouTubeMusicButton({
       title="YouTube Music"
       onClick={onToggle}
       className={cn(
-        "relative flex size-9 items-center justify-center rounded-full border touch-manipulation min-[431px]:size-10",
+        "function-chip relative flex items-center justify-center rounded-full border touch-manipulation",
         pressed
           ? "border-red-300/70 bg-[#ff0033]/40"
           : "border-red-400/35 bg-[#ff0033]/20 hover:bg-[#ff0033]/35",
@@ -399,7 +399,7 @@ function YouTubeMusicButton({
 
 function YouTubeMusicMark() {
   return (
-    <svg viewBox="0 0 24 24" className="size-6" aria-hidden>
+    <svg viewBox="0 0 24 24" className="function-chip__icon" aria-hidden>
       <circle cx="12" cy="12" r="10" fill="#FF0033" />
       <path d="M10 8.2v7.6L17 12 10 8.2z" fill="#fff" />
     </svg>

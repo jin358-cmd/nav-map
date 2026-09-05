@@ -30,7 +30,7 @@ let lastPoint: { lng: number; lat: number } | null = null;
 let denied = false;
 
 function toHeading(value: number | null): number | null {
-  if (value === null || Number.isNaN(value)) return null;
+  if (value === null || !Number.isFinite(value) || value < 0) return null;
   return (value + 360) % 360;
 }
 
@@ -39,11 +39,16 @@ function toSpeed(value: number | null): number | undefined {
   return value;
 }
 
-function toPose(position: GeolocationPosition, heading: number): VehiclePose {
+function toPose(
+  position: GeolocationPosition,
+  heading: number,
+  headingAvailable: boolean,
+): VehiclePose {
   return {
     lng: position.coords.longitude,
     lat: position.coords.latitude,
     heading,
+    headingAvailable,
     accuracy: position.coords.accuracy,
     speedMps: toSpeed(position.coords.speed),
     source: "gps",
@@ -75,6 +80,7 @@ function applyPosition(position: GeolocationPosition) {
   const lng = position.coords.longitude;
   const lat = position.coords.latitude;
   const gpsHeading = toHeading(position.coords.heading);
+  const headingAvailable = gpsHeading !== null;
   let heading = gpsHeading ?? lastHeading;
 
   if (lastPoint) {
@@ -87,7 +93,7 @@ function applyPosition(position: GeolocationPosition) {
     }
   }
 
-  const pose = toPose(position, heading);
+  const pose = toPose(position, heading, headingAvailable);
   emitFix(pose);
   emitStatus("active");
   emitPermission("granted");
@@ -287,7 +293,14 @@ export function requestCurrentPosition(): Promise<VehiclePose> {
         denied = false;
         applyPosition(position);
         if (subscribers.size > 0 && watchId === null) startWatch();
-        resolve(lastFix ?? toPose(position, lastHeading));
+        resolve(
+          lastFix ??
+            toPose(
+              position,
+              lastHeading,
+              toHeading(position.coords.heading) !== null,
+            ),
+        );
       },
       (error) => {
         const code = geoErrorCode(error);
