@@ -20,6 +20,8 @@ import {
   INTERSECTION_ZOOM_MOBILE,
   MANEUVER_RECOVER_MS,
   NAVIGATION_PITCH,
+  OVERHEAD_NAV_ZOOM,
+  OVERHEAD_NAV_ZOOM_MOBILE,
   OVERHEAD_TURN_ZOOM,
   OVERHEAD_TURN_ZOOM_MOBILE,
   OVERHEAD_ZOOM,
@@ -224,7 +226,9 @@ function cameraOptions(
       ? compact
         ? DRIVING_ZOOM_MOBILE
         : DRIVING_ZOOM
-      : OVERHEAD_ZOOM;
+      : compact
+        ? OVERHEAD_NAV_ZOOM_MOBILE
+        : OVERHEAD_NAV_ZOOM;
   const focusZoom =
     mode === "3d"
       ? compact
@@ -642,7 +646,7 @@ export function DrivingMap({
               routeMetersRef.current,
               distanceToNextRef.current,
               true,
-              (now / 1200) % 1,
+              (now / 900) % 1,
               {
                 cameraMode: modeRef.current,
                 isTurn: isTurnRef.current,

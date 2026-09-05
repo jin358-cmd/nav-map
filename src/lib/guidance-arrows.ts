@@ -21,7 +21,7 @@ export const GUIDANCE_PATH_SOURCE_ID = "guidance-path";
 export const GUIDANCE_LAYER_ID = "guidance-arrows-layer";
 export const GUIDANCE_PATH_LAYER_ID = "guidance-path-layer";
 export const GUIDANCE_PATH_GLOW_ID = "guidance-path-glow";
-const CHEVRON_IMAGE_ID = "floating-orange-arrow-v1";
+const CHEVRON_IMAGE_ID = "floating-orange-arrow-v2";
 
 let lastAhead: [number, number][] = [];
 
@@ -98,17 +98,17 @@ function floatingArrowSize(): ExpressionSpecification {
     ["linear"],
     ["zoom"],
     14,
-    1.15,
+    1.45,
     15.5,
-    1.55,
-    16.5,
     1.9,
-    17.4,
-    2.15,
-    18.2,
+    16.5,
     2.35,
+    17.4,
+    2.65,
+    18.2,
+    2.9,
     19,
-    2.45,
+    3.05,
   ];
 }
 
@@ -118,7 +118,7 @@ function ensureChevronLayer(map: MapLibreMap) {
     "icon-image": CHEVRON_IMAGE_ID,
     "icon-size": size,
     "icon-anchor": "bottom" as const,
-    "icon-offset": [0, -10] as [number, number],
+    "icon-offset": [0, -18] as [number, number],
     "icon-rotate": ["get", "bearing"] as ExpressionSpecification,
     "icon-rotation-alignment": "map" as const,
     "icon-pitch-alignment": "viewport" as const,
@@ -144,7 +144,7 @@ function ensureChevronLayer(map: MapLibreMap) {
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-image", CHEVRON_IMAGE_ID);
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-size", size);
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-anchor", "bottom");
-  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-offset", [0, -10]);
+  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-offset", [0, -18]);
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-rotation-alignment", "map");
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-pitch-alignment", "viewport");
 }

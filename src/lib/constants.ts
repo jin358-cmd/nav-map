@@ -20,9 +20,12 @@ export const DRIVING_PITCH = 52;
  */
 export const NAVIGATION_PITCH = 56;
 export const OVERVIEW_PITCH = 0;
-export const DRIVING_ZOOM = 16.55;
-export const DRIVING_ZOOM_MOBILE = 16.25;
+export const DRIVING_ZOOM = 16.75;
+export const DRIVING_ZOOM_MOBILE = 16.45;
 export const OVERHEAD_ZOOM = 15.4;
+/** 2D 導航 cruise，比瀏覽俯視更近，仍留出路口預判距離。 */
+export const OVERHEAD_NAV_ZOOM = 16.35;
+export const OVERHEAD_NAV_ZOOM_MOBILE = 16.15;
 export const OVERHEAD_TURN_ZOOM = 17.35;
 export const OVERHEAD_TURN_ZOOM_MOBILE = 17.15;
 /** 路口近距離上限，避免無限放大。 */
@@ -38,7 +41,7 @@ export const CONSECUTIVE_TURN_METERS = 160;
 export const JUNCTION_FOCUS_ENTER_METERS = 50;
 export const JUNCTION_FOCUS_EXIT_METERS = 65;
 export const JUNCTION_FOCUS_MAX_ZOOM_METERS = 12;
-/** 三段轉向：200 橘色路段／100 接近放大／30 最後提醒 */
+/** 三段轉向：200 開始拉近／100 Approach／30 Turn View */
 export const MANEUVER_PREPARE_METERS = 200;
 export const MANEUVER_PREPARE_EXIT_METERS = 220;
 export const MANEUVER_APPROACH_METERS = 100;

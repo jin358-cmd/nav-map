@@ -1,8 +1,9 @@
 import {
-  CRUISE_ZOOM_START_METERS,
   GUIDANCE_ARROW_APPROACH_METERS,
   INTERSECTION_APPROACH_METERS,
   MANEUVER_AFTER_TURN_METERS,
+  MANEUVER_APPROACH_METERS,
+  MANEUVER_IMMINENT_METERS,
   PREPARE_ZOOM_METERS,
   TURN_VIEW_METERS,
 } from "@/lib/constants";
@@ -89,12 +90,12 @@ export function chevronCount(
 ) {
   if (pathLength <= 0) return 0;
   const near = distanceToNext <= TURN_VIEW_METERS;
-  const mid = distanceToNext <= 100;
-  const min = near ? 8 : mid ? 7 : 6;
-  const max = near ? 14 : mid ? 12 : 10;
+  const mid = distanceToNext <= MANEUVER_APPROACH_METERS;
+  const min = near ? 12 : mid ? 10 : 9;
+  const max = near ? 18 : mid ? 16 : 14;
   const zoomScale = zoom >= 18 ? 0.78 : zoom >= 17 ? 0.9 : 1;
   return Math.round(
-    Math.min(max, Math.max(min, pathLength / (10.2 * zoomScale))),
+    Math.min(max, Math.max(min, pathLength / (7.2 * zoomScale))),
   );
 }
 
@@ -106,7 +107,7 @@ export function marqueeSpacingMeters(
   if (pathLength <= 0) return 10;
   const desired = chevronCount(pathLength, distanceToNext, zoom);
   if (desired <= 0) return 12;
-  return Math.min(16, Math.max(7.5, pathLength / desired));
+  return Math.min(12, Math.max(5.5, pathLength / desired));
 }
 
 export function guidanceArrowsAlong(
@@ -171,22 +172,24 @@ export function isApproachingIntersection(distanceToNext: number) {
 }
 
 /**
- * 距離插值：>500m=0，200m≈0.42，50m=1。體感偏快但仍連續。
+ * >200m=cruise，200→100 開始拉近，100=Approach，30=Turn View。
  */
 export function approachCameraProgress(distanceToNext: number) {
   if (!Number.isFinite(distanceToNext)) return 0;
-  if (distanceToNext >= CRUISE_ZOOM_START_METERS) return 0;
-  if (distanceToNext <= TURN_VIEW_METERS) return 1;
-  if (distanceToNext >= PREPARE_ZOOM_METERS) {
-    return ((CRUISE_ZOOM_START_METERS - distanceToNext) /
-      (CRUISE_ZOOM_START_METERS - PREPARE_ZOOM_METERS)) *
-      0.42;
+  if (distanceToNext > PREPARE_ZOOM_METERS) return 0;
+  if (distanceToNext <= MANEUVER_IMMINENT_METERS) return 1;
+  if (distanceToNext <= MANEUVER_APPROACH_METERS) {
+    return (
+      0.62 +
+      0.38 *
+        ((MANEUVER_APPROACH_METERS - distanceToNext) /
+          (MANEUVER_APPROACH_METERS - MANEUVER_IMMINENT_METERS))
+    );
   }
   return (
-    0.42 +
+    0.62 *
     ((PREPARE_ZOOM_METERS - distanceToNext) /
-      (PREPARE_ZOOM_METERS - TURN_VIEW_METERS)) *
-      0.58
+      (PREPARE_ZOOM_METERS - MANEUVER_APPROACH_METERS))
   );
 }
 
