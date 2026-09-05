@@ -434,6 +434,57 @@
 
 .hud-trip-card {
   width: 100%;
+  padding: 0.5rem 0.2rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(196, 181, 253, 0.22);
+  background: rgba(59, 7, 100, 0.3);
+}
+
+.hud-trip-cell {
+  min-width: 0;
+  padding: 0 0.5rem;
+}
+
+.hud-trip-label {
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1;
+  color: #e4e4e7;
+}
+
+.hud-trip-minutes {
+  margin-top: 0.15rem;
+  font-size: clamp(26px, 6.6vw, 34px);
+  font-weight: 800;
+  line-height: 1.05;
+  color: #fde047;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hud-trip-minutes-unit {
+  margin-left: 0.15rem;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.hud-trip-value {
+  margin-top: 0.15rem;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.15;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hud-trip-unit {
+  margin-left: 0.15rem;
+  font-size: 11px;
+  font-weight: 500;
 }
 
 @media (orientation: landscape) {
@@ -446,7 +497,28 @@
   }
 
   .hud-anchor-trip {
-    width: min(46vw, 20rem);
+    width: min(36vw, 16.25rem);
+  }
+
+  .hud-trip-card {
+    padding: 0.32rem 0.08rem;
+    border-radius: 0.85rem;
+  }
+
+  .hud-trip-cell {
+    padding: 0 0.35rem;
+  }
+
+  .hud-trip-label {
+    font-size: 9px;
+  }
+
+  .hud-trip-minutes {
+    font-size: clamp(22px, 3.8vw, 30px);
+  }
+
+  .hud-trip-value {
+    font-size: 14px;
   }
 }
 
@@ -457,11 +529,10 @@
   padding: 0.75rem 0.85rem;
   border-radius: 1.15rem;
   overflow: hidden;
-}
-
-.navigation-instruction-card--junction {
-  background: #ea580c;
-  color: #fff7ed;
+  color: #fff;
+  background: rgba(39, 39, 42, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
 }
 
 .navigation-turn-icon--signal {
@@ -497,18 +568,15 @@
 }
 
 .navigation-guidance {
-  font-size: clamp(18px, 4.6vw, 28px);
+  font-size: clamp(20px, 5.1vw, 30px);
   line-height: 1.15;
   font-weight: 800;
 }
 
-.navigation-instruction-card--junction .navigation-guidance {
-  color: #fff7ed;
-}
-
 .navigation-road-name {
-  font-size: clamp(13px, 3.2vw, 16px);
+  font-size: clamp(15px, 3.6vw, 18px);
   line-height: 1.2;
+  color: #f4f4f5;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -539,11 +607,11 @@
   }
 
   .navigation-guidance {
-    font-size: clamp(16px, 4.8vw, 22px);
+    font-size: clamp(18px, 5.3vw, 24px);
   }
 
   .navigation-road-name {
-    font-size: clamp(12px, 3.3vw, 14px);
+    font-size: clamp(14px, 3.6vw, 16px);
   }
 }
 

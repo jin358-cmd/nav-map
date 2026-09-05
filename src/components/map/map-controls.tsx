@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { LayoutGrid, LocateFixed, Settings, Volume2, VolumeX, Waypoints } from "lucide-react";
+import { LayoutGrid, LocateFixed, Settings } from "lucide-react";
 import { HeadingCompass } from "@/components/overlay/heading-compass";
 import { MapStyleMenu } from "@/components/overlay/map-style-menu";
 import { Button } from "@/components/ui/button";
@@ -28,15 +28,11 @@ type MapControlsProps = {
   styleMenuOpen: boolean;
   toolsDrawerOpen?: boolean;
   navigating?: boolean;
-  voiceEnabled?: boolean;
-  trafficVisible?: boolean;
   onLocate: () => void;
   onToggleCamera: () => void;
   onMapDisplayMode: (mode: MapDisplayMode) => void;
   onToggleStyleMenu: () => void;
   onToggleToolsDrawer?: () => void;
-  onToggleVoice?: () => void;
-  onToggleTraffic?: () => void;
 };
 
 export function MapControls({
@@ -50,15 +46,11 @@ export function MapControls({
   styleMenuOpen,
   toolsDrawerOpen = false,
   navigating = false,
-  voiceEnabled = true,
-  trafficVisible = true,
   onLocate,
   onToggleCamera,
   onMapDisplayMode,
   onToggleStyleMenu,
   onToggleToolsDrawer,
-  onToggleVoice,
-  onToggleTraffic,
 }: MapControlsProps) {
   const locating = gpsStatus === "locating";
   const locateLabel = !followVehicle
@@ -86,34 +78,18 @@ export function MapControls({
             onToggle={onToggleStyleMenu}
           />
         </LabeledRail>
-        {onToggleVoice ? (
-          <LabeledRail label="聲音" tone={tone}>
-            <ControlButton
-              label={voiceEnabled ? "關閉語音" : "開啟語音"}
-              onClick={onToggleVoice}
-              active={voiceEnabled}
-              tone={tone}
-            >
-              {voiceEnabled ? (
-                <Volume2 className="size-5" />
-              ) : (
-                <VolumeX className="size-5" />
-              )}
-            </ControlButton>
-          </LabeledRail>
-        ) : null}
-        {onToggleTraffic ? (
-          <LabeledRail label="路況" tone={tone}>
-            <ControlButton
-              label={trafficVisible ? "隱藏路況" : "顯示路況"}
-              onClick={onToggleTraffic}
-              active={trafficVisible}
-              tone={tone}
-            >
-              <Waypoints className="size-5" />
-            </ControlButton>
-          </LabeledRail>
-        ) : null}
+        <LabeledRail label="2D/3D" tone={tone}>
+          <ControlButton
+            label={cameraMode === "3d" ? "切換 2D" : "切換 3D"}
+            onClick={onToggleCamera}
+            active={cameraMode === "3d"}
+            tone={tone}
+          >
+            <span className="text-[18px] font-bold leading-none tracking-tight">
+              {cameraMode === "3d" ? "3D" : "2D"}
+            </span>
+          </ControlButton>
+        </LabeledRail>
         {onToggleToolsDrawer ? (
           <LabeledRail label="設定" tone={tone}>
             <ControlButton

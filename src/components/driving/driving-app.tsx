@@ -1256,12 +1256,14 @@ export function DrivingApp() {
           <NextIntersectionHud
             ref={navCardRef}
             step={activeNavigationStep}
-            followingStep={followingStep}
             distanceMeters={distanceToNextMeters}
             offRoute={navigationProgress?.offRoute ?? false}
             rerouting={rerouting}
             reroutePending={reroutePending}
             junctionFocus={approachingIntersection}
+            onCancelNavigation={exitNavigation}
+            voiceEnabled={voiceEnabled}
+            onToggleVoice={() => setVoiceEnabled((value) => !value)}
           />
         </div>
       ) : (
@@ -1318,21 +1320,12 @@ export function DrivingApp() {
           styleMenuOpen={styleMenuOpen}
           toolsDrawerOpen={drawerOpen}
           navigating={navigating}
-          voiceEnabled={voiceEnabled}
-          trafficVisible={layerVisibility.congestion}
           onLocate={() => void locate()}
           onToggleCamera={() =>
             setCameraMode((mode) => (mode === "3d" ? "2d" : "3d"))
           }
           onToggleToolsDrawer={() =>
             setToolsDrawerOpen((open) => !(open ?? !landscape))
-          }
-          onToggleVoice={() => setVoiceEnabled((value) => !value)}
-          onToggleTraffic={() =>
-            setLayerVisibility((current) => ({
-              ...current,
-              congestion: !current.congestion,
-            }))
           }
           onMapDisplayMode={(mode) => {
             if (mode === mapDisplayMode && pendingMapDisplayMode == null) {
@@ -1491,12 +1484,13 @@ export function DrivingApp() {
         >
         <RoadInformationCard
           items={intel}
-          navigating={navigating}
-          cameraMode={cameraMode}
-          onToggleCamera={() =>
-            setCameraMode((mode) => (mode === "3d" ? "2d" : "3d"))
+          trafficVisible={layerVisibility.congestion}
+          onToggleTraffic={() =>
+            setLayerVisibility((current) => ({
+              ...current,
+              congestion: !current.congestion,
+            }))
           }
-          onCancelNavigation={navigating ? exitNavigation : undefined}
           origin={origin}
           trafficOrigin={trafficOrigin}
           disasterOrigin={disasterOrigin}

@@ -1,39 +1,65 @@
 import type { Map as MapLibreMap } from "maplibre-gl";
-import { MAP_COLORS } from "@/lib/constants";
+
+/** 灰階夜間底圖。只影響 Dark style，不改青藍／橘色導航 overlay。 */
+const GRAY = {
+  background: "#2b2d32",
+  water: "#3a3d43",
+  land: "#33363c",
+  park: "#30342f",
+  building: "#40444b",
+  buildingExtrusion: "#4a4e56",
+  roadPath: "#5c6068",
+  roadMinor: "#6d717a",
+  roadMajor: "#8d919a",
+  roadMotorway: "#b0b4bc",
+  roadCasing: "#4f535b",
+  roadLabel: "#f3f4f6",
+  roadHalo: "#1f2126",
+  place: "#e5e7eb",
+  sky: "#3d4148",
+  horizon: "#5c616a",
+} as const;
 
 const PAINT_UPDATES: Record<string, Record<string, string | number>> = {
-  background: { "background-color": MAP_COLORS.background },
-  water: { "fill-color": MAP_COLORS.water },
-  waterway: { "line-color": MAP_COLORS.water },
-  landcover_ice_shelf: { "fill-color": MAP_COLORS.background },
-  landcover_glacier: { "fill-color": MAP_COLORS.background },
-  landuse_residential: { "fill-color": MAP_COLORS.land },
-  landcover_wood: { "fill-color": MAP_COLORS.park },
-  landuse_park: { "fill-color": MAP_COLORS.park },
-  building: { "fill-color": MAP_COLORS.building },
-  highway_path: { "line-color": "#2a3444" },
-  highway_minor: { "line-color": MAP_COLORS.roadMinor },
-  highway_major_casing: { "line-color": MAP_COLORS.roadCasing },
-  highway_major_inner: { "line-color": MAP_COLORS.roadMajor },
-  highway_major_subtle: { "line-color": MAP_COLORS.roadMinor },
-  highway_motorway_casing: { "line-color": MAP_COLORS.roadCasing },
-  highway_motorway_inner: { "line-color": MAP_COLORS.roadMotorway },
-  highway_motorway_subtle: { "line-color": MAP_COLORS.roadMajor },
-  railway_transit: { "line-color": "#2a3038" },
-  railway: { "line-color": "#2a3038" },
-  railway_minor: { "line-color": "#2a3038" },
-  highway_name_other: { "text-color": MAP_COLORS.roadLabel },
-  highway_name_motorway: { "text-color": MAP_COLORS.roadLabel },
-  place_city: { "text-color": "#c5d0de" },
-  place_town: { "text-color": "#a9b6c7" },
-  place_city_large: { "text-color": "#d7e0ea" },
+  background: { "background-color": GRAY.background },
+  water: { "fill-color": GRAY.water },
+  waterway: { "line-color": GRAY.water },
+  landcover_ice_shelf: { "fill-color": GRAY.background },
+  landcover_glacier: { "fill-color": GRAY.background },
+  landuse_residential: { "fill-color": GRAY.land },
+  landcover_wood: { "fill-color": GRAY.park },
+  landuse_park: { "fill-color": GRAY.park },
+  building: { "fill-color": GRAY.building },
+  road_area_pier: { "fill-color": GRAY.land },
+  road_pier: { "line-color": GRAY.roadMinor },
+  highway_path: { "line-color": GRAY.roadPath },
+  highway_minor: { "line-color": GRAY.roadMinor },
+  highway_major_casing: { "line-color": GRAY.roadCasing },
+  highway_major_inner: { "line-color": GRAY.roadMajor },
+  highway_major_subtle: { "line-color": GRAY.roadMinor },
+  highway_motorway_casing: { "line-color": GRAY.roadCasing },
+  highway_motorway_inner: { "line-color": GRAY.roadMotorway },
+  highway_motorway_subtle: { "line-color": GRAY.roadMajor },
+  railway_transit: { "line-color": "#5a5e66" },
+  railway: { "line-color": "#5a5e66" },
+  railway_minor: { "line-color": "#5a5e66" },
+  highway_name_other: {
+    "text-color": GRAY.roadLabel,
+    "text-halo-color": GRAY.roadHalo,
+  },
+  highway_name_motorway: {
+    "text-color": GRAY.roadLabel,
+    "text-halo-color": GRAY.roadHalo,
+  },
+  place_city: { "text-color": GRAY.place },
+  place_town: { "text-color": GRAY.place },
+  place_city_large: { "text-color": "#ffffff" },
+  place_suburb: { "text-color": "#d1d5db" },
+  place_village: { "text-color": "#d1d5db" },
+  place_other: { "text-color": "#c4c8ce" },
 };
 
 const HIDDEN_LAYERS = [
-  "place_other",
-  "place_suburb",
-  "place_village",
-  "place_state",
   "water_name",
   "road_oneway",
   "road_oneway_opposite",
@@ -41,6 +67,17 @@ const HIDDEN_LAYERS = [
   "aeroway-runway-casing",
   "aeroway-area",
   "aeroway-runway",
+];
+
+const LABEL_LAYERS = [
+  "highway_name_other",
+  "highway_name_motorway",
+  "place_city",
+  "place_town",
+  "place_city_large",
+  "place_suburb",
+  "place_village",
+  "place_other",
 ];
 
 export function applyDarkDrivingTheme(map: MapLibreMap) {
@@ -64,8 +101,14 @@ export function applyDarkDrivingTheme(map: MapLibreMap) {
     map.setLayoutProperty(layerId, "visibility", "none");
   }
 
-  if (map.getLayer("building")) {
-    map.setLayoutProperty("building", "visibility", "none");
+  for (const layerId of LABEL_LAYERS) {
+    if (!map.getLayer(layerId)) continue;
+    map.setLayoutProperty(layerId, "visibility", "visible");
+    try {
+      map.setPaintProperty(layerId, "text-halo-width", 1.2);
+    } catch {
+      /* some label layers may not accept halo width */
+    }
   }
 
   if (!map.getLayer("building-3d") && map.getSource("openmaptiles")) {
@@ -77,7 +120,7 @@ export function applyDarkDrivingTheme(map: MapLibreMap) {
         type: "fill-extrusion",
         minzoom: 14,
         paint: {
-          "fill-extrusion-color": MAP_COLORS.buildingExtrusion,
+          "fill-extrusion-color": GRAY.buildingExtrusion,
           "fill-extrusion-height": [
             "coalesce",
             ["get", "render_height"],
@@ -89,7 +132,7 @@ export function applyDarkDrivingTheme(map: MapLibreMap) {
             ["get", "render_min_height"],
             0,
           ],
-          "fill-extrusion-opacity": 0.78,
+          "fill-extrusion-opacity": 0.55,
         },
       });
     } catch {
@@ -97,14 +140,31 @@ export function applyDarkDrivingTheme(map: MapLibreMap) {
     }
   }
 
+  if (map.getLayer("building")) {
+    map.setLayoutProperty(
+      "building",
+      "visibility",
+      map.getLayer("building-3d") ? "none" : "visible",
+    );
+  }
+
+  if (map.getLayer("building-3d")) {
+    try {
+      map.setPaintProperty("building-3d", "fill-extrusion-color", GRAY.buildingExtrusion);
+      map.setPaintProperty("building-3d", "fill-extrusion-opacity", 0.55);
+    } catch {
+      /* keep existing extrusion */
+    }
+  }
+
   try {
     map.setSky({
-      "sky-color": "#07090d",
-      "sky-horizon-blend": 0.55,
-      "horizon-color": "#1a2433",
-      "horizon-fog-blend": 0.75,
-      "fog-color": MAP_COLORS.background,
-      "fog-ground-blend": 0.35,
+      "sky-color": GRAY.sky,
+      "sky-horizon-blend": 0.45,
+      "horizon-color": GRAY.horizon,
+      "horizon-fog-blend": 0.55,
+      "fog-color": GRAY.background,
+      "fog-ground-blend": 0.22,
     });
   } catch {
     // Sky atmosphere is optional on older MapLibre builds.
