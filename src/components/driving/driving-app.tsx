@@ -269,9 +269,9 @@ export function DrivingApp() {
   const navCardRef = useRef<HTMLDivElement>(null);
   const [overlayPadding, setOverlayPadding] = useState({
     top: 90,
-    left: 24,
-    right: 88,
-    bottom: 130,
+    left: 12,
+    right: 12,
+    bottom: 96,
   });
   const googleAccount = useGoogleAccount();
   const youtubeLibrary = useYoutubeLibrary(
@@ -950,9 +950,9 @@ export function DrivingApp() {
     const update = () => {
       const rect = el.getBoundingClientRect();
       setOverlayPadding({
-        top: Math.max(90, Math.round(rect.height + 24)),
-        left: Math.max(24, Math.round(rect.width + 24)),
-        right: 88,
+        top: Math.max(90, Math.round(rect.bottom + 12)),
+        left: 12,
+        right: 12,
         bottom: hasRouteAlert ? 148 : 96,
       });
     };

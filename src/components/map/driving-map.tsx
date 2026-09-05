@@ -151,31 +151,31 @@ function drivingPadding(
   overlay?: DrivingMapProps["overlayPadding"],
 ) {
   const compact = isCompactViewport(width);
-  const bottomPad = compact ? 96 : 118;
-  const rightPad = compact ? 58 : 20;
-  const base =
+  const bottomPad = navigating ? (compact ? 88 : 104) : compact ? 96 : 118;
+  /** 左右必須對稱，否則車輛／路線會偏離畫面水平中線。 */
+  const sidePad = 12;
+  const topPad =
     mode !== "3d"
-      ? {
-          top: compact ? 108 : 96,
-          bottom: bottomPad,
-          left: 12,
-          right: rightPad,
-        }
-      : {
-          top: Math.max(
-            Math.round((height - bottomPad) * DRIVING_PADDING_RATIO),
-            compact ? 96 : 80,
-          ),
-          bottom: bottomPad,
-          left: 12,
-          right: rightPad,
-        };
-  if (!navigating || !overlay) return base;
+      ? compact
+        ? 108
+        : 96
+      : Math.max(
+          Math.round((height - bottomPad) * DRIVING_PADDING_RATIO),
+          compact ? 96 : 80,
+        );
+  if (!navigating || !overlay) {
+    return {
+      top: topPad,
+      bottom: bottomPad,
+      left: sidePad,
+      right: sidePad,
+    };
+  }
   return {
-    top: Math.max(base.top, overlay.top),
-    bottom: Math.max(base.bottom, overlay.bottom),
-    left: Math.max(base.left, overlay.left),
-    right: Math.max(base.right, overlay.right),
+    top: Math.max(topPad, overlay.top),
+    bottom: Math.max(bottomPad, overlay.bottom),
+    left: sidePad,
+    right: sidePad,
   };
 }
 
@@ -1006,9 +1006,36 @@ export function DrivingMap({
         onStyleFallbackRef.current?.("地圖圖層重新掛載失敗，已保留目前畫面。");
       }
       try {
-        map.jumpTo(camera);
+        const display = displayStateRef.current;
+        const wanted = cameraOptions(
+          map,
+          {
+            ...vehicleRef.current,
+            lng: display.lng,
+            lat: display.lat,
+            heading: display.heading,
+          },
+          modeRef.current,
+          navigatingRef.current,
+          approachingRef.current,
+          overlayPaddingRef.current,
+          distanceToNextRef.current,
+          junctionCueRef.current,
+          followOrientationRef.current,
+        );
+        map.jumpTo({
+          center: wanted.center,
+          bearing: wanted.bearing,
+          pitch: wanted.pitch,
+          zoom: wanted.zoom,
+          padding: wanted.padding,
+        });
       } catch {
-        /* keep the newly loaded style even if camera restore fails */
+        try {
+          map.jumpTo(camera);
+        } catch {
+          /* keep the newly loaded style even if camera restore fails */
+        }
       }
       if (vehicleMarkerRef.current) vehicleMarkerRef.current.addTo(map);
       if (destMarkerRef.current) destMarkerRef.current.addTo(map);
@@ -1114,8 +1141,8 @@ export function DrivingMap({
       padding: {
         top: compact ? 120 : 110,
         bottom: compact ? 140 : 130,
-        left: 36,
-        right: compact ? 72 : 48,
+        left: compact ? 48 : 44,
+        right: compact ? 48 : 44,
       },
       duration: 900,
       pitch: OVERVIEW_PITCH,
