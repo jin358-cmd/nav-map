@@ -28,34 +28,35 @@ export function createVehicleDisplayState(
   };
 }
 
+/** Camera follow: fast response + light smoothing. Seconds, not animation duration. */
 export function presentationFollowTau(speedMps: number, approachBlend: number) {
   const kmh = speedMps * 3.6;
-  let posTau = 0.18;
-  if (kmh >= 90) posTau = 0.07;
-  else if (kmh >= 55) posTau = 0.09;
-  else if (kmh >= 25) posTau = 0.11;
-  else if (kmh >= 8) posTau = 0.14;
-  else posTau = 0.22;
+  let posTau = 0.08;
+  if (kmh >= 90) posTau = 0.048;
+  else if (kmh >= 55) posTau = 0.055;
+  else if (kmh >= 25) posTau = 0.065;
+  else if (kmh >= 8) posTau = 0.075;
+  else posTau = 0.1;
   return {
     posTau,
     zoomTau: approachBlend > 0.02 ? 0.07 : posTau,
-    bearingTau: kmh < 6 ? 0.16 : Math.min(posTau, 0.1),
+    bearingTau: kmh < 6 ? 0.12 : Math.min(posTau, 0.07),
   };
 }
 
 function positionTau(speedMps: number, jumpMeters: number) {
   const kmh = speedMps * 3.6;
-  if (jumpMeters > 28 || kmh >= 90) return 0.08;
-  if (kmh >= 55) return 0.09;
-  if (kmh >= 25) return 0.11;
-  if (kmh >= 8) return 0.14;
-  return 0.2;
+  if (jumpMeters > 28 || kmh >= 90) return 0.05;
+  if (kmh >= 55) return 0.055;
+  if (kmh >= 25) return 0.065;
+  if (kmh >= 8) return 0.08;
+  return 0.11;
 }
 
 function headingTau(speedMps: number) {
-  if (speedMps < 0.8) return 0.2;
-  if (speedMps < 4) return 0.12;
-  return 0.09;
+  if (speedMps < 0.8) return 0.13;
+  if (speedMps < 4) return 0.09;
+  return 0.06;
 }
 
 function isNoisyFix(accuracy: number | undefined, jumpMeters: number, speedMps: number) {
@@ -100,7 +101,7 @@ export function stepVehicleDisplay({
   if (stationary) {
     return {
       ...current,
-      heading: lerpAngle(current.heading, target.heading, damp(dtSeconds, 0.26)),
+      heading: lerpAngle(current.heading, target.heading, damp(dtSeconds, 0.14)),
       predictedMeters: 0,
       holdLng: noisy ? current.holdLng : goal.lng,
       holdLat: noisy ? current.holdLat : goal.lat,

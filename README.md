@@ -118,7 +118,7 @@ Phase 4 災害說明：[`docs/PHASE-4-DISASTERS.md`](docs/PHASE-4-DISASTERS.md)�
 已完成 weather 邏輯移植與 Driving HUD。CCTV 的 TDX live token 仍是 stub。
 
 **Phase 5.2：導航體驗（本階段）**
-路線吸附與平滑跟隨、五秒內偏航重算、50 公尺路口黃卡、住家／公司、亮／暗／自動／衛星、2D／3D、兩段式定位、汽車／機車預覽、事件圖層聯動、周邊停車、YouTube 歌單授權。
+路線吸附與平滑跟隨、五秒內偏航重算、50 公尺路口黃卡、住家／公司、亮／暗／自動／衛星、2D／3D、兩段式定位、汽車／機車預覽、事件圖層聯動、周邊停車、YouTube 歌單授權。手勢與跟車：單指／雙指會立刻放開 Camera Follow，跟車用每幀 `jumpTo` 而不是每次 GPS `easeTo`，Raw GPS 與畫面插值分離。
 
 **後續**
 機車路由供應商、TDX CCTV live、全國停車覆蓋、離線底圖快取。

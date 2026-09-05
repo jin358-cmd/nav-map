@@ -302,6 +302,11 @@ export function DrivingApp() {
   const rerouteGenerationRef = useRef(0);
   const destinationRef = useRef<RouteDestination | null>(null);
   const vehicleRef = useRef(vehicle);
+  const vehicleLiveRef = useRef<VehiclePose>(vehicle);
+  const displayVehicleLiveRef = useRef<DisplayPose | null>(null);
+  const lastHudVehicleAtRef = useRef(0);
+  const lastHudHeadingAvailRef = useRef<boolean | undefined>(undefined);
+  const lastHudSourceRef = useRef(vehicle.source);
   const sawGpsFixRef = useRef(false);
   const panIntentRef = useRef(false);
   const lastViewportCenterRef = useRef<{ lng: number; lat: number } | null>(
@@ -498,18 +503,38 @@ export function DrivingApp() {
 
   useEffect(() => {
     void queryGeolocationPermission().then(setGpsPermission);
+    const flushHudVehicle = (pose: VehiclePose, display: DisplayPose | null) => {
+      const now = performance.now();
+      const headingChanged = lastHudHeadingAvailRef.current !== pose.headingAvailable;
+      const sourceChanged = lastHudSourceRef.current !== pose.source;
+      if (
+        !headingChanged &&
+        !sourceChanged &&
+        now - lastHudVehicleAtRef.current < 280
+      ) {
+        return;
+      }
+      lastHudVehicleAtRef.current = now;
+      lastHudHeadingAvailRef.current = pose.headingAvailable;
+      lastHudSourceRef.current = pose.source;
+      setVehicle(pose);
+      setDisplayVehicle(display);
+    };
     const stop = watchVehiclePosition({
       onFix: (pose) => {
-        setVehicle(pose);
+        vehicleLiveRef.current = pose;
+        vehicleRef.current = pose;
         if (!sawGpsFixRef.current) {
           sawGpsFixRef.current = true;
           panIntentRef.current = false;
           setFollowVehicle(true);
           setUserAdjustedMap(false);
+          lastHudVehicleAtRef.current = 0;
         }
         const context = navigationContextRef.current;
         if (!context.navigating || !context.routeProgressModel) {
-          setDisplayVehicle(null);
+          displayVehicleLiveRef.current = null;
+          flushHudVehicle(pose, null);
           return;
         }
         const next = updateNavigationProgress({
@@ -520,13 +545,13 @@ export function DrivingApp() {
         });
         navigationTrackerRef.current = next;
         setNavigationProgress(next);
-        setDisplayVehicle(
-          snapVehicleToRoute({
-            raw: pose,
-            model: context.routeProgressModel,
-            previousRouteMeters: next?.routeMeters,
-          }),
-        );
+        const snapped = snapVehicleToRoute({
+          raw: pose,
+          model: context.routeProgressModel,
+          previousRouteMeters: next?.routeMeters,
+        });
+        displayVehicleLiveRef.current = snapped;
+        flushHudVehicle(pose, snapped);
       },
       onStatus: setGpsStatus,
       onError: setGpsError,
@@ -658,6 +683,8 @@ export function DrivingApp() {
     const pose = await requestCurrentPosition();
     sawGpsFixRef.current = true;
     panIntentRef.current = false;
+    vehicleLiveRef.current = pose;
+    vehicleRef.current = pose;
     setVehicle(pose);
     setGpsStatus("active");
     setGpsError(null);
@@ -788,6 +815,7 @@ export function DrivingApp() {
     setNavigating(false);
     navigationTrackerRef.current = null;
     setNavigationProgress(null);
+    displayVehicleLiveRef.current = null;
     setDisplayVehicle(null);
     setParkingOpen(false);
     setSelectedParking(null);
@@ -849,15 +877,15 @@ export function DrivingApp() {
       : null;
     navigationTrackerRef.current = next;
     setNavigationProgress(next);
-    setDisplayVehicle(
-      routeProgressModel
-        ? snapVehicleToRoute({
-            raw: pose,
-            model: routeProgressModel,
-            previousRouteMeters: next?.routeMeters,
-          })
-        : null,
-    );
+    const snapped = routeProgressModel
+      ? snapVehicleToRoute({
+          raw: pose,
+          model: routeProgressModel,
+          previousRouteMeters: next?.routeMeters,
+        })
+      : null;
+    displayVehicleLiveRef.current = snapped;
+    setDisplayVehicle(snapped);
     setNavigating(true);
     setToolsDrawerOpen(false);
     setCameraMode("3d");
@@ -876,6 +904,7 @@ export function DrivingApp() {
     setToolsDrawerOpen(false);
     navigationTrackerRef.current = null;
     setNavigationProgress(null);
+    displayVehicleLiveRef.current = null;
     setDisplayVehicle(null);
     setFollowVehicle(false);
     setFitRouteKey((value) => value + 1);
@@ -1128,6 +1157,8 @@ export function DrivingApp() {
       <DrivingMap
         vehicle={vehicle}
         displayVehicle={displayVehicle}
+        vehicleLiveRef={vehicleLiveRef}
+        displayVehicleLiveRef={displayVehicleLiveRef}
         cameraMode={cameraMode}
         followOrientation={followOrientation}
         followVehicle={followVehicle}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type MutableRefObject } from "react";
 import { LngLatBounds, Map as MapLibreMap, Marker } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import {
@@ -102,6 +102,8 @@ const DEFAULT_LAYER_VISIBILITY: LayerKindVisibility = {
 type DrivingMapProps = {
   vehicle: VehiclePose;
   displayVehicle?: DisplayPose | null;
+  vehicleLiveRef?: MutableRefObject<VehiclePose>;
+  displayVehicleLiveRef?: MutableRefObject<DisplayPose | null>;
   cameraMode: CameraMode;
   followOrientation?: FollowOrientation;
   followVehicle: boolean;
@@ -331,6 +333,8 @@ function readViewport(map: MapLibreMap): MapViewport {
 export function DrivingMap({
   vehicle,
   displayVehicle = null,
+  vehicleLiveRef,
+  displayVehicleLiveRef,
   cameraMode,
   followOrientation = "heading-up",
   followVehicle,
@@ -442,6 +446,12 @@ export function DrivingMap({
   const routeMetersRef = useRef(routeMeters);
   const distanceToNextRef = useRef(distanceToNextMeters);
   const pinchingRef = useRef(false);
+  const interactingRef = useRef(false);
+  const lastNavigatingMarkerRef = useRef<boolean | null>(null);
+  const lastConeAtRef = useRef(0);
+  const lastConeKeyRef = useRef("");
+  const lastIntelAtRef = useRef(0);
+  const lastIntelKeyRef = useRef("");
   const userZoomRef = useRef<number | null>(null);
   const overlayPaddingRef = useRef(overlayPadding);
   const lastArrowUpdateRef = useRef(0);
@@ -571,7 +581,11 @@ export function DrivingMap({
       maxPitch: 80,
       attributionControl: { compact: true },
       fadeDuration: 0,
-      dragPan: true,
+      dragPan: {
+        linearity: 0.28,
+        maxSpeed: 1200,
+        deceleration: 3000,
+      },
       scrollZoom: true,
       touchZoomRotate: true,
       doubleClickZoom: true,
@@ -592,6 +606,7 @@ export function DrivingMap({
 
     const emitViewport = (force = false) => {
       if (!readyRef.current) return;
+      if (!force && (interactingRef.current || pinchingRef.current)) return;
       const now = performance.now();
       const currentZoom = map.getZoom();
       const zoomJump = Math.abs(currentZoom - lastEmittedZoomRef.current);
@@ -599,7 +614,7 @@ export function DrivingMap({
         !force &&
         followVehicleRef.current &&
         zoomJump < 0.18 &&
-        now - lastViewportEmitRef.current < 450
+        now - lastViewportEmitRef.current < 800
       ) {
         return;
       }
@@ -620,9 +635,16 @@ export function DrivingMap({
       const dt = Math.min(0.05, (now - last) / 1000);
       lastFrameRef.current = now;
 
-      const raw = vehicleRef.current;
-      const snapTarget = displayVehicleRef.current;
+      const raw = vehicleLiveRef?.current ?? vehicleRef.current;
+      const snapTarget = displayVehicleLiveRef
+        ? displayVehicleLiveRef.current
+        : displayVehicleRef.current;
       const target = snapTarget ?? raw;
+      const fixKey = `${raw.lng.toFixed(6)},${raw.lat.toFixed(6)}`;
+      if (fixKey !== lastFixKeyRef.current) {
+        lastFixKeyRef.current = fixKey;
+        lastFixAtRef.current = now;
+      }
       displayStateRef.current = stepVehicleDisplay({
         current: displayStateRef.current,
         target,
@@ -636,24 +658,40 @@ export function DrivingMap({
       marker.setLngLat([display.lng, display.lat]);
 
       const headingUp = followOrientationRef.current === "heading-up";
-      setVehicleMarkerNavigating(marker.getElement(), navigatingRef.current);
+      const navigatingNow = navigatingRef.current;
+      if (lastNavigatingMarkerRef.current !== navigatingNow) {
+        lastNavigatingMarkerRef.current = navigatingNow;
+        setVehicleMarkerNavigating(marker.getElement(), navigatingNow);
+      }
       marker.setRotation(0);
       setVehicleMarkerHeading(marker.getElement(), headingUp ? 0 : display.heading);
 
+      const gestureBusy = interactingRef.current || pinchingRef.current;
       try {
-        ensureHeadingConeLayers(mapNow);
         const showCone = shouldShowHeadingCone({
           navigating: navigatingRef.current,
           rerouting: reroutingRef.current,
           source: raw.source,
           headingAvailable: raw.headingAvailable,
         });
-        upsertHeadingCone(
-          mapNow,
-          showCone ? { lng: display.lng, lat: display.lat } : null,
-          display.heading,
-          showCone,
-        );
+        const coneKey = showCone
+          ? `${display.lng.toFixed(5)},${display.lat.toFixed(5)},${display.heading.toFixed(1)}`
+          : "off";
+        if (
+          !gestureBusy &&
+          coneKey !== lastConeKeyRef.current &&
+          now - lastConeAtRef.current > 80
+        ) {
+          lastConeAtRef.current = now;
+          lastConeKeyRef.current = coneKey;
+          ensureHeadingConeLayers(mapNow);
+          upsertHeadingCone(
+            mapNow,
+            showCone ? { lng: display.lng, lat: display.lat } : null,
+            display.heading,
+            showCone,
+          );
+        }
       } catch {
         /* style may still be swapping */
       }
@@ -672,7 +710,7 @@ export function DrivingMap({
           }
           lastStepIdRef.current = stepId;
         }
-        if (now - lastArrowUpdateRef.current > 160) {
+        if (!gestureBusy && now - lastArrowUpdateRef.current > 160) {
           lastArrowUpdateRef.current = now;
           try {
             upsertGuidanceArrows(
@@ -702,7 +740,29 @@ export function DrivingMap({
         recoverUntilRef.current = 0;
       }
 
-      if (followVehicleRef.current) {
+      const intelKey = `${routeSigRef.current}:${Math.round((navigatingRef.current ? routeMetersRef.current : 0) / 40)}:${trafficRef.current.length}:${layerVisibilityRef.current.congestion}`;
+      if (
+        !gestureBusy &&
+        intelKey !== lastIntelKeyRef.current &&
+        now - lastIntelAtRef.current > 400
+      ) {
+        lastIntelKeyRef.current = intelKey;
+        lastIntelAtRef.current = now;
+        try {
+          upsertIntelligenceLayers(
+            mapNow,
+            routeRef.current,
+            trafficRef.current,
+            layerVisibilityRef.current.congestion,
+            navigatingRef.current ? routeMetersRef.current : 0,
+            currentManeuverOverlay(),
+          );
+        } catch {
+          /* remaining-route slice is presentation only */
+        }
+      }
+
+      if (followVehicleRef.current && !gestureBusy) {
         const displayPose = {
           ...raw,
           lng: display.lng,
@@ -742,7 +802,7 @@ export function DrivingMap({
               lerp(center.lat, wanted.center[1], posT),
             ],
             bearing: lerpAngle(mapNow.getBearing(), wanted.bearing, bearingT),
-            pitch: lerp(mapNow.getPitch(), wanted.pitch, damp(dt, 0.14)),
+            pitch: lerp(mapNow.getPitch(), wanted.pitch, damp(dt, 0.08)),
             zoom: lerp(mapNow.getZoom(), zoomTarget, zoomT),
             padding: wanted.padding,
           });
@@ -853,7 +913,11 @@ export function DrivingMap({
     };
     window.addEventListener("resize", onResize);
     const canvas = map.getCanvas();
+    const beginGesture = () => {
+      interactingRef.current = true;
+    };
     const detachFollow = () => {
+      beginGesture();
       followVehicleRef.current = false;
       onUserPanRef.current();
     };
@@ -883,9 +947,11 @@ export function DrivingMap({
       }, 560);
     };
     const onTouchStart = (event: TouchEvent) => {
+      beginGesture();
       if (event.touches.length >= 2) {
         pinchingRef.current = true;
         cancelPress();
+        detachFollow();
         return;
       }
       const touch = event.touches[0];
@@ -903,6 +969,9 @@ export function DrivingMap({
       cancelPress();
       if (pinchingRef.current) rememberZoom();
       pinchingRef.current = false;
+      window.setTimeout(() => {
+        if (!map.isMoving()) interactingRef.current = false;
+      }, 90);
     };
     const onPointerDown = (event: PointerEvent) => {
       if (event.pointerType === "touch") return;
@@ -939,37 +1008,50 @@ export function DrivingMap({
     canvas.addEventListener("pointerup", onPointerUp);
     canvas.addEventListener("contextmenu", onContextMenu);
     map.on("zoomstart", (event) => {
-      if (event.originalEvent) pinchingRef.current = true;
+      if (event.originalEvent) {
+        pinchingRef.current = true;
+        beginGesture();
+      }
     });
     map.on("wheel", () => {
       pinchingRef.current = true;
+      beginGesture();
       window.setTimeout(() => {
         rememberZoom();
         pinchingRef.current = false;
+        if (!map.isMoving()) interactingRef.current = false;
       }, 180);
     });
     map.on("dragstart", (event) => {
-      if (pinchingRef.current) return;
-      if (event.originalEvent instanceof TouchEvent && event.originalEvent.touches.length >= 2) {
+      beginGesture();
+      if (
+        event.originalEvent instanceof TouchEvent &&
+        event.originalEvent.touches.length >= 2
+      ) {
         pinchingRef.current = true;
+        detachFollow();
         return;
       }
       detachFollow();
     });
     map.on("rotatestart", (event) => {
-      if (event.originalEvent && !pinchingRef.current) detachFollow();
+      if (event.originalEvent) detachFollow();
+    });
+    map.on("pitchstart", (event) => {
+      if (event.originalEvent) detachFollow();
     });
     map.on("zoomend", () => {
       if (pinchingRef.current) rememberZoom();
     });
-    map.on("zoom", () => {
-      emitViewport();
-    });
     map.on("moveend", () => {
-      emitViewport(true);
+      const wasGesture = interactingRef.current || pinchingRef.current;
+      interactingRef.current = false;
+      pinchingRef.current = false;
+      emitViewport(wasGesture || !followVehicleRef.current);
     });
-    map.on("zoomend", () => {
-      emitViewport(true);
+    map.on("idle", () => {
+      interactingRef.current = false;
+      pinchingRef.current = false;
     });
 
     return () => {
@@ -1001,6 +1083,9 @@ export function DrivingMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!readyRef.current || !isStyleReady(map)) return;
+    if (interactingRef.current || pinchingRef.current) return;
+    lastIntelAtRef.current = performance.now();
+    lastIntelKeyRef.current = `${routeGeometrySignature(route)}:${Math.round((navigating ? routeMeters : 0) / 40)}:${traffic.length}:${layerVisibility.congestion}`;
     upsertIntelligenceLayers(
       map,
       route,
@@ -1012,18 +1097,7 @@ export function DrivingMap({
     if (!navigating) {
       clearGuidanceArrows(map);
     }
-  }, [
-    cameraMode,
-    distanceToNextMeters,
-    isTurnManeuver,
-    layerVisibility.congestion,
-    maneuverAlertPhase,
-    maneuverCueMeters,
-    navigating,
-    route,
-    routeMeters,
-    traffic,
-  ]);
+  }, [layerVisibility.congestion, navigating, route, traffic]);
 
   useEffect(() => {
     followVehicleRef.current = followVehicle;
@@ -1245,7 +1319,7 @@ export function DrivingMap({
     map.easeTo({
       center: [focusTarget.lng, focusTarget.lat],
       zoom: Math.max(map.getZoom(), 16.2),
-      duration: 720,
+      duration: 480,
       essential: true,
     });
   }, [focusTarget]);
@@ -1279,7 +1353,7 @@ export function DrivingMap({
         left: compact ? 48 : 44,
         right: compact ? 48 : 44,
       },
-      duration: 900,
+      duration: 520,
       pitch: OVERVIEW_PITCH,
       bearing: 0,
       maxZoom: 16.2,
