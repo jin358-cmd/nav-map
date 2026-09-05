@@ -1298,7 +1298,7 @@ export function DrivingApp() {
             offRoute={navigationProgress?.offRoute ?? false}
             rerouting={rerouting}
             reroutePending={reroutePending}
-            junctionFocus={approachingIntersection}
+            junctionFocus={turnManeuver && nextAlertPhase !== "cruise"}
             onCancelNavigation={exitNavigation}
             voiceEnabled={voiceEnabled}
             onToggleVoice={() => setVoiceEnabled((value) => !value)}

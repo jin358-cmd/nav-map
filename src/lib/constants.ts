@@ -20,14 +20,14 @@ export const DRIVING_PITCH = 52;
  */
 export const NAVIGATION_PITCH = 56;
 export const OVERVIEW_PITCH = 0;
-export const DRIVING_ZOOM = 16.75;
-export const DRIVING_ZOOM_MOBILE = 16.45;
+export const DRIVING_ZOOM = 17.05;
+export const DRIVING_ZOOM_MOBILE = 16.75;
 export const OVERHEAD_ZOOM = 15.4;
-/** 2D 導航 cruise，比瀏覽俯視更近，仍留出路口預判距離。 */
-export const OVERHEAD_NAV_ZOOM = 16.35;
-export const OVERHEAD_NAV_ZOOM_MOBILE = 16.15;
-export const OVERHEAD_TURN_ZOOM = 17.35;
-export const OVERHEAD_TURN_ZOOM_MOBILE = 17.15;
+/** 2D 導航 cruise：再近一級，仍留出路口預判距離。 */
+export const OVERHEAD_NAV_ZOOM = 16.95;
+export const OVERHEAD_NAV_ZOOM_MOBILE = 16.75;
+export const OVERHEAD_TURN_ZOOM = 17.55;
+export const OVERHEAD_TURN_ZOOM_MOBILE = 17.35;
 /** 路口近距離上限，避免無限放大。 */
 export const INTERSECTION_ZOOM = 18.15;
 export const INTERSECTION_ZOOM_MOBILE = 17.85;

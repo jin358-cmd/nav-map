@@ -98,17 +98,17 @@ function floatingArrowSize(): ExpressionSpecification {
     ["linear"],
     ["zoom"],
     14,
-    1.45,
+    1.15,
     15.5,
-    1.9,
+    1.35,
     16.5,
-    2.35,
+    1.55,
     17.4,
-    2.65,
+    1.7,
     18.2,
-    2.9,
+    1.85,
     19,
-    3.05,
+    1.95,
   ];
 }
 
@@ -118,7 +118,7 @@ function ensureChevronLayer(map: MapLibreMap) {
     "icon-image": CHEVRON_IMAGE_ID,
     "icon-size": size,
     "icon-anchor": "bottom" as const,
-    "icon-offset": [0, -18] as [number, number],
+    "icon-offset": [0, -12] as [number, number],
     "icon-rotate": ["get", "bearing"] as ExpressionSpecification,
     "icon-rotation-alignment": "map" as const,
     "icon-pitch-alignment": "viewport" as const,
@@ -135,7 +135,7 @@ function ensureChevronLayer(map: MapLibreMap) {
       paint: {
         "icon-opacity": ["get", "opacity"],
         "icon-halo-color": MAP_COLORS.maneuverGlow,
-        "icon-halo-width": 1.15,
+        "icon-halo-width": 0.55,
       },
     });
     return;
@@ -144,7 +144,7 @@ function ensureChevronLayer(map: MapLibreMap) {
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-image", CHEVRON_IMAGE_ID);
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-size", size);
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-anchor", "bottom");
-  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-offset", [0, -18]);
+  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-offset", [0, -12]);
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-rotation-alignment", "map");
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-pitch-alignment", "viewport");
 }

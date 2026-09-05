@@ -82,7 +82,7 @@ export function lineLengthMeters(line: [number, number][]) {
   return total;
 }
 
-/** 依可視路段、距離與 zoom 動態間距：Approach 6～10，路口 8～14。 */
+/** 依可視路段動態配置約 6～10 個，路口最多 12。 */
 export function chevronCount(
   pathLength: number,
   distanceToNext: number,
@@ -91,11 +91,11 @@ export function chevronCount(
   if (pathLength <= 0) return 0;
   const near = distanceToNext <= TURN_VIEW_METERS;
   const mid = distanceToNext <= MANEUVER_APPROACH_METERS;
-  const min = near ? 12 : mid ? 10 : 9;
-  const max = near ? 18 : mid ? 16 : 14;
+  const min = near ? 8 : mid ? 7 : 6;
+  const max = near ? 12 : mid ? 10 : 10;
   const zoomScale = zoom >= 18 ? 0.78 : zoom >= 17 ? 0.9 : 1;
   return Math.round(
-    Math.min(max, Math.max(min, pathLength / (7.2 * zoomScale))),
+    Math.min(max, Math.max(min, pathLength / (11.5 * zoomScale))),
   );
 }
 
@@ -107,7 +107,7 @@ export function marqueeSpacingMeters(
   if (pathLength <= 0) return 10;
   const desired = chevronCount(pathLength, distanceToNext, zoom);
   if (desired <= 0) return 12;
-  return Math.min(12, Math.max(5.5, pathLength / desired));
+  return Math.min(16, Math.max(9, pathLength / desired));
 }
 
 export function guidanceArrowsAlong(
@@ -153,7 +153,7 @@ export function guidanceArrowsAlong(
     return {
       ...arrow,
       opacity: Math.max(
-        0.32,
+        0.55,
         Math.min(1, intensity * highlight),
       ),
     };
