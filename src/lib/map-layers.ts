@@ -250,8 +250,8 @@ export function upsertIntelligenceLayers(
       filter: ["==", ["get", "kind"], "maneuver"],
       paint: {
         "line-color": MAP_COLORS.maneuver,
-        "line-width": ["interpolate", ["linear"], ["zoom"], 12, 4.2, 17, 8.6],
-        "line-opacity": 0.94,
+        "line-width": ["interpolate", ["linear"], ["zoom"], 12, 5.4, 17, 10.4],
+        "line-opacity": 0.96,
       },
       layout: { "line-cap": "round", "line-join": "round" },
     });

@@ -10,6 +10,8 @@ import {
 } from "@/lib/maneuver-guidance";
 import {
   guidanceArrowsAlong,
+  lineLengthMeters,
+  marqueeSpacingMeters,
   shouldShowGuidanceArrows,
 } from "@/lib/upcoming-route";
 import type { CameraMode } from "@/types/domain";
@@ -19,7 +21,7 @@ export const GUIDANCE_PATH_SOURCE_ID = "guidance-path";
 export const GUIDANCE_LAYER_ID = "guidance-arrows-layer";
 export const GUIDANCE_PATH_LAYER_ID = "guidance-path-layer";
 export const GUIDANCE_PATH_GLOW_ID = "guidance-path-glow";
-const CHEVRON_IMAGE_ID = "maneuver-marquee-chevron-v1";
+const CHEVRON_IMAGE_ID = "maneuver-marquee-billboard-v2";
 
 function emptyCollection() {
   return { type: "FeatureCollection" as const, features: [] };
@@ -33,8 +35,8 @@ function emptyLine() {
   };
 }
 
-function createChevronImage() {
-  const size = 128;
+function createStandingArrowImage() {
+  const size = 160;
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
@@ -44,37 +46,56 @@ function createChevronImage() {
   ctx.clearRect(0, 0, size, size);
   ctx.translate(size / 2, size / 2);
 
-  ctx.fillStyle = "rgba(124, 45, 18, 0.28)";
+  ctx.fillStyle = "rgba(67, 20, 7, 0.34)";
   ctx.beginPath();
-  ctx.ellipse(0, 28, 22, 7, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 68, 26, 8, 0, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.beginPath();
-  ctx.moveTo(0, -38);
-  ctx.lineTo(30, 10);
-  ctx.lineTo(14, 10);
-  ctx.lineTo(14, 34);
-  ctx.lineTo(-14, 34);
-  ctx.lineTo(-14, 10);
-  ctx.lineTo(-30, 10);
+  ctx.moveTo(-11, 62);
+  ctx.lineTo(11, 62);
+  ctx.lineTo(8, 8);
+  ctx.lineTo(-8, 8);
+  ctx.closePath();
+  ctx.fillStyle = "#c2410c";
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(-4, 62);
+  ctx.lineTo(4, 62);
+  ctx.lineTo(3, 8);
+  ctx.lineTo(-3, 8);
+  ctx.closePath();
+  ctx.fillStyle = "rgba(255, 237, 213, 0.28)";
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(0, -66);
+  ctx.lineTo(38, 2);
+  ctx.lineTo(16, 2);
+  ctx.lineTo(16, 14);
+  ctx.lineTo(-16, 14);
+  ctx.lineTo(-16, 2);
+  ctx.lineTo(-38, 2);
   ctx.closePath();
   ctx.fillStyle = MAP_COLORS.maneuver;
   ctx.fill();
   ctx.strokeStyle = "#ffedd5";
-  ctx.lineWidth = 4;
+  ctx.lineWidth = 5;
   ctx.lineJoin = "round";
+  ctx.lineCap = "round";
   ctx.stroke();
 
   ctx.beginPath();
-  ctx.moveTo(0, -24);
-  ctx.lineTo(12, 2);
-  ctx.lineTo(5, 2);
-  ctx.lineTo(5, 22);
-  ctx.lineTo(-5, 22);
-  ctx.lineTo(-5, 2);
-  ctx.lineTo(-12, 2);
+  ctx.moveTo(0, -48);
+  ctx.lineTo(16, -6);
+  ctx.lineTo(6, -6);
+  ctx.lineTo(6, 6);
+  ctx.lineTo(-6, 6);
+  ctx.lineTo(-6, -6);
+  ctx.lineTo(-16, -6);
   ctx.closePath();
-  ctx.fillStyle = "rgba(255, 237, 213, 0.55)";
+  ctx.fillStyle = "rgba(255, 247, 237, 0.62)";
   ctx.fill();
 
   return ctx.getImageData(0, 0, size, size);
@@ -82,23 +103,31 @@ function createChevronImage() {
 
 function ensureImages(map: MapLibreMap) {
   if (map.hasImage(CHEVRON_IMAGE_ID)) return;
-  const image = createChevronImage();
+  const image = createStandingArrowImage();
   if (!image) return;
   map.addImage(CHEVRON_IMAGE_ID, image, { pixelRatio: 2 });
 }
 
-function ensureChevronLayer(map: MapLibreMap) {
-  const size = [
+function standingArrowSize(): ExpressionSpecification {
+  return [
     "interpolate",
     ["linear"],
     ["zoom"],
     14,
-    0.52,
-    17,
-    0.78,
-    19,
-    0.92,
-  ] as ExpressionSpecification;
+    1.04,
+    16.4,
+    1.42,
+    17.4,
+    1.54,
+    18.2,
+    1.6,
+    19.2,
+    1.62,
+  ];
+}
+
+function ensureChevronLayer(map: MapLibreMap) {
+  const size = standingArrowSize();
 
   if (!map.getLayer(GUIDANCE_LAYER_ID)) {
     map.addLayer({
@@ -108,17 +137,18 @@ function ensureChevronLayer(map: MapLibreMap) {
       layout: {
         "icon-image": CHEVRON_IMAGE_ID,
         "icon-size": size,
-        "icon-anchor": "center",
+        "icon-anchor": "bottom",
+        "icon-offset": [0, -10],
         "icon-rotate": ["get", "bearing"],
         "icon-rotation-alignment": "map",
-        "icon-pitch-alignment": "map",
+        "icon-pitch-alignment": "viewport",
         "icon-allow-overlap": true,
         "icon-ignore-placement": true,
       },
       paint: {
         "icon-opacity": ["get", "opacity"],
         "icon-halo-color": MAP_COLORS.maneuverGlow,
-        "icon-halo-width": 1.2,
+        "icon-halo-width": 1.15,
       },
     });
     return;
@@ -126,8 +156,42 @@ function ensureChevronLayer(map: MapLibreMap) {
 
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-image", CHEVRON_IMAGE_ID);
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-size", size);
-  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-anchor", "center");
-  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-pitch-alignment", "map");
+  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-anchor", "bottom");
+  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-offset", [0, -10]);
+  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-rotation-alignment", "map");
+  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-pitch-alignment", "viewport");
+}
+
+function ensureHiddenPathLayers(map: MapLibreMap) {
+  if (!map.getLayer(GUIDANCE_PATH_GLOW_ID)) {
+    map.addLayer({
+      id: GUIDANCE_PATH_GLOW_ID,
+      type: "line",
+      source: GUIDANCE_PATH_SOURCE_ID,
+      paint: {
+        "line-color": MAP_COLORS.maneuverGlow,
+        "line-width": 1,
+        "line-opacity": 0,
+      },
+    });
+  } else {
+    map.setPaintProperty(GUIDANCE_PATH_GLOW_ID, "line-opacity", 0);
+  }
+
+  if (!map.getLayer(GUIDANCE_PATH_LAYER_ID)) {
+    map.addLayer({
+      id: GUIDANCE_PATH_LAYER_ID,
+      type: "line",
+      source: GUIDANCE_PATH_SOURCE_ID,
+      paint: {
+        "line-color": MAP_COLORS.maneuver,
+        "line-width": 1,
+        "line-opacity": 0,
+      },
+    });
+  } else {
+    map.setPaintProperty(GUIDANCE_PATH_LAYER_ID, "line-opacity", 0);
+  }
 }
 
 export function upsertGuidanceArrows(
@@ -161,16 +225,10 @@ export function upsertGuidanceArrows(
         distanceToNext,
       )
     : [];
-  const arrows = show ? guidanceArrowsAlong(ahead, 18, phase, intensity) : [];
-
-  const pathData =
-    ahead.length >= 2
-      ? {
-          type: "Feature" as const,
-          properties: {},
-          geometry: { type: "LineString" as const, coordinates: ahead },
-        }
-      : emptyLine();
+  const spacing = show
+    ? marqueeSpacingMeters(lineLengthMeters(ahead), map.getZoom())
+    : 12;
+  const arrows = show ? guidanceArrowsAlong(ahead, spacing, phase, intensity) : [];
 
   const arrowData = {
     type: "FeatureCollection" as const,
@@ -190,9 +248,9 @@ export function upsertGuidanceArrows(
 
   const pathSource = map.getSource(GUIDANCE_PATH_SOURCE_ID);
   if (pathSource?.type === "geojson") {
-    (pathSource as GeoJSONSource).setData(pathData);
+    (pathSource as GeoJSONSource).setData(emptyLine());
   } else if (!pathSource) {
-    map.addSource(GUIDANCE_PATH_SOURCE_ID, { type: "geojson", data: pathData });
+    map.addSource(GUIDANCE_PATH_SOURCE_ID, { type: "geojson", data: emptyLine() });
   }
 
   const arrowSource = map.getSource(GUIDANCE_SOURCE_ID);
@@ -202,58 +260,13 @@ export function upsertGuidanceArrows(
     map.addSource(GUIDANCE_SOURCE_ID, { type: "geojson", data: arrowData });
   }
 
-  if (!map.getLayer(GUIDANCE_PATH_GLOW_ID)) {
-    map.addLayer({
-      id: GUIDANCE_PATH_GLOW_ID,
-      type: "line",
-      source: GUIDANCE_PATH_SOURCE_ID,
-      paint: {
-        "line-color": MAP_COLORS.maneuverGlow,
-        "line-width": ["interpolate", ["linear"], ["zoom"], 14, 8, 19, 16],
-        "line-opacity": 0.2,
-        "line-blur": 7,
-      },
-      layout: { "line-cap": "round", "line-join": "round" },
-    });
-  }
-
-  if (!map.getLayer(GUIDANCE_PATH_LAYER_ID)) {
-    map.addLayer({
-      id: GUIDANCE_PATH_LAYER_ID,
-      type: "line",
-      source: GUIDANCE_PATH_SOURCE_ID,
-      paint: {
-        "line-color": MAP_COLORS.maneuver,
-        "line-width": ["interpolate", ["linear"], ["zoom"], 14, 2.4, 19, 5.5],
-        "line-opacity": 0.55,
-      },
-      layout: { "line-cap": "round", "line-join": "round" },
-    });
-  }
-
+  ensureHiddenPathLayers(map);
   ensureChevronLayer(map);
-
-  if (map.getLayer(GUIDANCE_PATH_GLOW_ID)) {
-    map.setPaintProperty(
-      GUIDANCE_PATH_GLOW_ID,
-      "line-opacity",
-      show ? 0.12 + intensity * 0.16 : 0,
-    );
-  }
-  if (map.getLayer(GUIDANCE_PATH_LAYER_ID)) {
-    map.setPaintProperty(
-      GUIDANCE_PATH_LAYER_ID,
-      "line-opacity",
-      show ? 0.28 + intensity * 0.32 : 0,
-    );
-  }
 
   for (const id of ["demo-route-glow", "demo-route-line", "demo-route-maneuver"]) {
     if (map.getLayer(id)) map.moveLayer(id);
   }
-  for (const id of [GUIDANCE_PATH_GLOW_ID, GUIDANCE_PATH_LAYER_ID, GUIDANCE_LAYER_ID]) {
-    if (map.getLayer(id)) map.moveLayer(id);
-  }
+  if (map.getLayer(GUIDANCE_LAYER_ID)) map.moveLayer(GUIDANCE_LAYER_ID);
 }
 
 export function clearGuidanceArrows(map: MapLibreMap) {

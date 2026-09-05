@@ -68,6 +68,28 @@ export function sliceRouteAhead(
   return points.length >= 2 ? points : [];
 }
 
+export function lineLengthMeters(line: [number, number][]) {
+  let total = 0;
+  for (let index = 1; index < line.length; index += 1) {
+    total +=
+      distanceKm(
+        { lng: line[index - 1][0], lat: line[index - 1][1] },
+        { lng: line[index][0], lat: line[index][1] },
+      ) * 1000;
+  }
+  return total;
+}
+
+/** 依可視路段長度與 zoom 動態間距，目標約 6～14 顆。 */
+export function marqueeSpacingMeters(pathLength: number, zoom: number) {
+  if (pathLength <= 0) return 12;
+  const zoomScale = zoom >= 18.2 ? 0.88 : zoom >= 17.2 ? 1 : 1.12;
+  const desired = Math.round(
+    Math.min(14, Math.max(6, pathLength / (11.5 * zoomScale))),
+  );
+  return Math.min(17, Math.max(8.5, pathLength / desired));
+}
+
 export function guidanceArrowsAlong(
   line: [number, number][],
   spacingMeters: number,
@@ -76,7 +98,7 @@ export function guidanceArrowsAlong(
 ): GuidanceArrow[] {
   if (line.length < 2) return [];
   const arrows: GuidanceArrow[] = [];
-  let leftover = spacingMeters * 0.35;
+  let leftover = spacingMeters * 0.62;
 
   for (let index = 1; index < line.length; index += 1) {
     const from = { lng: line[index - 1][0], lat: line[index - 1][1] };
@@ -103,11 +125,17 @@ export function guidanceArrowsAlong(
   const count = arrows.length;
   if (count === 0) return arrows;
   const cycle = ((phase % 1) + 1) % 1;
+  const head = cycle * count;
   return arrows.map((arrow, index) => {
-    const wave = 0.5 + 0.5 * Math.cos(2 * Math.PI * (index / count - cycle));
+    let dist = Math.abs(index - head);
+    dist = Math.min(dist, count - dist);
+    const highlight = Math.max(0, 1 - dist / 1.7);
     return {
       ...arrow,
-      opacity: Math.max(0.18, Math.min(1, intensity * (0.28 + 0.72 * wave))),
+      opacity: Math.max(
+        0.36,
+        Math.min(1, intensity * (0.42 + 0.58 * highlight)),
+      ),
     };
   });
 }
