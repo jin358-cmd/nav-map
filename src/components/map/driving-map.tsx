@@ -1097,6 +1097,8 @@ export function DrivingMap({
     if (!navigating) {
       clearGuidanceArrows(map);
     }
+    // routeMeters is applied from the rAF tick so GPS progress does not rebuild GeoJSON.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layerVisibility.congestion, navigating, route, traffic]);
 
   useEffect(() => {
