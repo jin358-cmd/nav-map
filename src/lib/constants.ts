@@ -16,18 +16,24 @@ export const DEMO_VEHICLE: VehiclePose = {
 export const DRIVING_PITCH = 52;
 /**
  * 導航第一人稱前視。MapLibre pitch 不是駕駛「仰角」。
- * pitch≈66 約等於視線低於水平 24°，畫面呈現約 20° 道路仰角。
+ * pitch≈56 約等於視線低於水平 34°，畫面呈現約 35° 道路前視。
  */
-export const NAVIGATION_PITCH = 66;
+export const NAVIGATION_PITCH = 56;
 export const OVERVIEW_PITCH = 0;
-export const DRIVING_ZOOM = 16.45;
-export const DRIVING_ZOOM_MOBILE = 16.15;
+export const DRIVING_ZOOM = 16.25;
+export const DRIVING_ZOOM_MOBILE = 15.95;
 export const OVERHEAD_ZOOM = 15.4;
-/** 接近路口時自動放大，看清轉向 */
-export const INTERSECTION_ZOOM = 18.35;
-export const INTERSECTION_ZOOM_MOBILE = 18.05;
-export const INTERSECTION_PITCH = 62;
+export const OVERHEAD_TURN_ZOOM = 17.35;
+export const OVERHEAD_TURN_ZOOM_MOBILE = 17.15;
+/** 路口近距離上限，避免無限放大。 */
+export const INTERSECTION_ZOOM = 18.15;
+export const INTERSECTION_ZOOM_MOBILE = 17.85;
+export const INTERSECTION_PITCH = 50;
 export const INTERSECTION_APPROACH_METERS = 95;
+export const CRUISE_ZOOM_START_METERS = 500;
+export const PREPARE_ZOOM_METERS = 200;
+export const TURN_VIEW_METERS = 50;
+export const CONSECUTIVE_TURN_METERS = 160;
 /** 50 公尺進入路口強化；65 公尺才退出，避免 49～51 閃爍 */
 export const JUNCTION_FOCUS_ENTER_METERS = 50;
 export const JUNCTION_FOCUS_EXIT_METERS = 65;
@@ -39,9 +45,9 @@ export const MANEUVER_APPROACH_METERS = 100;
 export const MANEUVER_APPROACH_EXIT_METERS = 118;
 export const MANEUVER_IMMINENT_METERS = 30;
 export const MANEUVER_AFTER_TURN_METERS = 48;
-export const MANEUVER_RECOVER_MS = 2800;
-/** 3D 路口走馬燈：100 公尺開始，30 公尺加強 */
-export const GUIDANCE_ARROW_APPROACH_METERS = 100;
+export const MANEUVER_RECOVER_MS = 3200;
+/** 地面 Chevron：200 公尺開始出現，越近越清楚 */
+export const GUIDANCE_ARROW_APPROACH_METERS = 200;
 
 /** 瀏覽時車輛約在畫面 65%；導航 3D 時約 72%（70～75）。 */
 export const BROWSE_VEHICLE_Y = 0.65;

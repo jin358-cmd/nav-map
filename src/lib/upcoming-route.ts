@@ -1,9 +1,10 @@
 import {
+  CRUISE_ZOOM_START_METERS,
   GUIDANCE_ARROW_APPROACH_METERS,
   INTERSECTION_APPROACH_METERS,
-  JUNCTION_FOCUS_MAX_ZOOM_METERS,
   MANEUVER_AFTER_TURN_METERS,
-  MANEUVER_APPROACH_METERS,
+  PREPARE_ZOOM_METERS,
+  TURN_VIEW_METERS,
 } from "@/lib/constants";
 import { bearingDegrees, distanceKm } from "@/lib/geo";
 import type { LngLat } from "@/types/domain";
@@ -80,14 +81,32 @@ export function lineLengthMeters(line: [number, number][]) {
   return total;
 }
 
-/** 依可視路段長度與 zoom 動態間距，目標約 8～16 顆。 */
-export function marqueeSpacingMeters(pathLength: number, zoom: number) {
-  if (pathLength <= 0) return 9;
-  const zoomScale = zoom >= 18.2 ? 0.82 : zoom >= 17.2 ? 0.94 : 1.05;
-  const desired = Math.round(
-    Math.min(16, Math.max(8, pathLength / (8.4 * zoomScale))),
+/** 依可視路段、距離與 zoom 動態間距：Approach 6～10，路口 8～14。 */
+export function chevronCount(
+  pathLength: number,
+  distanceToNext: number,
+  zoom: number,
+) {
+  if (pathLength <= 0) return 0;
+  const near = distanceToNext <= TURN_VIEW_METERS;
+  const mid = distanceToNext <= 100;
+  const min = near ? 8 : mid ? 7 : 6;
+  const max = near ? 14 : mid ? 12 : 10;
+  const zoomScale = zoom >= 18 ? 0.78 : zoom >= 17 ? 0.9 : 1;
+  return Math.round(
+    Math.min(max, Math.max(min, pathLength / (10.2 * zoomScale))),
   );
-  return Math.min(13, Math.max(6.5, pathLength / desired));
+}
+
+export function marqueeSpacingMeters(
+  pathLength: number,
+  zoom: number,
+  distanceToNext = GUIDANCE_ARROW_APPROACH_METERS,
+) {
+  if (pathLength <= 0) return 10;
+  const desired = chevronCount(pathLength, distanceToNext, zoom);
+  if (desired <= 0) return 12;
+  return Math.min(16, Math.max(7.5, pathLength / desired));
 }
 
 export function guidanceArrowsAlong(
@@ -129,12 +148,12 @@ export function guidanceArrowsAlong(
   return arrows.map((arrow, index) => {
     let dist = Math.abs(index - head);
     dist = Math.min(dist, count - dist);
-    const highlight = dist < 0.55 ? 1 : dist < 1.15 ? 0.42 : 0.16;
+    const highlight = dist < 0.55 ? 1 : dist < 1.15 ? 0.72 : 0.44;
     return {
       ...arrow,
       opacity: Math.max(
-        0.18,
-        Math.min(1, intensity * (0.2 + 0.8 * highlight)),
+        0.32,
+        Math.min(1, intensity * highlight),
       ),
     };
   });
@@ -151,14 +170,30 @@ export function isApproachingIntersection(distanceToNext: number) {
   return Number.isFinite(distanceToNext) && distanceToNext <= INTERSECTION_APPROACH_METERS;
 }
 
-/** 100 公尺開始放大，越近越接近最大 Zoom（0～1）。 */
-export function junctionZoomProgress(distanceToNext: number) {
+/**
+ * 距離插值：>500m=0，200m≈0.28，50m=1。
+ * 給 Camera Zoom／Pitch 用，連續、不跳級。
+ */
+export function approachCameraProgress(distanceToNext: number) {
   if (!Number.isFinite(distanceToNext)) return 0;
-  const span = MANEUVER_APPROACH_METERS - JUNCTION_FOCUS_MAX_ZOOM_METERS;
-  return Math.max(
-    0,
-    Math.min(1, (MANEUVER_APPROACH_METERS - distanceToNext) / span),
+  if (distanceToNext >= CRUISE_ZOOM_START_METERS) return 0;
+  if (distanceToNext <= TURN_VIEW_METERS) return 1;
+  if (distanceToNext >= PREPARE_ZOOM_METERS) {
+    return ((CRUISE_ZOOM_START_METERS - distanceToNext) /
+      (CRUISE_ZOOM_START_METERS - PREPARE_ZOOM_METERS)) *
+      0.28;
+  }
+  return (
+    0.28 +
+    ((PREPARE_ZOOM_METERS - distanceToNext) /
+      (PREPARE_ZOOM_METERS - TURN_VIEW_METERS)) *
+      0.72
   );
+}
+
+/** @deprecated 改用 approachCameraProgress；保留給舊呼叫。 */
+export function junctionZoomProgress(distanceToNext: number) {
+  return approachCameraProgress(distanceToNext);
 }
 
 export function shouldShowGuidanceArrows(distanceToNext: number) {

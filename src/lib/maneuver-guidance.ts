@@ -185,12 +185,16 @@ export function maneuverVoiceText(
 
 export function maneuverMarqueeIntensity(distanceMeters: number) {
   if (!Number.isFinite(distanceMeters)) return 0;
-  if (distanceMeters > MANEUVER_APPROACH_METERS) return 0;
+  if (distanceMeters > MANEUVER_PREPARE_METERS) return 0;
   if (distanceMeters <= MANEUVER_IMMINENT_METERS) return 1;
-  const span = MANEUVER_APPROACH_METERS - MANEUVER_IMMINENT_METERS;
+  if (distanceMeters <= MANEUVER_APPROACH_METERS) {
+    const span = MANEUVER_APPROACH_METERS - MANEUVER_IMMINENT_METERS;
+    return 0.72 + 0.28 * ((MANEUVER_APPROACH_METERS - distanceMeters) / span);
+  }
+  const span = MANEUVER_PREPARE_METERS - MANEUVER_APPROACH_METERS;
   return Math.max(
-    0.42,
-    Math.min(1, (MANEUVER_APPROACH_METERS - distanceMeters) / span),
+    0.4,
+    0.4 + 0.32 * ((MANEUVER_PREPARE_METERS - distanceMeters) / span),
   );
 }
 
@@ -204,6 +208,6 @@ export function sliceManeuverHighlight(
   const start = Math.max(0, routeMeters);
   const after = MANEUVER_AFTER_TURN_METERS;
   const end = Math.max(start + 18, cueMeters + after);
-  const ahead = Math.min(180, Math.max(28, end - start, distanceToNext + after));
+  const ahead = Math.min(220, Math.max(36, end - start, distanceToNext + after));
   return sliceRouteAhead(route, start, ahead);
 }

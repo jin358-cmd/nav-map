@@ -10,6 +10,7 @@ import {
 } from "@/components/map/vehicle-marker";
 import {
   BROWSE_VEHICLE_Y,
+  CONSECUTIVE_TURN_METERS,
   DRIVING_PITCH,
   DRIVING_ZOOM,
   DRIVING_ZOOM_MOBILE,
@@ -17,18 +18,20 @@ import {
   INTERSECTION_PITCH,
   INTERSECTION_ZOOM,
   INTERSECTION_ZOOM_MOBILE,
+  MANEUVER_RECOVER_MS,
   NAVIGATION_PITCH,
+  OVERHEAD_TURN_ZOOM,
+  OVERHEAD_TURN_ZOOM_MOBILE,
   OVERHEAD_ZOOM,
   OVERVIEW_PITCH,
   TAINAN_CENTER,
 } from "@/lib/constants";
-import { MANEUVER_RECOVER_MS } from "@/lib/constants";
 import {
   maneuverOrangeRouteActive,
   sliceManeuverHighlight,
   type ManeuverAlertPhase,
 } from "@/lib/maneuver-guidance";
-import { junctionZoomProgress } from "@/lib/upcoming-route";
+import { approachCameraProgress } from "@/lib/upcoming-route";
 import { bindCctvLayerClicks, upsertCctvLayer } from "@/lib/cctv-layer";
 import {
   bindConstructionLayerClicks,
@@ -37,7 +40,11 @@ import {
 import { bindParkingLayerClicks, upsertParkingLayer } from "@/lib/parking-layer";
 import { bindAccidentLayerClicks, upsertAccidentLayer } from "@/lib/event-layer";
 import { bindDisasterLayerClicks, upsertDisasterLayer } from "@/lib/disaster-layer";
-import { upsertGuidanceArrows } from "@/lib/guidance-arrows";
+import {
+  clearGuidanceArrows,
+  resetGuidanceArrowCache,
+  upsertGuidanceArrows,
+} from "@/lib/guidance-arrows";
 import { upsertIntelligenceLayers } from "@/lib/map-layers";
 import { configureMapLibreWorker } from "@/lib/maplibre-worker";
 import { formatTaiwanDisplayAddress } from "@/lib/geocoding/format-taiwan-display-address";
@@ -151,6 +158,13 @@ function isStyleReady(map: MapLibreMap | null): map is MapLibreMap {
   }
 }
 
+function routeGeometrySignature(route: [number, number][]) {
+  if (route.length < 2) return "empty";
+  const first = route[0];
+  const last = route[route.length - 1];
+  return `${route.length}:${first[0].toFixed(5)},${first[1].toFixed(5)}:${last[0].toFixed(5)},${last[1].toFixed(5)}`;
+}
+
 function drivingPadding(
   height: number,
   width: number,
@@ -207,13 +221,25 @@ function cameraOptions(
   const height = map.getContainer().clientHeight;
   const width = map.getContainer().clientWidth;
   const compact = isCompactViewport(width);
-  const approachBlend = approaching ? junctionZoomProgress(distanceToNext) : 0;
+  const approachBlend = navigating ? approachCameraProgress(distanceToNext) : 0;
   const blend = Math.max(approachBlend, recoverBlend);
-  const cruiseZoom = compact ? DRIVING_ZOOM_MOBILE : DRIVING_ZOOM;
-  const focusZoom = compact ? INTERSECTION_ZOOM_MOBILE : INTERSECTION_ZOOM;
+  const cruiseZoom =
+    mode === "3d"
+      ? compact
+        ? DRIVING_ZOOM_MOBILE
+        : DRIVING_ZOOM
+      : OVERHEAD_ZOOM;
+  const focusZoom =
+    mode === "3d"
+      ? compact
+        ? INTERSECTION_ZOOM_MOBILE
+        : INTERSECTION_ZOOM
+      : compact
+        ? OVERHEAD_TURN_ZOOM_MOBILE
+        : OVERHEAD_TURN_ZOOM;
   const navZoom = lerp(cruiseZoom, focusZoom, blend);
   const cruisePitch = navigating ? NAVIGATION_PITCH : DRIVING_PITCH;
-  const towardCue = approaching && junctionCue ? blend * 0.36 : 0;
+  const towardCue = approaching && junctionCue && blend > 0.35 ? blend * 0.28 : 0;
   return {
     center: [
       lerp(vehicle.lng, junctionCue?.lng ?? vehicle.lng, towardCue),
@@ -221,7 +247,7 @@ function cameraOptions(
     ] as [number, number],
     bearing: followOrientation === "heading-up" ? vehicle.heading : 0,
     pitch: mode === "3d" ? lerp(cruisePitch, INTERSECTION_PITCH, blend) : 0,
-    zoom: mode === "3d" ? navZoom : OVERHEAD_ZOOM,
+    zoom: navigating || mode === "3d" ? navZoom : OVERHEAD_ZOOM,
     padding: drivingPadding(height, width, mode, navigating, overlay),
     blend,
   };
@@ -381,6 +407,7 @@ export function DrivingMap({
   const lastFixAtRef = useRef(0);
   const routeModelRef = useRef(createRouteProgressModel(route, []));
   const routeRef = useRef(route);
+  const routeSigRef = useRef("");
   const trafficRef = useRef(traffic);
   const camerasRef = useRef(cameras);
   const speedEnforcementRef = useRef(speedEnforcement);
@@ -445,6 +472,12 @@ export function DrivingMap({
       displayStateRef.current.predictedMeters = 0;
     }
     routeRef.current = route;
+    const routeSig = routeGeometrySignature(route);
+    if (routeSig !== routeSigRef.current) {
+      routeSigRef.current = routeSig;
+      resetGuidanceArrowCache();
+      recoverUntilRef.current = 0;
+    }
     trafficRef.current = traffic;
     camerasRef.current = cameras;
     speedEnforcementRef.current = speedEnforcement;
@@ -602,7 +635,8 @@ export function DrivingMap({
         const stepId = stepIdRef.current;
         if (stepId !== lastStepIdRef.current) {
           const consecutive =
-            isTurnRef.current && distanceToNextRef.current <= 100;
+            isTurnRef.current &&
+            distanceToNextRef.current <= CONSECUTIVE_TURN_METERS;
           if (consecutive) {
             recoverUntilRef.current = 0;
           } else if (lastBlendRef.current > 0.05) {
@@ -611,7 +645,7 @@ export function DrivingMap({
           }
           lastStepIdRef.current = stepId;
         }
-        if (now - lastArrowUpdateRef.current > 180) {
+        if (now - lastArrowUpdateRef.current > 160) {
           lastArrowUpdateRef.current = now;
           try {
             upsertGuidanceArrows(
@@ -625,6 +659,11 @@ export function DrivingMap({
                 cameraMode: modeRef.current,
                 isTurn: isTurnRef.current,
                 cueMeters: cueMetersRef.current,
+                fade: recoverBlendAt(
+                  now,
+                  recoverUntilRef.current,
+                  recoverFromRef.current,
+                ),
               },
             );
           } catch {
@@ -956,10 +995,7 @@ export function DrivingMap({
       ),
     );
     if (!navigating) {
-      upsertGuidanceArrows(map, route, 0, 0, false, 0, {
-        cameraMode,
-        isTurn: false,
-      });
+      clearGuidanceArrows(map);
     }
   }, [
     cameraMode,
