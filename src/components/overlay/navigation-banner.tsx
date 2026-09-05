@@ -70,7 +70,7 @@ export const NextIntersectionHud = forwardRef<
           title="取消導航"
           className="navigation-card-cancel pointer-events-auto touch-manipulation"
         >
-          <X className="size-4" strokeWidth={2.4} />
+          <X className="size-3.5" strokeWidth={2.3} />
         </button>
       ) : null}
       <div className="navigation-instruction-content">
@@ -82,7 +82,7 @@ export const NextIntersectionHud = forwardRef<
               : "bg-white/16 text-white",
           )}
         >
-          <TurnArrowIcon side={side} className="p-1" />
+          <TurnArrowIcon side={side} className="p-0.5" />
         </div>
         <div className="navigation-copy min-w-0 text-left">
           <p className="navigation-guidance truncate tabular-nums tracking-tight">
@@ -110,9 +110,9 @@ export const NextIntersectionHud = forwardRef<
           className="navigation-card-voice pointer-events-auto touch-manipulation"
         >
           {voiceEnabled ? (
-            <Volume2 className="size-4" strokeWidth={2.2} />
+            <Volume2 className="size-3.5" strokeWidth={2.1} />
           ) : (
-            <VolumeX className="size-4" strokeWidth={2.2} />
+            <VolumeX className="size-3.5" strokeWidth={2.1} />
           )}
         </button>
       ) : null}

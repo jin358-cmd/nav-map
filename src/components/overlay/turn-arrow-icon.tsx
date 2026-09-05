@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import type { RouteStep } from "@/types/domain";
 
@@ -90,23 +91,48 @@ export function TurnArrowIcon({
   side: TurnSide;
   className?: string;
 }) {
-  if (side === "left") return <TurnArrow kind="left" className={className} />;
-  if (side === "right") return <TurnArrow kind="right" className={className} />;
-  if (side === "slight-left") return <SlightArrow direction="left" className={className} />;
-  if (side === "slight-right") return <SlightArrow direction="right" className={className} />;
-  if (side === "sharp-left") return <SharpArrow direction="left" className={className} />;
-  if (side === "sharp-right") return <SharpArrow direction="right" className={className} />;
-  if (side === "ramp-left") return <RampArrow direction="left" className={className} />;
-  if (side === "ramp-right") return <RampArrow direction="right" className={className} />;
-  if (side === "fork-left") return <ForkArrow direction="left" className={className} />;
-  if (side === "fork-right") return <ForkArrow direction="right" className={className} />;
+  if (side === "left") return <BendArrow kind="left" className={className} />;
+  if (side === "right") return <BendArrow kind="right" className={className} />;
+  if (side === "slight-left") return <SlightArrow kind="left" className={className} />;
+  if (side === "slight-right") return <SlightArrow kind="right" className={className} />;
+  if (side === "sharp-left") return <SharpArrow kind="left" className={className} />;
+  if (side === "sharp-right") return <SharpArrow kind="right" className={className} />;
+  if (side === "ramp-left") return <RampArrow kind="left" className={className} />;
+  if (side === "ramp-right") return <RampArrow kind="right" className={className} />;
+  if (side === "fork-left") return <ForkArrow kind="left" className={className} />;
+  if (side === "fork-right") return <ForkArrow kind="right" className={className} />;
   if (side === "uturn") return <UTurnArrow className={className} />;
   if (side === "roundabout") return <RoundaboutArrow className={className} />;
   if (side === "arrive") return <ArriveMark className={className} />;
   return <StraightArrow className={className} />;
 }
 
-function TurnArrow({
+function ArrowFrame({
+  className,
+  children,
+}: {
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <svg viewBox="0 0 64 64" className={cn("size-full", className)} aria-hidden="true">
+      {children}
+    </svg>
+  );
+}
+
+function shaftProps() {
+  return {
+    fill: "none" as const,
+    stroke: "currentColor",
+    strokeWidth: 8.5,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+  };
+}
+
+/** Forward, then a natural 90° bend — not a square L. */
+function BendArrow({
   kind,
   className,
 }: {
@@ -115,252 +141,165 @@ function TurnArrow({
 }) {
   const left = kind === "left";
   return (
-    <svg viewBox="0 0 64 64" className={cn("size-full", className)} aria-hidden="true">
+    <ArrowFrame className={className}>
       <path
-        d={left ? "M32 56 V26 H16" : "M32 56 V26 H48"}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="9"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+        d={left ? "M33 56 C33 34 33 30 18 30" : "M31 56 C31 34 31 30 46 30"}
+        {...shaftProps()}
       />
       <path
-        d={left ? "M28 16 L12 26 L28 36" : "M36 16 L52 26 L36 36"}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="9"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+        d={left ? "M6 30 L20 18.5 L20 41.5 Z" : "M58 30 L44 18.5 L44 41.5 Z"}
+        fill="currentColor"
       />
-    </svg>
+    </ArrowFrame>
   );
 }
 
 function SlightArrow({
-  direction,
+  kind,
   className,
 }: {
-  direction: "left" | "right";
+  kind: "left" | "right";
   className?: string;
 }) {
-  const left = direction === "left";
+  const left = kind === "left";
   return (
-    <svg viewBox="0 0 64 64" className={cn("size-full", className)} aria-hidden="true">
+    <ArrowFrame className={className}>
       <path
-        d={left ? "M32 56 V36 L18 18" : "M32 56 V36 L46 18"}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="9"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+        d={left ? "M32 56 C32 40 26 28 17 16" : "M32 56 C32 40 38 28 47 16"}
+        {...shaftProps()}
       />
       <path
-        d={left ? "M10 28 L16 14 L30 20" : "M54 28 L48 14 L34 20"}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="9"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+        d={
+          left
+            ? "M7 22 L22 9 L26 28 Z"
+            : "M57 22 L42 9 L38 28 Z"
+        }
+        fill="currentColor"
       />
-    </svg>
+    </ArrowFrame>
   );
 }
 
 function SharpArrow({
-  direction,
+  kind,
   className,
 }: {
-  direction: "left" | "right";
+  kind: "left" | "right";
   className?: string;
 }) {
-  const left = direction === "left";
+  const left = kind === "left";
   return (
-    <svg viewBox="0 0 64 64" className={cn("size-full", className)} aria-hidden="true">
+    <ArrowFrame className={className}>
       <path
-        d={left ? "M36 56 V22 H18 V36" : "M28 56 V22 H46 V36"}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="9"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+        d={
+          left
+            ? "M36 56 C36 28 30 20 16 22 C10 24 10 32 12 40"
+            : "M28 56 C28 28 34 20 48 22 C54 24 54 32 52 40"
+        }
+        {...shaftProps()}
       />
       <path
-        d={left ? "M8 28 L18 40 L28 28" : "M56 28 L46 40 L36 28"}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="9"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+        d={left ? "M12 52 L4 36 L24 38 Z" : "M52 52 L60 36 L40 38 Z"}
+        fill="currentColor"
       />
-    </svg>
+    </ArrowFrame>
   );
 }
 
 function RampArrow({
-  direction,
+  kind,
   className,
 }: {
-  direction: "left" | "right";
+  kind: "left" | "right";
   className?: string;
 }) {
-  const left = direction === "left";
+  const left = kind === "left";
   return (
-    <svg viewBox="0 0 64 64" className={cn("size-full", className)} aria-hidden="true">
+    <ArrowFrame className={className}>
+      <path d="M32 56 V14" {...shaftProps()} strokeWidth={7} />
       <path
-        d="M32 56 V12"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="8"
-        strokeLinecap="round"
+        d={left ? "M32 36 C26 28 20 22 14 16" : "M32 36 C38 28 44 22 50 16"}
+        {...shaftProps()}
+        strokeWidth={7.5}
       />
       <path
-        d={left ? "M32 34 L16 18" : "M32 34 L48 18"}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="8"
-        strokeLinecap="round"
+        d={left ? "M5 20 L20 8 L24 26 Z" : "M59 20 L44 8 L40 26 Z"}
+        fill="currentColor"
       />
-      <path
-        d={left ? "M8 26 L14 12 L28 18" : "M56 26 L50 12 L36 18"}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+    </ArrowFrame>
   );
 }
 
 function ForkArrow({
-  direction,
+  kind,
   className,
 }: {
-  direction: "left" | "right";
+  kind: "left" | "right";
   className?: string;
 }) {
-  const left = direction === "left";
+  const left = kind === "left";
   return (
-    <svg viewBox="0 0 64 64" className={cn("size-full", className)} aria-hidden="true">
+    <ArrowFrame className={className}>
+      <path d="M32 56 V38" {...shaftProps()} strokeWidth={7.5} />
       <path
-        d="M32 56 V36"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="8"
-        strokeLinecap="round"
+        d="M32 38 C40 30 46 22 50 16"
+        {...shaftProps()}
+        strokeWidth={7}
+        opacity={left ? 0.32 : 1}
       />
       <path
-        d="M32 36 L46 16"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="7"
-        strokeLinecap="round"
-        opacity={left ? 0.38 : 1}
+        d="M32 38 C24 30 18 22 14 16"
+        {...shaftProps()}
+        strokeWidth={7}
+        opacity={left ? 1 : 0.32}
       />
       <path
-        d="M32 36 L18 16"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="7"
-        strokeLinecap="round"
-        opacity={left ? 1 : 0.38}
+        d={left ? "M4 20 L19 8 L23 26 Z" : "M60 20 L45 8 L41 26 Z"}
+        fill="currentColor"
       />
-      <path
-        d={left ? "M8 24 L16 10 L30 18" : "M56 24 L48 10 L34 18"}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+    </ArrowFrame>
   );
 }
 
 function StraightArrow({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 64 64" className={cn("size-full", className)} aria-hidden="true">
-      <path
-        d="M32 56 V16"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="9"
-        strokeLinecap="round"
-      />
-      <path
-        d="M18 28 L32 12 L46 28"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="9"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+    <ArrowFrame className={className}>
+      <path d="M32 56 V20" {...shaftProps()} />
+      <path d="M32 6 L18 24 L46 24 Z" fill="currentColor" />
+    </ArrowFrame>
   );
 }
 
 function UTurnArrow({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 64 64" className={cn("size-full", className)} aria-hidden="true">
-      <path
-        d="M22 56 V24 a10 10 0 0 1 20 0 V40"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="9"
-        strokeLinecap="round"
-      />
-      <path
-        d="M32 30 L42 44 L52 30"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="9"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+    <ArrowFrame className={className}>
+      <path d="M22 56 V26 A10 10 0 0 1 42 26 V38" {...shaftProps()} />
+      <path d="M42 52 L30 38 L54 38 Z" fill="currentColor" />
+    </ArrowFrame>
   );
 }
 
 function RoundaboutArrow({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 64 64" className={cn("size-full", className)} aria-hidden="true">
+    <ArrowFrame className={className}>
       <circle
         cx="32"
-        cy="34"
-        r="12"
+        cy="36"
+        r="11"
         fill="none"
         stroke="currentColor"
         strokeWidth="7"
       />
-      <path
-        d="M32 56 V46"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="7"
-        strokeLinecap="round"
-      />
-      <path
-        d="M32 22 V10"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="7"
-        strokeLinecap="round"
-      />
-      <path
-        d="M22 18 L32 6 L42 18"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+      <path d="M32 56 V47" {...shaftProps()} strokeWidth={7} />
+      <path d="M32 25 V16" {...shaftProps()} strokeWidth={7} />
+      <path d="M32 6 L20 20 L44 20 Z" fill="currentColor" />
+    </ArrowFrame>
   );
 }
 
 function ArriveMark({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 64 64" className={cn("size-full", className)} aria-hidden="true">
+    <ArrowFrame className={className}>
       <path
         d="M32 8 C20 8 12 18 12 28 C12 42 32 56 32 56 C32 56 52 42 52 28 C52 18 44 8 32 8 Z"
         fill="none"
@@ -369,6 +308,6 @@ function ArriveMark({ className }: { className?: string }) {
         strokeLinejoin="round"
       />
       <circle cx="32" cy="28" r="6" fill="currentColor" />
-    </svg>
+    </ArrowFrame>
   );
 }
