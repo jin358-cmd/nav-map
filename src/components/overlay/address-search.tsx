@@ -11,12 +11,13 @@ import {
 import { Heart, History, Loader2, MapPin, Mic, Search, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { TAIWAN_LANDMARKS } from "@/data/landmarks";
+import { isDemoLandmarkPreset } from "@/data/landmarks";
 import {
   clearAddressHistory,
   getAddressHistorySnapshot,
   getServerAddressHistorySnapshot,
   rememberAddress,
+  removeAddressHistory,
   subscribeAddressHistory,
 } from "@/lib/address-history";
 import {
@@ -27,7 +28,10 @@ import {
   removeFavorite,
   subscribeFavorites,
 } from "@/lib/favorites";
-import { formatTaiwanDisplayAddress } from "@/lib/geocoding/format-taiwan-display-address";
+import {
+  formatTaiwanDisplayAddress,
+  sameTaiwanDisplayTitle,
+} from "@/lib/geocoding/format-taiwan-display-address";
 import { matchKindLabel } from "@/lib/geocoding/normalizeTaiwanAddress";
 import {
   instantKeywordHits,
@@ -170,7 +174,10 @@ export function AddressSearch({
           needle,
           biasBucket,
         );
-  const chips = useMemo(() => TAIWAN_LANDMARKS.slice(0, 5), []);
+  const userFavorites = useMemo(
+    () => favorites.filter((hit) => !isDemoLandmarkPreset(hit)),
+    [favorites],
+  );
   const emptyHint =
     needle.length >= 1 && !searching && !busy && visibleHits.length === 0
       ? lookup.submitted
@@ -309,45 +316,54 @@ export function AddressSearch({
                 </Button>
               </div>
               <ul className="max-h-52 overflow-y-auto py-0.5">
-                {history.map((hit) => (
-                  <li key={`${hit.id}-${hit.location.lng}-${hit.location.lat}`}>
-                    <button
-                      type="button"
-                      onClick={() => selectHit(hit)}
-                      className="flex w-full items-start gap-2.5 px-2.5 py-2 text-left hover:bg-white/8 touch-manipulation"
+                {history.map((hit) => {
+                  const title = formatTaiwanDisplayAddress(hit.name);
+                  const subtitle = formatTaiwanDisplayAddress(hit.address);
+                  return (
+                    <li
+                      key={`${hit.id}-${hit.location.lng}-${hit.location.lat}`}
+                      className="flex items-center"
                     >
-                      <History className="mt-0.5 size-4 shrink-0 text-cyan-300/80" />
-                      <span className="min-w-0">
-                        <span className="block truncate text-sm text-white">
-                          {formatTaiwanDisplayAddress(hit.name)}
-                        </span>
-                        <span className="block truncate text-[11px] text-zinc-500">
-                          {formatTaiwanDisplayAddress(hit.address)}
-                        </span>
-                        {hit.matchKind ? (
-                          <span
-                            className={cn(
-                              "mt-0.5 inline-block rounded-full px-1.5 py-px text-[10px]",
-                              hit.exactHouseNumber
-                                ? "bg-cyan-400/15 text-cyan-200"
-                                : "bg-white/8 text-zinc-400",
-                            )}
-                          >
-                            {matchKindLabel(hit.matchKind)}
+                      <button
+                        type="button"
+                        onClick={() => selectHit(hit)}
+                        className="flex min-w-0 flex-1 items-start gap-2.5 px-2.5 py-2 text-left hover:bg-white/8 touch-manipulation"
+                      >
+                        <History className="mt-0.5 size-4 shrink-0 text-cyan-300/80" />
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm text-white">
+                            {title}
                           </span>
-                        ) : null}
-                      </span>
-                    </button>
-                  </li>
-                ))}
+                          {subtitle && !sameTaiwanDisplayTitle(title, subtitle) ? (
+                            <span className="block truncate text-[11px] text-zinc-500">
+                              {subtitle}
+                            </span>
+                          ) : null}
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`刪除紀錄 ${title}`}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          removeAddressHistory(hit);
+                        }}
+                        className="mr-1 flex size-11 shrink-0 items-center justify-center rounded-full text-zinc-400 hover:bg-white/10 hover:text-white touch-manipulation"
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ) : null}
-          {needle.length < 1 && favorites.length ? (
-            <div className="px-3 pt-1">
+          {needle.length < 1 && userFavorites.length ? (
+            <div className="px-3 pt-1 pb-2">
               <p className="mb-1 text-[10px] text-rose-200/80">最愛書籤</p>
               <ul className="flex flex-wrap gap-1.5">
-                {favorites.slice(0, 8).map((hit) => (
+                {userFavorites.slice(0, 8).map((hit) => (
                   <li key={`fav-${hit.id}`}>
                     <button
                       type="button"
@@ -361,33 +377,16 @@ export function AddressSearch({
               </ul>
             </div>
           ) : null}
-          {needle.length < 1 ? (
-            <ul className="flex flex-wrap gap-1.5 px-3 py-2">
-              {chips.map((chip) => (
-                <li key={chip.id}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      selectHit(chip);
-                    }}
-                    className="rounded-full border border-white/10 bg-white/6 px-2.5 py-1 text-[11px] text-zinc-200 hover:bg-white/10 touch-manipulation"
-                  >
-                    {chip.name}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : null}
 
           {searching || suggesting || busy ? (
-            <p className="flex items-center gap-2 px-3 py-2 text-[11px] text-zinc-400">
-              <Loader2 className="size-3.5 animate-spin" />
-              {busy
-                ? "規劃路線中…"
-                : searching
-                  ? "正在查門牌與地圖…"
-                  : "比對紀錄與快取…"}
-            </p>
+            <div
+              className="mx-3 my-2 flex items-center gap-2 rounded-xl bg-white/8 px-3 py-2 text-sm text-white"
+              role="status"
+              aria-live="polite"
+            >
+              <Loader2 className="size-4 shrink-0 animate-spin text-cyan-200" />
+              {busy ? "規劃路線中…" : "搜尋中…"}
+            </div>
           ) : null}
 
           {!busy && visibleHits.length > 0 ? (
@@ -406,9 +405,12 @@ export function AddressSearch({
                       <span className="block truncate text-sm text-white">
                         {formatTaiwanDisplayAddress(hit.name)}
                       </span>
-                      <span className="block truncate text-[11px] text-zinc-500">
-                        {formatTaiwanDisplayAddress(hit.address)}
-                      </span>
+                      {hit.address &&
+                      !sameTaiwanDisplayTitle(hit.name, hit.address) ? (
+                        <span className="block truncate text-[11px] text-zinc-500">
+                          {formatTaiwanDisplayAddress(hit.address)}
+                        </span>
+                      ) : null}
                       {hit.matchKind ? (
                         <span
                           className={cn(

@@ -2,7 +2,10 @@
 
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { formatTaiwanDisplayAddress } from "@/lib/geocoding/format-taiwan-display-address";
+import {
+  formatTaiwanDisplayAddress,
+  sameTaiwanDisplayTitle,
+} from "@/lib/geocoding/format-taiwan-display-address";
 import { formatEtaClock, travelModeLabel } from "@/lib/travel-mode";
 import { cn } from "@/lib/utils";
 import type { NavigationManeuver, RouteDestination, TravelMode } from "@/types/domain";
@@ -54,7 +57,8 @@ export function RouteConfirmBar({
           <p className="text-lg leading-tight font-bold tracking-tight text-white sm:text-2xl">
             {formatTaiwanDisplayAddress(destination.label)}
           </p>
-          {destination.address ? (
+          {destination.address &&
+          !sameTaiwanDisplayTitle(destination.label, destination.address) ? (
             <p className="mt-1 w-full text-sm leading-snug text-zinc-300 sm:text-base">
               {formatTaiwanDisplayAddress(destination.address)}
             </p>

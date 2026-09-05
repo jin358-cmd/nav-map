@@ -387,20 +387,24 @@
   max-width: calc(100vw - 5.75rem - env(safe-area-inset-right));
 }
 
+.hud-anchor-interactive {
+  z-index: 50;
+}
+
 .hud-anchor-gps {
   position: absolute;
-  top: max(0.45rem, env(safe-area-inset-top));
+  top: max(3.6rem, calc(env(safe-area-inset-top) + 3.1rem));
   right: max(0.7rem, env(safe-area-inset-right));
-  z-index: 25;
+  z-index: 12;
 }
 
 .hud-anchor-gps--browse {
-  top: max(7.1rem, calc(env(safe-area-inset-top) + 6.6rem));
+  top: max(8.6rem, calc(env(safe-area-inset-top) + 8rem));
 }
 
 @media (min-width: 640px) {
   .hud-anchor-gps--browse {
-    top: max(0.55rem, env(safe-area-inset-top));
+    top: max(3.8rem, calc(env(safe-area-inset-top) + 3.3rem));
   }
 }
 
@@ -416,7 +420,7 @@
   position: absolute;
   left: max(0.5rem, env(safe-area-inset-left));
   bottom: max(0.75rem, env(safe-area-inset-bottom));
-  z-index: 20;
+  z-index: 28;
   width: min(58vw, 22rem);
   max-width: calc(100vw - 7.5rem - env(safe-area-inset-right));
 }
@@ -425,19 +429,19 @@
   bottom: max(5.75rem, calc(env(safe-area-inset-bottom) + 5.1rem));
 }
 
-.hud-anchor-speed {
-  position: absolute;
-  right: max(0.7rem, env(safe-area-inset-right));
-  bottom: max(0.75rem, env(safe-area-inset-bottom));
-  z-index: 20;
+.hud-trip-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.45rem;
 }
 
 .hud-trip-card {
   width: 100%;
   padding: 0.5rem 0.2rem;
   border-radius: 1rem;
-  border: 1px solid rgba(196, 181, 253, 0.22);
-  background: rgba(59, 7, 100, 0.3);
+  border: 1px solid rgba(196, 181, 253, 0.28);
+  background: rgba(59, 7, 100, 0.58);
 }
 
 .hud-trip-cell {
@@ -452,39 +456,33 @@
   color: #e4e4e7;
 }
 
-.hud-trip-minutes {
+.hud-trip-metric {
   margin-top: 0.15rem;
-  font-size: clamp(26px, 6.6vw, 34px);
+  font-size: clamp(17px, 4.2vw, 20px);
   font-weight: 800;
-  line-height: 1.05;
-  color: #fde047;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.hud-trip-minutes-unit {
-  margin-left: 0.15rem;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.hud-trip-value {
-  margin-top: 0.15rem;
-  font-size: 17px;
-  font-weight: 600;
-  line-height: 1.15;
-  color: #fff;
+  line-height: 1.1;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.hud-trip-unit {
-  margin-left: 0.15rem;
+.hud-trip-metric--time {
+  color: #fde047;
+}
+
+.hud-trip-metric--distance {
+  color: #fff;
+}
+
+.hud-trip-metric--eta {
+  color: #fde047;
+}
+
+.hud-trip-metric-unit {
+  margin-left: 0.12rem;
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 700;
 }
 
 @media (orientation: landscape) {
@@ -497,28 +495,28 @@
   }
 
   .hud-anchor-trip {
-    width: min(36vw, 16.25rem);
+    width: min(30vw, 13.75rem);
   }
 
   .hud-trip-card {
-    padding: 0.32rem 0.08rem;
+    padding: 0.3rem 0.04rem;
     border-radius: 0.85rem;
   }
 
   .hud-trip-cell {
-    padding: 0 0.35rem;
+    padding: 0 0.22rem;
   }
 
   .hud-trip-label {
     font-size: 9px;
   }
 
-  .hud-trip-minutes {
-    font-size: clamp(22px, 3.8vw, 30px);
+  .hud-trip-metric {
+    font-size: 16px;
   }
 
-  .hud-trip-value {
-    font-size: 14px;
+  .hud-trip-metric-unit {
+    font-size: 10px;
   }
 }
 

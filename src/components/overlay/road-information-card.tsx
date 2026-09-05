@@ -108,8 +108,6 @@ export function RoadInformationCard({
   accountUnavailable = false,
   onSignIn,
   onSignOut,
-  trafficVisible = true,
-  onToggleTraffic,
 }: {
   items: RoadIntelItem[];
   origin: CctvDataOrigin;
@@ -141,8 +139,6 @@ export function RoadInformationCard({
   accountUnavailable?: boolean;
   onSignIn?: () => void;
   onSignOut?: () => void;
-  trafficVisible?: boolean;
-  onToggleTraffic?: () => void;
 }) {
   const [openKind, setOpenKind] = useState<RoadIntelKind | null>(null);
   const selectedKind = activeKind ?? openKind;
@@ -160,21 +156,6 @@ export function RoadInformationCard({
     <section className="pointer-events-auto relative inline-flex flex-col items-center text-white">
       <div className="mb-1.5 flex w-full max-w-[min(36rem,calc(100vw-1.25rem))] items-center justify-between gap-2 px-0.5">
         <p className="text-[11px] tracking-wide text-zinc-300">功能選單</p>
-        {onToggleTraffic ? (
-          <button
-            type="button"
-            onClick={onToggleTraffic}
-            aria-pressed={trafficVisible}
-            className={cn(
-              "h-8 rounded-full border px-3 text-[11px] font-semibold touch-manipulation",
-              trafficVisible
-                ? "border-orange-300/45 bg-orange-500/80 text-white"
-                : "border-white/20 bg-black/45 text-zinc-200",
-            )}
-          >
-            路況 {trafficVisible ? "ON" : "OFF"}
-          </button>
-        ) : null}
       </div>
       {favoritesOpen ? (
         <div className="absolute bottom-full left-1/2 z-30 mb-2 w-[min(20rem,calc(100vw-1.25rem))] -translate-x-1/2">

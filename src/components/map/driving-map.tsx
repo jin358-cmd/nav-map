@@ -26,11 +26,7 @@ import {
   OVERVIEW_PITCH,
   TAINAN_CENTER,
 } from "@/lib/constants";
-import {
-  maneuverOrangeRouteActive,
-  sliceManeuverHighlight,
-  type ManeuverAlertPhase,
-} from "@/lib/maneuver-guidance";
+import { type ManeuverAlertPhase } from "@/lib/maneuver-guidance";
 import { approachCameraProgress } from "@/lib/upcoming-route";
 import { bindCctvLayerClicks, upsertCctvLayer } from "@/lib/cctv-layer";
 import {
@@ -259,17 +255,8 @@ function recoverBlendAt(now: number, until: number, from: number) {
   return from * remaining * remaining;
 }
 
-function currentManeuverOverlay(
-  navigating: boolean,
-  isTurn: boolean,
-  phase: ManeuverAlertPhase,
-  route: [number, number][],
-  routeMeters: number,
-  cueMeters: number,
-  distanceToNext: number,
-) {
-  if (!navigating || !isTurn || !maneuverOrangeRouteActive(phase)) return [];
-  return sliceManeuverHighlight(route, routeMeters, cueMeters, distanceToNext);
+function currentManeuverOverlay() {
+  return [] as [number, number][];
 }
 
 function createDestinationPin(label: string): HTMLDivElement {
@@ -398,6 +385,7 @@ export function DrivingMap({
   const mapDisplayModeRef = useRef(mapDisplayMode);
   const pickMarkerRef = useRef<Marker | null>(null);
   const styleKeyRef = useRef(resolveMapBasemap(mapDisplayMode));
+  const inFlightStyleRef = useRef<string | null>(null);
   const vehicleRef = useRef(vehicle);
   const displayVehicleRef = useRef(displayVehicle);
   const displayStateRef = useRef<VehicleDisplayState>(
@@ -704,7 +692,7 @@ export function DrivingMap({
         const zoomTarget = pinchingRef.current
           ? mapNow.getZoom()
           : (userZoomRef.current ?? wanted.zoom);
-        const followT = damp(dt, 0.22);
+        const followT = damp(dt, wanted.blend > 0.02 ? 0.11 : 0.18);
         try {
           mapNow.jumpTo({
             center: [
@@ -736,15 +724,7 @@ export function DrivingMap({
           trafficRef.current,
           visible.congestion,
           routeMetersRef.current,
-          currentManeuverOverlay(
-            navigatingRef.current,
-            isTurnRef.current,
-            alertPhaseRef.current,
-            routeRef.current,
-            routeMetersRef.current,
-            cueMetersRef.current,
-            distanceToNextRef.current,
-          ),
+          currentManeuverOverlay(),
         );
         upsertSpeedEnforcementLayer(map, speedEnforcementRef.current);
         upsertCctvLayer(map, camerasRef.current, selectedRef.current, visible.cctv);
@@ -984,15 +964,7 @@ export function DrivingMap({
       traffic,
       layerVisibility.congestion,
       navigating ? routeMeters : 0,
-      currentManeuverOverlay(
-        navigating,
-        isTurnManeuver,
-        maneuverAlertPhase,
-        route,
-        navigating ? routeMeters : 0,
-        maneuverCueMeters,
-        distanceToNextMeters,
-      ),
+      currentManeuverOverlay(),
     );
     if (!navigating) {
       clearGuidanceArrows(map);
@@ -1020,13 +992,14 @@ export function DrivingMap({
     if (!map || !readyRef.current) return;
     const requestedMode = mapDisplayMode;
     const resolved = resolveMapBasemap(requestedMode);
-    if (resolved === styleKeyRef.current) {
+    if (resolved === styleKeyRef.current && inFlightStyleRef.current == null) {
       onStyleAppliedRef.current?.(requestedMode);
       return;
     }
 
     const generation = styleGenerationRef.current + 1;
     styleGenerationRef.current = generation;
+    inFlightStyleRef.current = resolved;
     const isCurrent = () =>
       isLiveStyleGeneration(styleGenerationRef.current, generation);
     const camera = {
@@ -1076,6 +1049,7 @@ export function DrivingMap({
     const finishSuccess = () => {
       if (!isCurrent() || !isStyleReady(map)) return;
       styleKeyRef.current = resolved;
+      inFlightStyleRef.current = null;
       try {
         applyResolvedTheme(map, resolved);
         const visible = layerVisibilityRef.current;
@@ -1085,15 +1059,7 @@ export function DrivingMap({
           trafficRef.current,
           visible.congestion,
           routeMetersRef.current,
-          currentManeuverOverlay(
-            navigatingRef.current,
-            isTurnRef.current,
-            alertPhaseRef.current,
-            routeRef.current,
-            routeMetersRef.current,
-            cueMetersRef.current,
-            distanceToNextRef.current,
-          ),
+          currentManeuverOverlay(),
         );
         upsertSpeedEnforcementLayer(map, speedEnforcementRef.current);
         upsertCctvLayer(map, camerasRef.current, selectedRef.current, visible.cctv);
@@ -1143,6 +1109,7 @@ export function DrivingMap({
     } catch {
       pending.cancel();
       if (!cancelled && isCurrent()) {
+        inFlightStyleRef.current = null;
         onStyleFallbackRef.current?.("衛星或底圖載入失敗，已保留上一個有效圖層。");
       }
       return () => {
@@ -1158,6 +1125,7 @@ export function DrivingMap({
       })
       .catch((error: unknown) => {
         if (cancelled || isStaleStyleError(error) || !isCurrent()) return;
+        inFlightStyleRef.current = null;
         onStyleFallbackRef.current?.("衛星或底圖載入失敗，已保留上一個有效圖層。");
       });
 

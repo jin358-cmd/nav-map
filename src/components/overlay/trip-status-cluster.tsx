@@ -26,21 +26,21 @@ export function TripStatusCluster({
     <div className="hud-trip-card pointer-events-none grid grid-cols-3 divide-x divide-white/20 text-white shadow-lg">
       <div className="hud-trip-cell">
         <p className="hud-trip-label">剩餘時間</p>
-        <p className="hud-trip-minutes">
+        <p className="hud-trip-metric hud-trip-metric--time">
           {minutes != null ? `${minutes}` : "--"}
-          <span className="hud-trip-minutes-unit">分鐘</span>
+          <span className="hud-trip-metric-unit">分鐘</span>
         </p>
       </div>
       <div className="hud-trip-cell">
         <p className="hud-trip-label">剩餘距離</p>
-        <p className="hud-trip-value">
+        <p className="hud-trip-metric hud-trip-metric--distance">
           {km}
-          <span className="hud-trip-unit">km</span>
+          <span className="hud-trip-metric-unit">km</span>
         </p>
       </div>
       <div className="hud-trip-cell">
         <p className="hud-trip-label">預計抵達</p>
-        <p className="hud-trip-value">{eta}</p>
+        <p className="hud-trip-metric hud-trip-metric--eta">{eta}</p>
       </div>
     </div>
   );

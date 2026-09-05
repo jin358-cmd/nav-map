@@ -251,9 +251,11 @@ export function upsertIntelligenceLayers(
       paint: {
         "line-color": MAP_COLORS.maneuver,
         "line-width": ["interpolate", ["linear"], ["zoom"], 12, 5.4, 17, 10.4],
-        "line-opacity": 0.96,
+        "line-opacity": 0,
       },
       layout: { "line-cap": "round", "line-join": "round" },
     });
+  } else {
+    map.setPaintProperty("demo-route-maneuver", "line-opacity", 0);
   }
 }

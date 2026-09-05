@@ -154,7 +154,6 @@ export function MapControls({
 
 function LabeledRail({
   label,
-  tone,
   children,
 }: {
   label: string;
@@ -163,14 +162,7 @@ function LabeledRail({
 }) {
   return (
     <div className="flex items-center gap-1.5">
-      <span
-        className={cn(
-          "text-[11px] font-medium tracking-wide",
-          tone === "light"
-            ? "text-[#1F2937] [text-shadow:0_0_2px_#fff,0_1px_2px_rgba(255,255,255,0.9)]"
-            : "text-white [text-shadow:0_0_2px_#000,0_1px_2px_rgba(0,0,0,0.88)]",
-        )}
-      >
+      <span className="rounded-full bg-white/92 px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-[#1F2937] shadow-sm [text-shadow:0_0_2px_#fff]">
         {label}
       </span>
       {children}

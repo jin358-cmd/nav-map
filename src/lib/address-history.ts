@@ -83,6 +83,22 @@ export function rememberAddress(hit: GeocodeHit) {
   window.dispatchEvent(new Event(CHANGE_EVENT));
 }
 
+export function removeAddressHistory(hit: Pick<GeocodeHit, "name" | "location">) {
+  if (typeof window === "undefined") return;
+  const key = `${hit.name.replaceAll("臺", "台")}|${hit.location.lng.toFixed(5)}|${hit.location.lat.toFixed(5)}`;
+  const next = getAddressHistorySnapshot().filter((item) => {
+    const itemKey = `${item.name.replaceAll("臺", "台")}|${item.location.lng.toFixed(5)}|${item.location.lat.toFixed(5)}`;
+    return itemKey !== key;
+  });
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  } catch {
+    return;
+  }
+  cachedRaw = undefined;
+  window.dispatchEvent(new Event(CHANGE_EVENT));
+}
+
 export function clearAddressHistory() {
   if (typeof window === "undefined") return;
   try {

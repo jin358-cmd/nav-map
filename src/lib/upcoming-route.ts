@@ -171,8 +171,7 @@ export function isApproachingIntersection(distanceToNext: number) {
 }
 
 /**
- * 距離插值：>500m=0，200m≈0.28，50m=1。
- * 給 Camera Zoom／Pitch 用，連續、不跳級。
+ * 距離插值：>500m=0，200m≈0.42，50m=1。體感偏快但仍連續。
  */
 export function approachCameraProgress(distanceToNext: number) {
   if (!Number.isFinite(distanceToNext)) return 0;
@@ -181,13 +180,13 @@ export function approachCameraProgress(distanceToNext: number) {
   if (distanceToNext >= PREPARE_ZOOM_METERS) {
     return ((CRUISE_ZOOM_START_METERS - distanceToNext) /
       (CRUISE_ZOOM_START_METERS - PREPARE_ZOOM_METERS)) *
-      0.28;
+      0.42;
   }
   return (
-    0.28 +
+    0.42 +
     ((PREPARE_ZOOM_METERS - distanceToNext) /
       (PREPARE_ZOOM_METERS - TURN_VIEW_METERS)) *
-      0.72
+      0.58
   );
 }
 

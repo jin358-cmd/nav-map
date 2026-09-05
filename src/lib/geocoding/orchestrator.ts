@@ -304,28 +304,57 @@ export async function searchGeocode(
   const officialIndex = createOfficialIndexProvider();
   const collected: GeocodeResult[] = [...locals];
   const deadline = Date.now() + OVERALL_TIMEOUT_MS;
-
   const relaxations = relaxedAddressQueries(parsed);
-  for (const step of relaxations) {
-    if (Date.now() > deadline || options.signal?.aborted) break;
-    const official = await Promise.allSettled([
-      runProvider(officialIndex, step.query, options, statuses),
-      runProvider(tgos, step.query, options, statuses),
-      runProvider(nlsc, step.query, options, statuses),
+  const firstQuery = relaxations[0]?.query ?? parsed.searchAddress;
+  let ranOsm = false;
+
+  if (Date.now() <= deadline && !options.signal?.aborted) {
+    const [official, osmRows] = await Promise.all([
+      Promise.allSettled([
+        runProvider(officialIndex, firstQuery, options, statuses),
+        runProvider(tgos, firstQuery, options, statuses),
+        runProvider(nlsc, firstQuery, options, statuses),
+      ]),
+      runProvider(osm, firstQuery, options, statuses),
     ]);
+    ranOsm = true;
     for (const outcome of official) {
       if (outcome.status === "fulfilled") collected.push(...outcome.value);
     }
-    if (collected.some((item) => item.exactHouseNumber)) break;
+    collected.push(...osmRows);
+  }
+
+  const strongEnough =
+    collected.some((item) => item.exactHouseNumber) ||
+    collected.filter(
+      (item) =>
+        item.matchKind === "interpolated" ||
+        item.matchKind === "approximate" ||
+        item.confidence >= 0.65,
+    ).length >= 2;
+
+  if (!strongEnough) {
+    for (const step of relaxations.slice(1)) {
+      if (Date.now() > deadline || options.signal?.aborted) break;
+      const official = await Promise.allSettled([
+        runProvider(officialIndex, step.query, options, statuses),
+        runProvider(tgos, step.query, options, statuses),
+        runProvider(nlsc, step.query, options, statuses),
+      ]);
+      for (const outcome of official) {
+        if (outcome.status === "fulfilled") collected.push(...outcome.value);
+      }
+      if (collected.some((item) => item.exactHouseNumber)) break;
+    }
   }
 
   if (
+    !ranOsm &&
     !collected.some((item) => item.exactHouseNumber) &&
     Date.now() < deadline &&
     !options.signal?.aborted
   ) {
-    const fallbackQuery = relaxations[0]?.query ?? parsed.searchAddress;
-    const osmRows = await runProvider(osm, fallbackQuery, options, statuses);
+    const osmRows = await runProvider(osm, firstQuery, options, statuses);
     collected.push(...osmRows);
   }
 

@@ -181,3 +181,14 @@ export function formatTaiwanDisplayAddress(
   }
   return formatDisplayAddressString(input);
 }
+
+export function sameTaiwanDisplayTitle(a?: string | null, b?: string | null) {
+  const normalize = (value?: string | null) =>
+    formatTaiwanDisplayAddress(value)
+      .replaceAll("臺", "台")
+      .replaceAll(/[·・•]/g, "")
+      .replaceAll(/\s+/g, "");
+  const left = normalize(a);
+  const right = normalize(b);
+  return Boolean(left && right && left === right);
+}

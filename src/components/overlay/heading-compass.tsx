@@ -27,7 +27,7 @@ export function HeadingCompass({
       title="方向參考範圍為視覺輔助，不是 GPS 誤差"
       aria-label="回到定位並顯示方向參考範圍"
       className={cn(
-        "relative flex size-12 items-center justify-center rounded-full border border-white/25 bg-zinc-950/72 text-white shadow-lg backdrop-blur-md touch-manipulation",
+        "relative flex size-12 items-center justify-center rounded-full border border-[#111827]/55 bg-white/94 text-[#1F2937] shadow-lg backdrop-blur-md touch-manipulation",
         className,
       )}
     >
@@ -37,7 +37,7 @@ export function HeadingCompass({
           cy="32"
           r="29"
           fill="none"
-          stroke="rgba(255,255,255,0.18)"
+          stroke="rgba(31,41,55,0.28)"
           strokeWidth="1.5"
         />
         <g
@@ -55,11 +55,11 @@ export function HeadingCompass({
             y1="32"
             x2="32"
             y2="10"
-            stroke="white"
+            stroke="#111827"
             strokeWidth="2.6"
             strokeLinecap="round"
           />
-          <polygon points="32,7 36,14 32,12 28,14" fill="white" />
+          <polygon points="32,7 36,14 32,12 28,14" fill="#111827" />
         </g>
         <g
           transform={`rotate(${roseRotation} 32 32)`}

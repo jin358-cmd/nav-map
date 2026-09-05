@@ -20,8 +20,8 @@ export const DRIVING_PITCH = 52;
  */
 export const NAVIGATION_PITCH = 56;
 export const OVERVIEW_PITCH = 0;
-export const DRIVING_ZOOM = 16.25;
-export const DRIVING_ZOOM_MOBILE = 15.95;
+export const DRIVING_ZOOM = 16.55;
+export const DRIVING_ZOOM_MOBILE = 16.25;
 export const OVERHEAD_ZOOM = 15.4;
 export const OVERHEAD_TURN_ZOOM = 17.35;
 export const OVERHEAD_TURN_ZOOM_MOBILE = 17.15;
@@ -45,8 +45,8 @@ export const MANEUVER_APPROACH_METERS = 100;
 export const MANEUVER_APPROACH_EXIT_METERS = 118;
 export const MANEUVER_IMMINENT_METERS = 30;
 export const MANEUVER_AFTER_TURN_METERS = 48;
-export const MANEUVER_RECOVER_MS = 3200;
-/** 地面 Chevron：200 公尺開始出現，越近越清楚 */
+export const MANEUVER_RECOVER_MS = 1800;
+/** 懸空橘色箭頭：200 公尺開始出現 */
 export const GUIDANCE_ARROW_APPROACH_METERS = 200;
 
 /** 瀏覽時車輛約在畫面 65%；導航 3D 時約 72%（70～75）。 */

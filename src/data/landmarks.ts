@@ -52,6 +52,18 @@ function normalize(value: string) {
   return value.toLowerCase().replaceAll("臺", "台").replaceAll(" ", "");
 }
 
+const DEMO_PRESET_IDS = new Set([
+  "lm-tainan-station",
+  "lm-anping",
+  "lm-ncku",
+  "lm-chimei",
+  "lm-tainan-city-hall",
+]);
+
+export function isDemoLandmarkPreset(hit: Pick<GeocodeHit, "id">) {
+  return DEMO_PRESET_IDS.has(hit.id);
+}
+
 export function matchLandmarks(query: string, limit = 4): GeocodeHit[] {
   const needle = normalize(query);
   if (needle.length < 1) return TAIWAN_LANDMARKS.slice(0, limit);

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { searchAddresses } from "@/services/routing";
 import type { GeocodeHit, LngLat } from "@/types/domain";
 
-const SUGGEST_DEBOUNCE_MS = 350;
+const SUGGEST_DEBOUNCE_MS = 180;
 
 export function useAddressSearch(
   query: string,

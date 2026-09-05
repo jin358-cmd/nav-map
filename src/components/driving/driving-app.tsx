@@ -47,6 +47,7 @@ import { mapVisibleDisasters } from "@/lib/disaster-query";
 import { isDemoDataEnabled } from "@/lib/runtime-demo";
 import { segmentAnchor } from "@/lib/traffic-query";
 import { rememberAddress } from "@/lib/address-history";
+import { isDemoLandmarkPreset } from "@/data/landmarks";
 import { formatTaiwanDisplayAddress } from "@/lib/geocoding/format-taiwan-display-address";
 import {
   addFavorite,
@@ -254,11 +255,15 @@ export function DrivingApp() {
   const [navigating, setNavigating] = useState(false);
   const [musicMode, setMusicMode] = useState<"off" | "open" | "mini">("off");
   const [favoritesOpen, setFavoritesOpen] = useState(false);
-  const [toolsDrawerOpen, setToolsDrawerOpen] = useState<boolean | null>(null);
+  const [toolsDrawerOpen, setToolsDrawerOpen] = useState(false);
   const favorites = useSyncExternalStore(
     subscribeFavorites,
     getFavoritesSnapshot,
     getServerFavoritesSnapshot,
+  );
+  const userFavorites = useMemo(
+    () => favorites.filter((hit) => !isDemoLandmarkPreset(hit)),
+    [favorites],
   );
   const savedPlaces = useSyncExternalStore(
     subscribeSavedPlaces,
@@ -269,7 +274,8 @@ export function DrivingApp() {
   const workPlace = savedPlaces.find((place) => place.type === "work") ?? null;
   const trafficFocus5km = true;
   const landscape = useLandscape();
-  const drawerOpen = toolsDrawerOpen ?? !landscape;
+  const drawerOpen = toolsDrawerOpen;
+  const dismissedRouteAlertIdRef = useRef<string | null>(null);
   const navCardRef = useRef<HTMLDivElement>(null);
   const [overlayPadding, setOverlayPadding] = useState({
     top: 90,
@@ -826,6 +832,7 @@ export function DrivingApp() {
         : null,
     );
     setNavigating(true);
+    setToolsDrawerOpen(false);
     setCameraMode("3d");
     setFollowVehicle(true);
     setUserAdjustedMap(false);
@@ -838,6 +845,8 @@ export function DrivingApp() {
   const exitNavigation = useCallback(() => {
     rerouteAbortRef.current?.abort();
     setNavigating(false);
+    dismissedRouteAlertIdRef.current = null;
+    setToolsDrawerOpen(false);
     navigationTrackerRef.current = null;
     setNavigationProgress(null);
     setDisplayVehicle(null);
@@ -950,6 +959,22 @@ export function DrivingApp() {
   );
 
   const hasRouteAlert = Boolean(routeAlert);
+  const blockingRouteIncident = Boolean(
+    routeAlert &&
+      (routeAlert.kind === "accident" ||
+        routeAlert.kind === "construction" ||
+        routeAlert.kind === "closure"),
+  );
+
+  useEffect(() => {
+    if (!navigating) {
+      dismissedRouteAlertIdRef.current = null;
+      return;
+    }
+    if (!routeAlert || !blockingRouteIncident) return;
+    if (dismissedRouteAlertIdRef.current === routeAlert.id) return;
+    setToolsDrawerOpen(true);
+  }, [blockingRouteIncident, navigating, routeAlert]);
 
   useEffect(() => {
     if (!navigating) return;
@@ -1181,7 +1206,7 @@ export function DrivingApp() {
       ) : null}
 
       {editingPlaceType ? (
-        <div className="absolute top-[max(5.5rem,env(safe-area-inset-top))] left-3 right-3 z-40 sm:left-3 sm:right-auto">
+        <div className="hud-anchor-interactive absolute top-[max(5.5rem,env(safe-area-inset-top))] left-3 right-3 z-50 sm:left-3 sm:right-auto">
           <PlaceEditor
             type={editingPlaceType}
             existing={
@@ -1267,7 +1292,7 @@ export function DrivingApp() {
           />
         </div>
       ) : (
-        <div className="pointer-events-auto absolute top-[max(0.45rem,env(safe-area-inset-top))] left-[max(0.5rem,env(safe-area-inset-left))] right-[max(0.5rem,env(safe-area-inset-right))] z-20 min-w-0 max-w-full sm:right-[max(5.5rem,calc(env(safe-area-inset-right)+4.75rem))]">
+        <div className="hud-anchor-interactive pointer-events-auto absolute top-[max(0.45rem,env(safe-area-inset-top))] left-[max(0.5rem,env(safe-area-inset-left))] right-[max(0.5rem,env(safe-area-inset-right))] z-50 min-w-0 max-w-full sm:right-[max(5.5rem,calc(env(safe-area-inset-right)+4.75rem))]">
           {destination ? (
             <RouteConfirmBar
               destination={destination}
@@ -1325,7 +1350,13 @@ export function DrivingApp() {
             setCameraMode((mode) => (mode === "3d" ? "2d" : "3d"))
           }
           onToggleToolsDrawer={() =>
-            setToolsDrawerOpen((open) => !(open ?? !landscape))
+            setToolsDrawerOpen((open) => {
+              const next = !open;
+              if (!next && routeAlert) {
+                dismissedRouteAlertIdRef.current = routeAlert.id;
+              }
+              return next;
+            })
           }
           onMapDisplayMode={(mode) => {
             if (mode === mapDisplayMode && pendingMapDisplayMode == null) {
@@ -1363,35 +1394,32 @@ export function DrivingApp() {
             drawerOpen ? "hud-anchor-trip hud-anchor-trip--drawer" : "hud-anchor-trip"
           }
         >
-          <TripStatusCluster
-            remainingMeters={
-              navigationProgress
-                ? Math.max(
-                    0,
-                    (routeDistanceMeters ?? 0) - navigationProgress.routeMeters,
-                  )
-                : routeDistanceMeters
-            }
-            remainingSeconds={
-              navigationProgress && routeDistanceMeters
-                ? Math.max(
-                    0,
-                    (routeDurationSeconds ?? 0) *
-                      (1 - navigationProgress.routeMeters / Math.max(routeDistanceMeters, 1)),
-                  )
-                : routeDurationSeconds
-            }
-          />
+          <div className="hud-trip-stack">
+            <SpeedHud sample={vehicle} limit={unresolvedSpeedLimit()} />
+            <TripStatusCluster
+              remainingMeters={
+                navigationProgress
+                  ? Math.max(
+                      0,
+                      (routeDistanceMeters ?? 0) - navigationProgress.routeMeters,
+                    )
+                  : routeDistanceMeters
+              }
+              remainingSeconds={
+                navigationProgress && routeDistanceMeters
+                  ? Math.max(
+                      0,
+                      (routeDurationSeconds ?? 0) *
+                        (1 - navigationProgress.routeMeters / Math.max(routeDistanceMeters, 1)),
+                    )
+                  : routeDurationSeconds
+              }
+            />
+          </div>
         </div>
       ) : null}
 
-      {navigating ? (
-        <div className="hud-anchor-speed">
-          <SpeedHud sample={vehicle} limit={unresolvedSpeedLimit()} />
-        </div>
-      ) : null}
-
-      <footer className="absolute inset-x-0 bottom-0 z-10 flex max-w-[100vw] flex-col items-center gap-1.5 overflow-visible px-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))] pb-[max(0.45rem,env(safe-area-inset-bottom))] sm:p-4 sm:pt-0">
+      <footer className="hud-anchor-interactive absolute inset-x-0 bottom-0 z-50 flex max-w-[100vw] flex-col items-center gap-1.5 overflow-visible px-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))] pb-[max(0.45rem,env(safe-area-inset-bottom))] sm:p-4 sm:pt-0">
         {parkingOpen ? (
           <ParkingPanel
             lots={parkingLots}
@@ -1484,13 +1512,6 @@ export function DrivingApp() {
         >
         <RoadInformationCard
           items={intel}
-          trafficVisible={layerVisibility.congestion}
-          onToggleTraffic={() =>
-            setLayerVisibility((current) => ({
-              ...current,
-              congestion: !current.congestion,
-            }))
-          }
           origin={origin}
           trafficOrigin={trafficOrigin}
           disasterOrigin={disasterOrigin}
@@ -1500,7 +1521,7 @@ export function DrivingApp() {
           activeKind={eventListKind ?? selectedEvent?.kind ?? null}
           onKindClick={handleKindClick}
           musicOpen={musicMode !== "off"}
-          favorites={favorites}
+          favorites={userFavorites}
           favoritesOpen={favoritesOpen}
           canFavorite={Boolean(currentPlace)}
           isCurrentFavorite={isCurrentFavorite}
