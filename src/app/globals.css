@@ -151,19 +151,41 @@
 }
 
 .function-chip {
-  width: 2.5rem;
-  height: 2.5rem;
-  padding: 0;
+  width: 3.05rem;
+  min-height: 2.85rem;
+  padding: 0.28rem 0.12rem 0.22rem;
+  flex-direction: column;
+  gap: 0.12rem;
+  border-radius: 0.85rem;
 }
 
 .function-chip__icon {
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 1.2rem;
+  height: 1.2rem;
+  stroke-width: 1.75;
+}
+
+.function-chip__label {
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 .function-chip__badge {
-  top: 0.125rem;
-  right: 0.125rem;
+  top: 0.05rem;
+  right: 0.05rem;
+}
+
+@media (max-width: 430px) {
+  .function-chip {
+    width: 2.55rem;
+    min-height: 2.55rem;
+  }
+
+  .function-chip__label {
+    font-size: 8px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -416,19 +438,13 @@
 
 .hud-anchor-gps {
   position: absolute;
-  top: max(3.6rem, calc(env(safe-area-inset-top) + 3.1rem));
-  right: max(0.7rem, env(safe-area-inset-right));
-  z-index: 12;
+  top: max(0.4rem, env(safe-area-inset-top));
+  right: max(0.45rem, env(safe-area-inset-right));
+  z-index: 22;
 }
 
 .hud-anchor-gps--browse {
-  top: max(8.6rem, calc(env(safe-area-inset-top) + 8rem));
-}
-
-@media (min-width: 640px) {
-  .hud-anchor-gps--browse {
-    top: max(3.8rem, calc(env(safe-area-inset-top) + 3.3rem));
-  }
+  top: max(0.4rem, env(safe-area-inset-top));
 }
 
 .hud-anchor-rail {
@@ -480,6 +496,8 @@
 }
 
 .hud-trip-metric {
+  display: flex;
+  align-items: baseline;
   margin-top: 0.15rem;
   font-size: clamp(17px, 4.2vw, 20px);
   font-weight: 800;
@@ -514,28 +532,36 @@
   }
 
   .hud-anchor-maneuver {
-    width: min(38vw, 20rem);
+    width: min(50vw, 28rem);
+    max-width: calc(100vw - 6.75rem - env(safe-area-inset-right));
   }
 
   .hud-anchor-trip {
-    width: min(30vw, 13.75rem);
+    width: min(34vw, 16.5rem);
   }
 
   .hud-trip-card {
-    padding: 0.3rem 0.04rem;
+    padding: 0.38rem 0.08rem;
     border-radius: 0.85rem;
   }
 
   .hud-trip-cell {
-    padding: 0 0.22rem;
+    padding: 0 0.28rem;
+    text-align: center;
+  }
+
+  .hud-trip-label {
+    font-size: 11px;
+    text-align: center;
   }
 
   .hud-trip-metric {
-    font-size: 16px;
+    justify-content: center;
+    font-size: clamp(18px, 3.8vh, 23px);
   }
 
   .hud-trip-metric-unit {
-    font-size: 10px;
+    font-size: 11px;
   }
 }
 
@@ -543,13 +569,37 @@
   position: relative;
   width: 100%;
   max-height: min(220px, 32vh);
-  padding: 0.75rem 0.85rem;
+  padding: 0.7rem 2.55rem 0.7rem 0.7rem;
   border-radius: 1.15rem;
   overflow: hidden;
   color: #fff;
-  background: rgba(39, 39, 42, 0.82);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: #2563a8;
+  border: 1px solid rgba(255, 255, 255, 0.22);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+}
+
+.navigation-card-cancel,
+.navigation-card-voice {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(15, 23, 42, 0.28);
+  color: #fff;
+}
+
+.navigation-card-cancel {
+  top: 0.35rem;
+  right: 0.35rem;
+}
+
+.navigation-card-voice {
+  right: 0.35rem;
+  bottom: 0.35rem;
 }
 
 .navigation-turn-icon--pulse {
@@ -576,26 +626,27 @@
 
 .navigation-instruction-content {
   display: grid;
-  grid-template-columns: 3.4rem minmax(0, 1fr);
+  grid-template-columns: 4.15rem minmax(0, 1fr);
   align-items: center;
-  gap: 0.65rem;
+  gap: 0.55rem;
 }
 
 .navigation-turn-icon {
-  width: 3.4rem;
-  height: 3.4rem;
+  width: 4.15rem;
+  height: 4.15rem;
 }
 
 .navigation-guidance {
   font-size: clamp(20px, 5.1vw, 30px);
   line-height: 1.15;
   font-weight: 800;
+  color: #fff;
 }
 
 .navigation-road-name {
   font-size: clamp(15px, 3.6vw, 18px);
   line-height: 1.2;
-  color: #f4f4f5;
+  color: #f8fafc;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -611,18 +662,19 @@
     width: 100%;
     max-width: 100%;
     max-height: 168px;
-    padding: 0.65rem 0.7rem;
+    padding: 0.55rem 2.4rem 0.55rem 0.55rem;
     border-radius: 1rem;
+    background: #2563a8;
   }
 
   .navigation-instruction-content {
-    grid-template-columns: 3rem minmax(0, 1fr);
-    gap: 0.5rem;
+    grid-template-columns: 3.65rem minmax(0, 1fr);
+    gap: 0.45rem;
   }
 
   .navigation-turn-icon {
-    width: 3rem;
-    height: 3rem;
+    width: 3.65rem;
+    height: 3.65rem;
   }
 
   .navigation-guidance {
@@ -634,8 +686,23 @@
   }
 }
 
+@media (orientation: landscape) {
+  .navigation-instruction-card {
+    background: #2563a8;
+  }
+
+  .navigation-instruction-content {
+    grid-template-columns: 4.55rem minmax(0, 1fr);
+  }
+
+  .navigation-turn-icon {
+    width: 4.55rem;
+    height: 4.55rem;
+  }
+}
+
 @media (max-width: 390px) {
   .navigation-instruction-card {
-    padding: 10px 10px;
+    padding: 10px 2.35rem 10px 10px;
   }
 }

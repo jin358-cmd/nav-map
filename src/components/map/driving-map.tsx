@@ -1361,7 +1361,37 @@ export function DrivingMap({
       maxZoom: 16.2,
       essential: true,
     });
-  }, [cameraMode, fitRouteKey, route]);
+  }, [fitRouteKey, route]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !readyRef.current) return;
+    if (followVehicleRef.current) return;
+    const compact = isCompactViewport(map.getContainer().clientWidth);
+    const center = map.getCenter();
+    const zoom =
+      cameraMode === "3d"
+        ? compact
+          ? DRIVING_ZOOM_MOBILE
+          : DRIVING_ZOOM
+        : navigating
+          ? compact
+            ? OVERHEAD_NAV_ZOOM_MOBILE
+            : OVERHEAD_NAV_ZOOM
+          : OVERHEAD_ZOOM;
+    const pitch =
+      cameraMode === "3d" ? (navigating ? NAVIGATION_PITCH : DRIVING_PITCH) : 0;
+    try {
+      map.jumpTo({
+        center: [center.lng, center.lat],
+        zoom,
+        pitch,
+        bearing: map.getBearing(),
+      });
+    } catch {
+      /* keep the current frame if the style is swapping */
+    }
+  }, [cameraMode, navigating]);
 
   return <div ref={containerRef} className="absolute inset-0 h-full w-full touch-none" />;
 }

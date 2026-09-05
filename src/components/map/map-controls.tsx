@@ -1,8 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { LayoutGrid, LocateFixed, Settings } from "lucide-react";
-import { HeadingCompass } from "@/components/overlay/heading-compass";
+import { Box, LayoutGrid, LocateFixed, Square } from "lucide-react";
 import { MapStyleMenu } from "@/components/overlay/map-style-menu";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,12 +39,10 @@ export function MapControls({
   followOrientation,
   followVehicle,
   gpsStatus,
-  heading,
   mapDisplayMode,
   pendingMapDisplayMode = null,
   styleMenuOpen,
   toolsDrawerOpen = false,
-  navigating = false,
   onLocate,
   onToggleCamera,
   onMapDisplayMode,
@@ -59,54 +56,6 @@ export function MapControls({
       ? "切換北方朝上"
       : "切換車頭向上";
   const tone = mapControlTone(mapDisplayMode);
-
-  if (navigating) {
-    return (
-      <div className="pointer-events-auto flex flex-col items-end gap-2.5">
-        <HeadingCompass
-          heading={heading}
-          orientation={followOrientation}
-          onClick={onLocate}
-        />
-        <LabeledRail label="圖層" tone={tone}>
-          <MapStyleMenu
-            mode={mapDisplayMode}
-            pendingMode={pendingMapDisplayMode}
-            open={styleMenuOpen}
-            tone={tone}
-            onChange={onMapDisplayMode}
-            onToggle={onToggleStyleMenu}
-          />
-        </LabeledRail>
-        <LabeledRail label="2D/3D" tone={tone}>
-          <ControlButton
-            label={cameraMode === "3d" ? "切換 2D" : "切換 3D"}
-            onClick={onToggleCamera}
-            active={cameraMode === "3d"}
-            tone={tone}
-          >
-            <span className="text-[18px] font-bold leading-none tracking-tight">
-              {cameraMode === "3d" ? "3D" : "2D"}
-            </span>
-          </ControlButton>
-        </LabeledRail>
-        {onToggleToolsDrawer ? (
-          <LabeledRail label="設定" tone={tone}>
-            <ControlButton
-              label={toolsDrawerOpen ? "收合功能列" : "開啟功能列"}
-              onClick={onToggleToolsDrawer}
-              active={toolsDrawerOpen}
-              expanded={toolsDrawerOpen}
-              controls="navpilot-function-drawer"
-              tone={tone}
-            >
-              <Settings className="size-5" />
-            </ControlButton>
-          </LabeledRail>
-        ) : null}
-      </div>
-    );
-  }
 
   return (
     <div className="pointer-events-auto flex flex-col items-end gap-2.5">
@@ -124,9 +73,11 @@ export function MapControls({
         active={cameraMode === "3d"}
         tone={tone}
       >
-        <span className="text-[18px] font-bold leading-none tracking-tight">
-          {cameraMode === "3d" ? "3D" : "2D"}
-        </span>
+        {cameraMode === "3d" ? (
+          <Box className="size-5" strokeWidth={2} />
+        ) : (
+          <Square className="size-5" strokeWidth={2} />
+        )}
       </ControlButton>
       <MapStyleMenu
         mode={mapDisplayMode}
@@ -145,27 +96,9 @@ export function MapControls({
           controls="navpilot-function-drawer"
           tone={tone}
         >
-          <LayoutGrid className="size-5" />
+          <LayoutGrid className="size-5" strokeWidth={2} />
         </ControlButton>
       ) : null}
-    </div>
-  );
-}
-
-function LabeledRail({
-  label,
-  children,
-}: {
-  label: string;
-  tone: ReturnType<typeof mapControlTone>;
-  children: ReactNode;
-}) {
-  return (
-    <div className="flex items-center gap-1.5">
-      <span className="rounded-full bg-white/92 px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-[#1F2937] shadow-sm [text-shadow:0_0_2px_#fff]">
-        {label}
-      </span>
-      {children}
     </div>
   );
 }

@@ -27,14 +27,14 @@ export function TripStatusCluster({
       <div className="hud-trip-cell">
         <p className="hud-trip-label">剩餘時間</p>
         <p className="hud-trip-metric hud-trip-metric--time">
-          {minutes != null ? `${minutes}` : "--"}
+          <span>{minutes != null ? `${minutes}` : "--"}</span>
           <span className="hud-trip-metric-unit">分鐘</span>
         </p>
       </div>
       <div className="hud-trip-cell">
         <p className="hud-trip-label">剩餘距離</p>
         <p className="hud-trip-metric hud-trip-metric--distance">
-          {km}
+          <span>{km}</span>
           <span className="hud-trip-metric-unit">km</span>
         </p>
       </div>

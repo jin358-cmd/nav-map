@@ -6,6 +6,16 @@ export type SpeedLimitReading = {
   status: "live" | "stale" | "unknown" | "not_configured";
 };
 
+export function isReliableSpeedLimit(limit: SpeedLimitReading) {
+  return (
+    limit.speedLimitKph != null &&
+    Number.isFinite(limit.speedLimitKph) &&
+    limit.speedLimitKph > 0 &&
+    limit.source !== "NOT CONFIGURED" &&
+    (limit.status === "live" || limit.status === "stale")
+  );
+}
+
 export function unresolvedSpeedLimit(): SpeedLimitReading {
   return {
     speedLimitKph: null,

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import {
   Heart,
   MapPin,
+  Music2,
   Trash2,
   X,
 } from "lucide-react";
@@ -180,8 +181,8 @@ export function RoadInformationCard({
         </div>
       ) : null}
 
-      <div className="inline-flex w-full max-w-[min(36rem,calc(100vw-env(safe-area-inset-left)-env(safe-area-inset-right)-0.75rem))] items-center justify-center gap-1.5 rounded-full border border-zinc-500/40 bg-zinc-900/88 px-1.5 py-1 shadow-[0_10px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl min-[431px]:w-fit">
-        <div className="flex min-w-0 items-center gap-1.5">
+      <div className="inline-flex w-full max-w-[min(36rem,calc(100vw-env(safe-area-inset-left)-env(safe-area-inset-right)-0.75rem))] flex-wrap items-end justify-center gap-1.5 rounded-2xl border border-zinc-500/40 bg-zinc-900/88 px-1.5 py-1.5 shadow-[0_10px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl min-[431px]:w-fit">
+        <div className="flex min-w-0 flex-wrap items-end justify-center gap-1.5">
           {groups.map((group) => {
             const meta = KIND_META[group.kind];
             const Icon = meta.icon;
@@ -209,13 +210,14 @@ export function RoadInformationCard({
                   });
                 }}
                 className={cn(
-                  "function-chip relative flex items-center justify-center rounded-full border touch-manipulation",
+                  "function-chip relative flex items-center justify-center border touch-manipulation",
                   layerOn ? meta.activeClass : meta.className,
                   !layerOn && "opacity-55",
                   active && selectedKind === group.kind && "ring-2 ring-white/30",
                 )}
               >
                 <Icon className="function-chip__icon" />
+                <span className="function-chip__label">{meta.label}</span>
                 <span className="function-chip__badge absolute flex min-w-4 items-center justify-center rounded-full bg-black/80 px-1 text-[10px] leading-4 text-zinc-200">
                   {group.items.length}
                 </span>
@@ -276,13 +278,14 @@ function FavoriteHeartButton({
       title="最愛書籤"
       onClick={onToggle}
       className={cn(
-        "function-chip relative flex items-center justify-center rounded-full border touch-manipulation",
+        "function-chip relative flex items-center justify-center border touch-manipulation",
         pressed
           ? "border-rose-300/80 bg-rose-500/35 text-rose-100"
           : "border-rose-400/40 bg-rose-500/15 text-rose-200 hover:bg-rose-500/30",
       )}
     >
-      <Heart className={cn("function-chip__icon", pressed && "fill-rose-500")} />
+      <Heart className={cn("function-chip__icon", pressed && "fill-rose-500")} strokeWidth={1.75} />
+      <span className="function-chip__label">最愛</span>
       {count > 0 ? (
         <span className="function-chip__badge absolute flex min-w-4 items-center justify-center rounded-full bg-black/80 px-1 text-[10px] leading-4 text-zinc-200">
           {count}
@@ -386,22 +389,15 @@ function YouTubeMusicButton({
       title="YouTube Music"
       onClick={onToggle}
       className={cn(
-        "function-chip relative flex items-center justify-center rounded-full border touch-manipulation",
+        "function-chip relative flex items-center justify-center border touch-manipulation",
         pressed
-          ? "border-red-300/70 bg-[#ff0033]/40"
-          : "border-red-400/35 bg-[#ff0033]/20 hover:bg-[#ff0033]/35",
+          ? "border-red-300/70 bg-[#ff0033]/40 text-white"
+          : "border-red-400/35 bg-[#ff0033]/20 text-red-100 hover:bg-[#ff0033]/35",
       )}
     >
-      <YouTubeMusicMark />
+      <Music2 className="function-chip__icon" strokeWidth={1.75} />
+      <span className="function-chip__label">音樂</span>
     </button>
   );
 }
 
-function YouTubeMusicMark() {
-  return (
-    <svg viewBox="0 0 24 24" className="function-chip__icon" aria-hidden>
-      <circle cx="12" cy="12" r="10" fill="#FF0033" />
-      <path d="M10 8.2v7.6L17 12 10 8.2z" fill="#fff" />
-    </svg>
-  );
-}

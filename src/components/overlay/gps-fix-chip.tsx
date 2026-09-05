@@ -1,15 +1,7 @@
 "use client";
 
 import type { GpsErrorCode, GpsPermissionState, GpsStatus, VehiclePose } from "@/types/domain";
-import { geoErrorMessage } from "@/services/geolocation";
 import { cn } from "@/lib/utils";
-
-function permissionLabel(state: GpsPermissionState) {
-  if (state === "granted") return "granted";
-  if (state === "denied") return "denied";
-  if (state === "unsupported") return "unsupported";
-  return "prompt";
-}
 
 function formatCoord(value: number) {
   return value.toFixed(6);
@@ -18,9 +10,7 @@ function formatCoord(value: number) {
 export function GpsFixChip({
   vehicle,
   status,
-  permission,
   error,
-  tone = "dark",
   onRetry,
 }: {
   vehicle: VehiclePose;
@@ -33,14 +23,12 @@ export function GpsFixChip({
   const live = vehicle.source === "gps";
   const accuracy =
     live && typeof vehicle.accuracy === "number"
-      ? `GPS ± ${Math.round(vehicle.accuracy)} m`
+      ? `±${Math.round(vehicle.accuracy)} m`
       : status === "locating"
-        ? "GPS 定位中…"
-        : status === "denied"
-          ? "定位權限被拒"
-          : status === "unavailable" && error
-            ? geoErrorMessage(error)
-            : "GPS --";
+        ? "定位中"
+        : error
+          ? "定位失敗"
+          : "GPS --";
   const retryable = Boolean(onRetry) && !live;
 
   return (
@@ -59,29 +47,20 @@ export function GpsFixChip({
           : undefined
       }
       className={cn(
-        "max-w-[min(9.5rem,28vw)] text-right text-[10px] leading-snug",
+        "max-w-[min(8.5rem,26vw)] text-right text-[9px] leading-[1.35] text-[#3F3F46]",
         retryable ? "pointer-events-auto cursor-pointer" : "pointer-events-none",
-        tone === "light"
-          ? "text-[#1F2937] [text-shadow:0_0_2px_#fff,0_1px_2px_rgba(255,255,255,0.92)]"
-          : "text-white [text-shadow:0_0_2px_#000,0_1px_2px_rgba(0,0,0,0.88)]",
       )}
-      title="定位狀態"
+      title="GPS 經緯度與精度"
     >
-      <p className="font-medium">{accuracy}</p>
       {live ? (
         <>
           <p className="tabular-nums">{formatCoord(vehicle.lat)}</p>
           <p className="tabular-nums">{formatCoord(vehicle.lng)}</p>
+          <p className="tabular-nums">{accuracy}</p>
         </>
       ) : (
-        <p>等待座標</p>
+        <p>{accuracy}</p>
       )}
-      {error || permission === "denied" ? (
-        <p>
-          {permissionLabel(permission)}
-          {error ? ` · ${error}` : ""}
-        </p>
-      ) : null}
     </div>
   );
 }
