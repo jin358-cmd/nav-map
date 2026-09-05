@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Home, Briefcase, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { formatTaiwanDisplayAddress } from "@/lib/geocoding/format-taiwan-display-address";
 import { searchAddresses } from "@/services/routing";
 import type { LngLat, SavedPlace, SavedPlaceType } from "@/types/domain";
 
@@ -91,7 +92,11 @@ export function PlaceEditor({
         <div className="space-y-2 text-sm">
           <p>緯度 {pickLocation.lat.toFixed(6)}</p>
           <p>經度 {pickLocation.lng.toFixed(6)}</p>
-          <p className="truncate text-zinc-400">{pickAddress ?? "地址未提供，將保留座標"}</p>
+          <p className="truncate text-zinc-400">
+            {pickAddress
+              ? formatTaiwanDisplayAddress(pickAddress)
+              : "地址未提供，將保留座標"}
+          </p>
           <div className="flex flex-wrap gap-2">
             <Button type="button" className="h-10" onClick={onConfirmPick}>
               確認此位置
@@ -136,14 +141,18 @@ export function PlaceEditor({
                   onClick={() =>
                     onSave({
                       displayName: name.trim() || hit.name,
-                      originalAddress: hit.address,
+                      originalAddress: formatTaiwanDisplayAddress(hit.address),
                       latitude: hit.location.lat,
                       longitude: hit.location.lng,
                     })
                   }
                 >
-                  <span className="block truncate">{hit.name}</span>
-                  <span className="block truncate text-[11px] text-zinc-500">{hit.address}</span>
+                  <span className="block truncate">
+                    {formatTaiwanDisplayAddress(hit.name)}
+                  </span>
+                  <span className="block truncate text-[11px] text-zinc-500">
+                    {formatTaiwanDisplayAddress(hit.address)}
+                  </span>
                 </button>
               </li>
             ))}

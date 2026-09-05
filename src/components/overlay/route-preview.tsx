@@ -2,6 +2,7 @@
 
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { formatTaiwanDisplayAddress } from "@/lib/geocoding/format-taiwan-display-address";
 import { formatEtaClock, travelModeLabel } from "@/lib/travel-mode";
 import { cn } from "@/lib/utils";
 import type { NavigationManeuver, RouteDestination, TravelMode } from "@/types/domain";
@@ -17,7 +18,6 @@ export function RouteConfirmBar({
   onTravelMode,
   onStartNav,
   onClear,
-  onNearbyParking,
 }: {
   destination: RouteDestination;
   maneuver: NavigationManeuver | null;
@@ -29,7 +29,6 @@ export function RouteConfirmBar({
   onTravelMode: (mode: TravelMode) => void;
   onStartNav: () => void;
   onClear: () => void;
-  onNearbyParking?: () => void;
 }) {
   const remainingKm =
     distanceMeters != null
@@ -53,11 +52,11 @@ export function RouteConfirmBar({
       <div className="flex w-full flex-col gap-3 px-3.5 py-3 sm:px-4 sm:py-3.5">
         <div className="w-full min-w-0">
           <p className="text-lg leading-tight font-bold tracking-tight text-white sm:text-2xl">
-            {destination.label}
+            {formatTaiwanDisplayAddress(destination.label)}
           </p>
           {destination.address ? (
             <p className="mt-1 w-full text-sm leading-snug text-zinc-300 sm:text-base">
-              {destination.address}
+              {formatTaiwanDisplayAddress(destination.address)}
             </p>
           ) : null}
           <div className="mt-2 flex gap-1.5">
@@ -88,21 +87,11 @@ export function RouteConfirmBar({
           </p>
         </div>
         <div className="flex w-full items-center gap-2">
-          {onNearbyParking ? (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onNearbyParking}
-              className="h-12 min-h-12 rounded-xl border-emerald-300/30 bg-emerald-500/15 text-emerald-100 hover:bg-emerald-500/25"
-            >
-              附近停車
-            </Button>
-          ) : null}
           <Button
             type="button"
             onClick={onStartNav}
             disabled={rerouting || (motorcycleUnsupported && travelMode === "motorcycle")}
-            className="h-12 min-h-12 flex-1 rounded-xl bg-cyan-400 text-base font-semibold text-[#041016] hover:bg-cyan-300 sm:text-lg"
+            className="h-12 min-h-12 min-w-0 flex-1 rounded-xl bg-cyan-400 text-base font-semibold text-[#041016] hover:bg-cyan-300 sm:text-lg"
           >
             開始導航
           </Button>

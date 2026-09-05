@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { Briefcase, Home, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { formatTaiwanDisplayAddress } from "@/lib/geocoding/format-taiwan-display-address";
 import type { SavedPlace } from "@/types/domain";
 
 export function SavedPlaceBar({
@@ -19,14 +20,22 @@ export function SavedPlaceBar({
   return (
     <div className="mt-1.5 flex flex-wrap gap-1.5">
       <Shortcut
-        label={home?.displayName || "回家"}
+        label={
+          home?.displayName
+            ? formatTaiwanDisplayAddress(home.displayName)
+            : "回家"
+        }
         set={Boolean(home)}
         icon={<Home className="size-3.5" />}
         onGo={() => (home ? onGo(home) : onEdit("home"))}
         onEdit={() => onEdit("home")}
       />
       <Shortcut
-        label={work?.displayName || "公司"}
+        label={
+          work?.displayName
+            ? formatTaiwanDisplayAddress(work.displayName)
+            : "公司"
+        }
         set={Boolean(work)}
         icon={<Briefcase className="size-3.5" />}
         onGo={() => (work ? onGo(work) : onEdit("work"))}

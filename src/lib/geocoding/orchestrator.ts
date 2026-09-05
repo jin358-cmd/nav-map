@@ -2,6 +2,7 @@ import "server-only";
 
 import { matchLandmarks } from "@/data/landmarks";
 import { distanceKm } from "@/lib/geo";
+import { formatTaiwanDisplayAddress } from "@/lib/geocoding/format-taiwan-display-address";
 import {
   matchKindLabel,
   normalizeTaiwanAddress,
@@ -357,8 +358,8 @@ export async function searchGeocode(
 export function toGeocodeHits(results: GeocodeResult[]) {
   return results.map((item) => ({
     id: item.id,
-    name: item.label,
-    address: item.formattedAddress,
+    name: formatTaiwanDisplayAddress(item.label),
+    address: formatTaiwanDisplayAddress(item.formattedAddress),
     location: { lng: item.longitude, lat: item.latitude },
     source: item.source,
     exactHouseNumber: item.exactHouseNumber,

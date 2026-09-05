@@ -1,3 +1,4 @@
+import { formatTaiwanDisplayAddress } from "@/lib/geocoding/format-taiwan-display-address";
 import type { GeocodeLookupMode } from "@/lib/geocoding/types";
 import type { GeocodeHit, LngLat, RoutePlan, TravelMode } from "@/types/domain";
 
@@ -58,8 +59,10 @@ export async function searchAddresses(
     return [
       {
         id: item.id,
-        name: item.name || item.label || query,
-        address: item.address || item.formattedAddress || "",
+        name: formatTaiwanDisplayAddress(item.name || item.label || query),
+        address: formatTaiwanDisplayAddress(
+          item.address || item.formattedAddress || "",
+        ),
         location: { lng: Number(lng), lat: Number(lat) },
         source: item.source,
         exactHouseNumber: item.exactHouseNumber,

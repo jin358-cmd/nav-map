@@ -1,5 +1,6 @@
 import { matchLandmarks } from "@/data/landmarks";
 import { BRAND_ALIASES, TAINAN_POIS } from "@/data/tainan-pois";
+import { formatTaiwanDisplayAddress } from "@/lib/geocoding/format-taiwan-display-address";
 import { distanceKm } from "@/lib/geo";
 import { SEARCH_RADIUS_KM, SEARCH_RESULT_LIMIT } from "@/lib/search-constants";
 import type { GeocodeHit, LngLat } from "@/types/domain";
@@ -161,8 +162,8 @@ export function destinationToHit(destination: {
 }): GeocodeHit {
   return {
     id: `place-${destination.location.lng.toFixed(5)}-${destination.location.lat.toFixed(5)}`,
-    name: destination.label,
-    address: destination.address,
+    name: formatTaiwanDisplayAddress(destination.label),
+    address: formatTaiwanDisplayAddress(destination.address),
     location: destination.location,
   };
 }

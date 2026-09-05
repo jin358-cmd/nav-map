@@ -1,3 +1,4 @@
+import { formatTaiwanDisplayAddress } from "@/lib/geocoding/format-taiwan-display-address";
 import type { SavedPlace, SavedPlaceType } from "@/types/domain";
 
 const STORAGE_KEY = "navpilot.saved-places.v1";
@@ -120,7 +121,9 @@ export function savedPlaceToHit(place: SavedPlace) {
   return {
     id: place.id,
     name: place.displayName,
-    address: place.originalAddress ?? place.displayName,
+    address: formatTaiwanDisplayAddress(
+      place.originalAddress ?? place.displayName,
+    ),
     location: { lng: place.longitude, lat: place.latitude },
     source: "local" as const,
   };

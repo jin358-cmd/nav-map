@@ -39,6 +39,7 @@ import { bindDisasterLayerClicks, upsertDisasterLayer } from "@/lib/disaster-lay
 import { upsertGuidanceArrows } from "@/lib/guidance-arrows";
 import { upsertIntelligenceLayers } from "@/lib/map-layers";
 import { configureMapLibreWorker } from "@/lib/maplibre-worker";
+import { formatTaiwanDisplayAddress } from "@/lib/geocoding/format-taiwan-display-address";
 import { applyResolvedTheme, basemapStyle } from "@/lib/map-basemap";
 import { resolveMapBasemap } from "@/lib/map-display-mode";
 import {
@@ -1197,7 +1198,7 @@ export function DrivingMap({
     destMarkerRef.current = null;
     if (!destination) return;
     destMarkerRef.current = new Marker({
-      element: createDestinationPin(destination.label),
+        element: createDestinationPin(formatTaiwanDisplayAddress(destination.label)),
       anchor: "bottom",
     })
       .setLngLat([destination.location.lng, destination.location.lat])

@@ -49,6 +49,7 @@ import { mapVisibleDisasters } from "@/lib/disaster-query";
 import { isDemoDataEnabled } from "@/lib/runtime-demo";
 import { segmentAnchor } from "@/lib/traffic-query";
 import { rememberAddress } from "@/lib/address-history";
+import { formatTaiwanDisplayAddress } from "@/lib/geocoding/format-taiwan-display-address";
 import {
   addFavorite,
   getFavoritesSnapshot,
@@ -1145,7 +1146,9 @@ export function DrivingApp() {
           setPickLocation(location);
           setPickAddress(null);
           void reversePlace(location).then((hit) => {
-            setPickAddress(hit.address || hit.name || null);
+            setPickAddress(
+              formatTaiwanDisplayAddress(hit.address || hit.name || "") || null,
+            );
           });
         }}
         onStyleApplied={(mode) => {
@@ -1288,10 +1291,6 @@ export function DrivingApp() {
               }}
               onStartNav={startNavigation}
               onClear={clearRoute}
-              onNearbyParking={() => {
-                setParkingOpen(true);
-                setSelectedParking(null);
-              }}
             />
           ) : (
             <>
@@ -1418,7 +1417,7 @@ export function DrivingApp() {
               void applyRoute({
                 id: `parking-${lot.id}`,
                 name: lot.name,
-                address: lot.address || lot.name,
+                address: formatTaiwanDisplayAddress(lot.address || lot.name),
                 location: lot.location,
               });
             }}
@@ -1458,8 +1457,9 @@ export function DrivingApp() {
                     void applyRoute({
                       id: `event-${selectedEvent?.id ?? "point"}`,
                       name: selectedEventCard.title,
-                      address:
+                      address: formatTaiwanDisplayAddress(
                         selectedEventCard.roadName || selectedEventCard.title,
+                      ),
                       location: selectedEventLocation,
                     })
                 : undefined

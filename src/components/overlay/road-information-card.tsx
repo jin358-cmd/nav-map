@@ -20,6 +20,7 @@ import {
   disasterOriginLabel,
   trafficOriginLabel,
 } from "@/lib/format";
+import { formatTaiwanDisplayAddress } from "@/lib/geocoding/format-taiwan-display-address";
 import type { GoogleAccount } from "@/lib/google-identity";
 import { cn } from "@/lib/utils";
 import type {
@@ -343,9 +344,11 @@ function FavoritesPanel({
               >
                 <MapPin className="mt-0.5 size-3.5 shrink-0 text-rose-300" />
                 <span className="min-w-0">
-                  <span className="block truncate text-sm">{hit.name}</span>
+                  <span className="block truncate text-sm">
+                    {formatTaiwanDisplayAddress(hit.name)}
+                  </span>
                   <span className="block truncate text-[11px] text-zinc-500">
-                    {hit.address}
+                    {formatTaiwanDisplayAddress(hit.address)}
                   </span>
                 </span>
               </button>

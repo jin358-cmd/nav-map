@@ -27,6 +27,7 @@ import {
   removeFavorite,
   subscribeFavorites,
 } from "@/lib/favorites";
+import { formatTaiwanDisplayAddress } from "@/lib/geocoding/format-taiwan-display-address";
 import { matchKindLabel } from "@/lib/geocoding/normalizeTaiwanAddress";
 import {
   instantKeywordHits,
@@ -87,12 +88,17 @@ export function AddressSearch({
 
   const selectHit = useCallback(
     (hit: GeocodeHit) => {
+      const displayHit = {
+        ...hit,
+        name: formatTaiwanDisplayAddress(hit.name),
+        address: formatTaiwanDisplayAddress(hit.address),
+      };
       speechStopRef.current();
-      setQuery(hit.name);
+      setQuery(displayHit.name);
       setOpen(false);
-      rememberAddress(hit);
-      void rememberGeocodeSelection(hit.name, biasBucket ?? undefined);
-      onSelect(hit);
+      rememberAddress(displayHit);
+      void rememberGeocodeSelection(displayHit.name, biasBucket ?? undefined);
+      onSelect(displayHit);
     },
     [biasBucket, onSelect],
   );
@@ -313,10 +319,10 @@ export function AddressSearch({
                       <History className="mt-0.5 size-4 shrink-0 text-cyan-300/80" />
                       <span className="min-w-0">
                         <span className="block truncate text-sm text-white">
-                          {hit.name}
+                          {formatTaiwanDisplayAddress(hit.name)}
                         </span>
                         <span className="block truncate text-[11px] text-zinc-500">
-                          {hit.address}
+                          {formatTaiwanDisplayAddress(hit.address)}
                         </span>
                         {hit.matchKind ? (
                           <span
@@ -348,7 +354,7 @@ export function AddressSearch({
                       onClick={() => selectHit(hit)}
                       className="rounded-full border border-rose-300/25 bg-rose-500/15 px-2.5 py-1 text-[11px] text-rose-100 hover:bg-rose-500/25 touch-manipulation"
                     >
-                      {hit.name}
+                      {formatTaiwanDisplayAddress(hit.name)}
                     </button>
                   </li>
                 ))}
@@ -398,10 +404,10 @@ export function AddressSearch({
                     <MapPin className="mt-0.5 size-4 shrink-0 text-cyan-300" />
                     <span className="min-w-0">
                       <span className="block truncate text-sm text-white">
-                        {hit.name}
+                        {formatTaiwanDisplayAddress(hit.name)}
                       </span>
                       <span className="block truncate text-[11px] text-zinc-500">
-                        {hit.address}
+                        {formatTaiwanDisplayAddress(hit.address)}
                       </span>
                       {hit.matchKind ? (
                         <span

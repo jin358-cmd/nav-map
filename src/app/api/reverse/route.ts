@@ -1,3 +1,4 @@
+import { formatTaiwanDisplayAddress } from "@/lib/geocoding/format-taiwan-display-address";
 import { queryNlscTownVillage } from "@/services/official-address";
 import type { GeocodeHit, LngLat } from "@/types/domain";
 
@@ -70,13 +71,14 @@ export async function GET(request: Request) {
   const name =
     osm?.name?.trim() ||
     (town ? `${town}自訂位置` : "自訂位置");
-  const address =
+  const address = formatTaiwanDisplayAddress(
     osm?.display_name?.trim() ||
-    [city, town, "長按地圖"].filter(Boolean).join("");
+      [city, town, "長按地圖"].filter(Boolean).join(""),
+  );
 
   const hit: GeocodeHit = {
     id: `custom-${location.lng.toFixed(5)}-${location.lat.toFixed(5)}`,
-    name,
+    name: formatTaiwanDisplayAddress(name),
     address,
     location,
   };

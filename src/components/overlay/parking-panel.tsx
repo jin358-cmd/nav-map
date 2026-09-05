@@ -9,6 +9,7 @@ import {
   freshnessLabel,
   providedText,
 } from "@/lib/format";
+import { formatTaiwanDisplayAddress } from "@/lib/geocoding/format-taiwan-display-address";
 import { sortParkingLots } from "@/lib/parking-sort";
 import { cn } from "@/lib/utils";
 import type {
@@ -83,7 +84,9 @@ export function ParkingPanel({
       {detail ? (
         <article className="mb-2 rounded-xl bg-white/5 p-2.5">
           <h2 className="truncate text-sm font-semibold">{detail.name}</h2>
-          <p className="truncate text-[11px] text-zinc-400">{providedText(detail.address)}</p>
+          <p className="truncate text-[11px] text-zinc-400">
+            {providedText(formatTaiwanDisplayAddress(detail.address))}
+          </p>
           <dl className="mt-2 grid grid-cols-2 gap-2 text-xs">
             <Info label="距離" value={detail.distanceMeters != null ? formatDistance(detail.distanceMeters) : "未提供"} />
             <Info

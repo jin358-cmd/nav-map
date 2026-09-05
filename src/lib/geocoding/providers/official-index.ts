@@ -1,5 +1,6 @@
 import "server-only";
 
+import { formatTaiwanDisplayAddress } from "@/lib/geocoding/format-taiwan-display-address";
 import type { GeocodeProvider, GeocodeResult } from "@/lib/geocoding/types";
 
 function supabaseConfig() {
@@ -54,8 +55,12 @@ export function createOfficialIndexProvider(): GeocodeProvider {
         )
         .map((row) => ({
           id: `index-${row.id ?? row.normalized_address}`,
-          label: row.display_address || row.normalized_address || query,
-          formattedAddress: row.display_address || row.normalized_address || query,
+          label: formatTaiwanDisplayAddress(
+            row.display_address || row.normalized_address || query,
+          ),
+          formattedAddress: formatTaiwanDisplayAddress(
+            row.display_address || row.normalized_address || query,
+          ),
           latitude: Number(row.latitude),
           longitude: Number(row.longitude),
           source: "index" as const,
