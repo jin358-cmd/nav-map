@@ -1,6 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import {
+  chromeIntentUrl,
+  detectAndroidInstallBrowser,
+  isChromeWebApkSafe,
+  type AndroidInstallBrowser,
+} from "@/lib/install-browser";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -31,9 +37,20 @@ function readIosHint() {
   return /iphone|ipad|ipod/i.test(window.navigator.userAgent) && !isStandalone();
 }
 
+function readInstallBrowser(): AndroidInstallBrowser {
+  if (typeof window === "undefined") return "desktop";
+  return detectAndroidInstallBrowser(window.navigator.userAgent);
+}
+
 export function useAppInstall() {
   const installed = useSyncExternalStore(subscribeStandalone, isStandalone, () => false);
   const iosHint = useSyncExternalStore(subscribeStandalone, readIosHint, () => false);
+  const installBrowser = useSyncExternalStore(
+    subscribeStandalone,
+    readInstallBrowser,
+    () => "desktop" as const,
+  );
+  const chromeSafe = isChromeWebApkSafe(installBrowser);
   const [promptEvent, setPromptEvent] = useState<BeforeInstallPromptEvent | null>(
     null,
   );
@@ -60,10 +77,18 @@ export function useAppInstall() {
     return choice.outcome === "accepted";
   }, [promptEvent]);
 
+  const openInChrome = useCallback(() => {
+    if (typeof window === "undefined") return;
+    window.location.href = chromeIntentUrl(window.location.href);
+  }, []);
+
   return {
-    canInstall: Boolean(promptEvent) && !installed,
+    canInstall: Boolean(promptEvent) && !installed && chromeSafe,
     installed,
     iosHint,
+    installBrowser,
+    chromeSafe,
     install,
+    openInChrome,
   };
 }

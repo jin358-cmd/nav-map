@@ -13,6 +13,18 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        source: "/manifest.webmanifest",
+        headers: [
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+        ],
+      },
+      {
+        source: "/manifest.json",
+        headers: [
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+        ],
+      },
+      {
         source: "/:path*",
         headers: [
           { key: "Permissions-Policy", value: "geolocation=(self), microphone=(self)" },

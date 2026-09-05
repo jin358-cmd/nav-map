@@ -8,7 +8,16 @@ import { useAppInstall } from "@/hooks/use-app-install";
 import { APP_BOOKMARK_NAME, APP_TAGLINE } from "@/lib/app-brand";
 
 export default function InstallPage() {
-  const { canInstall, installed, iosHint, install } = useAppInstall();
+  const {
+    canInstall,
+    installed,
+    iosHint,
+    install,
+    installBrowser,
+    chromeSafe,
+    openInChrome,
+  } = useAppInstall();
+  const needsChrome = !installed && !chromeSafe && installBrowser !== "desktop";
   const [copied, setCopied] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const installUrl = useMemo(() => {
@@ -70,7 +79,28 @@ export default function InstallPage() {
         ) : null}
 
         <div className="mt-6 flex flex-col gap-2.5">
-          {!installed ? (
+          {needsChrome ? (
+            <div className="rounded-2xl border border-amber-300/35 bg-amber-500/12 px-3 py-3 text-[13px] leading-relaxed text-amber-50">
+              <p className="font-semibold text-amber-100">
+                請改用 Chrome 安裝，不要略過 Play Protect
+              </p>
+              <p className="mt-1.5 text-amber-50/90">
+                NavPilot 是網站 PWA，沒有側載 APK。Samsung 網際網路或其他瀏覽器產生的安裝包
+                targetSdk 過舊，Google Play 安全防護會顯示「專為舊版 Android 打造」。
+                Chrome 產生的 WebAPK 才含現行隱私保護等級。
+              </p>
+            </div>
+          ) : null}
+          {needsChrome ? (
+            <Button
+              type="button"
+              onClick={openInChrome}
+              className="h-12 rounded-2xl bg-cyan-400 text-base font-semibold text-[#041016] hover:bg-cyan-300"
+            >
+              <Download className="size-4" />
+              用 Chrome 開啟並安裝
+            </Button>
+          ) : !installed ? (
             <Button
               type="button"
               onClick={() => void handleInstall()}
@@ -106,8 +136,8 @@ export default function InstallPage() {
         >
           <li>1. 把此頁連結傳給要安裝的手機或電腦，用瀏覽器開啟。</li>
           <li>
-            2. Chrome／Edge：點上方「{canInstall ? "安裝到桌面" : "透過連結安裝"}」，或選單裡的「安裝應用程式」。完成後桌面圖示即為此圖，名稱為
-            「{APP_BOOKMARK_NAME}」。
+            2. Android 請用 Chrome 開啟此頁，再點「安裝到桌面」或選單「安裝應用程式」。不要用
+            Samsung 網際網路安裝，也不要略過 Play Protect。
           </li>
           {iosHint ? (
             <li>
