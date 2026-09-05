@@ -45,15 +45,49 @@ export function basemapStyle(
   return OPENFREEMAP_DARK_STYLE;
 }
 
-export function applyResolvedTheme(
-  map: MapLibreMap,
-  resolved: "light" | "dark" | "satellite",
-) {
-  if (resolved === "dark") {
-    applyDarkDrivingTheme(map);
-    return;
+const LIGHT_WASH_SOURCE = "navpilot-light-wash";
+const LIGHT_WASH_LAYER = "navpilot-light-wash-layer";
+
+function applyLightDrivingTheme(map: MapLibreMap) {
+  if (!map.getSource(LIGHT_WASH_SOURCE)) {
+    map.addSource(LIGHT_WASH_SOURCE, {
+      type: "geojson",
+      data: {
+        type: "Feature",
+        properties: {},
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [-180, -85],
+              [180, -85],
+              [180, 85],
+              [-180, 85],
+              [-180, -85],
+            ],
+          ],
+        },
+      },
+    });
   }
-  if (resolved === "light" && map.getSource("openmaptiles") && !map.getLayer("building-3d")) {
+  if (!map.getLayer(LIGHT_WASH_LAYER)) {
+    const firstSymbol = map
+      .getStyle()
+      ?.layers?.find((layer) => layer.type === "symbol")?.id;
+    map.addLayer(
+      {
+        id: LIGHT_WASH_LAYER,
+        type: "fill",
+        source: LIGHT_WASH_SOURCE,
+        paint: {
+          "fill-color": "#1a1d24",
+          "fill-opacity": 0.1,
+        },
+      },
+      firstSymbol,
+    );
+  }
+  if (map.getSource("openmaptiles") && !map.getLayer("building-3d")) {
     try {
       map.addLayer({
         id: "building-3d",
@@ -75,5 +109,18 @@ export function applyResolvedTheme(
     } catch {
       /* 亮色底圖可能沒有建物圖層 */
     }
+  }
+}
+
+export function applyResolvedTheme(
+  map: MapLibreMap,
+  resolved: "light" | "dark" | "satellite",
+) {
+  if (resolved === "dark") {
+    applyDarkDrivingTheme(map);
+    return;
+  }
+  if (resolved === "light") {
+    applyLightDrivingTheme(map);
   }
 }

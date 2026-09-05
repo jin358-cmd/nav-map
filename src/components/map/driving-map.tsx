@@ -41,6 +41,11 @@ import { upsertIntelligenceLayers } from "@/lib/map-layers";
 import { configureMapLibreWorker } from "@/lib/maplibre-worker";
 import { applyResolvedTheme, basemapStyle } from "@/lib/map-basemap";
 import { resolveMapBasemap } from "@/lib/map-display-mode";
+import {
+  isLiveStyleGeneration,
+  isStaleStyleError,
+  waitForBasemapStyle,
+} from "@/lib/map-style-switch";
 import { damp, lerp, lerpAngle } from "@/lib/geo";
 import { createRouteProgressModel } from "@/lib/route-progress";
 import {
@@ -128,6 +133,7 @@ type DrivingMapProps = {
   onViewportChange: (viewport: MapViewport) => void;
   onLongPress?: (location: { lng: number; lat: number }) => void;
   onPickLocation?: (location: { lng: number; lat: number }) => void;
+  onStyleApplied?: (mode: MapDisplayMode) => void;
   onStyleFallback?: (message: string) => void;
 };
 
@@ -333,6 +339,7 @@ export function DrivingMap({
   onViewportChange,
   onLongPress,
   onPickLocation,
+  onStyleApplied,
   onStyleFallback,
 }: DrivingMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -349,7 +356,9 @@ export function DrivingMap({
   const onViewportChangeRef = useRef(onViewportChange);
   const onLongPressRef = useRef(onLongPress);
   const onPickLocationRef = useRef(onPickLocation);
+  const onStyleAppliedRef = useRef(onStyleApplied);
   const onStyleFallbackRef = useRef(onStyleFallback);
+  const styleGenerationRef = useRef(0);
   const modeRef = useRef(cameraMode);
   const followOrientationRef = useRef(followOrientation);
   const pickModeRef = useRef(pickMode);
@@ -413,6 +422,7 @@ export function DrivingMap({
     onViewportChangeRef.current = onViewportChange;
     onLongPressRef.current = onLongPress;
     onPickLocationRef.current = onPickLocation;
+    onStyleAppliedRef.current = onStyleApplied;
     onStyleFallbackRef.current = onStyleFallback;
     modeRef.current = cameraMode;
     followOrientationRef.current = followOrientation;
@@ -462,6 +472,7 @@ export function DrivingMap({
     onViewportChange,
     onLongPress,
     onPickLocation,
+    onStyleApplied,
     onStyleFallback,
     cameraMode,
     followOrientation,
@@ -710,6 +721,19 @@ export function DrivingMap({
           parkingVisibleRef.current,
         );
         bindParkingLayerClicks(map, (id) => onParkingSelectRef.current?.(id));
+        upsertGuidanceArrows(
+          map,
+          routeRef.current,
+          routeMetersRef.current,
+          distanceToNextRef.current,
+          navigatingRef.current,
+          0,
+          {
+            cameraMode: modeRef.current,
+            isTurn: isTurnRef.current,
+            cueMeters: cueMetersRef.current,
+          },
+        );
       } catch (error) {
         console.error("Event layer skipped", error);
       }
@@ -951,16 +975,63 @@ export function DrivingMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !readyRef.current) return;
-    const resolved = resolveMapBasemap(mapDisplayMode);
-    if (resolved === styleKeyRef.current) return;
+    const requestedMode = mapDisplayMode;
+    const resolved = resolveMapBasemap(requestedMode);
+    if (resolved === styleKeyRef.current) {
+      onStyleAppliedRef.current?.(requestedMode);
+      return;
+    }
+
+    const generation = styleGenerationRef.current + 1;
+    styleGenerationRef.current = generation;
+    const isCurrent = () =>
+      isLiveStyleGeneration(styleGenerationRef.current, generation);
     const camera = {
       center: map.getCenter(),
       zoom: map.getZoom(),
       pitch: map.getPitch(),
       bearing: map.getBearing(),
     };
-    const onStyle = () => {
-      if (!isStyleReady(map)) return;
+
+    const restoreCameraAndMarkers = () => {
+      try {
+        const display = displayStateRef.current;
+        const wanted = cameraOptions(
+          map,
+          {
+            ...vehicleRef.current,
+            lng: display.lng,
+            lat: display.lat,
+            heading: display.heading,
+          },
+          modeRef.current,
+          navigatingRef.current,
+          approachingRef.current,
+          overlayPaddingRef.current,
+          distanceToNextRef.current,
+          junctionCueRef.current,
+          followOrientationRef.current,
+        );
+        map.jumpTo({
+          center: wanted.center,
+          bearing: wanted.bearing,
+          pitch: wanted.pitch,
+          zoom: wanted.zoom,
+          padding: wanted.padding,
+        });
+      } catch {
+        try {
+          map.jumpTo(camera);
+        } catch {
+          /* keep the newly loaded style even if camera restore fails */
+        }
+      }
+      if (vehicleMarkerRef.current) vehicleMarkerRef.current.addTo(map);
+      if (destMarkerRef.current) destMarkerRef.current.addTo(map);
+    };
+
+    const finishSuccess = () => {
+      if (!isCurrent() || !isStyleReady(map)) return;
       styleKeyRef.current = resolved;
       try {
         applyResolvedTheme(map, resolved);
@@ -1002,51 +1073,55 @@ export function DrivingMap({
           parkingVisibleRef.current,
         );
         bindParkingLayerClicks(map, (id) => onParkingSelectRef.current?.(id));
-      } catch {
-        onStyleFallbackRef.current?.("地圖圖層重新掛載失敗，已保留目前畫面。");
-      }
-      try {
-        const display = displayStateRef.current;
-        const wanted = cameraOptions(
+        upsertGuidanceArrows(
           map,
-          {
-            ...vehicleRef.current,
-            lng: display.lng,
-            lat: display.lat,
-            heading: display.heading,
-          },
-          modeRef.current,
-          navigatingRef.current,
-          approachingRef.current,
-          overlayPaddingRef.current,
+          routeRef.current,
+          routeMetersRef.current,
           distanceToNextRef.current,
-          junctionCueRef.current,
-          followOrientationRef.current,
+          navigatingRef.current,
+          0,
+          {
+            cameraMode: modeRef.current,
+            isTurn: isTurnRef.current,
+            cueMeters: cueMetersRef.current,
+          },
         );
-        map.jumpTo({
-          center: wanted.center,
-          bearing: wanted.bearing,
-          pitch: wanted.pitch,
-          zoom: wanted.zoom,
-          padding: wanted.padding,
-        });
-      } catch {
-        try {
-          map.jumpTo(camera);
-        } catch {
-          /* keep the newly loaded style even if camera restore fails */
-        }
+      } catch (error) {
+        console.error("Navigation overlays remount skipped", error);
       }
-      if (vehicleMarkerRef.current) vehicleMarkerRef.current.addTo(map);
-      if (destMarkerRef.current) destMarkerRef.current.addTo(map);
+      restoreCameraAndMarkers();
+      onStyleAppliedRef.current?.(requestedMode);
     };
-    map.once("style.load", onStyle);
+
+    let cancelled = false;
+    const pending = waitForBasemapStyle(map, () => isCurrent() && !cancelled);
     try {
       map.setStyle(basemapStyle(resolved), { diff: false });
     } catch {
-      styleKeyRef.current = "dark";
-      onStyleFallbackRef.current?.("衛星或底圖載入失敗，已退回一般地圖。");
+      pending.cancel();
+      if (!cancelled && isCurrent()) {
+        onStyleFallbackRef.current?.("衛星或底圖載入失敗，已保留上一個有效圖層。");
+      }
+      return () => {
+        cancelled = true;
+        pending.cancel();
+      };
     }
+
+    void pending.promise
+      .then(() => {
+        if (cancelled || !isCurrent()) return;
+        finishSuccess();
+      })
+      .catch((error: unknown) => {
+        if (cancelled || isStaleStyleError(error) || !isCurrent()) return;
+        onStyleFallbackRef.current?.("衛星或底圖載入失敗，已保留上一個有效圖層。");
+      });
+
+    return () => {
+      cancelled = true;
+      pending.cancel();
+    };
   }, [mapDisplayMode, styleRevision]);
 
   useEffect(() => {

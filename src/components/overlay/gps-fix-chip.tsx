@@ -15,22 +15,19 @@ function formatCoord(value: number) {
   return value.toFixed(5);
 }
 
-function formatClock(value?: number) {
-  if (!value) return "--:--:--";
-  return new Date(value).toLocaleTimeString("zh-TW", { hour12: false });
-}
-
 export function GpsFixChip({
   vehicle,
   status,
   permission,
   error,
+  tone = "dark",
   onRetry,
 }: {
   vehicle: VehiclePose;
   status: GpsStatus;
   permission: GpsPermissionState;
   error: GpsErrorCode;
+  tone?: "light" | "dark" | "satellite";
   onRetry?: () => void;
 }) {
   const live = vehicle.source === "gps";
@@ -42,12 +39,12 @@ export function GpsFixChip({
     status === "locating"
       ? "定位中…"
       : status === "denied"
-        ? "定位權限被拒，點此或右上定位鍵再試"
+        ? "定位權限被拒，點此再試"
         : status === "unavailable" && error
           ? geoErrorMessage(error)
           : live
             ? `精度 ${accuracy}`
-            : "點右上定位鍵開啟真實 GPS";
+            : "點右側定位鍵開啟 GPS";
   const retryable = Boolean(onRetry) && !live;
 
   return (
@@ -66,24 +63,26 @@ export function GpsFixChip({
           : undefined
       }
       className={cn(
-        "max-w-[min(18rem,calc(100vw-5.5rem))] rounded-xl border px-2 py-1.5 text-[10px] leading-tight shadow-lg backdrop-blur-md",
+        "max-w-[min(11.5rem,calc(100vw-5.75rem))] text-right text-[10px] leading-snug",
         retryable ? "pointer-events-auto cursor-pointer" : "pointer-events-none",
-        live
-          ? "border-emerald-400/25 bg-zinc-900/78 text-emerald-100"
-          : "border-white/12 bg-zinc-900/78 text-zinc-200",
+        tone === "light"
+          ? "text-[#1F2937] [text-shadow:0_0_2px_#fff,0_1px_2px_rgba(255,255,255,0.92)]"
+          : "text-white [text-shadow:0_0_2px_#000,0_1px_2px_rgba(0,0,0,0.88)]",
       )}
       title="定位狀態"
     >
-      <p className="truncate font-medium">{headline}</p>
-      <p className="truncate tabular-nums text-zinc-300">
+      <p className="font-medium">{headline}</p>
+      <p className="tabular-nums">
         {live
           ? `${formatCoord(vehicle.lat)}, ${formatCoord(vehicle.lng)}`
           : "等待裝置座標"}
       </p>
-      <p className="truncate text-zinc-500">
-        {formatClock(vehicle.fixedAt)} · {permissionLabel(permission)}
-        {error ? ` · ${error}` : ""}
-      </p>
+      {error || permission === "denied" ? (
+        <p>
+          {permissionLabel(permission)}
+          {error ? ` · ${error}` : ""}
+        </p>
+      ) : null}
     </div>
   );
 }

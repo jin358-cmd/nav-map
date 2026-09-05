@@ -83,6 +83,7 @@ import { snapVehicleToRoute } from "@/lib/route-snap";
 import {
   msUntilAutoSwitch,
   readMapDisplayMode,
+  resolveMapBasemap,
   writeMapDisplayMode,
 } from "@/lib/map-display-mode";
 import {
@@ -192,6 +193,8 @@ export function DrivingApp() {
   const [mapDisplayMode, setMapDisplayMode] = useState<MapDisplayMode>(() =>
     typeof window === "undefined" ? "dark" : readMapDisplayMode(),
   );
+  const [pendingMapDisplayMode, setPendingMapDisplayMode] =
+    useState<MapDisplayMode | null>(null);
   const [styleMenuOpen, setStyleMenuOpen] = useState(false);
   const [styleRevision, setStyleRevision] = useState(0);
   const [styleHint, setStyleHint] = useState<string | null>(null);
@@ -1058,7 +1061,7 @@ export function DrivingApp() {
         cameraMode={cameraMode}
         followOrientation={followOrientation}
         followVehicle={followVehicle}
-        mapDisplayMode={mapDisplayMode}
+        mapDisplayMode={pendingMapDisplayMode ?? mapDisplayMode}
         styleRevision={styleRevision}
         pickMode={pickMode}
         navigating={navigating}
@@ -1145,10 +1148,15 @@ export function DrivingApp() {
             setPickAddress(hit.address || hit.name || null);
           });
         }}
+        onStyleApplied={(mode) => {
+          writeMapDisplayMode(mode);
+          setMapDisplayMode(mode);
+          setPendingMapDisplayMode((current) => (current === mode ? null : current));
+          setStyleHint(null);
+        }}
         onStyleFallback={(message) => {
           setStyleHint(message);
-          setMapDisplayMode("dark");
-          writeMapDisplayMode("dark");
+          setPendingMapDisplayMode(null);
         }}
       />
 
@@ -1315,6 +1323,7 @@ export function DrivingApp() {
           followVehicle={followVehicle}
           gpsStatus={gpsStatus}
           mapDisplayMode={mapDisplayMode}
+          pendingMapDisplayMode={pendingMapDisplayMode}
           styleMenuOpen={styleMenuOpen}
           toolsDrawerOpen={drawerOpen}
           onLocate={() => void locate()}
@@ -1325,8 +1334,11 @@ export function DrivingApp() {
             setToolsDrawerOpen((open) => !(open ?? !landscape))
           }
           onMapDisplayMode={(mode) => {
-            writeMapDisplayMode(mode);
-            setMapDisplayMode(mode);
+            if (mode === mapDisplayMode && pendingMapDisplayMode == null) {
+              setStyleMenuOpen(false);
+              return;
+            }
+            setPendingMapDisplayMode(mode);
             setStyleMenuOpen(false);
             setStyleHint(null);
           }}
@@ -1342,12 +1354,29 @@ export function DrivingApp() {
 
       <div
         className={
-          drawerOpen
-            ? "pointer-events-none absolute bottom-[5.75rem] left-2 z-20 flex flex-col gap-1.5 sm:bottom-36 sm:left-3"
-            : "pointer-events-none absolute bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-2 z-20 flex flex-col gap-1.5 sm:left-3"
+          navigating
+            ? "pointer-events-none absolute top-[max(3.5rem,calc(env(safe-area-inset-top)+3.05rem))] right-[max(0.7rem,env(safe-area-inset-right))] z-20"
+            : "pointer-events-none absolute top-[max(7.15rem,calc(env(safe-area-inset-top)+6.65rem))] right-[max(0.7rem,env(safe-area-inset-right))] z-20 sm:top-[max(0.55rem,env(safe-area-inset-top))]"
         }
       >
-        {navigating ? (
+        <GpsFixChip
+          vehicle={vehicle}
+          status={gpsStatus}
+          permission={gpsPermission}
+          error={gpsError}
+          tone={resolveMapBasemap(mapDisplayMode)}
+          onRetry={() => void locate()}
+        />
+      </div>
+
+      {navigating ? (
+        <div
+          className={
+            drawerOpen
+              ? "pointer-events-none absolute bottom-[5.75rem] left-2 z-20 flex flex-col gap-1.5 sm:bottom-36 sm:left-3"
+              : "pointer-events-none absolute bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-2 z-20 flex flex-col gap-1.5 sm:left-3"
+          }
+        >
           <TripStatusCluster
             sample={vehicle}
             remainingMeters={
@@ -1368,25 +1397,8 @@ export function DrivingApp() {
                 : routeDurationSeconds
             }
           />
-        ) : (
-          <GpsFixChip
-            vehicle={vehicle}
-            status={gpsStatus}
-            permission={gpsPermission}
-            error={gpsError}
-            onRetry={() => void locate()}
-          />
-        )}
-        {navigating ? (
-          <GpsFixChip
-            vehicle={vehicle}
-            status={gpsStatus}
-            permission={gpsPermission}
-            error={gpsError}
-            onRetry={() => void locate()}
-          />
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
       <footer className="absolute inset-x-0 bottom-0 z-10 flex max-w-[100vw] flex-col items-center gap-1.5 overflow-visible px-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))] pb-[max(0.45rem,env(safe-area-inset-bottom))] sm:p-4 sm:pt-0">
         {parkingOpen ? (

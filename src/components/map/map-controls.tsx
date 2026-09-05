@@ -4,6 +4,10 @@ import type { ReactNode } from "react";
 import { LayoutGrid, LocateFixed } from "lucide-react";
 import { MapStyleMenu } from "@/components/overlay/map-style-menu";
 import { Button } from "@/components/ui/button";
+import {
+  mapControlButtonClass,
+  mapControlTone,
+} from "@/lib/map-control-tone";
 import { cn } from "@/lib/utils";
 import type {
   CameraMode,
@@ -18,6 +22,7 @@ type MapControlsProps = {
   followVehicle: boolean;
   gpsStatus: GpsStatus;
   mapDisplayMode: MapDisplayMode;
+  pendingMapDisplayMode?: MapDisplayMode | null;
   styleMenuOpen: boolean;
   toolsDrawerOpen?: boolean;
   onLocate: () => void;
@@ -33,6 +38,7 @@ export function MapControls({
   followVehicle,
   gpsStatus,
   mapDisplayMode,
+  pendingMapDisplayMode = null,
   styleMenuOpen,
   toolsDrawerOpen = false,
   onLocate,
@@ -47,6 +53,7 @@ export function MapControls({
     : followOrientation === "heading-up"
       ? "切換北方朝上"
       : "切換車頭向上";
+  const tone = mapControlTone(mapDisplayMode);
 
   return (
     <div className="pointer-events-auto flex flex-col items-end gap-2.5">
@@ -54,6 +61,7 @@ export function MapControls({
         label={locateLabel}
         onClick={onLocate}
         active={followVehicle}
+        tone={tone}
       >
         <LocateFixed className={cn("size-5", locating && "animate-pulse")} />
       </ControlButton>
@@ -61,6 +69,7 @@ export function MapControls({
         label={cameraMode === "3d" ? "切換 2D" : "切換 3D"}
         onClick={onToggleCamera}
         active={cameraMode === "3d"}
+        tone={tone}
       >
         <span className="text-[18px] font-bold leading-none tracking-tight">
           {cameraMode === "3d" ? "3D" : "2D"}
@@ -68,7 +77,9 @@ export function MapControls({
       </ControlButton>
       <MapStyleMenu
         mode={mapDisplayMode}
+        pendingMode={pendingMapDisplayMode}
         open={styleMenuOpen}
+        tone={tone}
         onChange={onMapDisplayMode}
         onToggle={onToggleStyleMenu}
       />
@@ -79,6 +90,7 @@ export function MapControls({
           active={toolsDrawerOpen}
           expanded={toolsDrawerOpen}
           controls="navpilot-function-drawer"
+          tone={tone}
         >
           <LayoutGrid className="size-5" />
         </ControlButton>
@@ -94,6 +106,7 @@ function ControlButton({
   active,
   expanded,
   controls,
+  tone,
 }: {
   children: ReactNode;
   label: string;
@@ -101,6 +114,7 @@ function ControlButton({
   active?: boolean;
   expanded?: boolean;
   controls?: string;
+  tone: ReturnType<typeof mapControlTone>;
 }) {
   return (
     <Button
@@ -113,8 +127,8 @@ function ControlButton({
       aria-controls={controls}
       onClick={onClick}
       className={cn(
-        "size-12 rounded-2xl border-zinc-500/55 bg-zinc-800/92 text-zinc-100 shadow-lg backdrop-blur-md hover:bg-zinc-700 disabled:border-zinc-700 disabled:bg-zinc-900/80 disabled:text-zinc-500 touch-manipulation",
-        active && "border-cyan-300/80 bg-zinc-700 text-cyan-200",
+        "size-12 rounded-2xl backdrop-blur-md disabled:border-zinc-700 disabled:bg-zinc-900/80 disabled:text-zinc-500 touch-manipulation",
+        mapControlButtonClass(tone, active),
       )}
     >
       {children}
