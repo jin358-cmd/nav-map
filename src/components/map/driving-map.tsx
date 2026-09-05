@@ -9,10 +9,11 @@ import {
   setVehicleMarkerNavigating,
 } from "@/components/map/vehicle-marker";
 import {
-  DRIVING_PADDING_RATIO,
+  BROWSE_VEHICLE_Y,
   DRIVING_PITCH,
   DRIVING_ZOOM,
   DRIVING_ZOOM_MOBILE,
+  NAV_VEHICLE_Y,
   INTERSECTION_PITCH,
   INTERSECTION_ZOOM,
   INTERSECTION_ZOOM_MOBILE,
@@ -158,16 +159,21 @@ function drivingPadding(
   overlay?: DrivingMapProps["overlayPadding"],
 ) {
   const compact = isCompactViewport(width);
-  const bottomPad = navigating ? (compact ? 88 : 104) : compact ? 96 : 118;
+  const bottomPad = navigating
+    ? Math.max(compact ? 72 : 84, Math.round(height * (compact ? 0.16 : 0.14)))
+    : compact
+      ? 96
+      : 118;
   /** 左右必須對稱，否則車輛／路線會偏離畫面水平中線。 */
   const sidePad = 12;
+  const vehicleY = navigating && mode === "3d" ? NAV_VEHICLE_Y : BROWSE_VEHICLE_Y;
   const topPad =
     mode !== "3d"
       ? compact
         ? 108
         : 96
       : Math.max(
-          Math.round((height - bottomPad) * DRIVING_PADDING_RATIO),
+          Math.round(height * (2 * vehicleY - 1) + bottomPad),
           compact ? 96 : 80,
         );
   if (!navigating || !overlay) {
@@ -614,7 +620,7 @@ export function DrivingMap({
               routeMetersRef.current,
               distanceToNextRef.current,
               true,
-              (now / 1600) % 1,
+              (now / 1200) % 1,
               {
                 cameraMode: modeRef.current,
                 isTurn: isTurnRef.current,

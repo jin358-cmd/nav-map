@@ -21,7 +21,7 @@ export const GUIDANCE_PATH_SOURCE_ID = "guidance-path";
 export const GUIDANCE_LAYER_ID = "guidance-arrows-layer";
 export const GUIDANCE_PATH_LAYER_ID = "guidance-path-layer";
 export const GUIDANCE_PATH_GLOW_ID = "guidance-path-glow";
-const CHEVRON_IMAGE_ID = "maneuver-marquee-billboard-v2";
+const CHEVRON_IMAGE_ID = "maneuver-marquee-billboard-v3";
 
 function emptyCollection() {
   return { type: "FeatureCollection" as const, features: [] };
@@ -114,15 +114,15 @@ function standingArrowSize(): ExpressionSpecification {
     ["linear"],
     ["zoom"],
     14,
-    1.04,
+    2.08,
     16.4,
-    1.42,
+    2.84,
     17.4,
-    1.54,
+    3.08,
     18.2,
-    1.6,
+    3.2,
     19.2,
-    1.62,
+    3.24,
   ];
 }
 
@@ -138,7 +138,7 @@ function ensureChevronLayer(map: MapLibreMap) {
         "icon-image": CHEVRON_IMAGE_ID,
         "icon-size": size,
         "icon-anchor": "bottom",
-        "icon-offset": [0, -10],
+        "icon-offset": [0, -36],
         "icon-rotate": ["get", "bearing"],
         "icon-rotation-alignment": "map",
         "icon-pitch-alignment": "viewport",
@@ -157,7 +157,7 @@ function ensureChevronLayer(map: MapLibreMap) {
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-image", CHEVRON_IMAGE_ID);
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-size", size);
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-anchor", "bottom");
-  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-offset", [0, -10]);
+  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-offset", [0, -36]);
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-rotation-alignment", "map");
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-pitch-alignment", "viewport");
 }

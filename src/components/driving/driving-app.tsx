@@ -9,9 +9,7 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
-import { X } from "lucide-react";
 import { MapControls } from "@/components/map/map-controls";
-import { Button } from "@/components/ui/button";
 import { AddressSearch } from "@/components/overlay/address-search";
 import { PlaceEditor } from "@/components/overlay/place-editor";
 import { SavedPlaceBar } from "@/components/overlay/saved-place-bar";
@@ -98,7 +96,9 @@ import {
 } from "@/lib/saved-places";
 import { deriveTrafficIntel } from "@/lib/traffic-intel";
 import { GpsFixChip } from "@/components/overlay/gps-fix-chip";
+import { SpeedHud } from "@/components/overlay/speed-hud";
 import { TripStatusCluster } from "@/components/overlay/trip-status-cluster";
+import { unresolvedSpeedLimit } from "@/lib/speed-limit";
 import {
   fetchAccidentReports,
   planDrivingRoute,
@@ -344,10 +344,14 @@ export function DrivingApp() {
       ? activeNavigationStep.cueMeters
       : (maneuver?.distanceMeters ?? activeNavigationStep?.distanceMeters ?? 0);
   const turnManeuver = isTurnManeuver(activeNavigationStep);
+  const followingStep = navigationProgress
+    ? (routeSteps[navigationProgress.stepIndex + 1] ?? null)
+    : (routeSteps[1] ?? null);
   const nextAlertPhase = deriveManeuverAlertPhase(
     navigating,
     turnManeuver,
     distanceToNextMeters,
+    isTurnManeuver(followingStep) ? followingStep?.distanceMeters : undefined,
   );
   const approachingIntersection = maneuverAlertActive(nextAlertPhase);
 
@@ -1248,31 +1252,18 @@ export function DrivingApp() {
       ) : null}
 
       {destination && navigating ? (
-        <>
-          <div className="absolute top-[max(0.45rem,env(safe-area-inset-top))] left-[max(0.5rem,env(safe-area-inset-left))] right-[max(3.75rem,calc(env(safe-area-inset-right)+3.25rem))] z-30 min-w-0">
-            <NextIntersectionHud
-              ref={navCardRef}
-              step={activeNavigationStep}
-              distanceMeters={distanceToNextMeters}
-              offRoute={navigationProgress?.offRoute ?? false}
-              rerouting={rerouting}
-              reroutePending={reroutePending}
-              junctionFocus={approachingIntersection}
-              voiceEnabled={voiceEnabled}
-              onToggleVoice={() => setVoiceEnabled((value) => !value)}
-            />
-          </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label="結束導航"
-            onClick={exitNavigation}
-            className="pointer-events-auto absolute top-[max(0.4rem,env(safe-area-inset-top))] right-[max(0.65rem,env(safe-area-inset-right))] z-30 size-11 rounded-full border border-white/12 bg-black/72 text-zinc-200 shadow-[0_8px_24px_rgba(0,0,0,0.45)] backdrop-blur-xl hover:bg-black/85 hover:text-white"
-          >
-            <X className="size-5" />
-          </Button>
-        </>
+        <div className="hud-anchor-maneuver">
+          <NextIntersectionHud
+            ref={navCardRef}
+            step={activeNavigationStep}
+            followingStep={followingStep}
+            distanceMeters={distanceToNextMeters}
+            offRoute={navigationProgress?.offRoute ?? false}
+            rerouting={rerouting}
+            reroutePending={reroutePending}
+            junctionFocus={approachingIntersection}
+          />
+        </div>
       ) : (
         <div className="pointer-events-auto absolute top-[max(0.45rem,env(safe-area-inset-top))] left-[max(0.5rem,env(safe-area-inset-left))] right-[max(0.5rem,env(safe-area-inset-right))] z-20 min-w-0 max-w-full sm:right-[max(5.5rem,calc(env(safe-area-inset-right)+4.75rem))]">
           {destination ? (
@@ -1315,22 +1306,33 @@ export function DrivingApp() {
         </div>
       )}
 
-      <div className="pointer-events-auto absolute top-[42%] right-[max(0.65rem,env(safe-area-inset-right))] z-20 -translate-y-1/2 sm:top-28 sm:translate-y-0">
+      <div className="hud-anchor-rail">
         <MapControls
           cameraMode={cameraMode}
           followOrientation={followOrientation}
           followVehicle={followVehicle}
           gpsStatus={gpsStatus}
+          heading={vehicle.heading}
           mapDisplayMode={mapDisplayMode}
           pendingMapDisplayMode={pendingMapDisplayMode}
           styleMenuOpen={styleMenuOpen}
           toolsDrawerOpen={drawerOpen}
+          navigating={navigating}
+          voiceEnabled={voiceEnabled}
+          trafficVisible={layerVisibility.congestion}
           onLocate={() => void locate()}
           onToggleCamera={() =>
             setCameraMode((mode) => (mode === "3d" ? "2d" : "3d"))
           }
           onToggleToolsDrawer={() =>
             setToolsDrawerOpen((open) => !(open ?? !landscape))
+          }
+          onToggleVoice={() => setVoiceEnabled((value) => !value)}
+          onToggleTraffic={() =>
+            setLayerVisibility((current) => ({
+              ...current,
+              congestion: !current.congestion,
+            }))
           }
           onMapDisplayMode={(mode) => {
             if (mode === mapDisplayMode && pendingMapDisplayMode == null) {
@@ -1351,13 +1353,7 @@ export function DrivingApp() {
         </div>
       ) : null}
 
-      <div
-        className={
-          navigating
-            ? "pointer-events-none absolute top-[max(3.5rem,calc(env(safe-area-inset-top)+3.05rem))] right-[max(0.7rem,env(safe-area-inset-right))] z-20"
-            : "pointer-events-none absolute top-[max(7.15rem,calc(env(safe-area-inset-top)+6.65rem))] right-[max(0.7rem,env(safe-area-inset-right))] z-20 sm:top-[max(0.55rem,env(safe-area-inset-top))]"
-        }
-      >
+      <div className={navigating ? "hud-anchor-gps" : "hud-anchor-gps hud-anchor-gps--browse"}>
         <GpsFixChip
           vehicle={vehicle}
           status={gpsStatus}
@@ -1371,13 +1367,10 @@ export function DrivingApp() {
       {navigating ? (
         <div
           className={
-            drawerOpen
-              ? "pointer-events-none absolute bottom-[5.75rem] left-2 z-20 flex flex-col gap-1.5 sm:bottom-36 sm:left-3"
-              : "pointer-events-none absolute bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-2 z-20 flex flex-col gap-1.5 sm:left-3"
+            drawerOpen ? "hud-anchor-trip hud-anchor-trip--drawer" : "hud-anchor-trip"
           }
         >
           <TripStatusCluster
-            sample={vehicle}
             remainingMeters={
               navigationProgress
                 ? Math.max(
@@ -1396,6 +1389,12 @@ export function DrivingApp() {
                 : routeDurationSeconds
             }
           />
+        </div>
+      ) : null}
+
+      {navigating ? (
+        <div className="hud-anchor-speed">
+          <SpeedHud sample={vehicle} limit={unresolvedSpeedLimit()} />
         </div>
       ) : null}
 
@@ -1492,6 +1491,12 @@ export function DrivingApp() {
         >
         <RoadInformationCard
           items={intel}
+          navigating={navigating}
+          cameraMode={cameraMode}
+          onToggleCamera={() =>
+            setCameraMode((mode) => (mode === "3d" ? "2d" : "3d"))
+          }
+          onCancelNavigation={navigating ? exitNavigation : undefined}
           origin={origin}
           trafficOrigin={trafficOrigin}
           disasterOrigin={disasterOrigin}

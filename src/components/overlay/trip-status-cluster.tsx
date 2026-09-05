@@ -1,16 +1,11 @@
 "use client";
 
-import { SpeedHud } from "@/components/overlay/speed-hud";
 import { formatEtaClock } from "@/lib/travel-mode";
-import { unresolvedSpeedLimit } from "@/lib/speed-limit";
-import type { SpeedSample } from "@/lib/speed-estimation";
 
 export function TripStatusCluster({
-  sample,
   remainingMeters,
   remainingSeconds,
 }: {
-  sample: SpeedSample;
   remainingMeters: number | null;
   remainingSeconds: number | null;
 }) {
@@ -21,40 +16,33 @@ export function TripStatusCluster({
   const km =
     remainingMeters != null
       ? remainingMeters >= 10000
-        ? `${(remainingMeters / 1000).toFixed(0)} 公里`
-        : `${(remainingMeters / 1000).toFixed(1)} 公里`
+        ? (remainingMeters / 1000).toFixed(0)
+        : (remainingMeters / 1000).toFixed(1)
       : "--";
   const eta =
     remainingSeconds != null ? formatEtaClock(remainingSeconds) : "--";
 
   return (
-    <div className="pointer-events-none flex max-w-[min(18.5rem,calc(100vw-6.5rem))] flex-col gap-2">
-      <SpeedHud sample={sample} limit={unresolvedSpeedLimit()} />
-      <div className="rounded-2xl border border-violet-200/25 bg-violet-700/50 px-3.5 py-2.5 text-white shadow-lg">
-        <div>
-          <p className="text-[10px] font-medium leading-none text-zinc-200">
-            剩餘時間
-          </p>
-          <p className="mt-0.5 text-[18px] font-bold leading-tight">
-            {minutes != null ? `${minutes} 分鐘` : "--"}
-          </p>
-        </div>
-        <div className="mt-1.5">
-          <p className="text-[10px] font-medium leading-none text-zinc-200">
-            剩餘距離
-          </p>
-          <p className="mt-0.5 text-[17px] font-semibold leading-tight tabular-nums text-zinc-100">
-            {km}
-          </p>
-        </div>
-        <div className="mt-1.5">
-          <p className="text-[10px] font-medium leading-none text-zinc-200">
-            預計抵達時間
-          </p>
-          <p className="mt-0.5 text-[17px] font-semibold leading-tight tabular-nums text-yellow-300">
-            {eta}
-          </p>
-        </div>
+    <div className="hud-trip-card pointer-events-none grid grid-cols-3 divide-x divide-white/15 rounded-2xl border border-violet-200/20 bg-violet-700/50 px-1 py-2 text-white shadow-lg">
+      <div className="min-w-0 px-2">
+        <p className="text-[10px] font-medium leading-none text-zinc-200">剩餘時間</p>
+        <p className="mt-0.5 truncate text-[18px] font-extrabold leading-tight text-yellow-300">
+          {minutes != null ? `${minutes}` : "--"}
+          <span className="ml-0.5 text-[11px] font-semibold">分鐘</span>
+        </p>
+      </div>
+      <div className="min-w-0 px-2">
+        <p className="text-[10px] font-medium leading-none text-zinc-200">剩餘距離</p>
+        <p className="mt-0.5 truncate text-[17px] font-semibold leading-tight tabular-nums text-white">
+          {km}
+          <span className="ml-0.5 text-[11px] font-medium">km</span>
+        </p>
+      </div>
+      <div className="min-w-0 px-2">
+        <p className="text-[10px] font-medium leading-none text-zinc-200">預計抵達</p>
+        <p className="mt-0.5 truncate text-[17px] font-semibold leading-tight tabular-nums text-white">
+          {eta}
+        </p>
       </div>
     </div>
   );

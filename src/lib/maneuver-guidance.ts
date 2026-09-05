@@ -79,12 +79,14 @@ export function deriveManeuverAlertPhase(
   navigating: boolean,
   isTurn: boolean,
   distanceMeters: number,
+  nextTurnDistance?: number,
 ): ManeuverAlertPhase {
   const next = nextManeuverAlertPhase(
     navigating,
     isTurn,
     distanceMeters,
     latchedAlertPhase,
+    nextTurnDistance,
   );
   latchedAlertPhase = next;
   return next;
@@ -95,8 +97,23 @@ export function nextManeuverAlertPhase(
   isTurn: boolean,
   distanceMeters: number,
   previous: ManeuverAlertPhase,
+  nextTurnDistance?: number,
 ): ManeuverAlertPhase {
-  if (!navigating || !isTurn || !Number.isFinite(distanceMeters)) {
+  if (!navigating) {
+    latchedAlertPhase = "cruise";
+    return "cruise";
+  }
+  const chained =
+    (previous === "approach" || previous === "imminent") &&
+    nextTurnDistance != null &&
+    Number.isFinite(nextTurnDistance) &&
+    nextTurnDistance <= MANEUVER_APPROACH_METERS;
+  if (!isTurn || !Number.isFinite(distanceMeters)) {
+    if (chained && nextTurnDistance != null) {
+      return nextTurnDistance <= MANEUVER_IMMINENT_METERS
+        ? "imminent"
+        : "approach";
+    }
     latchedAlertPhase = "cruise";
     return "cruise";
   }

@@ -80,14 +80,14 @@ export function lineLengthMeters(line: [number, number][]) {
   return total;
 }
 
-/** 依可視路段長度與 zoom 動態間距，目標約 6～14 顆。 */
+/** 依可視路段長度與 zoom 動態間距，目標約 8～16 顆。 */
 export function marqueeSpacingMeters(pathLength: number, zoom: number) {
-  if (pathLength <= 0) return 12;
-  const zoomScale = zoom >= 18.2 ? 0.88 : zoom >= 17.2 ? 1 : 1.12;
+  if (pathLength <= 0) return 9;
+  const zoomScale = zoom >= 18.2 ? 0.82 : zoom >= 17.2 ? 0.94 : 1.05;
   const desired = Math.round(
-    Math.min(14, Math.max(6, pathLength / (11.5 * zoomScale))),
+    Math.min(16, Math.max(8, pathLength / (8.4 * zoomScale))),
   );
-  return Math.min(17, Math.max(8.5, pathLength / desired));
+  return Math.min(13, Math.max(6.5, pathLength / desired));
 }
 
 export function guidanceArrowsAlong(
@@ -129,12 +129,12 @@ export function guidanceArrowsAlong(
   return arrows.map((arrow, index) => {
     let dist = Math.abs(index - head);
     dist = Math.min(dist, count - dist);
-    const highlight = Math.max(0, 1 - dist / 1.7);
+    const highlight = dist < 0.55 ? 1 : dist < 1.15 ? 0.42 : 0.16;
     return {
       ...arrow,
       opacity: Math.max(
-        0.36,
-        Math.min(1, intensity * (0.42 + 0.58 * highlight)),
+        0.18,
+        Math.min(1, intensity * (0.2 + 0.8 * highlight)),
       ),
     };
   });

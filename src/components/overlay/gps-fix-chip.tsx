@@ -12,7 +12,7 @@ function permissionLabel(state: GpsPermissionState) {
 }
 
 function formatCoord(value: number) {
-  return value.toFixed(5);
+  return value.toFixed(6);
 }
 
 export function GpsFixChip({
@@ -33,18 +33,14 @@ export function GpsFixChip({
   const live = vehicle.source === "gps";
   const accuracy =
     live && typeof vehicle.accuracy === "number"
-      ? `${Math.round(vehicle.accuracy)}m`
-      : "--";
-  const headline =
-    status === "locating"
-      ? "定位中…"
-      : status === "denied"
-        ? "定位權限被拒，點此再試"
-        : status === "unavailable" && error
-          ? geoErrorMessage(error)
-          : live
-            ? `精度 ${accuracy}`
-            : "點右側定位鍵開啟 GPS";
+      ? `GPS ± ${Math.round(vehicle.accuracy)} m`
+      : status === "locating"
+        ? "GPS 定位中…"
+        : status === "denied"
+          ? "定位權限被拒"
+          : status === "unavailable" && error
+            ? geoErrorMessage(error)
+            : "GPS --";
   const retryable = Boolean(onRetry) && !live;
 
   return (
@@ -63,7 +59,7 @@ export function GpsFixChip({
           : undefined
       }
       className={cn(
-        "max-w-[min(11.5rem,calc(100vw-5.75rem))] text-right text-[10px] leading-snug",
+        "max-w-[min(9.5rem,28vw)] text-right text-[10px] leading-snug",
         retryable ? "pointer-events-auto cursor-pointer" : "pointer-events-none",
         tone === "light"
           ? "text-[#1F2937] [text-shadow:0_0_2px_#fff,0_1px_2px_rgba(255,255,255,0.92)]"
@@ -71,12 +67,15 @@ export function GpsFixChip({
       )}
       title="定位狀態"
     >
-      <p className="font-medium">{headline}</p>
-      <p className="tabular-nums">
-        {live
-          ? `${formatCoord(vehicle.lat)}, ${formatCoord(vehicle.lng)}`
-          : "等待裝置座標"}
-      </p>
+      <p className="font-medium">{accuracy}</p>
+      {live ? (
+        <>
+          <p className="tabular-nums">{formatCoord(vehicle.lat)}</p>
+          <p className="tabular-nums">{formatCoord(vehicle.lng)}</p>
+        </>
+      ) : (
+        <p>等待座標</p>
+      )}
       {error || permission === "denied" ? (
         <p>
           {permissionLabel(permission)}

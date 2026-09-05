@@ -1,42 +1,10 @@
 "use client";
 
 import { forwardRef } from "react";
-import {
-  ArrowUp,
-  CornerUpLeft,
-  CornerUpRight,
-  Flag,
-  RotateCw,
-  Undo2,
-  Volume2,
-  VolumeX,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { TurnArrowIcon, turnSideFromStep } from "@/components/overlay/turn-arrow-icon";
 import { formatDistance } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { RouteStep } from "@/types/domain";
-
-function TurnGlyph({
-  step,
-  junction,
-}: {
-  step: RouteStep | null;
-  junction?: boolean;
-}) {
-  const type = step?.type ?? "";
-  const modifier = step?.modifier ?? "";
-  const className = junction
-    ? "size-12 text-[#fff7ed]"
-    : "size-10 text-cyan-200";
-  if (type === "arrive") return <Flag className={className} />;
-  if (type.includes("roundabout") || type.includes("rotary")) {
-    return <RotateCw className={className} />;
-  }
-  if (modifier.includes("uturn")) return <Undo2 className={className} />;
-  if (modifier.includes("left")) return <CornerUpLeft className={className} />;
-  if (modifier.includes("right")) return <CornerUpRight className={className} />;
-  return <ArrowUp className={className} />;
-}
 
 function shortTurn(step: RouteStep | null) {
   if (!step) return "繼續前行";
@@ -44,70 +12,82 @@ function shortTurn(step: RouteStep | null) {
   return step.action || "繼續前行";
 }
 
-function shortGuidance(step: RouteStep | null, distanceMeters: number) {
-  const turn = shortTurn(step);
-  if (step?.type === "arrive") return turn;
-  return `${formatDistance(distanceMeters)}後${turn}`;
-}
-
 export const NextIntersectionHud = forwardRef<
   HTMLDivElement,
   {
     step: RouteStep | null;
+    followingStep?: RouteStep | null;
     distanceMeters: number;
     offRoute: boolean;
     rerouting?: boolean;
     reroutePending?: boolean;
     junctionFocus?: boolean;
-    voiceEnabled: boolean;
-    onToggleVoice: () => void;
   }
 >(function NextIntersectionHud(
   {
     step,
+    followingStep = null,
     distanceMeters,
     offRoute,
     rerouting = false,
     reroutePending = false,
     junctionFocus = false,
-    voiceEnabled,
-    onToggleVoice,
   },
   ref,
 ) {
+  const turn = shortTurn(step);
+  const side = turnSideFromStep(step);
+  const following =
+    followingStep && followingStep.type !== "arrive"
+      ? `接下來 ${formatDistance(followingStep.distanceMeters)} ${followingStep.action}${
+          followingStep.roadName ? ` ${followingStep.roadName}` : ""
+        }`
+      : null;
+
   return (
     <div
       ref={ref}
       className={cn(
-        "navigation-instruction-card pointer-events-auto w-full min-w-0 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl",
+        "navigation-instruction-card pointer-events-none w-full min-w-0 shadow-[0_8px_32px_rgba(0,0,0,0.5)]",
         junctionFocus
-          ? "navigation-instruction-card--junction border border-orange-300/50 text-[#fff7ed]"
-          : "border border-cyan-300/25 bg-black/78 text-white",
+          ? "navigation-instruction-card--junction border border-orange-300/45 text-[#fff7ed]"
+          : "border border-white/12 bg-black/72 text-white",
       )}
     >
       <div className="navigation-instruction-content">
         <div
           className={cn(
-            "navigation-turn-icon flex shrink-0 items-center justify-center rounded-2xl",
+            "navigation-turn-icon flex shrink-0 items-center justify-center rounded-xl",
             junctionFocus
-              ? "navigation-turn-icon--signal bg-black/12"
-              : "bg-cyan-400/15",
+              ? "navigation-turn-icon--signal bg-emerald-500 text-white"
+              : "bg-white/12 text-white",
           )}
         >
-          <TurnGlyph step={step} junction={junctionFocus} />
+          <TurnArrowIcon side={side} className="p-1.5" />
         </div>
         <div className="min-w-0 text-left">
           <p className="navigation-guidance truncate tabular-nums tracking-tight">
-            {shortGuidance(step, distanceMeters)}
+            {formatDistance(distanceMeters)}
           </p>
           <p
             className={cn(
               "navigation-road-name truncate",
-              junctionFocus ? "text-[#ffedd5]" : "text-zinc-300",
+              junctionFocus ? "text-[#ffedd5]" : "text-zinc-200",
             )}
           >
-            {step?.roadName || (step?.type === "arrive" ? "目的地" : "沿目前道路")}
+            {turn}
+            {step?.roadName ? ` ${step.roadName}` : ""}
           </p>
+          {following ? (
+            <p
+              className={cn(
+                "mt-0.5 truncate text-[11px]",
+                junctionFocus ? "text-orange-100/90" : "text-zinc-400",
+              )}
+            >
+              {following}
+            </p>
+          ) : null}
           {rerouting ? (
             <p
               className={cn(
@@ -128,26 +108,6 @@ export const NextIntersectionHud = forwardRef<
             </p>
           ) : null}
         </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          aria-label={voiceEnabled ? "關閉 AI 語音" : "開啟 AI 語音"}
-          aria-pressed={voiceEnabled}
-          onClick={onToggleVoice}
-          className={cn(
-            "navigation-audio-button shrink-0 hover:bg-white/10",
-            junctionFocus
-              ? "text-[#fff7ed] hover:text-white"
-              : "text-zinc-300 hover:text-white",
-          )}
-        >
-          {voiceEnabled ? (
-            <Volume2 className="size-5" />
-          ) : (
-            <VolumeX className="size-5" />
-          )}
-        </Button>
       </div>
     </div>
   );

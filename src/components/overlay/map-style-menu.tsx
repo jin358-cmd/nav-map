@@ -42,7 +42,7 @@ export function MapStyleMenu({
         title="地圖顯示模式"
         onClick={onToggle}
         className={cn(
-          "size-12 rounded-2xl backdrop-blur-md disabled:border-zinc-700 disabled:bg-zinc-900/80 disabled:text-zinc-500",
+          "size-12 rounded-full backdrop-blur-md disabled:border-zinc-700 disabled:bg-zinc-900/80 disabled:text-zinc-500",
           mapControlButtonClass(tone, open),
         )}
       >

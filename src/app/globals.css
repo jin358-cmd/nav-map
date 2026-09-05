@@ -149,26 +149,6 @@
   }
 }
 
-.function-drawer {
-  transform: translateY(0);
-  opacity: 1;
-  transition:
-    transform 240ms ease,
-    opacity 240ms ease;
-}
-
-.function-drawer--closed {
-  transform: translateY(calc(100% + 1.25rem));
-  opacity: 0;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .function-drawer {
-    transition: none;
-  }
-}
-
 .yt-music-mini iframe {
   width: 100% !important;
   height: 100% !important;
@@ -398,13 +378,84 @@
   color: #b8c4d4 !important;
 }
 
+.hud-anchor-maneuver {
+  position: absolute;
+  top: max(0.5rem, env(safe-area-inset-top));
+  left: max(0.5rem, env(safe-area-inset-left));
+  z-index: 30;
+  width: min(42vw, 22rem);
+  max-width: calc(100vw - 5.75rem - env(safe-area-inset-right));
+}
+
+.hud-anchor-gps {
+  position: absolute;
+  top: max(0.45rem, env(safe-area-inset-top));
+  right: max(0.7rem, env(safe-area-inset-right));
+  z-index: 25;
+}
+
+.hud-anchor-gps--browse {
+  top: max(7.1rem, calc(env(safe-area-inset-top) + 6.6rem));
+}
+
+@media (min-width: 640px) {
+  .hud-anchor-gps--browse {
+    top: max(0.55rem, env(safe-area-inset-top));
+  }
+}
+
+.hud-anchor-rail {
+  position: absolute;
+  top: 42%;
+  right: max(0.65rem, env(safe-area-inset-right));
+  z-index: 20;
+  transform: translateY(-50%);
+}
+
+.hud-anchor-trip {
+  position: absolute;
+  left: max(0.5rem, env(safe-area-inset-left));
+  bottom: max(0.75rem, env(safe-area-inset-bottom));
+  z-index: 20;
+  width: min(58vw, 22rem);
+  max-width: calc(100vw - 7.5rem - env(safe-area-inset-right));
+}
+
+.hud-anchor-trip--drawer {
+  bottom: max(5.75rem, calc(env(safe-area-inset-bottom) + 5.1rem));
+}
+
+.hud-anchor-speed {
+  position: absolute;
+  right: max(0.7rem, env(safe-area-inset-right));
+  bottom: max(0.75rem, env(safe-area-inset-bottom));
+  z-index: 20;
+}
+
+.hud-trip-card {
+  width: 100%;
+}
+
+@media (orientation: landscape) {
+  .hud-anchor-rail {
+    top: 50%;
+  }
+
+  .hud-anchor-maneuver {
+    width: min(38vw, 20rem);
+  }
+
+  .hud-anchor-trip {
+    width: min(46vw, 20rem);
+  }
+}
+
 .navigation-instruction-card {
   position: relative;
-  width: min(520px, 42vw);
-  max-width: calc(100vw - 5.5rem);
+  width: 100%;
   max-height: min(220px, 32vh);
-  padding: 14px 16px;
-  border-radius: 22px;
+  padding: 0.75rem 0.85rem;
+  border-radius: 1.15rem;
   overflow: hidden;
 }
 
@@ -414,7 +465,7 @@
 }
 
 .navigation-turn-icon--signal {
-  animation: turn-signal 0.7s ease-in-out infinite;
+  animation: turn-signal 0.64s steps(2, end) infinite;
 }
 
 @keyframes turn-signal {
@@ -435,14 +486,14 @@
 
 .navigation-instruction-content {
   display: grid;
-  grid-template-columns: 64px minmax(0, 1fr) 40px;
+  grid-template-columns: 3.4rem minmax(0, 1fr);
   align-items: center;
-  gap: 10px;
+  gap: 0.65rem;
 }
 
 .navigation-turn-icon {
-  width: 64px;
-  height: 64px;
+  width: 3.4rem;
+  height: 3.4rem;
 }
 
 .navigation-guidance {
@@ -463,28 +514,28 @@
   text-overflow: ellipsis;
 }
 
-.navigation-audio-button {
-  width: 40px;
-  height: 40px;
-}
-
 @media (orientation: portrait) {
+  .hud-anchor-maneuver {
+    width: calc(100vw - 5.25rem - env(safe-area-inset-left) - env(safe-area-inset-right));
+    max-width: calc(100vw - 5rem);
+  }
+
   .navigation-instruction-card {
     width: 100%;
     max-width: 100%;
     max-height: 168px;
-    padding: 12px 12px;
-    border-radius: 18px;
+    padding: 0.65rem 0.7rem;
+    border-radius: 1rem;
   }
 
   .navigation-instruction-content {
-    grid-template-columns: 52px minmax(0, 1fr) 36px;
-    gap: 8px;
+    grid-template-columns: 3rem minmax(0, 1fr);
+    gap: 0.5rem;
   }
 
   .navigation-turn-icon {
-    width: 52px;
-    height: 52px;
+    width: 3rem;
+    height: 3rem;
   }
 
   .navigation-guidance {
@@ -493,11 +544,6 @@
 
   .navigation-road-name {
     font-size: clamp(12px, 3.3vw, 14px);
-  }
-
-  .navigation-audio-button {
-    width: 36px;
-    height: 36px;
   }
 }
 
