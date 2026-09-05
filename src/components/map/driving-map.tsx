@@ -46,7 +46,11 @@ import {
 import { upsertIntelligenceLayers } from "@/lib/map-layers";
 import { configureMapLibreWorker } from "@/lib/maplibre-worker";
 import { formatTaiwanDisplayAddress } from "@/lib/geocoding/format-taiwan-display-address";
-import { applyResolvedTheme, basemapStyle } from "@/lib/map-basemap";
+import {
+  applyResolvedTheme,
+  basemapStyle,
+  detectAppliedBasemap,
+} from "@/lib/map-basemap";
 import { resolveMapBasemap } from "@/lib/map-display-mode";
 import {
   isLiveStyleGeneration,
@@ -721,7 +725,7 @@ export function DrivingMap({
       if (!isStyleReady(map)) return;
       const visible = layerVisibilityRef.current;
       try {
-        applyResolvedTheme(map, resolveMapBasemap(mapDisplayModeRef.current));
+        applyResolvedTheme(map, styleKeyRef.current);
         upsertIntelligenceLayers(
           map,
           routeRef.current,
@@ -1052,6 +1056,7 @@ export function DrivingMap({
 
     const finishSuccess = () => {
       if (!isCurrent() || !isStyleReady(map)) return;
+      if (detectAppliedBasemap(map) !== resolved) return;
       styleKeyRef.current = resolved;
       inFlightStyleRef.current = null;
       try {
@@ -1107,7 +1112,11 @@ export function DrivingMap({
     };
 
     let cancelled = false;
-    const pending = waitForBasemapStyle(map, () => isCurrent() && !cancelled);
+    const pending = waitForBasemapStyle(
+      map,
+      () => isCurrent() && !cancelled,
+      resolved,
+    );
     try {
       map.setStyle(basemapStyle(resolved), { diff: false });
     } catch {

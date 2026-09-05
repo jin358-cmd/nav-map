@@ -1,4 +1,5 @@
 import type { Map as MapLibreMap } from "maplibre-gl";
+import { detectAppliedBasemap } from "@/lib/map-basemap";
 
 export function isLiveStyleGeneration(latest: number, generation: number) {
   return latest === generation;
@@ -28,22 +29,31 @@ function errorMessage(error: unknown) {
 export function waitForBasemapStyle(
   map: MapLibreMap,
   isCurrent: () => boolean,
+  expected: "light" | "dark" | "satellite",
   timeoutMs = 14000,
 ): { promise: Promise<void>; cancel: () => void } {
   let settled = false;
   let timer = 0;
+  let poll = 0;
   let fulfill: (error?: Error) => void = () => undefined;
 
-  function onIdle() {
+  function matchesExpected() {
+    const kind = detectAppliedBasemap(map);
+    return kind === expected;
+  }
+
+  function trySettle() {
+    if (settled) return;
     if (!isCurrent()) {
       fulfill(new Error("stale-style-load"));
       return;
     }
-    if (!styleIsUsable(map)) {
-      fulfill(new Error("style-not-ready"));
-      return;
-    }
+    if (!styleIsUsable(map) || !matchesExpected()) return;
     fulfill();
+  }
+
+  function onIdle() {
+    trySettle();
   }
 
   function onStyleLoad() {
@@ -53,16 +63,13 @@ export function waitForBasemapStyle(
     }
     requestAnimationFrame(() => {
       if (settled) return;
-      try {
-        if (map.loaded() && styleIsUsable(map)) {
-          fulfill();
-          return;
-        }
-      } catch {
-        /* wait for idle */
-      }
-      map.once("idle", onIdle);
+      trySettle();
+      if (!settled) map.once("idle", onIdle);
     });
+  }
+
+  function onStyleData() {
+    trySettle();
   }
 
   function onError(event: { error?: unknown; sourceId?: string }) {
@@ -83,9 +90,11 @@ export function waitForBasemapStyle(
       if (settled) return;
       settled = true;
       map.off("style.load", onStyleLoad);
+      map.off("styledata", onStyleData);
       map.off("idle", onIdle);
       map.off("error", onError);
       window.clearTimeout(timer);
+      window.clearInterval(poll);
       if (error) reject(error);
       else resolve();
     };
@@ -94,8 +103,11 @@ export function waitForBasemapStyle(
       fulfill(new Error("style-timeout"));
     }, timeoutMs);
 
-    map.once("style.load", onStyleLoad);
+    map.on("style.load", onStyleLoad);
+    map.on("styledata", onStyleData);
+    map.on("idle", onIdle);
     map.on("error", onError);
+    poll = window.setInterval(trySettle, 200);
   });
 
   return {

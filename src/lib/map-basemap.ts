@@ -45,48 +45,59 @@ export function basemapStyle(
   return OPENFREEMAP_DARK_STYLE;
 }
 
-const LIGHT_WASH_SOURCE = "navpilot-light-wash";
-const LIGHT_WASH_LAYER = "navpilot-light-wash-layer";
+function colorLuminance(value: unknown): number | null {
+  if (value && typeof value === "object") {
+    const color = value as { r?: number; g?: number; b?: number };
+    if (
+      typeof color.r === "number" &&
+      typeof color.g === "number" &&
+      typeof color.b === "number"
+    ) {
+      const scale = color.r > 1 || color.g > 1 || color.b > 1 ? 255 : 1;
+      return (0.2126 * color.r + 0.7152 * color.g + 0.0722 * color.b) / scale;
+    }
+    if (typeof (value as { toString?: () => string }).toString === "function") {
+      const text = String(value);
+      if (text && text !== "[object Object]") return colorLuminance(text);
+    }
+  }
+  if (typeof value !== "string") return null;
+  const hex = value.trim().match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+  if (hex) {
+    let raw = hex[1];
+    if (raw.length === 3) {
+      raw = raw.split("").map((part) => part + part).join("");
+    }
+    const n = Number.parseInt(raw, 16);
+    const r = (n >> 16) & 255;
+    const g = (n >> 8) & 255;
+    const b = n & 255;
+    return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  }
+  const rgb = value.match(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/i);
+  if (!rgb) return null;
+  return (
+    (0.2126 * Number(rgb[1]) + 0.7152 * Number(rgb[2]) + 0.0722 * Number(rgb[3])) /
+    255
+  );
+}
+
+export function detectAppliedBasemap(
+  map: MapLibreMap,
+): "light" | "dark" | "satellite" | "unknown" {
+  try {
+    if (map.getSource("esri-imagery") || map.getStyle()?.name === "satellite-streets") {
+      return "satellite";
+    }
+    const luminance = colorLuminance(map.getPaintProperty("background", "background-color"));
+    if (luminance == null) return "unknown";
+    return luminance > 0.45 ? "light" : "dark";
+  } catch {
+    return "unknown";
+  }
+}
 
 function applyLightDrivingTheme(map: MapLibreMap) {
-  if (!map.getSource(LIGHT_WASH_SOURCE)) {
-    map.addSource(LIGHT_WASH_SOURCE, {
-      type: "geojson",
-      data: {
-        type: "Feature",
-        properties: {},
-        geometry: {
-          type: "Polygon",
-          coordinates: [
-            [
-              [-180, -85],
-              [180, -85],
-              [180, 85],
-              [-180, 85],
-              [-180, -85],
-            ],
-          ],
-        },
-      },
-    });
-  }
-  if (!map.getLayer(LIGHT_WASH_LAYER)) {
-    const firstSymbol = map
-      .getStyle()
-      ?.layers?.find((layer) => layer.type === "symbol")?.id;
-    map.addLayer(
-      {
-        id: LIGHT_WASH_LAYER,
-        type: "fill",
-        source: LIGHT_WASH_SOURCE,
-        paint: {
-          "fill-color": "#1a1d24",
-          "fill-opacity": 0.1,
-        },
-      },
-      firstSymbol,
-    );
-  }
   if (map.getSource("openmaptiles") && !map.getLayer("building-3d")) {
     try {
       map.addLayer({

@@ -961,9 +961,7 @@ export function DrivingApp() {
   const hasRouteAlert = Boolean(routeAlert);
   const blockingRouteIncident = Boolean(
     routeAlert &&
-      (routeAlert.kind === "accident" ||
-        routeAlert.kind === "construction" ||
-        routeAlert.kind === "closure"),
+      (routeAlert.kind === "accident" || routeAlert.kind === "construction"),
   );
 
   useEffect(() => {
@@ -975,6 +973,21 @@ export function DrivingApp() {
     if (dismissedRouteAlertIdRef.current === routeAlert.id) return;
     setToolsDrawerOpen(true);
   }, [blockingRouteIncident, navigating, routeAlert]);
+
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      const drawer = document.getElementById("navpilot-function-drawer");
+      const rail = document.querySelector(".hud-anchor-rail");
+      if (drawer?.contains(target) || rail?.contains(target)) return;
+      setToolsDrawerOpen(false);
+      if (routeAlert) dismissedRouteAlertIdRef.current = routeAlert.id;
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [drawerOpen, routeAlert]);
 
   useEffect(() => {
     if (!navigating) return;
@@ -1333,7 +1346,7 @@ export function DrivingApp() {
         </div>
       )}
 
-      <div className="hud-anchor-rail">
+      <div className={styleMenuOpen ? "hud-anchor-rail hud-anchor-interactive" : "hud-anchor-rail"}>
         <MapControls
           cameraMode={cameraMode}
           followOrientation={followOrientation}
