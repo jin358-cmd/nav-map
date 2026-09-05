@@ -21,7 +21,9 @@ export const GUIDANCE_PATH_SOURCE_ID = "guidance-path";
 export const GUIDANCE_LAYER_ID = "guidance-arrows-layer";
 export const GUIDANCE_PATH_LAYER_ID = "guidance-path-layer";
 export const GUIDANCE_PATH_GLOW_ID = "guidance-path-glow";
-const CHEVRON_IMAGE_ID = "floating-orange-arrow-v2";
+const CHEVRON_STRAIGHT_ID = "floating-orange-arrow-v3-straight";
+const CHEVRON_LEFT_ID = "floating-orange-arrow-v3-left";
+const CHEVRON_RIGHT_ID = "floating-orange-arrow-v3-right";
 
 let lastAhead: [number, number][] = [];
 
@@ -37,8 +39,8 @@ function emptyLine() {
   };
 }
 
-/** 懸空橘色方向箭頭。圖檔朝北，icon-rotate 用 route tangent。 */
-function createFloatingOrangeArrowImage() {
+/** 懸空橘色箭頭。圖檔朝北，旋轉跟 route tangent；轉彎形用 bend。 */
+function createOrangeArrowImage(kind: "straight" | "left" | "right") {
   const size = 128;
   const canvas = document.createElement("canvas");
   canvas.width = size;
@@ -48,48 +50,63 @@ function createFloatingOrangeArrowImage() {
 
   ctx.clearRect(0, 0, size, size);
   ctx.translate(size / 2, size / 2);
-
-  ctx.shadowColor = "rgba(249, 115, 22, 0.55)";
-  ctx.shadowBlur = 16;
-
-  ctx.beginPath();
-  ctx.moveTo(0, -52);
-  ctx.lineTo(38, 10);
-  ctx.lineTo(16, 10);
-  ctx.lineTo(16, 46);
-  ctx.lineTo(-16, 46);
-  ctx.lineTo(-16, 10);
-  ctx.lineTo(-38, 10);
-  ctx.closePath();
+  ctx.shadowColor = "rgba(249, 115, 22, 0.28)";
+  ctx.shadowBlur = 6;
   ctx.fillStyle = MAP_COLORS.maneuver;
-  ctx.fill();
-  ctx.shadowBlur = 0;
   ctx.strokeStyle = "#ffedd5";
-  ctx.lineWidth = 5;
+  ctx.lineWidth = 4;
   ctx.lineJoin = "round";
   ctx.lineCap = "round";
-  ctx.stroke();
 
   ctx.beginPath();
-  ctx.moveTo(0, -36);
-  ctx.lineTo(16, 2);
-  ctx.lineTo(6, 2);
-  ctx.lineTo(6, 34);
-  ctx.lineTo(-6, 34);
-  ctx.lineTo(-6, 2);
-  ctx.lineTo(-16, 2);
+  if (kind === "straight") {
+    ctx.moveTo(0, -50);
+    ctx.lineTo(34, 8);
+    ctx.lineTo(14, 8);
+    ctx.lineTo(14, 46);
+    ctx.lineTo(-14, 46);
+    ctx.lineTo(-14, 8);
+    ctx.lineTo(-34, 8);
+  } else if (kind === "left") {
+    ctx.moveTo(12, 48);
+    ctx.lineTo(-10, 48);
+    ctx.lineTo(-10, 4);
+    ctx.quadraticCurveTo(-10, -10, -24, -10);
+    ctx.lineTo(-24, 6);
+    ctx.lineTo(-50, -12);
+    ctx.lineTo(-24, -34);
+    ctx.lineTo(-24, -20);
+    ctx.quadraticCurveTo(12, -20, 12, 6);
+  } else {
+    ctx.moveTo(-12, 48);
+    ctx.lineTo(10, 48);
+    ctx.lineTo(10, 4);
+    ctx.quadraticCurveTo(10, -10, 24, -10);
+    ctx.lineTo(24, 6);
+    ctx.lineTo(50, -12);
+    ctx.lineTo(24, -34);
+    ctx.lineTo(24, -20);
+    ctx.quadraticCurveTo(-12, -20, -12, 6);
+  }
   ctx.closePath();
-  ctx.fillStyle = "rgba(255, 247, 237, 0.42)";
   ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.stroke();
 
   return ctx.getImageData(0, 0, size, size);
 }
 
 function ensureImages(map: MapLibreMap) {
-  if (map.hasImage(CHEVRON_IMAGE_ID)) return;
-  const image = createFloatingOrangeArrowImage();
-  if (!image) return;
-  map.addImage(CHEVRON_IMAGE_ID, image, { pixelRatio: 2 });
+  const images: Array<["straight" | "left" | "right", string]> = [
+    ["straight", CHEVRON_STRAIGHT_ID],
+    ["left", CHEVRON_LEFT_ID],
+    ["right", CHEVRON_RIGHT_ID],
+  ];
+  for (const [kind, id] of images) {
+    if (map.hasImage(id)) continue;
+    const image = createOrangeArrowImage(kind);
+    if (image) map.addImage(id, image, { pixelRatio: 2 });
+  }
 }
 
 function floatingArrowSize(): ExpressionSpecification {
@@ -97,33 +114,46 @@ function floatingArrowSize(): ExpressionSpecification {
     "interpolate",
     ["linear"],
     ["zoom"],
-    14,
-    1.15,
-    15.5,
-    1.35,
-    16.5,
-    1.55,
-    17.4,
-    1.7,
+    14.5,
+    ["*", ["get", "scale"], 1.05],
+    16.2,
+    ["*", ["get", "scale"], 1.32],
+    17.2,
+    ["*", ["get", "scale"], 1.52],
     18.2,
-    1.85,
+    ["*", ["get", "scale"], 1.68],
     19,
-    1.95,
+    ["*", ["get", "scale"], 1.78],
   ];
 }
 
-function ensureChevronLayer(map: MapLibreMap) {
+function floatingArrowImage(): ExpressionSpecification {
+  return [
+    "match",
+    ["get", "kind"],
+    "left",
+    CHEVRON_LEFT_ID,
+    "right",
+    CHEVRON_RIGHT_ID,
+    CHEVRON_STRAIGHT_ID,
+  ];
+}
+
+function ensureChevronLayer(map: MapLibreMap, cameraMode: CameraMode = "3d") {
   const size = floatingArrowSize();
+  const image = floatingArrowImage();
+  const offset: [number, number] = cameraMode === "3d" ? [0, -36] : [0, -12];
   const layout = {
-    "icon-image": CHEVRON_IMAGE_ID,
+    "icon-image": image,
     "icon-size": size,
     "icon-anchor": "bottom" as const,
-    "icon-offset": [0, -12] as [number, number],
+    "icon-offset": offset,
     "icon-rotate": ["get", "bearing"] as ExpressionSpecification,
     "icon-rotation-alignment": "map" as const,
     "icon-pitch-alignment": "viewport" as const,
     "icon-allow-overlap": true,
     "icon-ignore-placement": true,
+    "icon-padding": 2,
   };
 
   if (!map.getLayer(GUIDANCE_LAYER_ID)) {
@@ -135,16 +165,16 @@ function ensureChevronLayer(map: MapLibreMap) {
       paint: {
         "icon-opacity": ["get", "opacity"],
         "icon-halo-color": MAP_COLORS.maneuverGlow,
-        "icon-halo-width": 0.55,
+        "icon-halo-width": 0.18,
       },
     });
     return;
   }
 
-  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-image", CHEVRON_IMAGE_ID);
+  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-image", image);
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-size", size);
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-anchor", "bottom");
-  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-offset", [0, -12]);
+  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-offset", offset);
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-rotation-alignment", "map");
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-pitch-alignment", "viewport");
 }
@@ -246,6 +276,8 @@ export function upsertGuidanceArrows(
       properties: {
         bearing: arrow.bearing,
         opacity: arrow.opacity,
+        kind: arrow.kind,
+        scale: arrow.scale,
       },
       geometry: {
         type: "Point" as const,
@@ -269,7 +301,7 @@ export function upsertGuidanceArrows(
   }
 
   ensureHiddenPathLayers(map);
-  ensureChevronLayer(map);
+  ensureChevronLayer(map, options.cameraMode ?? "3d");
   stackGuidanceLayers(map);
 }
 

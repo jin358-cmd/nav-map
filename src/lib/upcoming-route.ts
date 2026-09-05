@@ -17,11 +17,15 @@ type RouteSegment = {
   lengthMeters: number;
 };
 
+export type GuidanceArrowKind = "straight" | "left" | "right";
+
 export type GuidanceArrow = {
   lng: number;
   lat: number;
   bearing: number;
   opacity: number;
+  kind: GuidanceArrowKind;
+  scale: number;
 };
 
 function segmentsFromRoute(coordinates: [number, number][]): RouteSegment[] {
@@ -82,7 +86,41 @@ export function lineLengthMeters(line: [number, number][]) {
   return total;
 }
 
-/** 依可視路段動態配置約 6～10 個，路口最多 12。 */
+const VEHICLE_CLEARANCE_M = 16;
+const TURN_THRESHOLD_DEG = 24;
+
+function signedHeadingDelta(from: number, to: number) {
+  return ((to - from + 540) % 360) - 180;
+}
+
+function findManeuverTurn(line: [number, number][]) {
+  let meters = 0;
+  let best: { meters: number; signed: number } | null = null;
+  for (let index = 1; index < line.length; index += 1) {
+    const from = { lng: line[index - 1][0], lat: line[index - 1][1] };
+    const to = { lng: line[index][0], lat: line[index][1] };
+    const length = distanceKm(from, to) * 1000;
+    const bearing = bearingDegrees(from, to);
+    if (index >= 2) {
+      const prev = {
+        lng: line[index - 2][0],
+        lat: line[index - 2][1],
+      };
+      const prevBearing = bearingDegrees(prev, from);
+      const signed = signedHeadingDelta(prevBearing, bearing);
+      if (
+        Math.abs(signed) >= TURN_THRESHOLD_DEG &&
+        (!best || Math.abs(signed) > Math.abs(best.signed))
+      ) {
+        best = { meters, signed };
+      }
+    }
+    meters += length;
+  }
+  return best;
+}
+
+/** 前方連續可見約 8～14 個，避免堆疊。 */
 export function chevronCount(
   pathLength: number,
   distanceToNext: number,
@@ -91,11 +129,11 @@ export function chevronCount(
   if (pathLength <= 0) return 0;
   const near = distanceToNext <= TURN_VIEW_METERS;
   const mid = distanceToNext <= MANEUVER_APPROACH_METERS;
-  const min = near ? 8 : mid ? 7 : 6;
-  const max = near ? 12 : mid ? 10 : 10;
-  const zoomScale = zoom >= 18 ? 0.78 : zoom >= 17 ? 0.9 : 1;
+  const min = near ? 9 : mid ? 8 : 8;
+  const max = near ? 14 : mid ? 12 : 12;
+  const zoomScale = zoom >= 18 ? 0.82 : zoom >= 17 ? 0.92 : 1;
   return Math.round(
-    Math.min(max, Math.max(min, pathLength / (11.5 * zoomScale))),
+    Math.min(max, Math.max(min, pathLength / (13 * zoomScale))),
   );
 }
 
@@ -104,10 +142,10 @@ export function marqueeSpacingMeters(
   zoom: number,
   distanceToNext = GUIDANCE_ARROW_APPROACH_METERS,
 ) {
-  if (pathLength <= 0) return 10;
+  if (pathLength <= 0) return 13;
   const desired = chevronCount(pathLength, distanceToNext, zoom);
-  if (desired <= 0) return 12;
-  return Math.min(16, Math.max(9, pathLength / desired));
+  if (desired <= 0) return 13;
+  return Math.min(18, Math.max(12, pathLength / desired));
 }
 
 export function guidanceArrowsAlong(
@@ -117,44 +155,65 @@ export function guidanceArrowsAlong(
   intensity = 1,
 ): GuidanceArrow[] {
   if (line.length < 2) return [];
-  const arrows: GuidanceArrow[] = [];
-  let leftover = spacingMeters * 0.62;
+  const turn = findManeuverTurn(line);
+  const placed: Omit<GuidanceArrow, "opacity" | "scale" | "kind">[] = [];
+  let leftover = spacingMeters * 0.35;
+  let along = 0;
 
   for (let index = 1; index < line.length; index += 1) {
     const from = { lng: line[index - 1][0], lat: line[index - 1][1] };
     const to = { lng: line[index][0], lat: line[index][1] };
     const length = distanceKm(from, to) * 1000;
-    if (length < 0.4) continue;
+    if (length < 0.4) {
+      along += length;
+      continue;
+    }
     const bearing = bearingDegrees(from, to);
     let cursor = leftover;
     while (cursor < length) {
-      if (cursor >= 0) {
+      const at = along + cursor;
+      if (cursor >= 0 && at >= VEHICLE_CLEARANCE_M) {
         const ratio = cursor / length;
-        arrows.push({
+        placed.push({
           lng: from.lng + (to.lng - from.lng) * ratio,
           lat: from.lat + (to.lat - from.lat) * ratio,
           bearing,
-          opacity: 1,
         });
       }
       cursor += spacingMeters;
     }
     leftover = cursor - length;
+    along += length;
   }
 
-  const count = arrows.length;
-  if (count === 0) return arrows;
+  const count = placed.length;
+  if (count === 0) return [];
   const cycle = ((phase % 1) + 1) % 1;
-  const head = cycle * count;
-  return arrows.map((arrow, index) => {
-    let dist = Math.abs(index - head);
-    dist = Math.min(dist, count - dist);
-    const highlight = dist < 0.55 ? 1 : dist < 1.15 ? 0.72 : 0.44;
+  const wave = cycle * count;
+  return placed.map((arrow, index) => {
+    const t = count === 1 ? 0 : index / (count - 1);
+    const scale = 1.18 - t * 0.58;
+    const nearBase = 0.46 + 0.34 * (1 - t);
+    const dist = index - wave;
+    const pulse = dist >= -0.25 && dist <= 1.15 ? 1 - Math.abs(dist) * 0.42 : 0;
+    let kind: GuidanceArrowKind = "straight";
+    if (turn) {
+      const arrowMeters = VEHICLE_CLEARANCE_M + index * spacingMeters;
+      if (
+        arrowMeters >= turn.meters - 10 &&
+        arrowMeters <= turn.meters + 24 &&
+        Math.abs(turn.signed) >= TURN_THRESHOLD_DEG
+      ) {
+        kind = turn.signed < 0 ? "left" : "right";
+      }
+    }
     return {
       ...arrow,
+      kind,
+      scale,
       opacity: Math.max(
-        0.55,
-        Math.min(1, intensity * highlight),
+        0.38,
+        Math.min(1, intensity * (nearBase + pulse * 0.42)),
       ),
     };
   });

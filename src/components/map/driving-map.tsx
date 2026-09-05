@@ -710,7 +710,7 @@ export function DrivingMap({
           }
           lastStepIdRef.current = stepId;
         }
-        if (!gestureBusy && now - lastArrowUpdateRef.current > 160) {
+        if (!gestureBusy && now - lastArrowUpdateRef.current > 80) {
           lastArrowUpdateRef.current = now;
           try {
             upsertGuidanceArrows(
@@ -719,7 +719,7 @@ export function DrivingMap({
               routeMetersRef.current,
               distanceToNextRef.current,
               true,
-              (now / 900) % 1,
+              (now / 720) % 1,
               {
                 cameraMode: modeRef.current,
                 isTurn: isTurnRef.current,
