@@ -15,6 +15,7 @@ import {
   DRIVING_ZOOM,
   DRIVING_ZOOM_MOBILE,
   NAV_VEHICLE_Y,
+  NAV_2D_PORTRAIT_VEHICLE_Y,
   INTERSECTION_PITCH,
   INTERSECTION_ZOOM,
   INTERSECTION_ZOOM_MOBILE,
@@ -24,6 +25,7 @@ import {
   OVERHEAD_NAV_ZOOM_MOBILE,
   OVERHEAD_TURN_ZOOM,
   OVERHEAD_TURN_ZOOM_MOBILE,
+  OVERHEAD_TURN_ZOOM_PORTRAIT,
   OVERHEAD_ZOOM,
   OVERVIEW_PITCH,
   TAINAN_CENTER,
@@ -214,16 +216,25 @@ function drivingPadding(
   overlay?: DrivingMapProps["overlayPadding"],
 ) {
   const compact = isCompactViewport(width);
+  const portrait = height > width;
+  const portrait2dNav = navigating && mode === "2d" && portrait;
   const bottomPad = navigating
-    ? Math.max(compact ? 72 : 84, Math.round(height * (compact ? 0.16 : 0.14)))
+    ? Math.max(
+        portrait2dNav ? 132 : compact ? 72 : 84,
+        Math.round(height * (portrait2dNav ? 0.2 : compact ? 0.16 : 0.14)),
+      )
     : compact
       ? 96
       : 118;
   /** 左右必須對稱，否則車輛／路線會偏離畫面水平中線。 */
   const sidePad = 12;
-  const vehicleY = navigating && mode === "3d" ? NAV_VEHICLE_Y : BROWSE_VEHICLE_Y;
+  const vehicleY = navigating && mode === "3d"
+    ? NAV_VEHICLE_Y
+    : portrait2dNav
+      ? NAV_2D_PORTRAIT_VEHICLE_Y
+      : BROWSE_VEHICLE_Y;
   const topPad =
-    mode !== "3d"
+    mode !== "3d" && !portrait2dNav
       ? compact
         ? 108
         : 96
@@ -262,6 +273,8 @@ function cameraOptions(
   const height = map.getContainer().clientHeight;
   const width = map.getContainer().clientWidth;
   const compact = isCompactViewport(width);
+  const portrait = height > width;
+  const portrait2dNav = navigating && mode === "2d" && portrait;
   const approachBlend = navigating ? approachCameraProgress(distanceToNext) : 0;
   const blend = Math.max(approachBlend, recoverBlend);
   const cruiseZoom =
@@ -277,12 +290,17 @@ function cameraOptions(
       ? compact
         ? INTERSECTION_ZOOM_MOBILE
         : INTERSECTION_ZOOM
-      : compact
-        ? OVERHEAD_TURN_ZOOM_MOBILE
-        : OVERHEAD_TURN_ZOOM;
+      : portrait2dNav
+        ? OVERHEAD_TURN_ZOOM_PORTRAIT
+        : compact
+          ? OVERHEAD_TURN_ZOOM_MOBILE
+          : OVERHEAD_TURN_ZOOM;
   const navZoom = lerp(cruiseZoom, focusZoom, blend);
   const cruisePitch = navigating ? NAVIGATION_PITCH : DRIVING_PITCH;
-  const towardCue = approaching && junctionCue && blend > 0.35 ? blend * 0.28 : 0;
+  const towardCue =
+    approaching && junctionCue && blend > (portrait2dNav ? 0.18 : 0.35)
+      ? blend * (portrait2dNav ? 0.46 : 0.28)
+      : 0;
   return {
     center: [
       lerp(vehicle.lng, junctionCue?.lng ?? vehicle.lng, towardCue),

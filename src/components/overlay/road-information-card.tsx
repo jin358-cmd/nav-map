@@ -19,11 +19,7 @@ import {
   DisasterWarningIcon,
 } from "@/components/overlay/status-icons";
 import { AccountChip } from "@/components/overlay/account-chip";
-import {
-  cctvOriginLabel,
-  disasterOriginLabel,
-  trafficOriginLabel,
-} from "@/lib/format";
+import { cctvOriginLabel, disasterOriginLabel } from "@/lib/format";
 import { formatTaiwanDisplayAddress } from "@/lib/geocoding/format-taiwan-display-address";
 import type { GoogleAccount } from "@/lib/google-identity";
 import { cn } from "@/lib/utils";
@@ -34,7 +30,6 @@ import type {
   LayerKindVisibility,
   RoadIntelItem,
   RoadIntelKind,
-  TrafficDataOrigin,
 } from "@/types/domain";
 import type { RouteAlert } from "@/lib/route-events";
 
@@ -84,7 +79,6 @@ const KIND_META: Record<
 export function RoadInformationCard({
   items,
   origin,
-  trafficOrigin,
   disasterOrigin,
   onSelectCctv,
   layerVisibility,
@@ -117,7 +111,6 @@ export function RoadInformationCard({
 }: {
   items: RoadIntelItem[];
   origin: CctvDataOrigin;
-  trafficOrigin: TrafficDataOrigin;
   disasterOrigin: DisasterDataOrigin;
   emptyHint?: string;
   onSelectCctv?: (cameraId: string) => void;
@@ -282,7 +275,7 @@ export function RoadInformationCard({
       </div>
       {!compact ? (
         <p className="mt-1 max-w-[min(36rem,calc(100vw-0.75rem))] truncate text-center text-[10px] text-zinc-500">
-          CCTV {cctvOriginLabel(origin)} · 路況 {trafficOriginLabel(trafficOrigin)} · 災害 {disasterOriginLabel(disasterOrigin)}
+          CCTV {cctvOriginLabel(origin)} · 災害 {disasterOriginLabel(disasterOrigin)}
         </p>
       ) : null}
     </section>

@@ -38,7 +38,6 @@ import { useNavigationVoice } from "@/hooks/use-navigation-voice";
 import { useSpeedEnforcementView } from "@/hooks/use-speed-enforcement-view";
 import { useMapPois } from "@/hooks/use-map-pois";
 import { useParkingView } from "@/hooks/use-parking-view";
-import { useTrafficView } from "@/hooks/use-traffic-view";
 import { roadIntelFromCameras } from "@/lib/cctv-intel";
 import { deriveAccidentIntel, mapVisibleAccidents } from "@/lib/accident-query";
 import {
@@ -83,7 +82,6 @@ import {
 } from "@/lib/parking-arrival-setting";
 import { destinationToHit } from "@/lib/poi-search";
 import { logRerouteTimings } from "@/lib/reroute-metrics";
-import { CITY_TRAFFIC_FOCUS_KM } from "@/lib/traffic-constants";
 import {
   DEMO_VEHICLE,
   YOUTUBE_PLAYLISTS,
@@ -114,13 +112,11 @@ import {
   subscribeSavedPlaces,
   upsertSavedPlace,
 } from "@/lib/saved-places";
-import { deriveTrafficIntel } from "@/lib/traffic-intel";
 import { GpsFixChip } from "@/components/overlay/gps-fix-chip";
 import { MapAttribution } from "@/components/overlay/map-attribution";
 import { SpeedHud, SpeedLimitBadge } from "@/components/overlay/speed-hud";
 import { TripStatusCluster } from "@/components/overlay/trip-status-cluster";
 import { approachingSpeedCameraLimit } from "@/lib/speed-camera-alert";
-import { formatUpdatedAt, trafficOriginLabel } from "@/lib/format";
 import {
   fetchAccidentReports,
   planDrivingRoute,
@@ -165,7 +161,7 @@ import type {
 } from "@/types/domain";
 
 const DEFAULT_LAYER_VISIBILITY: LayerKindVisibility = {
-  congestion: true,
+  congestion: false,
   cctv: true,
   construction: true,
   accident: true,
@@ -304,7 +300,6 @@ export function DrivingApp() {
   );
   const homePlace = savedPlaces.find((place) => place.type === "home") ?? null;
   const workPlace = savedPlaces.find((place) => place.type === "work") ?? null;
-  const trafficFocus5km = true;
   const landscape = useLandscape();
   const drawerOpen = toolsDrawerOpen;
   const dismissedRouteAlertIdRef = useRef<string | null>(null);
@@ -453,23 +448,6 @@ export function DrivingApp() {
     viewport,
     route,
     refreshNonce,
-  });
-
-  const {
-    origin: trafficOrigin,
-    source: trafficSource,
-    updatedAt: trafficUpdatedAt,
-    stale: trafficStale,
-    scored: trafficScored,
-    visible: traffic,
-    error: trafficError,
-    reload: reloadTraffic,
-  } = useTrafficView({
-    queryOrigin: searchOrigin,
-    viewport,
-    route,
-    refreshNonce,
-    nearbyFocusKm: trafficFocus5km ? CITY_TRAFFIC_FOCUS_KM : null,
   });
 
   const {
@@ -632,21 +610,14 @@ export function DrivingApp() {
     [selectedCctv, visible],
   );
 
-  const liveTrafficOn = trafficOrigin === "tdx-live";
-  const mapTraffic = liveTrafficOn ? traffic : [];
+  const mapTraffic: [] = [];
   const mapLayerVisibility = {
     ...layerVisibility,
-    congestion: liveTrafficOn && layerVisibility.congestion,
+    congestion: false,
   };
 
   const intel = useMemo(() => {
     const cameras = roadIntelFromCameras(visible);
-    const trafficItems = liveTrafficOn
-      ? deriveTrafficIntel(
-          trafficScored,
-          trafficFocus5km ? CITY_TRAFFIC_FOCUS_KM : undefined,
-        )
-      : [];
     const extras = baseIntel.filter(
       (item) =>
         item.kind !== "cctv" &&
@@ -657,7 +628,6 @@ export function DrivingApp() {
     );
     const origin = searchOrigin;
     return [
-      ...trafficItems,
       ...cameras,
       ...deriveConstructionIntel(visibleConstructions, origin),
       ...deriveAccidentIntel(visibleAccidents, origin),
@@ -666,10 +636,7 @@ export function DrivingApp() {
     ];
   }, [
     baseIntel,
-    liveTrafficOn,
     searchOrigin,
-    trafficFocus5km,
-    trafficScored,
     visible,
     visibleAccidents,
     visibleConstructions,
@@ -707,14 +674,7 @@ export function DrivingApp() {
     if (selectedEvent?.kind !== "construction") return null;
     return constructions.find((item) => item.id === selectedEvent.id) ?? null;
   }, [constructions, selectedEvent]);
-  const selectedCongestion = useMemo(() => {
-    if (selectedEvent?.kind !== "congestion") return null;
-    return (
-      trafficScored.find((item) => item.id === selectedEvent.id) ??
-      traffic.find((item) => item.id === selectedEvent.id) ??
-      null
-    );
-  }, [selectedEvent, traffic, trafficScored]);
+  const selectedCongestion = null;
 
   const clearSelectedEvent = useCallback(() => {
     setSelectedEvent(null);
@@ -1008,10 +968,9 @@ export function DrivingApp() {
   const refreshIntel = useCallback(() => {
     setRefreshNonce((value) => value + 1);
     reload();
-    reloadTraffic();
     reloadSpeedEnforcement();
     reloadDisasters();
-  }, [reload, reloadDisasters, reloadSpeedEnforcement, reloadTraffic]);
+  }, [reload, reloadDisasters, reloadSpeedEnforcement]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -1157,7 +1116,7 @@ export function DrivingApp() {
             accidents,
             constructions,
             disasters,
-            traffic: trafficScored,
+            traffic: [],
           })
         : null,
     [
@@ -1167,7 +1126,6 @@ export function DrivingApp() {
       navigating,
       navigationProgress?.routeMeters,
       routeProgressModel,
-      trafficScored,
     ],
   );
 
@@ -1286,7 +1244,7 @@ export function DrivingApp() {
 
   const kindOrigin = (kind: RoadIntelKind) => {
     if (kind === "cctv") return origin;
-    if (kind === "congestion") return trafficOrigin;
+    if (kind === "congestion") return "unavailable";
     if (kind === "disaster") return disasterOrigin;
     if (kind === "accident") return accidentOrigin;
     return constructionOrigin;
@@ -1615,12 +1573,7 @@ export function DrivingApp() {
 
       {!navigating ? (
         <div className="pointer-events-none absolute bottom-28 left-2 z-10 hidden max-w-[11rem] sm:bottom-36 sm:left-3 sm:block">
-          <Legend
-            trafficOrigin={trafficOrigin}
-            trafficSource={trafficSource}
-            trafficUpdatedAt={trafficUpdatedAt}
-            trafficStale={trafficStale}
-          />
+          <Legend />
         </div>
       ) : null}
 
@@ -1807,7 +1760,6 @@ export function DrivingApp() {
         <RoadInformationCard
           items={intel}
           origin={origin}
-          trafficOrigin={trafficOrigin}
           disasterOrigin={disasterOrigin}
           emptyHint="目前畫面內尚無 CCTV、事故或災害情報。"
           onSelectCctv={selectCamera}
@@ -1861,33 +1813,18 @@ export function DrivingApp() {
         </div>
       </footer>
 
-      {cctvError || trafficError || speedEnforcementError || disasterError || parkingError ? (
+      {cctvError || speedEnforcementError || disasterError || parkingError ? (
         <div className="pointer-events-none absolute top-[max(11rem,calc(env(safe-area-inset-top)+10rem))] left-1/2 z-20 -translate-x-1/2 rounded-xl border border-amber-300/25 bg-black/65 px-3 py-2 text-xs text-amber-100">
-          {cctvError ?? trafficError ?? speedEnforcementError ?? disasterError ?? parkingError}
+          {cctvError ?? speedEnforcementError ?? disasterError ?? parkingError}
         </div>
       ) : null}
     </div>
   );
 }
 
-function Legend({
-  trafficOrigin,
-  trafficSource,
-  trafficUpdatedAt,
-  trafficStale,
-}: {
-  trafficOrigin?: "tdx-live" | "mock" | "unavailable";
-  trafficSource?: string;
-  trafficUpdatedAt?: string | null;
-  trafficStale?: boolean;
-} = {}) {
+function Legend() {
   const items = [
     { color: "bg-[#3ee0ff]", label: "導航路線" },
-    { color: "bg-[#22c55e]", label: "順暢" },
-    { color: "bg-[#facc15]", label: "車多" },
-    { color: "bg-[#f97316]", label: "壅塞" },
-    { color: "bg-[#ef4444]", label: "嚴重壅塞" },
-    { color: "bg-[#7f1d1d]", label: "接近停滯" },
     { color: "bg-[#c084fc]", label: "CCTV" },
     { color: "bg-[#fbbf24]", label: "測速執法" },
     { color: "bg-[#22c55e]", label: "停車場（充足）" },
@@ -1904,12 +1841,6 @@ function Legend({
           {item.label}
         </div>
       ))}
-      <p className="mt-1.5 text-[10px] text-zinc-500">
-        路況 {trafficOriginLabel(trafficOrigin ?? "unavailable")}
-        {trafficSource ? ` · ${trafficSource}` : ""}
-        {trafficStale ? " · 過期" : ""}
-        {trafficUpdatedAt ? ` · ${formatUpdatedAt(trafficUpdatedAt)}` : ""}
-      </p>
     </div>
   );
 }

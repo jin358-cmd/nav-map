@@ -28,6 +28,8 @@ export const OVERHEAD_NAV_ZOOM = 16.95;
 export const OVERHEAD_NAV_ZOOM_MOBILE = 16.75;
 export const OVERHEAD_TURN_ZOOM = 17.55;
 export const OVERHEAD_TURN_ZOOM_MOBILE = 17.35;
+/** 直立 2D 路口：再拉近，讓路標落在畫面中下。 */
+export const OVERHEAD_TURN_ZOOM_PORTRAIT = 18.08;
 /** 路口近距離上限，避免無限放大。 */
 export const INTERSECTION_ZOOM = 18.28;
 export const INTERSECTION_ZOOM_MOBILE = 18.05;
@@ -55,6 +57,8 @@ export const GUIDANCE_ARROW_APPROACH_METERS = 200;
 /** 瀏覽時車輛約在畫面 65%；導航 3D 時約 72%（70～75）。 */
 export const BROWSE_VEHICLE_Y = 0.65;
 export const NAV_VEHICLE_Y = 0.72;
+/** 直立 2D 導航：車輛偏下，前方路口／路標在畫面中下。 */
+export const NAV_2D_PORTRAIT_VEHICLE_Y = 0.78;
 /** 羅盤方向參考扇形半角（視覺輔助，非 GPS 誤差）。 */
 export const HEADING_REFERENCE_HALF_DEG = 24;
 
