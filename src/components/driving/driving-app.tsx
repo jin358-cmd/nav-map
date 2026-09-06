@@ -212,9 +212,7 @@ export function DrivingApp() {
     useState<FollowOrientation>("heading-up");
   const [followVehicle, setFollowVehicle] = useState(false);
   const [userAdjustedMap, setUserAdjustedMap] = useState(false);
-  const [mapDisplayMode, setMapDisplayMode] = useState<MapDisplayMode>(() =>
-    typeof window === "undefined" ? "dark" : readMapDisplayMode(),
-  );
+  const [mapDisplayMode, setMapDisplayMode] = useState<MapDisplayMode>("dark");
   const [pendingMapDisplayMode, setPendingMapDisplayMode] =
     useState<MapDisplayMode | null>(null);
   const [styleMenuOpen, setStyleMenuOpen] = useState(false);
@@ -351,6 +349,10 @@ export function DrivingApp() {
     routeProgressModel,
     routeSteps,
   });
+
+  useEffect(() => {
+    setMapDisplayMode(readMapDisplayMode());
+  }, []);
 
   useEffect(() => {
     if (mapDisplayMode !== "auto") return;
