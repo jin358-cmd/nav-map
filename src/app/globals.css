@@ -707,26 +707,60 @@
   bottom: 0.36rem;
 }
 
-.navigation-turn-icon--pulse,
-.navigation-turn-icon--blink {
-  animation: turn-icon-blink 0.7s step-end infinite;
+.maneuverIconWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
-@keyframes turn-icon-blink {
+.maneuverIconBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 1.05rem;
+  background: #16a34a;
+  color: #fff;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.2),
+    0 2px 8px rgba(0, 0, 0, 0.22);
+  transform: translateZ(0);
+}
+
+.maneuverIconArrow {
+  width: 78%;
+  height: 78%;
+  color: #fff;
+}
+
+.maneuverIconBadge--blink {
+  animation: maneuver-turn-signal 0.72s step-end infinite;
+}
+
+@keyframes maneuver-turn-signal {
   0%,
   49% {
     opacity: 1;
+    filter: brightness(1.18);
+    box-shadow:
+      0 0 12px 3px rgba(74, 222, 128, 0.72),
+      0 0 0 1px rgba(255, 255, 255, 0.3);
   }
   50%,
   100% {
-    opacity: 0.12;
+    opacity: 0.42;
+    filter: brightness(1);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .navigation-turn-icon--pulse,
-  .navigation-turn-icon--blink {
+  .maneuverIconBadge--blink {
     animation: none;
+    opacity: 1;
+    filter: none;
   }
 }
 
@@ -740,16 +774,6 @@
 .navigation-turn-icon {
   width: 5.15rem;
   height: 5.15rem;
-}
-
-.navigation-turn-icon--cruise {
-  background: rgba(8, 47, 73, 0.5);
-  color: #0f172a;
-}
-
-.navigation-turn-icon--alert {
-  background: rgba(22, 101, 52, 0.5);
-  color: #15803d;
 }
 
 .navigation-guidance {

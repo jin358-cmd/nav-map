@@ -1,13 +1,60 @@
 "use client";
 
-import { forwardRef } from "react";
+import { forwardRef, useEffect, useRef, useState } from "react";
 import { Volume2, VolumeX, X } from "lucide-react";
-import { TurnArrowIcon, turnSideFromStep } from "@/components/overlay/turn-arrow-icon";
+import {
+  TurnArrowIcon,
+  turnSideFromStep,
+  type TurnSide,
+} from "@/components/overlay/turn-arrow-icon";
 import { formatDistance } from "@/lib/format";
 import { formatTaiwanDisplayAddress } from "@/lib/geocoding/format-taiwan-display-address";
 import type { ManeuverAlertPhase } from "@/lib/maneuver-guidance";
 import { cn } from "@/lib/utils";
 import type { RouteStep } from "@/types/domain";
+
+const TURN_SIGNAL_METERS = 300;
+
+function isSignalTurn(side: TurnSide) {
+  return side !== "straight" && side !== "arrive";
+}
+
+function useSmoothedMeters(target: number) {
+  const [shown, setShown] = useState(target);
+  const shownRef = useRef(target);
+  const lastTsRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    let frame = 0;
+    lastTsRef.current = null;
+    const tick = (now: number) => {
+      const next = target;
+      const current = shownRef.current;
+      if (!Number.isFinite(next)) {
+        frame = requestAnimationFrame(tick);
+        return;
+      }
+      const last = lastTsRef.current ?? now;
+      lastTsRef.current = now;
+      const dt = Math.min(0.08, Math.max(0, (now - last) / 1000));
+      const jump = Math.abs(next - current);
+      const blended =
+        jump > 180 ? next : current + (next - current) * (1 - Math.exp(-dt / 0.32));
+      shownRef.current = blended;
+      const rounded = Math.round(blended);
+      if (rounded !== Math.round(current)) {
+        setShown(rounded);
+      }
+      if (Math.abs(next - blended) > 0.5) {
+        frame = requestAnimationFrame(tick);
+      }
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [target]);
+
+  return shown;
+}
 
 function shortTurn(step: RouteStep | null) {
   if (!step) return "繼續前行";
@@ -58,8 +105,11 @@ export const NextIntersectionHud = forwardRef<
   const turn = shortTurn(step);
   const side = turnSideFromStep(step);
   const road = shortRoadName(step);
-  const headline = `${formatDistance(distanceMeters)}後${turn}`;
+  const displayMeters = useSmoothedMeters(distanceMeters);
+  const headline = `${formatDistance(displayMeters)}後${turn}`;
   const turnAlert = isTurn && alertPhase !== "cruise";
+  const blinkTurn =
+    isTurn && isSignalTurn(side) && distanceMeters <= TURN_SIGNAL_METERS;
 
   return (
     <div
@@ -83,15 +133,19 @@ export const NextIntersectionHud = forwardRef<
         </button>
       ) : null}
       <div className="navigation-instruction-content">
-        <div
-          className={cn(
-            "navigation-turn-icon navigation-turn-icon--blink flex shrink-0 items-center justify-center rounded-full",
-            turnAlert
-              ? "navigation-turn-icon--alert"
-              : "navigation-turn-icon--cruise",
-          )}
-        >
-          <TurnArrowIcon side={side} className="p-1" />
+        <div className="maneuverIconWrap navigation-turn-icon">
+          <div
+            className={cn(
+              "maneuverIconBadge",
+              blinkTurn && "maneuverIconBadge--blink",
+            )}
+          >
+            <TurnArrowIcon
+              side={side}
+              variant="sign"
+              className="maneuverIconArrow"
+            />
+          </div>
         </div>
         <div className="navigation-copy min-w-0 text-left">
           <p className="navigation-guidance truncate tabular-nums tracking-tight">
