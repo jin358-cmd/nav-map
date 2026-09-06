@@ -31,17 +31,6 @@ export async function GET(request: Request) {
         "motorcycle",
       );
     }
-    const avoided = await routeFromOsrmLike(
-      OSRM_CAR,
-      fromLng,
-      fromLat,
-      toLng,
-      toLat,
-      label,
-      "motorcycle",
-      "motorway",
-    );
-    if (avoided.status !== 404 && avoided.status !== 502) return avoided;
     return routeFromOsrmLike(
       OSRM_CAR,
       fromLng,
@@ -72,7 +61,6 @@ async function routeFromOsrmLike(
   toLat: number,
   label: string,
   travelMode: "car" | "motorcycle",
-  exclude?: string,
 ) {
   const path = `${fromLng},${fromLat};${toLng},${toLat}`;
   const endpoint = new URL(
@@ -82,7 +70,6 @@ async function routeFromOsrmLike(
   endpoint.searchParams.set("geometries", "geojson");
   endpoint.searchParams.set("steps", "true");
   endpoint.searchParams.set("alternatives", "false");
-  if (exclude) endpoint.searchParams.set("exclude", exclude);
 
   try {
     const response = await fetch(endpoint, {

@@ -2,7 +2,7 @@ import type { TravelMode } from "@/types/domain";
 
 export const CAR_ROUTING_PROVIDER = "OSRM public driving (router.project-osrm.org)";
 export const MOTORCYCLE_ROUTING_PROVIDER =
-  "OSRM public driving, exclude motorway (router.project-osrm.org)";
+  "OSRM public driving (router.project-osrm.org)";
 
 export function motorcycleRoutingConfigured() {
   return true;

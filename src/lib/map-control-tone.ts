@@ -17,8 +17,9 @@ export function mapControlButtonClass(tone: MapControlTone, active = false) {
   }
   if (tone === "dark") {
     return cn(
-      "border-2 border-[#67e8f9] bg-[#041016]/90 text-[#67e8f9] shadow-[0_0_0_1px_rgba(103,232,249,0.35),0_8px_22px_rgba(8,47,73,0.55)] hover:bg-[#083344] hover:text-[#ecfeff]",
-      active && "border-[#ecfeff] bg-[#22d3ee] text-[#042f2e]",
+      "!border-2 !border-[#67e8f9] !bg-[#041016] !text-[#ecfeff] shadow-[0_0_0_2px_rgba(103,232,249,0.45),0_8px_22px_rgba(8,47,73,0.55)] hover:!bg-[#083344] hover:!text-white [&_svg]:!text-[#ecfeff]",
+      active &&
+        "!border-[#ecfeff] !bg-[#22d3ee] !text-[#042f2e] hover:!bg-[#67e8f9] [&_svg]:!text-[#042f2e]",
     );
   }
   return cn(

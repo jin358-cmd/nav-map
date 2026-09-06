@@ -36,7 +36,7 @@ export function MapStyleMenu({
     <div className="relative">
       <Button
         type="button"
-        variant="outline"
+        variant="ghost"
         size="icon-lg"
         aria-label="地圖顯示模式"
         title="地圖顯示模式"

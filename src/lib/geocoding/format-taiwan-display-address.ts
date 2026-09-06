@@ -122,13 +122,60 @@ function formatCommaSeparated(value: string) {
     .map((token) => token.trim())
     .filter(Boolean);
   if (tokens.length < 2) return "";
-  const kept = tokens.filter((token) => {
-    if (/[區鄉鎮市縣]$/u.test(token)) return true;
-    if (/(?:路|街|大道|道|段|巷|弄|號|樓|室)$/u.test(token)) return true;
-    return !OSM_DROP_TOKEN.test(token);
-  });
-  if (kept.length === tokens.length) return "";
-  return kept.join(", ");
+
+  const dropBare = /^(?:台灣|臺灣|Taiwan|ROC|\d{3,6})$/i;
+  let city = "";
+  let town = "";
+  let road = "";
+  let section = "";
+  let poi = "";
+
+  for (const token of tokens) {
+    if (dropBare.test(token) || OSM_DROP_TOKEN.test(token)) continue;
+    if (/[縣市]$/u.test(token) && token.length <= 4) {
+      city = token;
+      continue;
+    }
+    if (/[區鎮鄉]$/u.test(token) || (token.endsWith("市") && token !== city && token.length <= 4)) {
+      if (!town) town = token;
+      continue;
+    }
+    if (/(?:路|街|大道)$/u.test(token)) {
+      if (!road) road = token;
+      continue;
+    }
+    if (/^[0-9一二三四五六七八九十]+段$/u.test(token)) {
+      section = token;
+      continue;
+    }
+    if (/(?:巷|弄|號|樓|室)$/u.test(token)) {
+      if (!road) road = token;
+      else road += token;
+      continue;
+    }
+    if (/[村里]$/u.test(token)) continue;
+    if (!poi && !/[縣市區鄉鎮]$/u.test(token)) {
+      poi = token.replace(/[（(][^）)]+[）)]/g, "").trim();
+    }
+  }
+
+  const street = joinParts([city, town, road, section]);
+  if (!street && !poi) {
+    const kept = tokens.filter((token) => {
+      if (dropBare.test(token) || OSM_DROP_TOKEN.test(token)) return false;
+      if (/[區鄉鎮市縣]$/u.test(token)) return true;
+      if (/(?:路|街|大道|道|段|巷|弄|號|樓|室)$/u.test(token)) return true;
+      return false;
+    });
+    return kept.length ? kept.join("") : "";
+  }
+  if (poi && street) {
+    const poiKey = poi.replaceAll("臺", "台").replaceAll(/\s+/g, "");
+    const streetKey = street.replaceAll("臺", "台").replaceAll(/\s+/g, "");
+    if (streetKey.includes(poiKey) || poiKey.includes(streetKey)) return street;
+    return `${poi} · ${street}`;
+  }
+  return street || poi;
 }
 
 function formatDisplayAddressString(value: string) {
@@ -136,7 +183,7 @@ function formatDisplayAddressString(value: string) {
   if (!trimmed) return "";
   const { address, nearby, notes } = peelNotes(trimmed);
   const commaForm = formatCommaSeparated(address);
-  if (commaForm) return restoreNotes(commaForm, nearby, notes);
+  if (commaForm) return restoreNotes(commaForm, nearby, []);
 
   const compact = compactTaiwanText(address);
   const parts = parseDisplayParts(compact);

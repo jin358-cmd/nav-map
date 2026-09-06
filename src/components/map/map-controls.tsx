@@ -126,7 +126,7 @@ function ControlButton({
   return (
     <Button
       type="button"
-      variant="outline"
+      variant="ghost"
       size="icon-lg"
       aria-label={label}
       title={label}
