@@ -469,7 +469,8 @@ export function DrivingApp() {
   } = useDisasterView(refreshNonce);
 
   const parkingCenter =
-    destination?.location ?? (vehicle.source === "gps" ? vehicle : null);
+    destination?.location ??
+    (vehicle.source === "gps" ? vehicle : viewport?.center ?? vehicle);
   const {
     lots: parkingLots,
     origin: parkingOrigin,

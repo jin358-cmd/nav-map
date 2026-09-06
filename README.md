@@ -100,7 +100,7 @@ npm start
 - 底部半透明 Road Information Card
 - Android 直式優先的 Responsive HUD（資訊卡不遮住主要駕駛視野）
 
-未設定 TDX 金鑰時：CCTV 可走本地 SNAPSHOT；路況、事故與施工顯示「資料暫時無法取得」，不會自動改用假資料。停車圖層改抓全國公有停車場：有 TDX 時用各縣市路外公有場（含註冊編號、收費／無收費）；沒有金鑰時，臺南走市府停車動態，其他縣市走 OpenStreetMap 公有場。金鑰請放伺服器端 `TDX_CLIENT_ID` / `TDX_CLIENT_SECRET`（不可用 `NEXT_PUBLIC_`）。live cache 與前端輪詢約 **5 分鐘**。
+未設定 TDX 金鑰時：CCTV 可走本地 SNAPSHOT；路況、事故與施工顯示「資料暫時無法取得」，不會自動改用假資料。停車圖層改抓全國公有停車場：有 TDX 時用各縣市路外公有場（含註冊編號、收費／無收費）；沒有金鑰時，臺南走市府停車動態，其他縣市走 OpenStreetMap 公有／免費場。金鑰請放伺服器端 `TDX_CLIENT_ID` / `TDX_CLIENT_SECRET`（不可用 `NEXT_PUBLIC_`）。live cache 與前端輪詢約 **5 分鐘**。
 
 災害示警由 `/api/disasters` 抓 NCDR 民生示警 JSON Atom，再讀各則 CAP 的 `polygon`／`circle` 幾何中心。可選填伺服器端 `NCDR_ALERT_FEED_URL`。失敗時顯示「資料暫時無法取得」。YouTube 歌單設定見 [`docs/youtube-playlist-oauth-setup.md`](docs/youtube-playlist-oauth-setup.md)。
 

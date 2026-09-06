@@ -70,3 +70,8 @@ export function parkingCitiesNear(center: LngLat, radiusKm: number): string[] {
 export function isInTainan(center: LngLat) {
   return parkingCitiesNear(center, 4).includes("Tainan");
 }
+
+export function parkingCityLabelNear(center: LngLat) {
+  const id = parkingCitiesNear(center, 4)[0];
+  return TDX_PARKING_CITIES.find((city) => city.id === id)?.label ?? "";
+}
