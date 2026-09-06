@@ -781,17 +781,17 @@
 }
 
 .navigation-status {
-  margin-top: 0.2rem;
-  font-size: 13px;
-  font-weight: 600;
+  margin-top: 0.25rem;
+  font-size: clamp(17px, 4.8vw, 22px);
+  font-weight: 800;
+  line-height: 1.2;
+  color: #ff1a1a;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
-.navigation-instruction-card--cruise .navigation-status {
-  color: #9a3412;
-}
-
+.navigation-instruction-card--cruise .navigation-status,
 .navigation-instruction-card--alert .navigation-status {
-  color: #9a3412;
+  color: #ff1a1a;
 }
 
 @media (orientation: portrait) {

@@ -99,11 +99,13 @@ export const NextIntersectionHud = forwardRef<
           </p>
           {road ? <p className="navigation-road-name truncate">{road}</p> : null}
           {rerouting ? (
-            <p className="navigation-status truncate">
+            <p className="navigation-status navigation-status--reroute truncate">
               {reroutePending ? "仍在重新規劃路線" : "正在重新規劃路線"}
             </p>
           ) : offRoute ? (
-            <p className="navigation-status truncate">偏離路線，即將重算</p>
+            <p className="navigation-status navigation-status--reroute truncate">
+              偏離路線，即將重算
+            </p>
           ) : null}
         </div>
       </div>
