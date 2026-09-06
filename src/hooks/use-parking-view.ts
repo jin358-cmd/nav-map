@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { PARKING_DEFAULT_RADIUS_M } from "@/lib/parking/constants";
 import type { LngLat, ParkingCatalog, ParkingLot } from "@/types/domain";
 
 function normalizeLot(lot: ParkingLot): ParkingLot {
@@ -9,24 +10,27 @@ function normalizeLot(lot: ParkingLot): ParkingLot {
     feeClass: lot.feeClass ?? "unknown",
     publicLot: lot.publicLot ?? true,
     registered: lot.registered ?? false,
+    hourlyRate: lot.hourlyRate ?? null,
+    dailyMax: lot.dailyMax ?? null,
+    availabilityStatus: lot.availabilityStatus ?? "unknown",
   };
 }
 
 async function fetchParking(
   center: LngLat,
-  radiusKm: number,
+  radiusMeters: number,
   signal: AbortSignal,
 ): Promise<ParkingCatalog> {
   const params = new URLSearchParams({
     lat: String(center.lat),
     lng: String(center.lng),
-    radiusKm: String(radiusKm),
+    radius: String(radiusMeters),
   });
-  const response = await fetch(`/api/parking?${params.toString()}`, {
+  const response = await fetch(`/api/parking/nearby?${params.toString()}`, {
     cache: "no-store",
     signal,
   });
-  if (!response.ok) throw new Error("parking catalog failed");
+  if (!response.ok) throw new Error("parking nearby failed");
   const data = (await response.json()) as ParkingCatalog;
   return {
     origin: data.origin ?? "unavailable",
@@ -38,11 +42,11 @@ async function fetchParking(
 export function useParkingView({
   center,
   enabled,
-  radiusKm = 4,
+  radiusMeters = PARKING_DEFAULT_RADIUS_M,
 }: {
   center: LngLat | null;
   enabled: boolean;
-  radiusKm?: number;
+  radiusMeters?: number;
 }) {
   const [catalog, setCatalog] = useState<ParkingCatalog>({
     origin: "unavailable",
@@ -57,7 +61,7 @@ export function useParkingView({
   const requestKey =
     searchLng == null || searchLat == null
       ? null
-      : `${searchLng.toFixed(5)}:${searchLat.toFixed(5)}:${radiusKm}`;
+      : `${searchLng.toFixed(5)}:${searchLat.toFixed(5)}:${radiusMeters}`;
 
   useEffect(() => {
     if (!enabled || searchLng == null || searchLat == null || requestKey == null) {
@@ -69,7 +73,7 @@ export function useParkingView({
     const timer = window.setTimeout(() => {
       void fetchParking(
         { lng: searchLng, lat: searchLat },
-        radiusKm,
+        radiusMeters,
         controller.signal,
       )
         .then((next) => {
@@ -92,7 +96,7 @@ export function useParkingView({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [enabled, radiusKm, requestKey, searchLat, searchLng]);
+  }, [enabled, radiusMeters, requestKey, searchLat, searchLng]);
 
   const lots: ParkingLot[] = enabled ? catalog.lots : [];
 

@@ -21,7 +21,9 @@ export function sortParkingLots(lots: ParkingLot[], sort: ParkingSort) {
     if (sort === "price") {
       const classDelta = feeRank(a.feeClass) - feeRank(b.feeClass);
       if (classDelta !== 0) return classDelta;
-      return feeNumber(a.fee) - feeNumber(b.fee);
+      const left = a.hourlyRate ?? feeNumber(a.fee);
+      const right = b.hourlyRate ?? feeNumber(b.fee);
+      return left - right;
     }
     return (a.distanceMeters ?? Infinity) - (b.distanceMeters ?? Infinity);
   });

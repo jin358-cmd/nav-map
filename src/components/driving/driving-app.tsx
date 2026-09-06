@@ -76,6 +76,10 @@ import {
   type MapPlace,
 } from "@/lib/map-place";
 import {
+  PARKING_CURRENT_LOCATION_RADIUS_M,
+  PARKING_DESTINATION_RADIUS_M,
+} from "@/lib/parking/constants";
+import {
   parkingArrivalPromptEnabled,
   setParkingArrivalPromptEnabled,
   subscribeParkingArrivalPrompt,
@@ -468,9 +472,14 @@ export function DrivingApp() {
     reload: reloadDisasters,
   } = useDisasterView(refreshNonce);
 
-  const parkingCenter =
-    destination?.location ??
-    (vehicle.source === "gps" ? vehicle : viewport?.center ?? vehicle);
+  const parkingCenter = navigating
+    ? destination?.location ?? (vehicle.source === "gps" ? vehicle : viewport?.center ?? vehicle)
+    : vehicle.source === "gps"
+      ? vehicle
+      : viewport?.center ?? vehicle;
+  const parkingRadiusMeters = navigating
+    ? PARKING_DESTINATION_RADIUS_M
+    : PARKING_CURRENT_LOCATION_RADIUS_M;
   const {
     lots: parkingLots,
     origin: parkingOrigin,
@@ -479,7 +488,7 @@ export function DrivingApp() {
   } = useParkingView({
     center: parkingCenter,
     enabled: parkingOpen,
-    radiusKm: 4,
+    radiusMeters: parkingRadiusMeters,
   });
   const mapPois = useMapPois({
     viewport,
@@ -1093,9 +1102,9 @@ export function DrivingApp() {
     if (!navigating || !parkingArrivalEnabled) return;
     if (parkingArrivalDismissedRef.current) return;
     if (remainingToDestination == null) return;
-    if (remainingToDestination > 800 || remainingToDestination < 40) return;
+    if (remainingToDestination > 1000 || remainingToDestination < 40) return;
     parkingArrivalDismissedRef.current = true;
-    const text = "即將抵達目的地，需要幫您尋找附近停車場嗎？";
+    const text = "是否搜尋目的地附近停車場？";
     const timer = window.setTimeout(() => {
       setParkingArrivalOpen(true);
       if (window.speechSynthesis && !window.speechSynthesis.speaking) {

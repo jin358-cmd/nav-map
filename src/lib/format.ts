@@ -43,7 +43,7 @@ export function freshnessLabel(value?: DataFreshness) {
 
 export function eventOriginLabel(origin?: EventDataOrigin | TrafficDataOrigin | DisasterDataOrigin | CctvDataOrigin | ParkingDataOrigin) {
   if (origin === "tdx-live") return "TDX 全國公有停車場";
-  if (origin === "tainan-open") return "臺南市停車動態資訊";
+  if (origin === "tainan-open") return "臺南市停車 Open Data";
   if (origin === "osm-open") return "OpenStreetMap 公有停車場";
   if (origin === "ncdr-live") return "NCDR 即時災害";
   if (origin === "snapshot") return "SNAPSHOT";
@@ -82,4 +82,33 @@ export function formatUpdatedAt(iso: string) {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "時間未知";
   return date.toLocaleString("zh-TW", { hour12: false });
+}
+
+export function formatUpdatedAgo(iso?: string | null) {
+  if (!iso) return "未提供";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "時間未知";
+  const delta = Date.now() - date.getTime();
+  if (delta < 30_000) return "剛剛";
+  const minutes = Math.round(delta / 60_000);
+  if (minutes < 60) return `${minutes} 分鐘前`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours} 小時前`;
+  return formatUpdatedAt(iso);
+}
+
+export function formatParkingRate(lot: {
+  hourlyRate?: number | null;
+  dailyMax?: number | null;
+  fee?: string;
+  feeClass?: string;
+}) {
+  if (lot.feeClass === "free") return "免費";
+  if (lot.hourlyRate != null) {
+    const daily =
+      lot.dailyMax != null ? `，當日最高 ${lot.dailyMax} 元` : "";
+    return `${lot.hourlyRate} 元／小時${daily}`;
+  }
+  const text = lot.fee?.trim();
+  return text || "未提供";
 }

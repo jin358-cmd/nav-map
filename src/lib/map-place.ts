@@ -26,8 +26,12 @@ export type MapPlace = {
   carTotal?: number | null;
   fee?: string;
   feeClass?: ParkingFeeClass;
+  hourlyRate?: number | null;
+  dailyMax?: number | null;
   registered?: boolean;
   publicLot?: boolean;
+  updatedAt?: string;
+  availabilityStatus?: ParkingLot["availabilityStatus"];
 };
 
 export type MapPoiFeature = {
@@ -94,8 +98,12 @@ export function parkingLotToPlace(lot: ParkingLot): MapPlace {
     hours: lot.hours,
     fee: lot.fee,
     feeClass: lot.feeClass,
+    hourlyRate: lot.hourlyRate,
+    dailyMax: lot.dailyMax,
     registered: lot.registered,
     publicLot: lot.publicLot,
+    updatedAt: lot.updatedAt,
+    availabilityStatus: lot.availabilityStatus,
     carAvailable: lot.carAvailable,
     carTotal: lot.carTotal,
     openStatus:

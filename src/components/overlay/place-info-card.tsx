@@ -2,9 +2,8 @@
 
 import { Heart, Navigation, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { formatDistance } from "@/lib/format";
+import { formatDistance, formatParkingRate, formatUpdatedAgo } from "@/lib/format";
 import { formatTaiwanDisplayAddress } from "@/lib/geocoding/format-taiwan-display-address";
-import { PARKING_FEE_LABEL } from "@/lib/parking-meta";
 import type { MapPlace } from "@/lib/map-place";
 import { cn } from "@/lib/utils";
 
@@ -77,7 +76,30 @@ export function PlaceInfoCard({
             <dd>{place.openStatus}</dd>
           </div>
         ) : null}
-        {place.carAvailable != null || place.carTotal != null ? (
+        {place.kind === "parking" ? (
+          <>
+            <div>
+              <dt className="text-[11px] text-zinc-500">剩餘</dt>
+              <dd>
+                {place.availabilityStatus === "unknown" || place.carAvailable == null
+                  ? "即時剩餘車位目前無資料"
+                  : `${place.carAvailable} 格`}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[11px] text-zinc-500">總車位</dt>
+              <dd>{place.carTotal != null ? `${place.carTotal} 格` : "未提供"}</dd>
+            </div>
+            <div>
+              <dt className="text-[11px] text-zinc-500">費率</dt>
+              <dd>{formatParkingRate(place)}</dd>
+            </div>
+            <div>
+              <dt className="text-[11px] text-zinc-500">最後更新</dt>
+              <dd>{formatUpdatedAgo(place.updatedAt)}</dd>
+            </div>
+          </>
+        ) : place.carAvailable != null || place.carTotal != null ? (
           <div>
             <dt className="text-[11px] text-zinc-500">車位</dt>
             <dd>
@@ -86,19 +108,7 @@ export function PlaceInfoCard({
             </dd>
           </div>
         ) : null}
-        {place.kind === "parking" ? (
-          <div>
-            <dt className="text-[11px] text-zinc-500">停車場</dt>
-            <dd>
-              {place.publicLot ? "公有" : "停車場"}
-              {place.registered ? " · 有註冊" : ""}
-              {place.feeClass
-                ? ` · ${PARKING_FEE_LABEL[place.feeClass]}`
-                : ""}
-            </dd>
-          </div>
-        ) : null}
-        {place.fee ? (
+        {place.kind !== "parking" && place.fee ? (
           <div>
             <dt className="text-[11px] text-zinc-500">收費</dt>
             <dd>{place.fee}</dd>
@@ -112,7 +122,7 @@ export function PlaceInfoCard({
           className="h-12 min-h-12 flex-1 rounded-xl bg-cyan-400 text-base font-semibold text-[#041016] hover:bg-cyan-300"
         >
           <Navigation className="size-4" />
-          開始導航
+          {place.kind === "parking" ? "導航前往" : "開始導航"}
         </Button>
         <Button
           type="button"

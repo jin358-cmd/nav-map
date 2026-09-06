@@ -1,38 +1,37 @@
 "use client";
 
-import { useState } from "react";
 import { Navigation, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   eventOriginLabel,
   formatDistance,
-  formatUpdatedAt,
-  freshnessLabel,
-  providedText,
+  formatParkingRate,
+  formatUpdatedAgo,
 } from "@/lib/format";
 import { formatTaiwanDisplayAddress } from "@/lib/geocoding/format-taiwan-display-address";
-import { PARKING_FEE_LABEL, parkingFeeLayerColor } from "@/lib/parking-meta";
 import { sortParkingLots } from "@/lib/parking-sort";
 import { cn } from "@/lib/utils";
 import type {
   ParkingCatalog,
-  ParkingFilter,
   ParkingLot,
   ParkingSort,
 } from "@/types/domain";
 
-const FILL_LABEL = {
-  plenty: "車位充足",
-  limited: "剩餘不多",
-  full: "已滿",
-  unknown: "車位資訊未提供",
-} as const;
+function remainingLabel(lot: ParkingLot) {
+  if (lot.availabilityStatus === "unknown" || lot.carAvailable == null) {
+    return "即時剩餘車位目前無資料";
+  }
+  if (lot.availabilityStatus === "stale") {
+    return `${lot.carAvailable} 格（資料可能過期）`;
+  }
+  return `${lot.carAvailable} 格`;
+}
 
-function matchesFilter(lot: ParkingLot, filter: ParkingFilter) {
-  if (filter === "registered") return lot.registered;
-  if (filter === "paid") return lot.feeClass === "paid";
-  if (filter === "free") return lot.feeClass === "free";
-  return true;
+function markerClass(lot: ParkingLot) {
+  if (lot.fill === "plenty") return "bg-emerald-400";
+  if (lot.fill === "limited") return "bg-amber-300";
+  if (lot.fill === "full") return "bg-red-400";
+  return "bg-zinc-400";
 }
 
 export function ParkingPanel({
@@ -60,19 +59,15 @@ export function ParkingPanel({
   arrivalPromptEnabled?: boolean;
   onToggleArrivalPrompt?: (enabled: boolean) => void;
 }) {
-  const [filter, setFilter] = useState<ParkingFilter>("all");
-  const ranked = sortParkingLots(lots.filter((lot) => matchesFilter(lot, filter)), sort);
-  const detail = selected && matchesFilter(selected, filter) ? selected : null;
+  const ranked = sortParkingLots(lots, sort);
+  const detail = selected;
   return (
     <section className="pointer-events-auto w-full max-w-xl rounded-2xl border border-emerald-300/20 bg-black/78 p-3 text-white shadow-[0_12px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <div>
-          <p className="text-[11px] tracking-wide text-emerald-200">全國公有停車場</p>
-          <p className="text-[11px] text-zinc-500">
-            {eventOriginLabel(origin)} · {fetchedAt ? formatUpdatedAt(fetchedAt) : "未提供"}
-          </p>
-          <p className="mt-1 text-[10px] text-zinc-500">
-            綠＝無收費 · 黃＝收費 · 藍邊＝有註冊
+        <div className="min-w-0">
+          <p className="text-[11px] tracking-wide text-emerald-200">附近停車場</p>
+          <p className="truncate text-[11px] text-zinc-500">
+            {eventOriginLabel(origin)} · {fetchedAt ? formatUpdatedAgo(fetchedAt) : "未提供"}
           </p>
           {onToggleArrivalPrompt ? (
             <button
@@ -89,30 +84,10 @@ export function ParkingPanel({
           type="button"
           aria-label="關閉停車場"
           onClick={onClose}
-          className="flex size-11 items-center justify-center rounded-lg text-zinc-400 hover:bg-white/10 touch-manipulation"
+          className="flex size-11 shrink-0 items-center justify-center rounded-lg text-zinc-400 hover:bg-white/10 touch-manipulation"
         >
           <X className="size-4" />
         </button>
-      </div>
-      <div className="mb-2 flex flex-wrap gap-1.5">
-        {([
-          ["all", "全部"],
-          ["registered", "有註冊"],
-          ["paid", "收費"],
-          ["free", "無收費"],
-        ] as const).map(([value, label]) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => setFilter(value)}
-            className={cn(
-              "h-9 rounded-full px-3 text-xs touch-manipulation",
-              filter === value ? "bg-sky-400 text-[#041016]" : "bg-white/8 text-zinc-300",
-            )}
-          >
-            {label}
-          </button>
-        ))}
       </div>
       <div className="mb-2 flex gap-1.5">
         {(["distance", "remaining", "price"] as const).map((value) => (
@@ -125,7 +100,7 @@ export function ParkingPanel({
               sort === value ? "bg-emerald-400 text-[#041016]" : "bg-white/8 text-zinc-300",
             )}
           >
-            {value === "distance" ? "距離" : value === "remaining" ? "剩餘車位" : "價格"}
+            {value === "distance" ? "距離最近" : value === "remaining" ? "剩餘最多" : "費率最低"}
           </button>
         ))}
       </div>
@@ -133,42 +108,31 @@ export function ParkingPanel({
         <article className="mb-2 rounded-xl bg-white/5 p-2.5">
           <h2 className="truncate text-sm font-semibold">{detail.name}</h2>
           <p className="truncate text-[11px] text-zinc-400">
-            {providedText(formatTaiwanDisplayAddress(detail.address))}
+            {formatTaiwanDisplayAddress(detail.address) || "地址未提供"}
           </p>
-          <div className="mt-1.5 flex flex-wrap gap-1">
-            {detail.publicLot ? <Badge>公有</Badge> : null}
-            <Badge tone={detail.registered ? "sky" : "zinc"}>
-              {detail.registered ? "有註冊" : "未註冊"}
-            </Badge>
-            <Badge tone={detail.feeClass === "free" ? "green" : detail.feeClass === "paid" ? "amber" : "zinc"}>
-              {PARKING_FEE_LABEL[detail.feeClass]}
-            </Badge>
-          </div>
           <dl className="mt-2 grid grid-cols-2 gap-2 text-xs">
-            <Info label="距離" value={detail.distanceMeters != null ? formatDistance(detail.distanceMeters) : "未提供"} />
             <Info
-              label="汽車車位"
+              label="距離"
+              value={detail.distanceMeters != null ? formatDistance(detail.distanceMeters) : "未提供"}
+            />
+            <Info label="剩餘" value={remainingLabel(detail)} />
+            <Info
+              label="總車位"
+              value={detail.carTotal != null ? `${detail.carTotal} 格` : "未提供"}
+            />
+            <Info label="費率" value={formatParkingRate(detail)} />
+            <Info label="最後更新" value={formatUpdatedAgo(detail.updatedAt)} />
+            <Info
+              label="空位"
               value={
-                detail.carAvailable == null && detail.carTotal == null
-                  ? "車位資訊未提供"
-                  : `${detail.carAvailable ?? "未提供"} / ${detail.carTotal ?? "未提供"}`
+                detail.fill === "full"
+                  ? "已滿"
+                  : detail.fill === "unknown"
+                    ? "即時剩餘車位目前無資料"
+                    : "仍有空位"
               }
             />
-            <Info
-              label="機車車位"
-              value={
-                detail.motorcycleAvailable == null && detail.motorcycleTotal == null
-                  ? "車位資訊未提供"
-                  : `${detail.motorcycleAvailable ?? "未提供"} / ${detail.motorcycleTotal ?? "未提供"}`
-              }
-            />
-            <Info label="收費" value={detail.fee?.trim() ? detail.fee : PARKING_FEE_LABEL[detail.feeClass]} />
-            <Info label="營業時間" value={providedText(detail.hours)} />
-            <Info label="狀態" value={`${FILL_LABEL[detail.fill]} · ${freshnessLabel(detail.freshness)}`} />
           </dl>
-          <p className="mt-2 text-[11px] text-zinc-500">
-            最後更新 {detail.updatedAt ? formatUpdatedAt(detail.updatedAt) : "未提供"} · {providedText(detail.source)}
-          </p>
           <Button
             type="button"
             onClick={() => onNavigate(detail)}
@@ -181,11 +145,7 @@ export function ParkingPanel({
       ) : null}
       {ranked.length === 0 ? (
         <p className="px-1 py-3 text-sm text-zinc-300">
-          {origin === "unavailable"
-            ? "資料暫時無法取得"
-            : filter === "all"
-              ? "附近沒有公有停車場資料"
-              : "這個分類附近沒有符合的公有停車場"}
+          {origin === "unavailable" ? "資料暫時無法取得" : "附近沒有停車場資料"}
         </p>
       ) : (
         <ul className="max-h-40 overflow-y-auto">
@@ -200,21 +160,21 @@ export function ParkingPanel({
                 )}
               >
                 <span
-                  className="flex size-9 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-[#041016]"
-                  style={{
-                    backgroundColor: parkingFeeLayerColor(lot.feeClass),
-                    boxShadow: lot.registered ? "0 0 0 2px #38bdf8" : undefined,
-                  }}
+                  className={cn(
+                    "flex size-9 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-[#041016]",
+                    markerClass(lot),
+                  )}
                 >
-                  {lot.feeClass === "free" ? "免" : lot.feeClass === "paid" ? "收" : "P"}
+                  {lot.carAvailable == null ? "P?" : `P${Math.max(0, lot.carAvailable)}`}
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm">{lot.name}</span>
                   <span className="block truncate text-[11px] text-zinc-500">
-                    {PARKING_FEE_LABEL[lot.feeClass]}
-                    {lot.registered ? " · 有註冊" : ""}
-                    {" · "}
                     {lot.distanceMeters != null ? formatDistance(lot.distanceMeters) : "未提供"}
+                    {" · "}
+                    {remainingLabel(lot)}
+                    {" · "}
+                    {formatParkingRate(lot)}
                   </span>
                 </span>
               </button>
@@ -223,30 +183,6 @@ export function ParkingPanel({
         </ul>
       )}
     </section>
-  );
-}
-
-function Badge({
-  children,
-  tone = "emerald",
-}: {
-  children: string;
-  tone?: "emerald" | "sky" | "green" | "amber" | "zinc";
-}) {
-  const toneClass =
-    tone === "sky"
-      ? "bg-sky-400/20 text-sky-100"
-      : tone === "green"
-        ? "bg-emerald-400/20 text-emerald-100"
-        : tone === "amber"
-          ? "bg-amber-400/20 text-amber-100"
-          : tone === "zinc"
-            ? "bg-white/10 text-zinc-300"
-            : "bg-emerald-400/20 text-emerald-100";
-  return (
-    <span className={cn("rounded-full px-2 py-0.5 text-[10px]", toneClass)}>
-      {children}
-    </span>
   );
 }
 

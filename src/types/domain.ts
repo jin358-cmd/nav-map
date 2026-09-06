@@ -325,6 +325,11 @@ export type RouteDestination = {
 
 export type ParkingFill = "plenty" | "limited" | "full" | "unknown";
 export type ParkingFeeClass = "paid" | "free" | "unknown";
+export type ParkingAvailabilityStatus =
+  | "available"
+  | "full"
+  | "unknown"
+  | "stale";
 export type ParkingSort = "distance" | "remaining" | "price";
 export type ParkingFilter = "all" | "registered" | "paid" | "free";
 export type ParkingDataOrigin =
@@ -345,10 +350,13 @@ export type ParkingLot = {
   motorcycleTotal?: number | null;
   fee?: string;
   feeClass: ParkingFeeClass;
+  hourlyRate?: number | null;
+  dailyMax?: number | null;
   publicLot: boolean;
   registered: boolean;
   hours?: string;
   updatedAt?: string;
+  availabilityStatus?: ParkingAvailabilityStatus;
   source: string;
   origin: ParkingDataOrigin;
   freshness: DataFreshness;

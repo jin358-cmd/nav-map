@@ -4,7 +4,6 @@ import type {
   Map as MapLibreMap,
   MapLayerMouseEvent,
 } from "maplibre-gl";
-import { parkingLayerLabel } from "@/lib/parking-meta";
 import type { ParkingLot } from "@/types/domain";
 
 export const PARKING_SOURCE_ID = "parking-source";
@@ -14,21 +13,16 @@ export const PARKING_LAYER_ID = "parking-layer";
 export const PARKING_LABEL_LAYER_ID = "parking-layer-label";
 export const PARKING_HIT_LAYER_ID = "parking-hit-layer";
 
-const FEE_COLOR: ExpressionSpecification = [
+const FILL_COLOR: ExpressionSpecification = [
   "match",
-  ["get", "feeClass"],
-  "free",
+  ["get", "fill"],
+  "plenty",
   "#22c55e",
-  "paid",
-  "#f59e0b",
-  "#64748b",
-];
-
-const STROKE_COLOR: ExpressionSpecification = [
-  "case",
-  ["==", ["get", "registered"], 1],
-  "#38bdf8",
-  "#ecfdf5",
+  "limited",
+  "#eab308",
+  "full",
+  "#ef4444",
+  "#71717a",
 ];
 
 function data(lots: ParkingLot[]) {
@@ -40,9 +34,8 @@ function data(lots: ParkingLot[]) {
       properties: {
         id: lot.id,
         fill: lot.fill,
-        feeClass: lot.feeClass,
-        registered: lot.registered ? 1 : 0,
-        label: parkingLayerLabel(lot.feeClass, lot.carAvailable),
+        label:
+          lot.carAvailable == null ? "?" : String(Math.max(0, lot.carAvailable)),
         selected: 0,
       },
       geometry: {
@@ -122,13 +115,13 @@ export function upsertParkingLayer(
           16,
           13,
         ],
-        "circle-color": FEE_COLOR,
-        "circle-stroke-color": STROKE_COLOR,
+        "circle-color": FILL_COLOR,
+        "circle-stroke-color": "#ecfdf5",
         "circle-stroke-width": [
           "case",
           ["==", ["get", "id"], selectedId ?? ""],
           3,
-          ["case", ["==", ["get", "registered"], 1], 2.4, 1.4],
+          1.4,
         ],
       },
     });
@@ -138,15 +131,15 @@ export function upsertParkingLayer(
       source: PARKING_SOURCE_ID,
       filter: ["!", ["has", "point_count"]],
       layout: {
-        "text-field": ["get", "label"],
+        "text-field": ["concat", "P", ["get", "label"]],
         "text-size": 10,
         "text-allow-overlap": true,
       },
       paint: { "text-color": "#052e16" },
     });
   } else {
-    map.setPaintProperty(PARKING_LAYER_ID, "circle-color", FEE_COLOR);
-    map.setPaintProperty(PARKING_LAYER_ID, "circle-stroke-color", STROKE_COLOR);
+    map.setPaintProperty(PARKING_LAYER_ID, "circle-color", FILL_COLOR);
+    map.setPaintProperty(PARKING_LAYER_ID, "circle-stroke-color", "#ecfdf5");
     map.setPaintProperty(PARKING_LAYER_ID, "circle-radius", [
       "case",
       ["==", ["get", "id"], selectedId ?? ""],
@@ -157,9 +150,13 @@ export function upsertParkingLayer(
       "case",
       ["==", ["get", "id"], selectedId ?? ""],
       3,
-      ["case", ["==", ["get", "registered"], 1], 2.4, 1.4],
+      1.4,
     ]);
-    map.setLayoutProperty(PARKING_LABEL_LAYER_ID, "text-field", ["get", "label"]);
+    map.setLayoutProperty(PARKING_LABEL_LAYER_ID, "text-field", [
+      "concat",
+      "P",
+      ["get", "label"],
+    ]);
   }
 
   const visibility = visible ? "visible" : "none";

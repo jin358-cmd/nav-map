@@ -2,7 +2,7 @@
 
 智駕台灣。駕駛視角的道路情報地圖，不是 Google Maps 克隆。
 
-駕駛視角道路情報地圖。Phase 5.2 已含路線吸附、平滑跟隨、偏航重算、路口強化、住家／公司、亮暗衛星底圖、汽車／機車預覽、即時事件圖層與全國公有停車場（有註冊／收費／無收費）。正式環境 API 失敗時顯示「資料暫時無法取得」，不會自動填入假路況、假事故或假災害。僅在本機將 `NEXT_PUBLIC_ENABLE_DEMO=1` 時才會出現標示為「示範資料」的測試圖層。
+駕駛視角道路情報地圖。Phase 5.2 已含路線吸附、平滑跟隨、偏航重算、路口強化、住家／公司、亮暗衛星底圖、汽車／機車預覽、即時事件圖層，以及台南停車 Open Data（名稱、位置、距離、總格、剩餘、費率、更新時間，可導航前往）。正式環境 API 失敗時顯示「資料暫時無法取得」，不會自動填入假路況、假事故、假災害或假車位。僅在本機將 `NEXT_PUBLIC_ENABLE_DEMO=1` 時才會出現標示為「示範資料」的測試圖層。
 
 ## 技術架構
 
@@ -100,7 +100,7 @@ npm start
 - 底部半透明 Road Information Card
 - Android 直式優先的 Responsive HUD（資訊卡不遮住主要駕駛視野）
 
-未設定 TDX 金鑰時：CCTV 可走本地 SNAPSHOT；路況、事故與施工顯示「資料暫時無法取得」，不會自動改用假資料。停車圖層改抓全國公有停車場：有 TDX 時用各縣市路外公有場（含註冊編號、收費／無收費）；沒有金鑰時，臺南走市府停車動態，其他縣市走 OpenStreetMap 公有／免費場。金鑰請放伺服器端 `TDX_CLIENT_ID` / `TDX_CLIENT_SECRET`（不可用 `NEXT_PUBLIC_`）。live cache 與前端輪詢約 **5 分鐘**。
+未設定 TDX 金鑰時：CCTV 可走本地 SNAPSHOT；路況、事故與施工顯示「資料暫時無法取得」，不會自動改用假資料。停車第一階段讀臺南市府 Open Data，經 Provider 清洗後寫入 Supabase（`parking_lots` / `parking_availability` / `parking_rates`）；未設定 `SUPABASE_SERVICE_ROLE_KEY` 時改走即時 Open Data 後備，不產生假車位。詳見 [`docs/PARKING-OPEN-DATA.md`](docs/PARKING-OPEN-DATA.md)。
 
 災害示警由 `/api/disasters` 抓 NCDR 民生示警 JSON Atom，再讀各則 CAP 的 `polygon`／`circle` 幾何中心。可選填伺服器端 `NCDR_ALERT_FEED_URL`。失敗時顯示「資料暫時無法取得」。YouTube 歌單設定見 [`docs/youtube-playlist-oauth-setup.md`](docs/youtube-playlist-oauth-setup.md)。
 
@@ -118,10 +118,10 @@ Phase 4 災害說明：[`docs/PHASE-4-DISASTERS.md`](docs/PHASE-4-DISASTERS.md)�
 已完成 weather 邏輯移植與 Driving HUD。CCTV 的 TDX live token 仍是 stub。
 
 **Phase 5.2：導航體驗（本階段）**
-路線吸附與平滑跟隨、五秒內偏航重算、50 公尺路口黃卡、住家／公司、亮／暗／自動／衛星、2D／3D、兩段式定位、汽車／機車預覽、事件圖層聯動、全國公有停車場、YouTube 歌單授權。手勢與跟車：單指／雙指會立刻放開 Camera Follow，跟車用每幀 `jumpTo` 而不是每次 GPS `easeTo`，Raw GPS 與畫面插值分離。
+路線吸附與平滑跟隨、五秒內偏航重算、50 公尺路口黃卡、住家／公司、亮／暗／自動／衛星、2D／3D、兩段式定位、汽車／機車預覽、事件圖層聯動、台南停車 Open Data、YouTube 歌單授權。手勢與跟車：單指／雙指會立刻放開 Camera Follow，跟車用每幀 `jumpTo` 而不是每次 GPS `easeTo`，Raw GPS 與畫面插值分離。
 
 **後續**
-機車路由供應商、TDX CCTV live、離線底圖快取。
+機車路由供應商、TDX CCTV live、停車擴充至北中高與新北、離線底圖快取。
 
 ## Vercel 部署
 
