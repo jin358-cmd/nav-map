@@ -291,7 +291,7 @@
   pointer-events: none;
   overflow: visible;
   transform-style: preserve-3d;
-  filter: drop-shadow(0 7px 10px rgba(127, 29, 29, 0.55));
+  filter: drop-shadow(0 7px 10px rgba(180, 83, 9, 0.55));
 }
 
 .destination-beacon {
@@ -307,16 +307,16 @@
 .destination-beacon__dot {
   position: absolute;
   inset: 0;
-  border: 3px solid #ef4444;
+  border: 3px solid #facc15;
   border-radius: 999px;
   background: transparent;
-  box-shadow: 0 0 12px rgba(239, 68, 68, 0.55);
+  box-shadow: 0 0 12px rgba(250, 204, 21, 0.6);
 }
 
 .destination-beacon__ring {
   position: absolute;
   inset: -4px;
-  border: 2.5px solid rgba(239, 68, 68, 0.92);
+  border: 2.5px solid rgba(250, 204, 21, 0.95);
   border-radius: 999px;
   animation: destination-beacon-pulse 2.1s ease-out infinite;
 }
@@ -349,7 +349,7 @@
   height: 8px;
   transform: translateX(-50%);
   border-radius: 999px;
-  background: radial-gradient(circle, rgba(239, 68, 68, 0.7), transparent 72%);
+  background: radial-gradient(circle, rgba(255, 176, 39, 0.7), transparent 72%);
 }
 
 .destination-pin__mark {
@@ -758,12 +758,9 @@
   font-weight: 800;
 }
 
-.navigation-instruction-card--cruise .navigation-guidance {
-  color: #0f172a;
-}
-
+.navigation-instruction-card--cruise .navigation-guidance,
 .navigation-instruction-card--alert .navigation-guidance {
-  color: #422006;
+  color: #fff;
 }
 
 .navigation-road-name {
@@ -798,6 +795,56 @@
 }
 
 @media (orientation: portrait) {
+  .hud-anchor-trip {
+    width: min(68vw, 21.5rem);
+    max-width: calc(100vw - 7.25rem - env(safe-area-inset-right));
+  }
+
+  .hud-trip-stack {
+    --hud-trip-cols: minmax(4.25rem, 1fr) minmax(0, 1fr) minmax(5.15rem, 1.2fr);
+    gap: 0.35rem;
+  }
+
+  .hud-trip-card {
+    min-height: 4.45rem;
+    padding: 0.62rem 0.16rem;
+    border-radius: 1rem;
+  }
+
+  .hud-trip-cell {
+    padding: 0 0.36rem;
+  }
+
+  .hud-trip-label {
+    font-size: clamp(10px, 5cqi, 12px);
+  }
+
+  .hud-trip-metric {
+    margin-top: 0.2rem;
+    font-size: clamp(17px, 10.2cqi, 26px);
+  }
+
+  .hud-speed-gps {
+    min-height: 2.95rem;
+    padding: 0.32rem 0.16rem 0.28rem;
+  }
+
+  .hud-speed-gps__value {
+    font-size: clamp(17px, 5.6cqi, 22px);
+  }
+
+  .hud-speed-limit-slot {
+    min-height: 2.7rem;
+  }
+
+  .hud-speed-limit-badge {
+    width: 2.45rem;
+    height: 2.45rem;
+    box-shadow:
+      0 0 0 0.42rem rgba(220, 38, 38, 0.5),
+      0 2px 8px rgba(0, 0, 0, 0.35);
+  }
+
   .hud-anchor-maneuver {
     left: max(0.4rem, env(safe-area-inset-left));
     right: max(0.4rem, env(safe-area-inset-right));
