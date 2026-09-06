@@ -19,7 +19,7 @@ export async function GET(request: Request) {
       origin: catalog.origin,
       lots: catalog.lots,
       fetchedAt: catalog.fetchedAt,
-      source: catalog.origin === "tainan-open" ? "tainan-open" : "unavailable",
+      source: catalog.origin,
     });
   } catch {
     return Response.json({ error: "停車資料載入失敗" }, { status: 502 });

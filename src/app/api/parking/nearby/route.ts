@@ -22,7 +22,7 @@ export async function GET(request: Request) {
       lots: catalog.lots,
       fetchedAt: catalog.fetchedAt,
       radiusMeters: Number.isFinite(radius) ? radius : PARKING_DEFAULT_RADIUS_M,
-      source: catalog.origin === "tainan-open" ? "tainan-open" : "unavailable",
+      source: catalog.origin,
     });
   } catch {
     return Response.json({ error: "停車資料載入失敗" }, { status: 502 });

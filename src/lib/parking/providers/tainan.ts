@@ -6,6 +6,7 @@ import {
   TAINAN_PARKING_SOURCE,
   TAINAN_PARKWEB_URL,
 } from "@/lib/parking/constants";
+import { inferPublicLot, matchParkingBrand } from "@/lib/parking/brands";
 import { classifyParkingFee } from "@/lib/parking-meta";
 import type {
   NormalizedParkingLot,
@@ -99,6 +100,7 @@ function toLot(value: unknown): NormalizedParkingLot | null {
   if (!sourceParkingId) return null;
   const typeName = text(row.typeName);
   const name = text(row.name) || "停車場";
+  const brand = matchParkingBrand(name, typeName);
   const fee = text(row.chargeFee);
   const feeClass = /免費|無收費/.test(`${typeName}${fee}${name}`)
     ? "free"
@@ -141,10 +143,16 @@ function toLot(value: unknown): NormalizedParkingLot | null {
     operatingHours: text(row.chargeTime),
     phone: "",
     operator: typeName || "臺南市停車管理",
+    brand,
     city: "臺南市",
     district: text(row.zone),
     isActive: true,
-    publicLot: /公有|公營|智慧停車/.test(typeName),
+    publicLot: inferPublicLot({
+      typeName,
+      name,
+      operator: typeName,
+      brand,
+    }),
     registered: true,
     feeClass,
     availability: {

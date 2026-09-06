@@ -335,6 +335,7 @@ export type ParkingFilter = "all" | "registered" | "paid" | "free";
 export type ParkingDataOrigin =
   | "tdx-live"
   | "tainan-open"
+  | "taipei-open"
   | "osm-open"
   | "unavailable";
 
@@ -353,6 +354,7 @@ export type ParkingLot = {
   hourlyRate?: number | null;
   dailyMax?: number | null;
   publicLot: boolean;
+  brand?: string | null;
   registered: boolean;
   hours?: string;
   updatedAt?: string;

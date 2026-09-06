@@ -93,6 +93,12 @@ export async function fetchCityParkingAvailability(
   );
 }
 
+export async function fetchCityParkingOperators(
+  city: string,
+): Promise<Record<string, unknown>[]> {
+  return fetchTdxPaged(`/v1/Parking/OffStreet/Operator/City/${city}`);
+}
+
 export async function fetchTainanParkingLots(): Promise<Record<string, unknown>[]> {
   return fetchCityParkingLots(TDX_TAINAN_CITY);
 }
@@ -107,7 +113,13 @@ function unwrapParkingList(payload: unknown): Record<string, unknown>[] {
   if (Array.isArray(payload)) return payload as Record<string, unknown>[];
   if (!payload || typeof payload !== "object") return [];
   const record = payload as Record<string, unknown>;
-  for (const key of ["Items", "items", "CarParks", "ParkingAvailabilities"]) {
+  for (const key of [
+    "Items",
+    "items",
+    "CarParks",
+    "ParkingAvailabilities",
+    "Operators",
+  ]) {
     const value = record[key];
     if (Array.isArray(value)) return value as Record<string, unknown>[];
   }

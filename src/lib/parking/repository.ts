@@ -1,6 +1,7 @@
 import "server-only";
 
 import { distanceKm } from "@/lib/geo";
+import { inferPublicLot, matchParkingBrand } from "@/lib/parking/brands";
 import {
   PARKING_AVAIL_SYNC_MS,
   PARKING_LOT_SYNC_MS,
@@ -189,10 +190,15 @@ function rowToNormalized(row: NearbyRow): NormalizedParkingLot {
     operatingHours: row.operating_hours ?? "",
     phone: row.phone ?? "",
     operator: row.operator ?? "",
+    brand: matchParkingBrand(row.name, row.operator),
     city: row.city ?? "",
     district: row.district ?? "",
     isActive: row.is_active !== false,
-    publicLot: true,
+    publicLot: inferPublicLot({
+      name: row.name,
+      operator: row.operator ?? "",
+      typeName: row.operator ?? "",
+    }),
     registered: true,
     feeClass:
       row.rate_type === "free"

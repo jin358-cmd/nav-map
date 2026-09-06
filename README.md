@@ -100,7 +100,7 @@ npm start
 - 底部半透明 Road Information Card
 - Android 直式優先的 Responsive HUD（資訊卡不遮住主要駕駛視野）
 
-未設定 TDX 金鑰時：CCTV 可走本地 SNAPSHOT；路況、事故與施工顯示「資料暫時無法取得」，不會自動改用假資料。停車第一階段讀臺南市府 Open Data，經 Provider 清洗後寫入 Supabase（`parking_lots` / `parking_availability` / `parking_rates`）；未設定 `SUPABASE_SERVICE_ROLE_KEY` 時改走即時 Open Data 後備，不產生假車位。詳見 [`docs/PARKING-OPEN-DATA.md`](docs/PARKING-OPEN-DATA.md)。
+未設定 TDX 金鑰時：CCTV 可走本地 SNAPSHOT；路況、事故與施工顯示「資料暫時無法取得」，不會自動改用假資料。停車場圖層收公有與民營：臺南市府 Open Data、臺北市停管處 Open Data、TDX 路外停車場（含 `IsPublic=0`），以及 OSM `amenity=parking`。連鎖品牌（嘟嘟房、台灣聯通等）沒有公開場站 API，從上述來源辨識。未設定 `SUPABASE_SERVICE_ROLE_KEY` 時臺南走即時 Open Data 後備，不產生假車位。詳見 [`docs/PARKING-OPEN-DATA.md`](docs/PARKING-OPEN-DATA.md)。
 
 災害示警由 `/api/disasters` 抓 NCDR 民生示警 JSON Atom，再讀各則 CAP 的 `polygon`／`circle` 幾何中心。可選填伺服器端 `NCDR_ALERT_FEED_URL`。失敗時顯示「資料暫時無法取得」。YouTube 歌單設定見 [`docs/youtube-playlist-oauth-setup.md`](docs/youtube-playlist-oauth-setup.md)。
 

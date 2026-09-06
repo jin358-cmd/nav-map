@@ -2,20 +2,29 @@ import "server-only";
 
 import { distanceKm } from "@/lib/geo";
 import {
+  OSM_PARKING_SOURCE,
   PARKING_DEFAULT_RADIUS_M,
   PARKING_MAX_RADIUS_M,
   PARKING_MIN_RADIUS_M,
+  TAIPEI_PARKING_SOURCE,
   TAINAN_PARKING_SOURCE,
+  TDX_PARKING_SOURCE,
 } from "@/lib/parking/constants";
+import { mergeParkingLots } from "@/lib/parking/merge";
 import { readParkingMemory } from "@/lib/parking/memory-store";
+import { fetchOsmParkingLots } from "@/lib/parking/providers/osm";
+import { fetchTaipeiParkingLots } from "@/lib/parking/providers/taipei";
+import { fetchTdxParkingLots } from "@/lib/parking/providers/tdx";
 import { queryNearbyParkingLots } from "@/lib/parking/repository";
 import { parkingFillFromAvailability } from "@/lib/parking/schema";
 import { syncTainanParking } from "@/lib/parking/sync";
+import { isInTainan, parkingCitiesNear } from "@/lib/parking-cities";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
 import type {
   DataFreshness,
   LngLat,
   ParkingCatalog,
+  ParkingDataOrigin,
   ParkingLot,
 } from "@/types/domain";
 
@@ -30,6 +39,29 @@ function freshnessOf(status: ParkingLot["availabilityStatus"]): DataFreshness {
   return "live";
 }
 
+function originOf(source: string): ParkingDataOrigin {
+  if (source === TDX_PARKING_SOURCE) return "tdx-live";
+  if (source === TAIPEI_PARKING_SOURCE) return "taipei-open";
+  if (source === OSM_PARKING_SOURCE) return "osm-open";
+  return "tainan-open";
+}
+
+function sourceLabel(source: string) {
+  if (source === TDX_PARKING_SOURCE) return "TDX 路外停車場";
+  if (source === TAIPEI_PARKING_SOURCE) return "臺北市停管處 Open Data";
+  if (source === OSM_PARKING_SOURCE) return "OpenStreetMap 停車場";
+  if (source === TAINAN_PARKING_SOURCE) return "臺南市停車 Open Data";
+  return source;
+}
+
+function catalogOrigin(lots: ParkingLot[]): ParkingDataOrigin {
+  if (lots.some((lot) => lot.origin === "tainan-open")) return "tainan-open";
+  if (lots.some((lot) => lot.origin === "taipei-open")) return "taipei-open";
+  if (lots.some((lot) => lot.origin === "tdx-live")) return "tdx-live";
+  if (lots.some((lot) => lot.origin === "osm-open")) return "osm-open";
+  return "unavailable";
+}
+
 function toCatalogLot(
   lot: import("@/lib/parking/schema").NormalizedParkingLot,
   center: LngLat,
@@ -38,6 +70,7 @@ function toCatalogLot(
     distanceKm(center, { lat: lot.latitude, lng: lot.longitude }) * 1000,
   );
   const status = lot.availability.status;
+  const origin = originOf(lot.source);
   return {
     id: lot.id,
     name: lot.name,
@@ -53,12 +86,13 @@ function toCatalogLot(
     hourlyRate: lot.rate.hourlyRate,
     dailyMax: lot.rate.dailyMax,
     publicLot: lot.publicLot,
+    brand: lot.brand,
     registered: lot.registered,
     hours: lot.operatingHours,
     updatedAt: lot.availability.dataTimestamp ?? undefined,
     availabilityStatus: status,
-    source: lot.source === TAINAN_PARKING_SOURCE ? "臺南市停車 Open Data" : lot.source,
-    origin: "tainan-open",
+    source: sourceLabel(lot.source),
+    origin,
     freshness: freshnessOf(status),
     fill: parkingFillFromAvailability(
       lot.availability.availableSpaces,
@@ -68,11 +102,8 @@ function toCatalogLot(
   };
 }
 
-export async function loadNearbyParkingLots(
-  center: LngLat,
-  radiusMeters = PARKING_DEFAULT_RADIUS_M,
-): Promise<ParkingCatalog> {
-  const radius = clampParkingRadius(radiusMeters);
+async function loadTainanLots(center: LngLat, radius: number) {
+  if (!isInTainan(center)) return [];
   const sync = await syncTainanParking(false);
   let normalized = isSupabaseConfigured()
     ? await queryNearbyParkingLots(center, radius)
@@ -85,22 +116,44 @@ export async function loadNearbyParkingLots(
       return meters <= radius;
     });
   }
+  return normalized;
+}
 
-  const lots = normalized
+export async function loadNearbyParkingLots(
+  center: LngLat,
+  radiusMeters = PARKING_DEFAULT_RADIUS_M,
+): Promise<ParkingCatalog> {
+  const radius = clampParkingRadius(radiusMeters);
+  const cities = parkingCitiesNear(center, radius / 1000);
+  const wantTaipei = cities.includes("Taipei");
+  const [tainan, tdx, taipei, osm] = await Promise.all([
+    loadTainanLots(center, radius),
+    fetchTdxParkingLots(center, Math.max(radius / 1000, 6)),
+    wantTaipei ? fetchTaipeiParkingLots() : Promise.resolve([]),
+    fetchOsmParkingLots(center, radius),
+  ]);
+
+  const merged = mergeParkingLots([tainan, tdx, taipei, osm]).filter((lot) => {
+    const meters =
+      distanceKm(center, { lat: lot.latitude, lng: lot.longitude }) * 1000;
+    return meters <= radius;
+  });
+
+  const lots = merged
     .map((lot) => toCatalogLot(lot, center))
     .sort((a, b) => (a.distanceMeters ?? 0) - (b.distanceMeters ?? 0));
 
-  if (!lots.length && sync.status === "failed" && !sync.lots.length) {
+  if (!lots.length) {
     return {
       origin: "unavailable",
       lots: [],
-      fetchedAt: sync.completedAt,
+      fetchedAt: new Date().toISOString(),
     };
   }
 
   return {
-    origin: lots.length ? "tainan-open" : "unavailable",
+    origin: catalogOrigin(lots),
     lots,
-    fetchedAt: sync.completedAt,
+    fetchedAt: new Date().toISOString(),
   };
 }

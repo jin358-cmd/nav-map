@@ -79,6 +79,13 @@ export function PlaceInfoCard({
         {place.kind === "parking" ? (
           <>
             <div>
+              <dt className="text-[11px] text-zinc-500">經營</dt>
+              <dd>
+                {place.publicLot === false ? "民營" : "公有"}
+                {place.brand ? ` · ${place.brand}` : ""}
+              </dd>
+            </div>
+            <div>
               <dt className="text-[11px] text-zinc-500">剩餘</dt>
               <dd>
                 {place.availabilityStatus === "unknown" || place.carAvailable == null

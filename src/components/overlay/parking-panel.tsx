@@ -8,6 +8,7 @@ import {
   formatParkingRate,
   formatUpdatedAgo,
 } from "@/lib/format";
+import { parkingOwnershipLabel } from "@/lib/parking/brands";
 import { formatTaiwanDisplayAddress } from "@/lib/geocoding/format-taiwan-display-address";
 import { sortParkingLots } from "@/lib/parking-sort";
 import { cn } from "@/lib/utils";
@@ -108,6 +109,9 @@ export function ParkingPanel({
         <article className="mb-2 rounded-xl bg-white/5 p-2.5">
           <h2 className="truncate text-sm font-semibold">{detail.name}</h2>
           <p className="truncate text-[11px] text-zinc-400">
+            {parkingOwnershipLabel(detail.publicLot)}
+            {detail.brand ? ` · ${detail.brand}` : ""}
+            {" · "}
             {formatTaiwanDisplayAddress(detail.address) || "地址未提供"}
           </p>
           <dl className="mt-2 grid grid-cols-2 gap-2 text-xs">
@@ -171,6 +175,9 @@ export function ParkingPanel({
                   <span className="block truncate text-sm">{lot.name}</span>
                   <span className="block truncate text-[11px] text-zinc-500">
                     {lot.distanceMeters != null ? formatDistance(lot.distanceMeters) : "未提供"}
+                    {" · "}
+                    {parkingOwnershipLabel(lot.publicLot)}
+                    {lot.brand ? ` · ${lot.brand}` : ""}
                     {" · "}
                     {remainingLabel(lot)}
                     {" · "}

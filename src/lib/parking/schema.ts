@@ -22,6 +22,7 @@ export type NormalizedParkingLot = {
   operatingHours: string;
   phone: string;
   operator: string;
+  brand: string | null;
   city: string;
   district: string;
   isActive: boolean;

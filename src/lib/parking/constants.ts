@@ -1,6 +1,14 @@
 export const TAINAN_PARKWEB_URL =
   "https://parkweb.tainan.gov.tw/api/parking.php?mode=0";
 export const TAINAN_PARKING_SOURCE = "tainan-parkweb";
+export const TDX_PARKING_SOURCE = "tdx-offstreet";
+export const TAIPEI_PARKING_SOURCE = "taipei-pma";
+export const OSM_PARKING_SOURCE = "osm-parking";
+export const TAIPEI_PARK_DESC_URL =
+  "https://tcgbusfs.blob.core.windows.net/blobtcmsv/TCMSV_alldesc.json";
+export const TAIPEI_PARK_AVAIL_URL =
+  "https://tcgbusfs.blob.core.windows.net/blobtcmsv/TCMSV_allavailable.json";
+export const OSM_OVERPASS_URL = "https://overpass-api.de/api/interpreter";
 export const PARKING_STALE_AFTER_MS = 10 * 60 * 1000;
 export const PARKING_AVAIL_SYNC_MS = 3 * 60 * 1000;
 export const PARKING_LOT_SYNC_MS = 24 * 60 * 60 * 1000;

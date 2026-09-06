@@ -30,6 +30,7 @@ export type MapPlace = {
   dailyMax?: number | null;
   registered?: boolean;
   publicLot?: boolean;
+  brand?: string | null;
   updatedAt?: string;
   availabilityStatus?: ParkingLot["availabilityStatus"];
 };
@@ -102,6 +103,7 @@ export function parkingLotToPlace(lot: ParkingLot): MapPlace {
     dailyMax: lot.dailyMax,
     registered: lot.registered,
     publicLot: lot.publicLot,
+    brand: lot.brand,
     updatedAt: lot.updatedAt,
     availabilityStatus: lot.availabilityStatus,
     carAvailable: lot.carAvailable,

@@ -9,6 +9,7 @@ function normalizeLot(lot: ParkingLot): ParkingLot {
     ...lot,
     feeClass: lot.feeClass ?? "unknown",
     publicLot: lot.publicLot ?? true,
+    brand: lot.brand ?? null,
     registered: lot.registered ?? false,
     hourlyRate: lot.hourlyRate ?? null,
     dailyMax: lot.dailyMax ?? null,
