@@ -43,7 +43,11 @@ function drawCameraIcon(fill: string, lens: string): ImageData {
   }
 
   ctx.beginPath();
-  ctx.arc(32, 32, 28, 0, Math.PI * 2);
+  ctx.arc(32, 32, 31, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(168, 85, 247, 0.5)";
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(32, 32, 26, 0, Math.PI * 2);
   ctx.fillStyle = fill;
   ctx.fill();
   ctx.lineWidth = 4;

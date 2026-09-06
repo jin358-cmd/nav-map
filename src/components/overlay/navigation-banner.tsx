@@ -85,13 +85,13 @@ export const NextIntersectionHud = forwardRef<
       <div className="navigation-instruction-content">
         <div
           className={cn(
-            "navigation-turn-icon flex shrink-0 items-center justify-center rounded-xl",
+            "navigation-turn-icon navigation-turn-icon--blink flex shrink-0 items-center justify-center rounded-full",
             turnAlert
-              ? "navigation-turn-icon--alert navigation-turn-icon--blink"
+              ? "navigation-turn-icon--alert"
               : "navigation-turn-icon--cruise",
           )}
         >
-          <TurnArrowIcon side={side} variant="sign" className="p-0.5" />
+          <TurnArrowIcon side={side} className="p-1" />
         </div>
         <div className="navigation-copy min-w-0 text-left">
           <p className="navigation-guidance truncate tabular-nums tracking-tight">

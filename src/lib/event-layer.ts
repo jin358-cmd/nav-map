@@ -34,9 +34,13 @@ function drawTriangle(fill: string, selected: boolean): ImageData {
   const ctx = canvas.getContext("2d");
   if (!ctx) return new ImageData(size, size);
   ctx.beginPath();
-  ctx.moveTo(32, 6);
-  ctx.lineTo(58, 54);
-  ctx.lineTo(6, 54);
+  ctx.arc(32, 32, 30, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(220, 38, 38, 0.5)";
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(32, 10);
+  ctx.lineTo(54, 50);
+  ctx.lineTo(10, 50);
   ctx.closePath();
   ctx.fillStyle = fill;
   ctx.fill();

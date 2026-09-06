@@ -33,6 +33,10 @@ function drawBarrier(fill: string, selected: boolean): ImageData {
   canvas.height = size;
   const ctx = canvas.getContext("2d");
   if (!ctx) return new ImageData(size, size);
+  ctx.beginPath();
+  ctx.arc(32, 32, 30, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(234, 179, 8, 0.5)";
+  ctx.fill();
   ctx.fillStyle = fill;
   ctx.fillRect(10, 18, 8, 32);
   ctx.fillRect(46, 18, 8, 32);

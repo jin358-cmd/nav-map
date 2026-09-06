@@ -109,10 +109,9 @@ function applyLightDrivingTheme(map: MapLibreMap) {
         paint: {
           "fill-extrusion-color": "#d7d2c8",
           "fill-extrusion-height": [
-            "coalesce",
-            ["get", "render_height"],
-            ["get", "height"],
-            10,
+            "*",
+            ["coalesce", ["get", "render_height"], ["get", "height"], 10],
+            1.35,
           ],
           "fill-extrusion-opacity": 0.55,
         },

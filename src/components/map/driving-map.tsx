@@ -318,7 +318,7 @@ function createDestinationPin(label: string): HTMLDivElement {
       <span class="destination-beacon__dot"></span>
     </span>
     <span class="destination-pin__glow"></span>
-    <svg class="destination-pin__mark" viewBox="0 0 48 58" width="30" height="36" aria-hidden="true">
+    <svg class="destination-pin__mark" viewBox="0 0 48 66" width="32" height="42" aria-hidden="true">
       <defs>
         <linearGradient id="pin-left" x1="0" x2="1" y1="0" y2="1">
           <stop offset="0%" stop-color="#f87171"/>
@@ -335,12 +335,13 @@ function createDestinationPin(label: string): HTMLDivElement {
           <stop offset="100%" stop-color="#f87171"/>
         </linearGradient>
       </defs>
-      <ellipse cx="24" cy="52" rx="9" ry="3.2" fill="#7f1d1d" opacity="0.38"/>
-      <path d="M24 3 C12 3 6 14 6 24 C6 38 24 54 24 54 C24 54 42 38 42 24 C42 14 36 3 24 3 Z" fill="url(#pin-right)"/>
-      <path d="M24 3 C16 3 10 13 10 24 C10 34 24 48 24 48 C24 48 20 36 20 24 C20 14 24 5 24 3 Z" fill="url(#pin-left)"/>
-      <path d="M24 3 L26.6 50 L21.4 50 Z" fill="url(#pin-ridge)" opacity="0.45"/>
-      <circle cx="24" cy="23" r="7" fill="#fff"/>
-      <circle cx="24" cy="23" r="3.4" fill="#dc2626"/>
+      <ellipse cx="24" cy="60" rx="10" ry="3.4" fill="#7f1d1d" opacity="0.38"/>
+      <circle cx="24" cy="58" r="11" fill="rgba(220,38,38,0.5)"/>
+      <path d="M24 2 C11 2 4 14 4 26 C4 42 24 62 24 62 C24 62 44 42 44 26 C44 14 37 2 24 2 Z" fill="url(#pin-right)"/>
+      <path d="M24 2 C16 2 9 13 9 26 C9 38 24 54 24 54 C24 54 19 40 19 26 C19 14 24 4 24 2 Z" fill="url(#pin-left)"/>
+      <path d="M24 2 L27.2 56 L20.8 56 Z" fill="url(#pin-ridge)" opacity="0.45"/>
+      <circle cx="24" cy="24" r="7" fill="#fff"/>
+      <circle cx="24" cy="24" r="3.4" fill="#dc2626"/>
     </svg>
   `;
   return el;

@@ -61,8 +61,8 @@ export function upsertSpeedEnforcementLayer(
           17,
           13,
         ],
-        "circle-stroke-color": "#1c1917",
-        "circle-stroke-width": 2.5,
+        "circle-stroke-color": "rgba(251, 191, 36, 0.5)",
+        "circle-stroke-width": 7,
         "circle-opacity": 0.96,
       },
     });

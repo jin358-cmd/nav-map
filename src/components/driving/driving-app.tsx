@@ -632,12 +632,21 @@ export function DrivingApp() {
     [selectedCctv, visible],
   );
 
+  const liveTrafficOn = trafficOrigin === "tdx-live";
+  const mapTraffic = liveTrafficOn ? traffic : [];
+  const mapLayerVisibility = {
+    ...layerVisibility,
+    congestion: liveTrafficOn && layerVisibility.congestion,
+  };
+
   const intel = useMemo(() => {
     const cameras = roadIntelFromCameras(visible);
-    const trafficItems = deriveTrafficIntel(
-      trafficScored,
-      trafficFocus5km ? CITY_TRAFFIC_FOCUS_KM : undefined,
-    );
+    const trafficItems = liveTrafficOn
+      ? deriveTrafficIntel(
+          trafficScored,
+          trafficFocus5km ? CITY_TRAFFIC_FOCUS_KM : undefined,
+        )
+      : [];
     const extras = baseIntel.filter(
       (item) =>
         item.kind !== "cctv" &&
@@ -657,6 +666,7 @@ export function DrivingApp() {
     ];
   }, [
     baseIntel,
+    liveTrafficOn,
     searchOrigin,
     trafficFocus5km,
     trafficScored,
@@ -1318,13 +1328,13 @@ export function DrivingApp() {
         selectedDisasterId={selectedDisaster?.id ?? null}
         cameras={mapCameras}
         speedEnforcement={speedEnforcement}
-        traffic={traffic}
+        traffic={mapTraffic}
         disasters={visibleDisasters}
         accidents={visibleAccidents}
         constructions={visibleConstructions}
         selectedAccidentId={selectedAccident?.id ?? null}
         selectedConstructionId={selectedConstruction?.id ?? null}
-        layerVisibility={layerVisibility}
+        layerVisibility={mapLayerVisibility}
         focusTarget={focusTarget}
         parkingLots={parkingLots}
         selectedParkingId={selectedParking?.id ?? null}

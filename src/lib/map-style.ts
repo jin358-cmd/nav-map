@@ -122,10 +122,9 @@ export function applyDarkDrivingTheme(map: MapLibreMap) {
         paint: {
           "fill-extrusion-color": GRAY.buildingExtrusion,
           "fill-extrusion-height": [
-            "coalesce",
-            ["get", "render_height"],
-            ["get", "height"],
-            10,
+            "*",
+            ["coalesce", ["get", "render_height"], ["get", "height"], 10],
+            1.35,
           ],
           "fill-extrusion-base": [
             "coalesce",
