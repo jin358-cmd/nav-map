@@ -1358,7 +1358,8 @@ export function DrivingApp() {
             offRoute={navigationProgress?.offRoute ?? false}
             rerouting={rerouting}
             reroutePending={reroutePending}
-            junctionFocus={turnManeuver && nextAlertPhase !== "cruise"}
+            alertPhase={nextAlertPhase}
+            isTurn={turnManeuver}
             onCancelNavigation={exitNavigation}
             voiceEnabled={voiceEnabled}
             onToggleVoice={() => setVoiceEnabled((value) => !value)}
@@ -1375,6 +1376,12 @@ export function DrivingApp() {
               distanceMeters={routeDistanceMeters}
               rerouting={routing || rerouting}
               motorcycleUnsupported={motorcycleUnsupported}
+              favorite={isCurrentFavorite}
+              onToggleFavorite={() => {
+                if (!currentPlace) return;
+                if (isCurrentFavorite) removeFavorite(currentPlace);
+                else addFavorite(currentPlace);
+              }}
               onTravelMode={(mode) => {
                 setTravelMode(mode);
                 const hit = lastRouteHitRef.current;

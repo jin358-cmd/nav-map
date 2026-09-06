@@ -11,8 +11,8 @@ import { cn } from "@/lib/utils";
 import type { MapDisplayMode } from "@/types/domain";
 
 const OPTIONS: Array<{ id: MapDisplayMode; label: string }> = [
-  { id: "light", label: "亮色" },
-  { id: "dark", label: "暗色" },
+  { id: "light", label: "白天" },
+  { id: "dark", label: "夜間" },
   { id: "auto", label: "自動" },
   { id: "satellite", label: "衛星" },
 ];
@@ -63,7 +63,7 @@ export function MapStyleMenu({
               type="button"
               onClick={() => onChange(option.id)}
               className={cn(
-                "h-9 min-w-16 rounded-xl px-3 text-left text-sm",
+                "flex h-9 min-w-16 items-center justify-center rounded-xl px-3 text-center text-sm",
                 mapStyleOptionClass(
                   tone,
                   mode === option.id,

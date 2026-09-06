@@ -5,6 +5,7 @@ import { Volume2, VolumeX, X } from "lucide-react";
 import { TurnArrowIcon, turnSideFromStep } from "@/components/overlay/turn-arrow-icon";
 import { formatDistance } from "@/lib/format";
 import { formatTaiwanDisplayAddress } from "@/lib/geocoding/format-taiwan-display-address";
+import type { ManeuverAlertPhase } from "@/lib/maneuver-guidance";
 import { cn } from "@/lib/utils";
 import type { RouteStep } from "@/types/domain";
 
@@ -33,7 +34,8 @@ export const NextIntersectionHud = forwardRef<
     offRoute: boolean;
     rerouting?: boolean;
     reroutePending?: boolean;
-    junctionFocus?: boolean;
+    alertPhase?: ManeuverAlertPhase;
+    isTurn?: boolean;
     onCancelNavigation?: () => void;
     voiceEnabled?: boolean;
     onToggleVoice?: () => void;
@@ -45,7 +47,8 @@ export const NextIntersectionHud = forwardRef<
     offRoute,
     rerouting = false,
     reroutePending = false,
-    junctionFocus = false,
+    alertPhase = "cruise",
+    isTurn = false,
     onCancelNavigation,
     voiceEnabled = true,
     onToggleVoice,
@@ -56,11 +59,17 @@ export const NextIntersectionHud = forwardRef<
   const side = turnSideFromStep(step);
   const road = shortRoadName(step);
   const headline = `${formatDistance(distanceMeters)}後${turn}`;
+  const turnAlert = isTurn && alertPhase !== "cruise";
 
   return (
     <div
       ref={ref}
-      className="navigation-instruction-card pointer-events-none w-full min-w-0"
+      className={cn(
+        "navigation-instruction-card pointer-events-none w-full min-w-0",
+        turnAlert
+          ? "navigation-instruction-card--alert"
+          : "navigation-instruction-card--cruise",
+      )}
     >
       {onCancelNavigation ? (
         <button
@@ -77,12 +86,12 @@ export const NextIntersectionHud = forwardRef<
         <div
           className={cn(
             "navigation-turn-icon flex shrink-0 items-center justify-center rounded-xl",
-            junctionFocus
-              ? "navigation-turn-icon--pulse bg-white text-[#2563A8]"
-              : "bg-white/16 text-white",
+            turnAlert
+              ? "navigation-turn-icon--alert navigation-turn-icon--blink"
+              : "navigation-turn-icon--cruise",
           )}
         >
-          <TurnArrowIcon side={side} className="p-0.5" />
+          <TurnArrowIcon side={side} variant="sign" className="p-0.5" />
         </div>
         <div className="navigation-copy min-w-0 text-left">
           <p className="navigation-guidance truncate tabular-nums tracking-tight">
@@ -90,13 +99,11 @@ export const NextIntersectionHud = forwardRef<
           </p>
           {road ? <p className="navigation-road-name truncate">{road}</p> : null}
           {rerouting ? (
-            <p className="mt-0.5 truncate text-[12px] font-medium text-amber-200">
+            <p className="navigation-status truncate">
               {reroutePending ? "仍在重新規劃路線" : "正在重新規劃路線"}
             </p>
           ) : offRoute ? (
-            <p className="mt-0.5 truncate text-[12px] font-medium text-amber-200">
-              偏離路線，即將重算
-            </p>
+            <p className="navigation-status truncate">偏離路線，即將重算</p>
           ) : null}
         </div>
       </div>

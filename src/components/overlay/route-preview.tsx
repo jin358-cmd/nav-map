@@ -1,6 +1,6 @@
 "use client";
 
-import { X } from "lucide-react";
+import { Bookmark, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   formatTaiwanDisplayAddress,
@@ -21,6 +21,8 @@ export function RouteConfirmBar({
   onTravelMode,
   onStartNav,
   onClear,
+  favorite = false,
+  onToggleFavorite,
 }: {
   destination: RouteDestination;
   maneuver: NavigationManeuver | null;
@@ -32,6 +34,8 @@ export function RouteConfirmBar({
   onTravelMode: (mode: TravelMode) => void;
   onStartNav: () => void;
   onClear: () => void;
+  favorite?: boolean;
+  onToggleFavorite?: () => void;
 }) {
   const remainingKm =
     distanceMeters != null
@@ -54,9 +58,29 @@ export function RouteConfirmBar({
     <div className="pointer-events-auto w-full rounded-2xl border border-cyan-300/20 bg-black/74 shadow-[0_10px_40px_rgba(0,0,0,0.5)] backdrop-blur-xl">
       <div className="flex w-full flex-col gap-3 px-3.5 py-3 sm:px-4 sm:py-3.5">
         <div className="w-full min-w-0">
-          <p className="text-lg leading-tight font-bold tracking-tight text-white sm:text-2xl">
-            {formatTaiwanDisplayAddress(destination.label)}
-          </p>
+          <div className="flex items-start gap-2">
+            <p className="min-w-0 flex-1 text-lg leading-tight font-bold tracking-tight text-white sm:text-2xl">
+              {formatTaiwanDisplayAddress(destination.label)}
+            </p>
+            {onToggleFavorite ? (
+              <button
+                type="button"
+                onClick={onToggleFavorite}
+                aria-pressed={favorite}
+                aria-label={favorite ? "移出最愛書籤" : "加入最愛書籤"}
+                title={favorite ? "移出最愛" : "加入最愛"}
+                className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-full text-cyan-200 hover:bg-white/10 hover:text-white touch-manipulation"
+              >
+                <Bookmark
+                  className={cn(
+                    "size-6",
+                    favorite && "fill-cyan-300 text-cyan-200",
+                  )}
+                  strokeWidth={2.1}
+                />
+              </button>
+            ) : null}
+          </div>
           {destination.address &&
           !sameTaiwanDisplayTitle(destination.label, destination.address) ? (
             <p className="mt-1 w-full text-sm leading-snug text-zinc-300 sm:text-base">

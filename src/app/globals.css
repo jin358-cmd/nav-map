@@ -505,20 +505,25 @@
 }
 
 .hud-trip-card {
+  container-type: inline-size;
   width: 100%;
-  padding: 0.5rem 0.2rem;
-  border-radius: 1rem;
+  min-height: 5.15rem;
+  padding: 0.85rem 0.28rem;
+  border-radius: 1.15rem;
   border: 1px solid rgba(196, 181, 253, 0.28);
   background: rgba(59, 7, 100, 0.64);
 }
 
 .hud-trip-cell {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   padding: 0 0.5rem;
 }
 
 .hud-trip-label {
-  font-size: 10px;
+  font-size: clamp(11px, 5.6cqi, 14px);
   font-weight: 500;
   line-height: 1;
   color: #e4e4e7;
@@ -527,8 +532,8 @@
 .hud-trip-metric {
   display: flex;
   align-items: baseline;
-  margin-top: 0.15rem;
-  font-size: clamp(17px, 4.2vw, 20px);
+  margin-top: 0.28rem;
+  font-size: clamp(20px, 11.5cqi, 30px);
   font-weight: 800;
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
@@ -551,7 +556,7 @@
 
 .hud-trip-metric-unit {
   margin-left: 0.12rem;
-  font-size: 11px;
+  font-size: clamp(11px, 5cqi, 14px);
   font-weight: 700;
 }
 
@@ -571,8 +576,9 @@
   }
 
   .hud-trip-card {
-    padding: 0.38rem 0.08rem;
-    border-radius: 0.85rem;
+    min-height: 4.6rem;
+    padding: 0.72rem 0.12rem;
+    border-radius: 1rem;
   }
 
   .hud-trip-cell {
@@ -581,31 +587,37 @@
   }
 
   .hud-trip-label {
-    font-size: 11px;
     text-align: center;
   }
 
   .hud-trip-metric {
     justify-content: center;
-    font-size: clamp(18px, 3.8vh, 23px);
-  }
-
-  .hud-trip-metric-unit {
-    font-size: 11px;
   }
 }
 
 .navigation-instruction-card {
   position: relative;
   width: 100%;
-  max-height: min(220px, 32vh);
-  padding: 0.55rem 2.05rem 0.55rem 0.55rem;
-  border-radius: 1.15rem;
+  min-height: 6.35rem;
+  max-height: min(280px, 38vh);
+  padding: 0.85rem 2.2rem 0.85rem 0.75rem;
+  border-radius: 1.25rem;
   overflow: hidden;
-  color: #fff;
-  background: #2563a8;
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #0f172a;
+  background: #7dd3fc;
+  border: 1px solid rgba(14, 116, 144, 0.28);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+}
+
+.navigation-instruction-card--cruise {
+  background: #7dd3fc;
+  color: #0f172a;
+}
+
+.navigation-instruction-card--alert {
+  background: #facc15;
+  border-color: rgba(161, 98, 7, 0.35);
+  color: #422006;
 }
 
 .navigation-card-cancel,
@@ -618,69 +630,115 @@
   height: 1.75rem;
   padding: 0;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.24);
-  background: rgba(15, 23, 42, 0.28);
-  color: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.18);
+  background: rgba(15, 23, 42, 0.16);
+  color: #0f172a;
+}
+
+.navigation-instruction-card--alert .navigation-card-cancel,
+.navigation-instruction-card--alert .navigation-card-voice {
+  border-color: rgba(66, 32, 6, 0.22);
+  background: rgba(66, 32, 6, 0.12);
+  color: #422006;
 }
 
 .navigation-card-cancel {
-  top: 0.28rem;
-  right: 0.28rem;
+  top: 0.36rem;
+  right: 0.36rem;
 }
 
 .navigation-card-voice {
-  right: 0.28rem;
-  bottom: 0.28rem;
+  right: 0.36rem;
+  bottom: 0.36rem;
 }
 
-.navigation-turn-icon--pulse {
-  animation: turn-icon-pulse 1.1s ease-in-out infinite;
+.navigation-turn-icon--pulse,
+.navigation-turn-icon--blink {
+  animation: turn-icon-blink 0.7s step-end infinite;
 }
 
-@keyframes turn-icon-pulse {
+@keyframes turn-icon-blink {
   0%,
-  100% {
+  49% {
     opacity: 1;
-    filter: brightness(1);
   }
-  50% {
-    opacity: 0.7;
-    filter: brightness(1.18);
+  50%,
+  100% {
+    opacity: 0.12;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .navigation-turn-icon--pulse {
+  .navigation-turn-icon--pulse,
+  .navigation-turn-icon--blink {
     animation: none;
   }
 }
 
 .navigation-instruction-content {
   display: grid;
-  grid-template-columns: 4.15rem minmax(0, 1fr);
+  grid-template-columns: 5.15rem minmax(0, 1fr);
   align-items: center;
-  gap: 0.55rem;
+  gap: 0.7rem;
 }
 
 .navigation-turn-icon {
-  width: 4.15rem;
-  height: 4.15rem;
+  width: 5.15rem;
+  height: 5.15rem;
+}
+
+.navigation-turn-icon--cruise {
+  background: rgba(8, 47, 73, 0.1);
+  color: #0f172a;
+}
+
+.navigation-turn-icon--alert {
+  background: rgba(22, 101, 52, 0.12);
+  color: #15803d;
 }
 
 .navigation-guidance {
-  font-size: clamp(22px, 5.8vw, 30px);
+  font-size: clamp(26px, 6.6vw, 36px);
   line-height: 1.12;
   font-weight: 800;
-  color: #fff;
+}
+
+.navigation-instruction-card--cruise .navigation-guidance {
+  color: #0f172a;
+}
+
+.navigation-instruction-card--alert .navigation-guidance {
+  color: #422006;
 }
 
 .navigation-road-name {
-  font-size: clamp(14px, 3.3vw, 16px);
+  font-size: clamp(16px, 3.8vw, 20px);
   line-height: 1.2;
-  color: #f8fafc;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.navigation-instruction-card--cruise .navigation-road-name {
+  color: #164e63;
+}
+
+.navigation-instruction-card--alert .navigation-road-name {
+  color: #713f12;
+}
+
+.navigation-status {
+  margin-top: 0.2rem;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.navigation-instruction-card--cruise .navigation-status {
+  color: #9a3412;
+}
+
+.navigation-instruction-card--alert .navigation-status {
+  color: #9a3412;
 }
 
 @media (orientation: portrait) {
@@ -694,57 +752,57 @@
   .navigation-instruction-card {
     width: 100%;
     max-width: 100%;
-    max-height: 168px;
-    padding: 0.5rem 1.95rem 0.5rem 0.5rem;
-    border-radius: 1rem;
-    background: #2563a8;
+    min-height: 6.1rem;
+    max-height: 210px;
+    padding: 0.78rem 2.05rem 0.78rem 0.65rem;
+    border-radius: 1.15rem;
   }
 
   .navigation-instruction-content {
-    grid-template-columns: 3.65rem minmax(0, 1fr);
-    gap: 0.45rem;
+    grid-template-columns: 4.85rem minmax(0, 1fr);
+    gap: 0.6rem;
   }
 
   .navigation-turn-icon {
-    width: 3.65rem;
-    height: 3.65rem;
+    width: 4.85rem;
+    height: 4.85rem;
   }
 
   .navigation-guidance {
-    font-size: clamp(22px, 6.4vw, 30px);
+    font-size: clamp(26px, 7.2vw, 36px);
   }
 
   .navigation-road-name {
-    font-size: clamp(13px, 3.3vw, 16px);
+    font-size: clamp(15px, 3.8vw, 19px);
   }
 }
 
 @media (orientation: landscape) {
   .navigation-instruction-card {
-    background: #2563a8;
-    padding: 0.5rem 2rem 0.5rem 0.55rem;
+    min-height: 6.5rem;
+    padding: 0.8rem 2.15rem 0.8rem 0.75rem;
   }
 
   .navigation-instruction-content {
-    grid-template-columns: 4.55rem minmax(0, 1fr);
+    grid-template-columns: 5.4rem minmax(0, 1fr);
   }
 
   .navigation-turn-icon {
-    width: 4.55rem;
-    height: 4.55rem;
+    width: 5.4rem;
+    height: 5.4rem;
   }
 
   .navigation-guidance {
-    font-size: clamp(22px, 3.5vw, 30px);
+    font-size: clamp(26px, 4.2vw, 36px);
   }
 
   .navigation-road-name {
-    font-size: clamp(13px, 2.2vw, 16px);
+    font-size: clamp(15px, 2.4vw, 20px);
   }
 }
 
 @media (max-width: 390px) {
   .navigation-instruction-card {
-    padding: 8px 1.9rem 8px 8px;
+    padding: 0.7rem 1.95rem 0.7rem 0.55rem;
   }
 }

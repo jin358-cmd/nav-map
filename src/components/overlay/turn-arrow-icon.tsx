@@ -87,10 +87,15 @@ export function turnSideFromStep(step: RouteStep | null): TurnSide {
 export function TurnArrowIcon({
   side,
   className,
+  variant = "curve",
 }: {
   side: TurnSide;
   className?: string;
+  variant?: "curve" | "sign";
 }) {
+  if (variant === "sign") {
+    return <SignTurnArrow side={side} className={className} />;
+  }
   if (side === "left") return <BendArrow kind="left" className={className} />;
   if (side === "right") return <BendArrow kind="right" className={className} />;
   if (side === "slight-left") return <SlightArrow kind="left" className={className} />;
@@ -308,6 +313,195 @@ function ArriveMark({ className }: { className?: string }) {
         strokeLinejoin="round"
       />
       <circle cx="32" cy="28" r="6" fill="currentColor" />
+    </ArrowFrame>
+  );
+}
+
+/** Filled highway-sign pictograms — distinct from the curved HUD strokes. */
+function SignTurnArrow({
+  side,
+  className,
+}: {
+  side: TurnSide;
+  className?: string;
+}) {
+  if (side === "left") return <SignBend kind="left" className={className} />;
+  if (side === "right") return <SignBend kind="right" className={className} />;
+  if (side === "slight-left") return <SignSlight kind="left" className={className} />;
+  if (side === "slight-right") return <SignSlight kind="right" className={className} />;
+  if (side === "sharp-left") return <SignSharp kind="left" className={className} />;
+  if (side === "sharp-right") return <SignSharp kind="right" className={className} />;
+  if (side === "ramp-left") return <SignRamp kind="left" className={className} />;
+  if (side === "ramp-right") return <SignRamp kind="right" className={className} />;
+  if (side === "fork-left") return <SignFork kind="left" className={className} />;
+  if (side === "fork-right") return <SignFork kind="right" className={className} />;
+  if (side === "uturn") return <SignUTurn className={className} />;
+  if (side === "roundabout") return <SignRoundabout className={className} />;
+  if (side === "arrive") return <SignArrive className={className} />;
+  return <SignStraight className={className} />;
+}
+
+function SignStraight({ className }: { className?: string }) {
+  return (
+    <ArrowFrame className={className}>
+      <path
+        d="M32 4 L52 26 H40 V60 H24 V26 H12 Z"
+        fill="currentColor"
+      />
+    </ArrowFrame>
+  );
+}
+
+function SignBend({
+  kind,
+  className,
+}: {
+  kind: "left" | "right";
+  className?: string;
+}) {
+  const left = kind === "left";
+  return (
+    <ArrowFrame className={className}>
+      <path
+        d={
+          left
+            ? "M40 60 V28 H18 L18 18 L4 32 L18 46 V36 H24 V60 Z"
+            : "M24 60 V28 H46 L46 18 L60 32 L46 46 V36 H40 V60 Z"
+        }
+        fill="currentColor"
+      />
+    </ArrowFrame>
+  );
+}
+
+function SignSlight({
+  kind,
+  className,
+}: {
+  kind: "left" | "right";
+  className?: string;
+}) {
+  const left = kind === "left";
+  return (
+    <ArrowFrame className={className}>
+      <path
+        d={
+          left
+            ? "M36 60 L36 38 L22 22 L22 12 L6 26 L20 40 L28 32 L28 60 Z"
+            : "M28 60 L28 38 L42 22 L42 12 L58 26 L44 40 L36 32 L36 60 Z"
+        }
+        fill="currentColor"
+      />
+    </ArrowFrame>
+  );
+}
+
+function SignSharp({
+  kind,
+  className,
+}: {
+  kind: "left" | "right";
+  className?: string;
+}) {
+  const left = kind === "left";
+  return (
+    <ArrowFrame className={className}>
+      <path
+        d={
+          left
+            ? "M40 60 V22 H20 L26 12 L6 22 L26 32 L20 28 H28 V60 Z"
+            : "M24 60 V22 H44 L38 12 L58 22 L38 32 L44 28 H36 V60 Z"
+        }
+        fill="currentColor"
+      />
+    </ArrowFrame>
+  );
+}
+
+function SignRamp({
+  kind,
+  className,
+}: {
+  kind: "left" | "right";
+  className?: string;
+}) {
+  const left = kind === "left";
+  return (
+    <ArrowFrame className={className}>
+      <path d="M38 60 H26 V18 H38 Z" fill="currentColor" opacity={0.38} />
+      <path
+        d={
+          left
+            ? "M32 42 L20 24 L20 14 L4 28 L20 42 L20 32 L28 42 Z"
+            : "M32 42 L44 24 L44 14 L60 28 L44 42 L44 32 L36 42 Z"
+        }
+        fill="currentColor"
+      />
+    </ArrowFrame>
+  );
+}
+
+function SignFork({
+  kind,
+  className,
+}: {
+  kind: "left" | "right";
+  className?: string;
+}) {
+  const left = kind === "left";
+  return (
+    <ArrowFrame className={className}>
+      <path d="M38 60 H26 V36 H38 Z" fill="currentColor" />
+      <path
+        d="M32 38 L48 18 L48 10 L62 26 L46 40 L46 30 Z"
+        fill="currentColor"
+        opacity={left ? 0.3 : 1}
+      />
+      <path
+        d="M32 38 L16 18 L16 10 L2 26 L18 40 L18 30 Z"
+        fill="currentColor"
+        opacity={left ? 1 : 0.3}
+      />
+    </ArrowFrame>
+  );
+}
+
+function SignUTurn({ className }: { className?: string }) {
+  return (
+    <ArrowFrame className={className}>
+      <path
+        d="M18 60 V26 A14 14 0 0 1 46 26 V40 H36 L50 56 L64 40 H54 V26 A22 22 0 0 0 10 26 V60 Z"
+        fill="currentColor"
+      />
+    </ArrowFrame>
+  );
+}
+
+function SignRoundabout({ className }: { className?: string }) {
+  return (
+    <ArrowFrame className={className}>
+      <circle
+        cx="32"
+        cy="36"
+        r="12"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="9"
+      />
+      <path d="M38 60 H26 V48 H38 Z" fill="currentColor" />
+      <path d="M32 4 L46 20 H18 Z" fill="currentColor" />
+    </ArrowFrame>
+  );
+}
+
+function SignArrive({ className }: { className?: string }) {
+  return (
+    <ArrowFrame className={className}>
+      <path
+        d="M32 6 C19 6 10 17 10 28 C10 44 32 60 32 60 C32 60 54 44 54 28 C54 17 45 6 32 6 Z"
+        fill="currentColor"
+      />
+      <circle cx="32" cy="27" r="6" fill="#fff" />
     </ArrowFrame>
   );
 }

@@ -17,8 +17,8 @@ export function mapControlButtonClass(tone: MapControlTone, active = false) {
   }
   if (tone === "dark") {
     return cn(
-      "border-[#111827]/55 bg-zinc-100/94 text-[#1F2937] shadow-lg hover:bg-white hover:text-[#111827]",
-      active && "border-[#111827] bg-white text-[#111827]",
+      "border-[#67e8f9] bg-[#22d3ee] text-[#042f2e] shadow-[0_8px_20px_rgba(8,47,73,0.45)] hover:bg-[#67e8f9] hover:text-[#022c36]",
+      active && "border-[#ecfeff] bg-[#67e8f9] text-[#022c36]",
     );
   }
   return cn(
@@ -33,9 +33,18 @@ export function mapStyleOptionClass(
   pending: boolean,
 ) {
   return cn(
-    "bg-white/94 text-[#1F2937] hover:bg-zinc-100",
-    selected && "bg-zinc-100 text-[#111827] ring-1 ring-[#111827]/70",
-    pending && "ring-1 ring-[#1F2937]/45",
+    "text-center",
+    tone === "dark"
+      ? "bg-[#0b1220]/90 text-[#e2e8f0] hover:bg-[#164e63]/80"
+      : "bg-white/94 text-[#1F2937] hover:bg-zinc-100",
+    selected &&
+      (tone === "dark"
+        ? "bg-[#22d3ee] text-[#042f2e] ring-1 ring-[#ecfeff]/80"
+        : "bg-zinc-100 text-[#111827] ring-1 ring-[#111827]/70"),
+    pending &&
+      (tone === "dark"
+        ? "ring-1 ring-[#67e8f9]/70"
+        : "ring-1 ring-[#1F2937]/45"),
     tone === "satellite" && "border border-[#111827]/20",
   );
 }
