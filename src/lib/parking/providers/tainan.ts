@@ -47,8 +47,9 @@ function parseLngLatPair(value: unknown) {
 function parseTimestamp(value: unknown) {
   const raw = text(value);
   if (!raw) return null;
+  const hasZone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(raw);
   const normalized = raw.includes("T") ? raw : raw.replace(" ", "T");
-  const date = new Date(normalized);
+  const date = new Date(hasZone ? normalized : `${normalized}+08:00`);
   if (Number.isNaN(date.getTime())) return null;
   return date.toISOString();
 }
