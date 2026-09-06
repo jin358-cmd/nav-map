@@ -65,6 +65,17 @@ function restoreNotes(address: string, nearby: string, notes: string[]) {
   return `${address}${nearby}${notes.join("")}`;
 }
 
+function stripAccuracyLabels(value: string) {
+  let next = value.trim();
+  for (const label of ACCURACY_SUFFIXES) {
+    const suffix = ` · ${label}`;
+    if (next.endsWith(suffix)) next = next.slice(0, -suffix.length).trim();
+    next = next.replaceAll(suffix, "").trim();
+    if (next.endsWith(label)) next = next.slice(0, -label.length).trim();
+  }
+  return next.replace(/\s*[·・•]\s*$/g, "").trim();
+}
+
 function parseDisplayParts(compact: string) {
   const city = compact.match(/(.+?[縣市])/u)?.[1] ?? "";
   const afterCity = city ? compact.slice(city.length) : compact;
@@ -249,22 +260,24 @@ export function unifiedConfirmAddress(
 ): string {
   const title = formatTaiwanDisplayAddress(label);
   const line = formatTaiwanDisplayAddress(address);
-  if (!title) return line;
-  if (!line) return title;
-  if (sameTaiwanDisplayTitle(title, line)) return title;
+  if (!title) return stripAccuracyLabels(line);
+  if (!line) return stripAccuracyLabels(title);
+  if (sameTaiwanDisplayTitle(title, line)) return stripAccuracyLabels(title);
 
   const titleKey = compactAddressKey(title);
   const lineKey = compactAddressKey(line);
-  if (titleKey === lineKey) return title.length >= line.length ? title : line;
-  if (lineKey.includes(titleKey)) return line;
-  if (titleKey.includes(lineKey)) return title;
+  if (titleKey === lineKey) {
+    return stripAccuracyLabels(title.length >= line.length ? title : line);
+  }
+  if (lineKey.includes(titleKey)) return stripAccuracyLabels(line);
+  if (titleKey.includes(lineKey)) return stripAccuracyLabels(title);
 
   const titleCore = title.replace(/[（(][^）)]+[）)]/g, "").trim();
   const coreKey = compactAddressKey(titleCore);
-  if (coreKey && lineKey.includes(coreKey)) return line;
-  if (coreKey && titleKey.includes(lineKey)) return title;
+  if (coreKey && lineKey.includes(coreKey)) return stripAccuracyLabels(line);
+  if (coreKey && titleKey.includes(lineKey)) return stripAccuracyLabels(title);
   if (coreKey && titleCore !== title && !lineKey.includes(coreKey)) {
-    return `${titleCore} · ${line}`;
+    return stripAccuracyLabels(`${titleCore} · ${line}`);
   }
-  return title.length >= line.length ? title : line;
+  return stripAccuracyLabels(title.length >= line.length ? title : line);
 }
