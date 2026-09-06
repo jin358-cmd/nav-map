@@ -487,7 +487,7 @@
 }
 
 .hud-trip-stack {
-  --hud-trip-cols: minmax(0, 1fr) minmax(0, 1fr) minmax(6.35rem, 1.7fr);
+  --hud-trip-cols: minmax(4.85rem, 1.05fr) minmax(0, 1fr) minmax(5.85rem, 1.25fr);
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -498,6 +498,10 @@
 .hud-trip-card {
   display: grid;
   grid-template-columns: var(--hud-trip-cols);
+}
+
+.hud-speed-row {
+  padding-inline: calc(0.28rem + 1px);
 }
 
 .hud-speed-column {
@@ -586,6 +590,7 @@
 
 .hud-trip-metric--time {
   color: #fde047;
+  overflow: visible;
 }
 
 .hud-trip-metric--distance {
