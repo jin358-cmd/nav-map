@@ -3,7 +3,7 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
-    name: "智駕地圖NavPilot",
+    name: "智駕地圖",
     short_name: "智駕地圖",
     description: "智駕台灣 · 即時道路情報與駕駛導航",
     start_url: "/",

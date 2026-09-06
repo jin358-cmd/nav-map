@@ -86,7 +86,7 @@ export default function InstallPage() {
                 請改用 Chrome 安裝，不要略過 Play Protect
               </p>
               <p className="mt-1.5 text-amber-50/90">
-                NavPilot 是網站 PWA，沒有側載 APK。Samsung 網際網路或其他瀏覽器產生的安裝包
+                智駕地圖是網站 PWA，沒有側載 APK。Samsung 網際網路或其他瀏覽器產生的安裝包
                 targetSdk 過舊，Google Play 安全防護會顯示「專為舊版 Android 打造」。
                 Chrome 產生的 WebAPK 才含現行隱私保護等級。
               </p>

@@ -142,7 +142,7 @@ export const NextIntersectionHud = forwardRef<
           >
             <TurnArrowIcon
               side={side}
-              variant="sign"
+              variant="curve"
               className="maneuverIconArrow"
             />
           </div>

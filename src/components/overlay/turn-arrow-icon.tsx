@@ -130,7 +130,7 @@ function shaftProps() {
   return {
     fill: "none" as const,
     stroke: "currentColor",
-    strokeWidth: 8.5,
+    strokeWidth: 10,
     strokeLinecap: "round" as const,
     strokeLinejoin: "round" as const,
   };
