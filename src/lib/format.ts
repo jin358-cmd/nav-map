@@ -110,5 +110,7 @@ export function formatParkingRate(lot: {
     return `${lot.hourlyRate} 元／小時${daily}`;
   }
   const text = lot.fee?.trim();
-  return text || "未提供";
+  if (!text) return "未提供";
+  if (/停車場$/.test(text) && !/\d/.test(text)) return "未提供";
+  return text;
 }
