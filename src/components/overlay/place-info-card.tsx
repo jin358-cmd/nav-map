@@ -4,6 +4,7 @@ import { Heart, Navigation, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDistance } from "@/lib/format";
 import { formatTaiwanDisplayAddress } from "@/lib/geocoding/format-taiwan-display-address";
+import { PARKING_FEE_LABEL } from "@/lib/parking-meta";
 import type { MapPlace } from "@/lib/map-place";
 import { cn } from "@/lib/utils";
 
@@ -82,6 +83,18 @@ export function PlaceInfoCard({
             <dd>
               {place.carAvailable != null ? `剩餘 ${place.carAvailable}` : "剩餘未提供"}
               {place.carTotal != null ? `／總 ${place.carTotal}` : ""}
+            </dd>
+          </div>
+        ) : null}
+        {place.kind === "parking" ? (
+          <div>
+            <dt className="text-[11px] text-zinc-500">停車場</dt>
+            <dd>
+              {place.publicLot ? "公有" : "停車場"}
+              {place.registered ? " · 有註冊" : ""}
+              {place.feeClass
+                ? ` · ${PARKING_FEE_LABEL[place.feeClass]}`
+                : ""}
             </dd>
           </div>
         ) : null}

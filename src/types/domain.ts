@@ -324,8 +324,14 @@ export type RouteDestination = {
 };
 
 export type ParkingFill = "plenty" | "limited" | "full" | "unknown";
+export type ParkingFeeClass = "paid" | "free" | "unknown";
 export type ParkingSort = "distance" | "remaining" | "price";
-export type ParkingDataOrigin = "tdx-live" | "tainan-open" | "unavailable";
+export type ParkingFilter = "all" | "registered" | "paid" | "free";
+export type ParkingDataOrigin =
+  | "tdx-live"
+  | "tainan-open"
+  | "osm-open"
+  | "unavailable";
 
 export type ParkingLot = {
   id: string;
@@ -338,6 +344,9 @@ export type ParkingLot = {
   motorcycleAvailable?: number | null;
   motorcycleTotal?: number | null;
   fee?: string;
+  feeClass: ParkingFeeClass;
+  publicLot: boolean;
+  registered: boolean;
   hours?: string;
   updatedAt?: string;
   source: string;

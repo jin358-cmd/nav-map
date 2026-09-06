@@ -42,8 +42,9 @@ export function freshnessLabel(value?: DataFreshness) {
 }
 
 export function eventOriginLabel(origin?: EventDataOrigin | TrafficDataOrigin | DisasterDataOrigin | CctvDataOrigin | ParkingDataOrigin) {
-  if (origin === "tdx-live") return "TDX 即時資料";
+  if (origin === "tdx-live") return "TDX 全國公有停車場";
   if (origin === "tainan-open") return "臺南市停車動態資訊";
+  if (origin === "osm-open") return "OpenStreetMap 公有停車場";
   if (origin === "ncdr-live") return "NCDR 即時災害";
   if (origin === "snapshot") return "SNAPSHOT";
   if (origin === "mock") return "示範資料";

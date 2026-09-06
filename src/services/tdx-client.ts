@@ -79,20 +79,28 @@ export async function fetchTainanCityNews(): Promise<Record<string, unknown>[]> 
   return unwrapTdxList<Record<string, unknown>>(payload, ["News", "news"]);
 }
 
-export async function fetchTainanParkingLots(): Promise<Record<string, unknown>[]> {
-  const payload = await fetchTdxJson(
-    `/v1/Parking/OffStreet/CarPark/City/${TDX_TAINAN_CITY}`,
+export async function fetchCityParkingLots(
+  city: string,
+): Promise<Record<string, unknown>[]> {
+  return fetchTdxPaged(`/v1/Parking/OffStreet/CarPark/City/${city}`);
+}
+
+export async function fetchCityParkingAvailability(
+  city: string,
+): Promise<Record<string, unknown>[]> {
+  return fetchTdxPaged(
+    `/v1/Parking/OffStreet/ParkingAvailability/City/${city}`,
   );
-  return unwrapParkingList(payload);
+}
+
+export async function fetchTainanParkingLots(): Promise<Record<string, unknown>[]> {
+  return fetchCityParkingLots(TDX_TAINAN_CITY);
 }
 
 export async function fetchTainanParkingAvailability(): Promise<
   Record<string, unknown>[]
 > {
-  const payload = await fetchTdxJson(
-    `/v1/Parking/OffStreet/ParkingAvailability/City/${TDX_TAINAN_CITY}`,
-  );
-  return unwrapParkingList(payload);
+  return fetchCityParkingAvailability(TDX_TAINAN_CITY);
 }
 
 function unwrapParkingList(payload: unknown): Record<string, unknown>[] {
@@ -109,10 +117,31 @@ function unwrapParkingList(payload: unknown): Record<string, unknown>[] {
   ]);
 }
 
-async function fetchTdxJson(path: string): Promise<unknown> {
+async function fetchTdxPaged(path: string): Promise<Record<string, unknown>[]> {
+  const pageSize = TDX_PAGE_SIZE;
+  const rows: Record<string, unknown>[] = [];
+  for (let page = 0; page < 4; page += 1) {
+    const payload = await fetchTdxJson(path, {
+      top: pageSize,
+      skip: page * pageSize,
+    });
+    const chunk = unwrapParkingList(payload);
+    rows.push(...chunk);
+    if (chunk.length < pageSize) break;
+  }
+  return rows;
+}
+
+async function fetchTdxJson(
+  path: string,
+  options?: { top?: number; skip?: number; filter?: string; select?: string },
+): Promise<unknown> {
   const url = new URL(`${TDX_API_BASE}${path}`);
   url.searchParams.set("$format", "JSON");
-  url.searchParams.set("$top", String(TDX_PAGE_SIZE));
+  url.searchParams.set("$top", String(options?.top ?? TDX_PAGE_SIZE));
+  if (options?.skip) url.searchParams.set("$skip", String(options.skip));
+  if (options?.filter) url.searchParams.set("$filter", options.filter);
+  if (options?.select) url.searchParams.set("$select", options.select);
 
   const response = await authorizedFetch(url);
   if (!response.ok) {

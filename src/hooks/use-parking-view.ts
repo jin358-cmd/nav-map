@@ -3,6 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 import type { LngLat, ParkingCatalog, ParkingLot } from "@/types/domain";
 
+function normalizeLot(lot: ParkingLot): ParkingLot {
+  return {
+    ...lot,
+    feeClass: lot.feeClass ?? "unknown",
+    publicLot: lot.publicLot ?? true,
+    registered: lot.registered ?? false,
+  };
+}
+
 async function fetchParking(
   center: LngLat,
   radiusKm: number,
@@ -21,7 +30,7 @@ async function fetchParking(
   const data = (await response.json()) as ParkingCatalog;
   return {
     origin: data.origin ?? "unavailable",
-    lots: data.lots ?? [],
+    lots: (data.lots ?? []).map(normalizeLot),
     fetchedAt: data.fetchedAt ?? new Date().toISOString(),
   };
 }

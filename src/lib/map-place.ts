@@ -1,6 +1,11 @@
 import { poiCategoryLabel } from "@/lib/poi/category-label";
 import type { PoiCategory } from "@/lib/poi/schema";
-import type { GeocodeHit, LngLat, ParkingLot } from "@/types/domain";
+import type {
+  GeocodeHit,
+  LngLat,
+  ParkingFeeClass,
+  ParkingLot,
+} from "@/types/domain";
 
 export type MapPlaceKind = "poi" | "parking" | "custom";
 
@@ -20,6 +25,9 @@ export type MapPlace = {
   carAvailable?: number | null;
   carTotal?: number | null;
   fee?: string;
+  feeClass?: ParkingFeeClass;
+  registered?: boolean;
+  publicLot?: boolean;
 };
 
 export type MapPoiFeature = {
@@ -85,6 +93,9 @@ export function parkingLotToPlace(lot: ParkingLot): MapPlace {
     source: lot.source,
     hours: lot.hours,
     fee: lot.fee,
+    feeClass: lot.feeClass,
+    registered: lot.registered,
+    publicLot: lot.publicLot,
     carAvailable: lot.carAvailable,
     carTotal: lot.carTotal,
     openStatus:

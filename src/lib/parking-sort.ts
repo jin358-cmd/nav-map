@@ -1,8 +1,14 @@
-import type { ParkingLot, ParkingSort } from "@/types/domain";
+import type { ParkingFeeClass, ParkingLot, ParkingSort } from "@/types/domain";
 
 function feeNumber(value?: string) {
   const match = value?.match(/(\d+(?:\.\d+)?)/);
   return match ? Number(match[1]) : Number.POSITIVE_INFINITY;
+}
+
+function feeRank(value: ParkingFeeClass) {
+  if (value === "free") return 0;
+  if (value === "paid") return 1;
+  return 2;
 }
 
 export function sortParkingLots(lots: ParkingLot[], sort: ParkingSort) {
@@ -13,6 +19,8 @@ export function sortParkingLots(lots: ParkingLot[], sort: ParkingSort) {
       return right - left;
     }
     if (sort === "price") {
+      const classDelta = feeRank(a.feeClass) - feeRank(b.feeClass);
+      if (classDelta !== 0) return classDelta;
       return feeNumber(a.fee) - feeNumber(b.fee);
     }
     return (a.distanceMeters ?? Infinity) - (b.distanceMeters ?? Infinity);

@@ -24,7 +24,9 @@ export async function GET(request: Request) {
           ? "tdx"
           : catalog.origin === "tainan-open"
             ? "tainan-open"
-            : "unavailable",
+            : catalog.origin === "osm-open"
+              ? "osm-open"
+              : "unavailable",
     });
   } catch {
     return Response.json({ error: "停車資料載入失敗" }, { status: 502 });
