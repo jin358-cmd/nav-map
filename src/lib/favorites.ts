@@ -29,8 +29,8 @@ function isGeocodeHit(value: unknown): value is GeocodeHit {
   );
 }
 
-function placeKey(hit: Pick<GeocodeHit, "name" | "location">) {
-  return `${hit.name.replaceAll("臺", "台")}|${hit.location.lng.toFixed(5)}|${hit.location.lat.toFixed(5)}`;
+function placeKey(hit: Pick<GeocodeHit, "location">) {
+  return `${hit.location.lng.toFixed(5)}|${hit.location.lat.toFixed(5)}`;
 }
 
 function withoutDemoPresets(hits: GeocodeHit[]) {
@@ -121,7 +121,7 @@ function writeFavorites(next: GeocodeHit[]) {
   window.dispatchEvent(new Event(CHANGE_EVENT));
 }
 
-export function isFavorite(hit: Pick<GeocodeHit, "name" | "location">) {
+export function isFavorite(hit: Pick<GeocodeHit, "location">) {
   const key = placeKey(hit);
   return getFavoritesSnapshot().some((item) => placeKey(item) === key);
 }
@@ -136,7 +136,22 @@ export function addFavorite(hit: GeocodeHit) {
   writeFavorites(next);
 }
 
-export function removeFavorite(hit: Pick<GeocodeHit, "name" | "location">) {
+export function renameFavorite(
+  hit: Pick<GeocodeHit, "location">,
+  name: string,
+) {
+  if (typeof window === "undefined") return;
+  const nextName = name.trim();
+  if (!nextName) return;
+  const key = placeKey(hit);
+  writeFavorites(
+    getFavoritesSnapshot().map((item) =>
+      placeKey(item) === key ? { ...item, name: nextName } : item,
+    ),
+  );
+}
+
+export function removeFavorite(hit: Pick<GeocodeHit, "location">) {
   if (typeof window === "undefined") return;
   const key = placeKey(hit);
   writeFavorites(getFavoritesSnapshot().filter((item) => placeKey(item) !== key));

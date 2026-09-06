@@ -2,9 +2,11 @@
 
 import { useMemo, useState } from "react";
 import {
+  Check,
   Heart,
   MapPin,
   Music2,
+  Pencil,
   Trash2,
   X,
 } from "lucide-react";
@@ -35,11 +37,10 @@ import type {
 } from "@/types/domain";
 import type { RouteAlert } from "@/lib/route-events";
 
-const KIND_ORDER: RoadIntelKind[] = [
-  "congestion",
-  "cctv",
-  "construction",
+const TOP_KIND_ORDER: RoadIntelKind[] = ["cctv"];
+const BOTTOM_KIND_ORDER: RoadIntelKind[] = [
   "accident",
+  "construction",
   "disaster",
 ];
 
@@ -102,6 +103,7 @@ export function RoadInformationCard({
   onCloseFavorites,
   onSelectFavorite,
   onRemoveFavorite,
+  onRenameFavorite,
   account = null,
   accountBusy = false,
   accountHint = null,
@@ -131,6 +133,7 @@ export function RoadInformationCard({
   onCloseFavorites?: () => void;
   onSelectFavorite?: (hit: GeocodeHit) => void;
   onRemoveFavorite?: (hit: GeocodeHit) => void;
+  onRenameFavorite?: (hit: GeocodeHit, name: string) => void;
   routeAlert?: RouteAlert | null;
   compact?: boolean;
   account?: GoogleAccount | null;
@@ -144,22 +147,41 @@ export function RoadInformationCard({
   const [openKind, setOpenKind] = useState<RoadIntelKind | null>(null);
   const selectedKind = activeKind ?? openKind;
 
-  const groups = useMemo(
-    () =>
-      KIND_ORDER.map((kind) => ({
-        kind,
-        items: items.filter((item) => item.kind === kind),
-      })),
-    [items],
-  );
+  const counts = useMemo(() => {
+    const next: Record<RoadIntelKind, number> = {
+      congestion: 0,
+      cctv: 0,
+      construction: 0,
+      accident: 0,
+      disaster: 0,
+    };
+    for (const item of items) next[item.kind] += 1;
+    return next;
+  }, [items]);
+
+  const handleKind = (kind: RoadIntelKind) => {
+    onPreviewOpen?.();
+    if (onKindClick) {
+      onKindClick(kind);
+      return;
+    }
+    setOpenKind((current) => {
+      const next = current === kind ? null : kind;
+      if (next && kind === "cctv") {
+        const camera = items.find((item) => item.kind === "cctv" && item.cameraId);
+        if (camera?.cameraId) onSelectCctv?.(camera.cameraId);
+      }
+      return next;
+    });
+  };
 
   return (
-    <section className="pointer-events-auto relative inline-flex flex-col items-center text-white">
-      <div className="mb-1.5 flex w-full max-w-[min(36rem,calc(100vw-1.25rem))] items-center justify-between gap-2 px-0.5">
+    <section className="pointer-events-auto relative inline-flex flex-col items-end text-white">
+      <div className="mb-1.5 flex w-full items-center justify-end gap-2 px-0.5">
         <p className="text-[11px] tracking-wide text-zinc-300">功能選單</p>
       </div>
       {favoritesOpen ? (
-        <div className="absolute bottom-full left-1/2 z-30 mb-2 w-[min(20rem,calc(100vw-1.25rem))] -translate-x-1/2">
+        <div className="absolute bottom-full right-0 z-30 mb-2 w-[min(20rem,calc(100vw-1.25rem))]">
           <FavoritesPanel
             favorites={favorites}
             canFavorite={canFavorite}
@@ -167,6 +189,7 @@ export function RoadInformationCard({
             onAddCurrent={onAddFavorite}
             onSelect={onSelectFavorite}
             onRemove={onRemoveFavorite}
+            onRename={onRenameFavorite}
             onClose={() => onCloseFavorites?.()}
           />
         </div>
@@ -181,60 +204,15 @@ export function RoadInformationCard({
         </div>
       ) : null}
 
-      <div className="inline-flex w-full max-w-[min(36rem,calc(100vw-env(safe-area-inset-left)-env(safe-area-inset-right)-0.75rem))] flex-wrap items-end justify-center gap-1.5 rounded-2xl border border-zinc-500/40 bg-zinc-900/88 px-1.5 py-1.5 shadow-[0_10px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl min-[431px]:w-fit">
-        <div className="flex min-w-0 flex-wrap items-end justify-center gap-1.5">
-          {groups.map((group) => {
-            const meta = KIND_META[group.kind];
-            const Icon = meta.icon;
-            const layerOn = layerVisibility ? layerVisibility[group.kind] : true;
-            const active = selectedKind === group.kind || layerOn;
-            return (
-              <button
-                key={group.kind}
-                type="button"
-                title={meta.label}
-                aria-label={`${meta.label}${group.items.length}則`}
-                aria-pressed={layerOn}
-                onClick={() => {
-                  onPreviewOpen?.();
-                  if (onKindClick) {
-                    onKindClick(group.kind);
-                    return;
-                  }
-                  setOpenKind((current) => {
-                    const next = current === group.kind ? null : group.kind;
-                    if (next && group.items[0]?.cameraId) {
-                      onSelectCctv?.(group.items[0].cameraId);
-                    }
-                    return next;
-                  });
-                }}
-                className={cn(
-                  "function-chip relative flex items-center justify-center border touch-manipulation",
-                  layerOn ? meta.activeClass : meta.className,
-                  !layerOn && "opacity-55",
-                  active && selectedKind === group.kind && "ring-2 ring-white/30",
-                )}
-              >
-                <Icon className="function-chip__icon" />
-                <span className="function-chip__label">{meta.label}</span>
-                <span className="function-chip__badge absolute flex min-w-4 items-center justify-center rounded-full bg-black/80 px-1 text-[10px] leading-4 text-zinc-200">
-                  {group.items.length}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-        <AccountChip
-          account={account}
-          busy={accountBusy}
-          hint={accountHint}
-          configured={accountConfigured}
-          unavailable={accountUnavailable}
-          onSignIn={() => onSignIn?.()}
-          onSignOut={() => onSignOut?.()}
-        />
-        <div className="flex items-center gap-1.5">
+      <div className="inline-flex flex-col items-end gap-1.5 rounded-2xl border border-zinc-500/40 bg-zinc-900/88 px-1.5 py-1.5 shadow-[0_10px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl">
+        <div className="flex flex-row-reverse items-end justify-end gap-1.5">
+          <YouTubeMusicButton
+            pressed={musicOpen}
+            onToggle={() => {
+              setOpenKind(null);
+              onToggleMusic?.();
+            }}
+          />
           <FavoriteHeartButton
             pressed={favoritesOpen || isCurrentFavorite}
             count={favorites.length}
@@ -243,13 +221,38 @@ export function RoadInformationCard({
               onHeartClick?.();
             }}
           />
-          <YouTubeMusicButton
-            pressed={musicOpen}
-            onToggle={() => {
-              setOpenKind(null);
-              onToggleMusic?.();
-            }}
+          {TOP_KIND_ORDER.map((kind) => (
+            <KindChip
+              key={kind}
+              kind={kind}
+              count={counts[kind]}
+              layerOn={layerVisibility ? layerVisibility[kind] : true}
+              selected={selectedKind === kind}
+              onClick={() => handleKind(kind)}
+            />
+          ))}
+          <AccountChip
+            compact
+            account={account}
+            busy={accountBusy}
+            hint={accountHint}
+            configured={accountConfigured}
+            unavailable={accountUnavailable}
+            onSignIn={() => onSignIn?.()}
+            onSignOut={() => onSignOut?.()}
           />
+        </div>
+        <div className="flex flex-row-reverse items-end justify-end gap-1.5">
+          {BOTTOM_KIND_ORDER.map((kind) => (
+            <KindChip
+              key={kind}
+              kind={kind}
+              count={counts[kind]}
+              layerOn={layerVisibility ? layerVisibility[kind] : true}
+              selected={selectedKind === kind}
+              onClick={() => handleKind(kind)}
+            />
+          ))}
         </div>
       </div>
       {!compact ? (
@@ -258,6 +261,44 @@ export function RoadInformationCard({
         </p>
       ) : null}
     </section>
+  );
+}
+
+function KindChip({
+  kind,
+  count,
+  layerOn,
+  selected,
+  onClick,
+}: {
+  kind: RoadIntelKind;
+  count: number;
+  layerOn: boolean;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  const meta = KIND_META[kind];
+  const Icon = meta.icon;
+  return (
+    <button
+      type="button"
+      title={meta.label}
+      aria-label={`${meta.label}${count}則`}
+      aria-pressed={layerOn}
+      onClick={onClick}
+      className={cn(
+        "function-chip relative flex items-center justify-center border touch-manipulation",
+        layerOn ? meta.activeClass : meta.className,
+        !layerOn && "opacity-55",
+        selected && "ring-2 ring-white/30",
+      )}
+    >
+      <Icon className="function-chip__icon" />
+      <span className="function-chip__label">{meta.label}</span>
+      <span className="function-chip__badge absolute flex min-w-4 items-center justify-center rounded-full bg-black/80 px-1 text-[10px] leading-4 text-zinc-200">
+        {count}
+      </span>
+    </button>
   );
 }
 
@@ -302,6 +343,7 @@ function FavoritesPanel({
   onAddCurrent,
   onSelect,
   onRemove,
+  onRename,
   onClose,
 }: {
   favorites: GeocodeHit[];
@@ -310,8 +352,19 @@ function FavoritesPanel({
   onAddCurrent?: () => void;
   onSelect?: (hit: GeocodeHit) => void;
   onRemove?: (hit: GeocodeHit) => void;
+  onRename?: (hit: GeocodeHit, name: string) => void;
   onClose?: () => void;
 }) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
+
+  const commitRename = (hit: GeocodeHit) => {
+    const next = draft.trim();
+    if (next) onRename?.(hit, next);
+    setEditingId(null);
+    setDraft("");
+  };
+
   return (
     <div className="w-full rounded-2xl border border-rose-300/25 bg-black/82 px-2.5 py-2 shadow-[0_12px_40px_rgba(0,0,0,0.55)] backdrop-blur-xl">
       <div className="mb-1 flex items-center justify-between gap-2">
@@ -341,33 +394,87 @@ function FavoritesPanel({
         </p>
       ) : (
         <ul className="max-h-44 overflow-y-auto">
-          {favorites.map((hit) => (
-            <li key={hit.id} className="flex items-start">
-              <button
-                type="button"
-                onClick={() => onSelect?.(hit)}
-                className="flex min-w-0 flex-1 items-start gap-2 px-1 py-1.5 text-left hover:bg-white/8 touch-manipulation"
-              >
-                <MapPin className="mt-0.5 size-3.5 shrink-0 text-rose-300" />
-                <span className="min-w-0">
-                  <span className="block truncate text-sm">
-                    {formatTaiwanDisplayAddress(hit.name)}
-                  </span>
-                  <span className="block truncate text-[11px] text-zinc-500">
-                    {formatTaiwanDisplayAddress(hit.address)}
-                  </span>
-                </span>
-              </button>
-              <button
-                type="button"
-                aria-label={`移除${hit.name}`}
-                onClick={() => onRemove?.(hit)}
-                className="mt-1 flex size-7 shrink-0 items-center justify-center rounded-lg text-zinc-500 hover:bg-white/10 hover:text-white touch-manipulation"
-              >
-                <Trash2 className="size-3.5" />
-              </button>
-            </li>
-          ))}
+          {favorites.map((hit) => {
+            const editing = editingId === hit.id;
+            return (
+              <li key={hit.id} className="flex items-start gap-0.5">
+                {editing ? (
+                  <div className="flex min-w-0 flex-1 items-center gap-1 px-1 py-1">
+                    <input
+                      autoFocus
+                      value={draft}
+                      onChange={(event) => setDraft(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") commitRename(hit);
+                        if (event.key === "Escape") {
+                          setEditingId(null);
+                          setDraft("");
+                        }
+                      }}
+                      aria-label="書籤名稱"
+                      className="h-8 min-w-0 flex-1 rounded-lg border border-rose-300/30 bg-white/8 px-2 text-sm text-white outline-none"
+                    />
+                    <button
+                      type="button"
+                      aria-label="儲存名稱"
+                      onClick={() => commitRename(hit)}
+                      className="flex size-7 shrink-0 items-center justify-center rounded-lg text-rose-200 hover:bg-white/10 touch-manipulation"
+                    >
+                      <Check className="size-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="取消編輯"
+                      onClick={() => {
+                        setEditingId(null);
+                        setDraft("");
+                      }}
+                      className="flex size-7 shrink-0 items-center justify-center rounded-lg text-zinc-400 hover:bg-white/10 hover:text-white touch-manipulation"
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => onSelect?.(hit)}
+                      className="flex min-w-0 flex-1 items-start gap-2 px-1 py-1.5 text-left hover:bg-white/8 touch-manipulation"
+                    >
+                      <MapPin className="mt-0.5 size-3.5 shrink-0 text-rose-300" />
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm">
+                          {formatTaiwanDisplayAddress(hit.name)}
+                        </span>
+                        <span className="block truncate text-[11px] text-zinc-500">
+                          {formatTaiwanDisplayAddress(hit.address)}
+                        </span>
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`編輯${hit.name}名稱`}
+                      onClick={() => {
+                        setEditingId(hit.id);
+                        setDraft(hit.name);
+                      }}
+                      className="mt-1 flex size-7 shrink-0 items-center justify-center rounded-lg text-zinc-400 hover:bg-white/10 hover:text-white touch-manipulation"
+                    >
+                      <Pencil className="size-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`移除${hit.name}`}
+                      onClick={() => onRemove?.(hit)}
+                      className="mt-1 flex size-7 shrink-0 items-center justify-center rounded-lg text-zinc-500 hover:bg-white/10 hover:text-white touch-manipulation"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  </>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

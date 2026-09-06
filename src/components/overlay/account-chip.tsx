@@ -12,6 +12,7 @@ export function AccountChip({
   unavailable,
   onSignIn,
   onSignOut,
+  compact = false,
 }: {
   account: GoogleAccount | null;
   busy?: boolean;
@@ -20,7 +21,60 @@ export function AccountChip({
   unavailable?: boolean;
   onSignIn: () => void;
   onSignOut: () => void;
+  compact?: boolean;
 }) {
+  if (compact) {
+    const blocked = !configured || unavailable;
+    return (
+      <div className="relative">
+        <button
+          type="button"
+          aria-label={
+            account
+              ? "登出 Google 帳號"
+              : blocked
+                ? "Google 登入尚未完成設定"
+                : "使用 Google 帳號登入"
+          }
+          title={account ? account.name : "Google 登入"}
+          aria-disabled={blocked || busy}
+          disabled={Boolean(busy && configured && !account)}
+          onClick={account ? onSignOut : onSignIn}
+          className={cn(
+            "function-chip relative flex items-center justify-center border touch-manipulation",
+            account
+              ? "border-cyan-300/70 bg-cyan-500/25 text-cyan-50"
+              : blocked
+                ? "cursor-not-allowed border-white/8 bg-white/4 text-zinc-500"
+                : "border-white/20 bg-white/8 text-white hover:bg-white/12",
+          )}
+        >
+          {account?.picture ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={account.picture}
+              alt=""
+              width={18}
+              height={18}
+              className="function-chip__icon rounded-full"
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <GoogleMark className="function-chip__icon" />
+          )}
+          <span className="function-chip__label">
+            {account ? "帳號" : busy && configured ? "登入中" : "登入"}
+          </span>
+        </button>
+        {hint ? (
+          <p className="absolute bottom-full left-1/2 z-20 mb-1 w-40 -translate-x-1/2 rounded-lg bg-black/80 px-2 py-1 text-center text-[10px] text-amber-100">
+            {hint}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+
   if (account) {
     return (
       <div className="relative flex min-w-0 max-w-[11.5rem] items-center gap-1.5">
@@ -96,9 +150,9 @@ export function AccountChip({
   );
 }
 
-function GoogleMark() {
+function GoogleMark({ className = "size-3.5" }: { className?: string }) {
   return (
-    <svg viewBox="0 0 18 18" className="size-3.5" aria-hidden>
+    <svg viewBox="0 0 18 18" className={className} aria-hidden>
       <path
         fill="#4285F4"
         d="M17.6 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.57 2.66-3.88 2.66-6.62z"

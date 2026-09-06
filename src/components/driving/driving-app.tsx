@@ -55,6 +55,7 @@ import {
   getServerFavoritesSnapshot,
   isFavorite,
   removeFavorite,
+  renameFavorite,
   subscribeFavorites,
 } from "@/lib/favorites";
 import { pinSelected } from "@/lib/map-visibility";
@@ -1588,7 +1589,11 @@ export function DrivingApp() {
         ) : null}
         <div
           id="navpilot-function-drawer"
-          className={drawerOpen ? "function-drawer" : "function-drawer function-drawer--closed"}
+          className={
+            drawerOpen
+              ? "function-drawer self-end"
+              : "function-drawer function-drawer--closed self-end"
+          }
         >
         <RoadInformationCard
           items={intel}
@@ -1617,6 +1622,7 @@ export function DrivingApp() {
             void applyRoute(hit);
           }}
           onRemoveFavorite={removeFavorite}
+          onRenameFavorite={renameFavorite}
           account={googleAccount.account}
           accountBusy={googleAccount.busy}
           accountHint={googleAccount.hint}
