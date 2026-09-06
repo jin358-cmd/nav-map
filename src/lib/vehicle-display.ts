@@ -1,4 +1,4 @@
-import { damp, distanceKm, lerp, lerpAngle } from "@/lib/geo";
+import { damp, distanceKm, headingDelta, lerp, lerpAngle } from "@/lib/geo";
 import { pointAtRouteMeters, type RouteProgressModel } from "@/lib/route-progress";
 import type { DisplayPose, VehiclePose } from "@/types/domain";
 
@@ -11,9 +11,10 @@ export type VehicleDisplayState = {
   holdLat: number;
 };
 
-const MAX_PREDICT_METERS = 16;
-const STATIONARY_SPEED_MPS = 0.45;
-const STATIONARY_HOLD_METERS = 2;
+const MAX_PREDICT_METERS = 5;
+const STATIONARY_SPEED_MPS = 0.7;
+const STATIONARY_HOLD_METERS = 5.5;
+const HEADING_HOLD_DEG = 4;
 
 export function createVehicleDisplayState(
   pose: Pick<VehiclePose, "lng" | "lat" | "heading">,
@@ -46,17 +47,19 @@ export function presentationFollowTau(speedMps: number, approachBlend: number) {
 
 function positionTau(speedMps: number, jumpMeters: number) {
   const kmh = speedMps * 3.6;
-  if (jumpMeters > 28 || kmh >= 90) return 0.05;
-  if (kmh >= 55) return 0.055;
-  if (kmh >= 25) return 0.065;
-  if (kmh >= 8) return 0.08;
-  return 0.11;
+  if (jumpMeters > 45) return 0.12;
+  if (kmh >= 90) return 0.14;
+  if (kmh >= 55) return 0.18;
+  if (kmh >= 25) return 0.22;
+  if (kmh >= 8) return 0.28;
+  return 0.36;
 }
 
-function headingTau(speedMps: number) {
-  if (speedMps < 0.8) return 0.13;
-  if (speedMps < 4) return 0.09;
-  return 0.06;
+function headingTau(speedMps: number, headingJump: number) {
+  if (headingJump > 50) return 0.14;
+  if (speedMps < 0.8) return 0.3;
+  if (speedMps < 4) return 0.22;
+  return 0.16;
 }
 
 function isNoisyFix(accuracy: number | undefined, jumpMeters: number, speedMps: number) {
@@ -99,9 +102,13 @@ export function stepVehicleDisplay({
     speedMps < STATIONARY_SPEED_MPS && jumpMeters < STATIONARY_HOLD_METERS;
 
   if (stationary) {
+    const holdHeading =
+      headingDelta(current.heading, target.heading) < HEADING_HOLD_DEG
+        ? current.heading
+        : lerpAngle(current.heading, target.heading, damp(dtSeconds, 0.32));
     return {
       ...current,
-      heading: lerpAngle(current.heading, target.heading, damp(dtSeconds, 0.14)),
+      heading: holdHeading,
       predictedMeters: 0,
       holdLng: noisy ? current.holdLng : goal.lng,
       holdLat: noisy ? current.holdLat : goal.lat,
@@ -122,7 +129,7 @@ export function stepVehicleDisplay({
   ) {
     predictedMeters = Math.min(
       MAX_PREDICT_METERS,
-      Math.max(current.predictedMeters, speedMps * elapsedSinceFixSeconds),
+      current.predictedMeters * 0.72 + speedMps * elapsedSinceFixSeconds * 0.28,
     );
     const along = pointAtRouteMeters(model, target.routeMeters + predictedMeters);
     if (along) {
@@ -150,13 +157,21 @@ export function stepVehicleDisplay({
     };
   }
 
+  const headingJump = headingDelta(current.heading, desiredHeading);
+  const nextHeading =
+    speedMps < 1.2 && headingJump < HEADING_HOLD_DEG
+      ? current.heading
+      : lerpAngle(
+          current.heading,
+          desiredHeading,
+          damp(dtSeconds, headingTau(speedMps, headingJump)),
+        );
   const posT = damp(dtSeconds, positionTau(speedMps, jumpMeters));
-  const headT = damp(dtSeconds, headingTau(speedMps));
 
   return {
     lng: lerp(current.lng, desired.lng, posT),
     lat: lerp(current.lat, desired.lat, posT),
-    heading: lerpAngle(current.heading, desiredHeading, headT),
+    heading: nextHeading,
     predictedMeters,
     holdLng,
     holdLat,

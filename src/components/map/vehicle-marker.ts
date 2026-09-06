@@ -1,19 +1,34 @@
 /**
- * 貼地 3D 黃色指標：MapLibre Marker 用 pitch/rotation alignment = map。
- * 旋轉走 Marker.setRotation，根節點不做 CSS rotate。
+ * 立體三角車頭：與安裝圖示同語言。
+ * 旋轉走 Marker.setRotation；根節點不做 CSS rotate。
+ * viewBox 正方形、三角形重心在中心，anchor=center 時旋轉不偏軸。
  */
 export function createVehicleMarkerElement(): HTMLDivElement {
   const root = document.createElement("div");
   root.className = "vehicle-marker";
   root.innerHTML = `
     <div class="vehicle-marker__body" aria-hidden="true">
-      <svg viewBox="0 0 72 92" width="52" height="68">
-        <ellipse cx="36" cy="86" rx="18" ry="5.5" fill="rgba(15,23,42,0.28)"/>
-        <path d="M20 82 L26 40 L16 34 L36 4 L56 34 L46 40 L52 82 Z" fill="#713f12"/>
-        <path d="M22 78 L28 38 L36 10 L44 38 L50 78 L36 70 Z" fill="#a16207"/>
-        <path d="M24 74 L30 36 L36 14 L42 36 L48 74 L36 66 Z" fill="#ca8a04"/>
-        <path d="M36 6 L56 34 L45 34 L52 72 L36 64 L20 72 L27 34 L16 34 Z" fill="#facc15" stroke="#d4d4d8" stroke-width="1.3" stroke-linejoin="round"/>
-        <path d="M36 12 L45 32 L36 60 L27 32 Z" fill="#fde047" opacity="0.55"/>
+      <svg viewBox="0 0 64 64" width="58" height="58">
+        <ellipse cx="32" cy="51" rx="11" ry="3.1" fill="rgba(15,23,42,0.3)"/>
+        <path d="M16 46 L32 52 L48 46 L32 40 Z" fill="#713f12"/>
+        <path d="M32 4 L50 46 L32 40 Z" fill="#92400e"/>
+        <path d="M32 4 L14 46 L32 40 Z" fill="#ca8a04"/>
+        <path
+          d="M32 2 L51 47 L32 37 L13 47 Z"
+          fill="#facc15"
+          stroke="#3f3f46"
+          stroke-width="1.15"
+          stroke-linejoin="round"
+        />
+        <path d="M32 6 L20 42 L32 34 Z" fill="#fde047" opacity="0.5"/>
+        <path
+          d="M32 8 L32 34"
+          fill="none"
+          stroke="#fef08a"
+          stroke-width="1.7"
+          stroke-linecap="round"
+          opacity="0.9"
+        />
       </svg>
     </div>
   `;

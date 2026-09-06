@@ -85,7 +85,7 @@ import {
   isStaleStyleError,
   waitForBasemapStyle,
 } from "@/lib/map-style-switch";
-import { damp, lerp, lerpAngle } from "@/lib/geo";
+import { damp, distanceKm, lerp, lerpAngle } from "@/lib/geo";
 import {
   ensureHeadingConeLayers,
   shouldShowHeadingCone,
@@ -549,9 +549,12 @@ export function DrivingMap({
       routeSigRef.current = routeSig;
       resetGuidanceArrowCache();
       recoverUntilRef.current = 0;
-      displayStateRef.current = createVehicleDisplayState(
-        displayVehicle ?? vehicle,
-      );
+      const nextPose = displayVehicle ?? vehicle;
+      const jumpMeters =
+        distanceKm(displayStateRef.current, nextPose) * 1000;
+      if (jumpMeters > 35) {
+        displayStateRef.current = createVehicleDisplayState(nextPose);
+      }
     }
     trafficRef.current = traffic;
     camerasRef.current = cameras;
@@ -662,6 +665,7 @@ export function DrivingMap({
     vehicleMarkerRef.current = new Marker({
       element: vehicleEl,
       anchor: "center",
+      offset: [0, 0],
       pitchAlignment: "map",
       rotationAlignment: "map",
     })
@@ -727,8 +731,6 @@ export function DrivingMap({
         lastNavigatingMarkerRef.current = navigatingNow;
         setVehicleMarkerNavigating(marker.getElement(), navigatingNow);
       }
-      marker.setRotation(display.heading);
-      setVehicleMarkerHeading(marker.getElement(), headingUp ? 0 : display.heading);
 
       const gestureBusy = interactingRef.current || pinchingRef.current;
       try {
@@ -858,6 +860,13 @@ export function DrivingMap({
         }
         emitViewport();
       }
+
+      const rotation =
+        headingUp && followVehicleRef.current
+          ? mapNow.getBearing()
+          : display.heading;
+      marker.setRotation(rotation);
+      setVehicleMarkerHeading(marker.getElement(), rotation);
 
       rafRef.current = requestAnimationFrame(tick);
     };
