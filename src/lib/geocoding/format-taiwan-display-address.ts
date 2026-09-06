@@ -183,12 +183,41 @@ export function formatTaiwanDisplayAddress(
 }
 
 export function sameTaiwanDisplayTitle(a?: string | null, b?: string | null) {
-  const normalize = (value?: string | null) =>
-    formatTaiwanDisplayAddress(value)
-      .replaceAll("臺", "台")
-      .replaceAll(/[·・•]/g, "")
-      .replaceAll(/\s+/g, "");
-  const left = normalize(a);
-  const right = normalize(b);
+  const left = compactAddressKey(a);
+  const right = compactAddressKey(b);
   return Boolean(left && right && left === right);
+}
+
+function compactAddressKey(value?: string | null) {
+  return formatTaiwanDisplayAddress(value)
+    .replaceAll("臺", "台")
+    .replaceAll(/[()（）·・•,，、]/g, "")
+    .replaceAll(/\s+/g, "");
+}
+
+/** 確認欄只顯示一條地址，去掉標題／完整地址重複。 */
+export function unifiedConfirmAddress(
+  label?: string | null,
+  address?: string | null,
+): string {
+  const title = formatTaiwanDisplayAddress(label);
+  const line = formatTaiwanDisplayAddress(address);
+  if (!title) return line;
+  if (!line) return title;
+  if (sameTaiwanDisplayTitle(title, line)) return title;
+
+  const titleKey = compactAddressKey(title);
+  const lineKey = compactAddressKey(line);
+  if (titleKey === lineKey) return title.length >= line.length ? title : line;
+  if (lineKey.includes(titleKey)) return line;
+  if (titleKey.includes(lineKey)) return title;
+
+  const titleCore = title.replace(/[（(][^）)]+[）)]/g, "").trim();
+  const coreKey = compactAddressKey(titleCore);
+  if (coreKey && lineKey.includes(coreKey)) return line;
+  if (coreKey && titleKey.includes(lineKey)) return title;
+  if (coreKey && titleCore !== title && !lineKey.includes(coreKey)) {
+    return `${titleCore} · ${line}`;
+  }
+  return title.length >= line.length ? title : line;
 }

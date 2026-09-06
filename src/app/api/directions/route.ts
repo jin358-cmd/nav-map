@@ -20,25 +20,36 @@ export async function GET(request: Request) {
 
   if (travelMode === "motorcycle") {
     const motorcycleUrl = process.env.MOTORCYCLE_ROUTING_URL?.trim();
-    if (!motorcycleUrl) {
-      return Response.json(
-        {
-          error: "機車路線尚未設定",
-          code: "NOT_CONFIGURED",
-          provider: "NOT CONFIGURED",
-          travelMode,
-        },
-        { status: 501 },
+    if (motorcycleUrl) {
+      return routeFromOsrmLike(
+        motorcycleUrl,
+        fromLng,
+        fromLat,
+        toLng,
+        toLat,
+        label,
+        "motorcycle",
       );
     }
-    return routeFromOsrmLike(
-      motorcycleUrl,
+    const avoided = await routeFromOsrmLike(
+      OSRM_CAR,
       fromLng,
       fromLat,
       toLng,
       toLat,
       label,
-      travelMode,
+      "motorcycle",
+      "motorway",
+    );
+    if (avoided.status !== 404 && avoided.status !== 502) return avoided;
+    return routeFromOsrmLike(
+      OSRM_CAR,
+      fromLng,
+      fromLat,
+      toLng,
+      toLat,
+      label,
+      "motorcycle",
     );
   }
 
@@ -61,6 +72,7 @@ async function routeFromOsrmLike(
   toLat: number,
   label: string,
   travelMode: "car" | "motorcycle",
+  exclude?: string,
 ) {
   const path = `${fromLng},${fromLat};${toLng},${toLat}`;
   const endpoint = new URL(
@@ -70,6 +82,7 @@ async function routeFromOsrmLike(
   endpoint.searchParams.set("geometries", "geojson");
   endpoint.searchParams.set("steps", "true");
   endpoint.searchParams.set("alternatives", "false");
+  if (exclude) endpoint.searchParams.set("exclude", exclude);
 
   try {
     const response = await fetch(endpoint, {

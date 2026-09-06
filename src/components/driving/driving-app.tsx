@@ -786,8 +786,6 @@ export function DrivingApp() {
   const handleLongPress = useCallback(
     async (location: { lng: number; lat: number }) => {
       const hit = await reversePlace(location);
-      addFavorite(hit);
-      setFavoritesOpen(true);
       await applyRoute(hit);
     },
     [applyRoute],

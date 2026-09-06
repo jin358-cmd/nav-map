@@ -1,10 +1,11 @@
 import type { TravelMode } from "@/types/domain";
 
 export const CAR_ROUTING_PROVIDER = "OSRM public driving (router.project-osrm.org)";
-export const MOTORCYCLE_ROUTING_PROVIDER = "NOT CONFIGURED";
+export const MOTORCYCLE_ROUTING_PROVIDER =
+  "OSRM public driving, exclude motorway (router.project-osrm.org)";
 
 export function motorcycleRoutingConfigured() {
-  return Boolean(process.env.MOTORCYCLE_ROUTING_URL?.trim());
+  return true;
 }
 
 export function formatEtaClock(durationSeconds: number, now = new Date()) {

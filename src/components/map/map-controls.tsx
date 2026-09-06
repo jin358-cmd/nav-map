@@ -55,7 +55,7 @@ export function MapControls({
     : followOrientation === "heading-up"
       ? "切換北方朝上"
       : "切換車頭向上";
-  const tone = mapControlTone(mapDisplayMode);
+  const tone = mapControlTone(pendingMapDisplayMode ?? mapDisplayMode);
 
   return (
     <div className="pointer-events-auto flex flex-col items-end gap-2.5">
@@ -65,7 +65,10 @@ export function MapControls({
         active={followVehicle}
         tone={tone}
       >
-        <LocateFixed className={cn("size-5", locating && "animate-pulse")} />
+        <LocateFixed
+          className={cn("size-6", locating && "animate-pulse")}
+          strokeWidth={2.5}
+        />
       </ControlButton>
       <ControlButton
         label={cameraMode === "3d" ? "切換 2D" : "切換 3D"}
@@ -74,9 +77,9 @@ export function MapControls({
         tone={tone}
       >
         {cameraMode === "3d" ? (
-          <Box className="size-5" strokeWidth={2} />
+          <Box className="size-6" strokeWidth={2.5} />
         ) : (
-          <Square className="size-5" strokeWidth={2} />
+          <Square className="size-6" strokeWidth={2.5} />
         )}
       </ControlButton>
       <MapStyleMenu
@@ -96,7 +99,7 @@ export function MapControls({
           controls="navpilot-function-drawer"
           tone={tone}
         >
-          <LayoutGrid className="size-5" strokeWidth={2} />
+          <LayoutGrid className="size-6" strokeWidth={2.5} />
         </ControlButton>
       ) : null}
     </div>

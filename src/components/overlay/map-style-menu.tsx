@@ -46,7 +46,7 @@ export function MapStyleMenu({
           mapControlButtonClass(tone, open),
         )}
       >
-        <Layers className="size-5" />
+        <Layers className="size-6" strokeWidth={2.5} />
       </Button>
       {open ? (
         <div
