@@ -23,7 +23,7 @@ export function TripStatusCluster({
     remainingSeconds != null ? formatEtaClock(remainingSeconds) : "--";
 
   return (
-    <div className="hud-trip-card pointer-events-none grid grid-cols-3 divide-x divide-white/20 text-white shadow-lg">
+    <div className="hud-trip-card pointer-events-none divide-x divide-white/20 text-white shadow-lg">
       <div className="hud-trip-cell">
         <p className="hud-trip-label">剩餘時間</p>
         <p className="hud-trip-metric hud-trip-metric--time">

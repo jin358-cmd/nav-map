@@ -99,9 +99,9 @@ import {
 import { deriveTrafficIntel } from "@/lib/traffic-intel";
 import { GpsFixChip } from "@/components/overlay/gps-fix-chip";
 import { MapAttribution } from "@/components/overlay/map-attribution";
-import { SpeedHud } from "@/components/overlay/speed-hud";
+import { SpeedHud, SpeedLimitBadge } from "@/components/overlay/speed-hud";
 import { TripStatusCluster } from "@/components/overlay/trip-status-cluster";
-import { unresolvedSpeedLimit } from "@/lib/speed-limit";
+import { approachingSpeedCameraLimit } from "@/lib/speed-camera-alert";
 import {
   fetchAccidentReports,
   planDrivingRoute,
@@ -448,6 +448,7 @@ export function DrivingApp() {
     viewport,
     refreshNonce,
   });
+  const cameraSpeedLimit = approachingSpeedCameraLimit(vehicle, speedEnforcement);
 
   const {
     alerts: disasters,
@@ -1476,7 +1477,12 @@ export function DrivingApp() {
           }
         >
           <div className="hud-trip-stack">
-            <SpeedHud sample={vehicle} limit={unresolvedSpeedLimit()} />
+            <div className="hud-speed-row">
+              <div className="hud-speed-column">
+                <SpeedLimitBadge kph={cameraSpeedLimit?.speedLimitKph ?? null} />
+                <SpeedHud sample={vehicle} />
+              </div>
+            </div>
             <TripStatusCluster
               remainingMeters={
                 navigationProgress

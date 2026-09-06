@@ -222,32 +222,21 @@
 
 .vehicle-marker {
   position: relative;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 52px;
   pointer-events: none;
 }
 
-.vehicle-marker__ring {
-  position: absolute;
-  inset: 0;
-  border-radius: 999px;
-  border: 2.5px solid rgba(203, 213, 225, 0.68);
-  background: rgba(209, 213, 219, 0.16);
-  box-shadow: 0 0 8px rgba(15, 23, 42, 0.28);
-}
-
-.vehicle-marker__triangle {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
+.vehicle-marker__body {
   display: grid;
   place-items: center;
-  transform-origin: center center;
-  filter: drop-shadow(0 3px 6px rgba(250, 204, 21, 0.55));
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 2px 4px rgba(15, 23, 42, 0.45));
 }
 
-.vehicle-marker--nav .vehicle-marker__triangle {
-  filter: drop-shadow(0 0 10px rgba(250, 204, 21, 0.85));
+.vehicle-marker--nav .vehicle-marker__body {
+  filter: drop-shadow(0 0 8px rgba(250, 204, 21, 0.55));
 }
 
 .intel-marker {
@@ -302,7 +291,7 @@
   pointer-events: none;
   overflow: visible;
   transform-style: preserve-3d;
-  filter: drop-shadow(0 7px 10px rgba(180, 83, 9, 0.55));
+  filter: drop-shadow(0 7px 10px rgba(127, 29, 29, 0.55));
 }
 
 .destination-beacon {
@@ -318,16 +307,16 @@
 .destination-beacon__dot {
   position: absolute;
   inset: 0;
-  border: 3px solid #facc15;
+  border: 3px solid #ef4444;
   border-radius: 999px;
   background: transparent;
-  box-shadow: 0 0 12px rgba(250, 204, 21, 0.6);
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.55);
 }
 
 .destination-beacon__ring {
   position: absolute;
   inset: -4px;
-  border: 2.5px solid rgba(250, 204, 21, 0.95);
+  border: 2.5px solid rgba(239, 68, 68, 0.92);
   border-radius: 999px;
   animation: destination-beacon-pulse 2.1s ease-out infinite;
 }
@@ -360,7 +349,7 @@
   height: 8px;
   transform: translateX(-50%);
   border-radius: 999px;
-  background: radial-gradient(circle, rgba(255, 176, 39, 0.7), transparent 72%);
+  background: radial-gradient(circle, rgba(239, 68, 68, 0.7), transparent 72%);
 }
 
 .destination-pin__mark {
@@ -489,8 +478,8 @@
   left: max(0.5rem, env(safe-area-inset-left));
   bottom: max(0.75rem, env(safe-area-inset-bottom));
   z-index: 28;
-  width: min(58vw, 22rem);
-  max-width: calc(100vw - 7.5rem - env(safe-area-inset-right));
+  width: min(78vw, 26rem);
+  max-width: calc(100vw - 6.5rem - env(safe-area-inset-right));
 }
 
 .hud-anchor-trip--drawer {
@@ -498,10 +487,63 @@
 }
 
 .hud-trip-stack {
+  --hud-trip-cols: minmax(0, 1fr) minmax(0, 1fr) minmax(6.35rem, 1.7fr);
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 0.45rem;
+}
+
+.hud-speed-row,
+.hud-trip-card {
+  display: grid;
+  grid-template-columns: var(--hud-trip-cols);
+}
+
+.hud-speed-column {
+  container-type: inline-size;
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.35rem;
+}
+
+.hud-speed-gps {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 3.35rem;
+  padding: 0.4rem 0.2rem 0.35rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.hud-speed-gps__value {
+  font-size: clamp(20px, 6.2cqi, 26px);
+}
+
+.hud-speed-gps__unit {
+  margin-top: 0.15rem;
+  font-size: 11px;
+}
+
+.hud-speed-limit-slot {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 3.15rem;
+}
+
+.hud-speed-limit-badge {
+  width: 2.85rem;
+  height: 2.85rem;
+  border: 4px solid #dc2626;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.hud-speed-limit-badge span {
+  font-size: 1.05rem;
 }
 
 .hud-trip-card {
@@ -552,6 +594,7 @@
 
 .hud-trip-metric--eta {
   color: #fde047;
+  overflow: visible;
 }
 
 .hud-trip-metric-unit {
@@ -572,7 +615,11 @@
   }
 
   .hud-anchor-trip {
-    width: min(34vw, 16.5rem);
+    width: min(42vw, 20rem);
+  }
+
+  .hud-speed-column {
+    min-width: 0;
   }
 
   .hud-trip-card {
@@ -712,8 +759,9 @@
 }
 
 .navigation-road-name {
-  font-size: clamp(16px, 3.8vw, 20px);
+  font-size: clamp(24px, 6vw, 32px);
   line-height: 1.2;
+  font-weight: 800;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -773,7 +821,7 @@
   }
 
   .navigation-road-name {
-    font-size: clamp(15px, 3.8vw, 19px);
+    font-size: clamp(24px, 6.8vw, 32px);
   }
 }
 
@@ -797,7 +845,7 @@
   }
 
   .navigation-road-name {
-    font-size: clamp(15px, 2.4vw, 20px);
+    font-size: clamp(22px, 3.6vw, 30px);
   }
 }
 

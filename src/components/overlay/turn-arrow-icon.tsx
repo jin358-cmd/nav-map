@@ -497,11 +497,17 @@ function SignRoundabout({ className }: { className?: string }) {
 function SignArrive({ className }: { className?: string }) {
   return (
     <ArrowFrame className={className}>
+      <ellipse cx="32" cy="58" rx="10" ry="3.2" fill="#7f1d1d" opacity="0.35" />
       <path
-        d="M32 6 C19 6 10 17 10 28 C10 44 32 60 32 60 C32 60 54 44 54 28 C54 17 45 6 32 6 Z"
-        fill="currentColor"
+        d="M32 6 C20 6 12 16 12 27 C12 42 32 58 32 58 C32 58 52 42 52 27 C52 16 44 6 32 6 Z"
+        fill="#dc2626"
       />
-      <circle cx="32" cy="27" r="6" fill="#fff" />
+      <path
+        d="M32 6 C24 6 16 15 16 27 C16 38 32 52 32 52 C32 52 28 40 28 27 C28 16 32 8 32 6 Z"
+        fill="#ef4444"
+      />
+      <circle cx="32" cy="26" r="7" fill="#fff" />
+      <circle cx="32" cy="26" r="3.2" fill="#dc2626" />
     </ArrowFrame>
   );
 }

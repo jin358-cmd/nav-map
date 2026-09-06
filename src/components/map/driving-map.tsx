@@ -291,25 +291,26 @@ function createDestinationPin(label: string): HTMLDivElement {
     <svg class="destination-pin__mark" viewBox="0 0 48 58" width="30" height="36" aria-hidden="true">
       <defs>
         <linearGradient id="pin-left" x1="0" x2="1" y1="0" y2="1">
-          <stop offset="0%" stop-color="#ffe56a"/>
-          <stop offset="42%" stop-color="#ffb027"/>
-          <stop offset="100%" stop-color="#e67a10"/>
+          <stop offset="0%" stop-color="#f87171"/>
+          <stop offset="42%" stop-color="#ef4444"/>
+          <stop offset="100%" stop-color="#b91c1c"/>
         </linearGradient>
         <linearGradient id="pin-right" x1="1" x2="0" y1="0" y2="1">
-          <stop offset="0%" stop-color="#ffcf4a"/>
-          <stop offset="55%" stop-color="#f08812"/>
-          <stop offset="100%" stop-color="#b45309"/>
+          <stop offset="0%" stop-color="#fca5a5"/>
+          <stop offset="55%" stop-color="#dc2626"/>
+          <stop offset="100%" stop-color="#7f1d1d"/>
         </linearGradient>
         <linearGradient id="pin-ridge" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stop-color="#fff4b8"/>
-          <stop offset="100%" stop-color="#ffd36a"/>
+          <stop offset="0%" stop-color="#fee2e2"/>
+          <stop offset="100%" stop-color="#f87171"/>
         </linearGradient>
       </defs>
-      <ellipse cx="24" cy="52" rx="9" ry="3.2" fill="#ff9a1a" opacity="0.38"/>
-      <path d="M24 3 L42 36 L24 50 Z" fill="url(#pin-right)"/>
-      <path d="M24 3 L6 36 L24 50 Z" fill="url(#pin-left)"/>
-      <path d="M24 3 L27.2 49 L20.8 49 Z" fill="url(#pin-ridge)" opacity="0.72"/>
-      <path d="M24 3 L42 36 L24 50 L6 36 Z" fill="none" stroke="#fff6d2" stroke-width="1.15" stroke-linejoin="round"/>
+      <ellipse cx="24" cy="52" rx="9" ry="3.2" fill="#7f1d1d" opacity="0.38"/>
+      <path d="M24 3 C12 3 6 14 6 24 C6 38 24 54 24 54 C24 54 42 38 42 24 C42 14 36 3 24 3 Z" fill="url(#pin-right)"/>
+      <path d="M24 3 C16 3 10 13 10 24 C10 34 24 48 24 48 C24 48 20 36 20 24 C20 14 24 5 24 3 Z" fill="url(#pin-left)"/>
+      <path d="M24 3 L26.6 50 L21.4 50 Z" fill="url(#pin-ridge)" opacity="0.45"/>
+      <circle cx="24" cy="23" r="7" fill="#fff"/>
+      <circle cx="24" cy="23" r="3.4" fill="#dc2626"/>
     </svg>
   `;
   return el;
@@ -598,8 +599,8 @@ export function DrivingMap({
     vehicleMarkerRef.current = new Marker({
       element: vehicleEl,
       anchor: "center",
-      pitchAlignment: "viewport",
-      rotationAlignment: "viewport",
+      pitchAlignment: "map",
+      rotationAlignment: "map",
     })
       .setLngLat([vehicle.lng, vehicle.lat])
       .addTo(map);
@@ -663,7 +664,7 @@ export function DrivingMap({
         lastNavigatingMarkerRef.current = navigatingNow;
         setVehicleMarkerNavigating(marker.getElement(), navigatingNow);
       }
-      marker.setRotation(0);
+      marker.setRotation(display.heading);
       setVehicleMarkerHeading(marker.getElement(), headingUp ? 0 : display.heading);
 
       const gestureBusy = interactingRef.current || pinchingRef.current;
@@ -713,24 +714,7 @@ export function DrivingMap({
         if (!gestureBusy && now - lastArrowUpdateRef.current > 80) {
           lastArrowUpdateRef.current = now;
           try {
-            upsertGuidanceArrows(
-              mapNow,
-              routeRef.current,
-              routeMetersRef.current,
-              distanceToNextRef.current,
-              true,
-              (now / 720) % 1,
-              {
-                cameraMode: modeRef.current,
-                isTurn: isTurnRef.current,
-                cueMeters: cueMetersRef.current,
-                fade: recoverBlendAt(
-                  now,
-                  recoverUntilRef.current,
-                  recoverFromRef.current,
-                ),
-              },
-            );
+            upsertGuidanceArrows(mapNow);
           } catch {
             /* style may still be swapping */
           }
@@ -850,19 +834,7 @@ export function DrivingMap({
           parkingVisibleRef.current,
         );
         bindParkingLayerClicks(map, (id) => onParkingSelectRef.current?.(id));
-        upsertGuidanceArrows(
-          map,
-          routeRef.current,
-          routeMetersRef.current,
-          distanceToNextRef.current,
-          navigatingRef.current,
-          0,
-          {
-            cameraMode: modeRef.current,
-            isTurn: isTurnRef.current,
-            cueMeters: cueMetersRef.current,
-          },
-        );
+        upsertGuidanceArrows(map);
       } catch (error) {
         console.error("Event layer skipped", error);
       }
@@ -1203,19 +1175,7 @@ export function DrivingMap({
           parkingVisibleRef.current,
         );
         bindParkingLayerClicks(map, (id) => onParkingSelectRef.current?.(id));
-        upsertGuidanceArrows(
-          map,
-          routeRef.current,
-          routeMetersRef.current,
-          distanceToNextRef.current,
-          navigatingRef.current,
-          0,
-          {
-            cameraMode: modeRef.current,
-            isTurn: isTurnRef.current,
-            cueMeters: cueMetersRef.current,
-          },
-        );
+        upsertGuidanceArrows(map);
       } catch (error) {
         console.error("Navigation overlays remount skipped", error);
       }
