@@ -1,6 +1,7 @@
 import type { MapDisplayMode } from "@/types/domain";
 
 const STORAGE_KEY = "navpilot.map-display-mode.v1";
+const CHANGE_EVENT = "navpilot-map-display-mode";
 
 export function readMapDisplayMode(): MapDisplayMode {
   if (typeof window === "undefined") return "dark";
@@ -15,11 +16,31 @@ export function readMapDisplayMode(): MapDisplayMode {
   return "dark";
 }
 
+export function getServerMapDisplayModeSnapshot(): MapDisplayMode {
+  return "dark";
+}
+
+export function subscribeMapDisplayMode(onChange: () => void) {
+  if (typeof window === "undefined") return () => undefined;
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === STORAGE_KEY) onChange();
+  };
+  window.addEventListener("storage", onStorage);
+  window.addEventListener(CHANGE_EVENT, onChange);
+  return () => {
+    window.removeEventListener("storage", onStorage);
+    window.removeEventListener(CHANGE_EVENT, onChange);
+  };
+}
+
 export function writeMapDisplayMode(mode: MapDisplayMode) {
   try {
     window.localStorage.setItem(STORAGE_KEY, mode);
   } catch {
     /* 略過 */
+  }
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(CHANGE_EVENT));
   }
 }
 

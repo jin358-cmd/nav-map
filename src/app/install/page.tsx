@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { Check, Copy, Download, Share } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,11 +20,11 @@ export default function InstallPage() {
   const needsChrome = !installed && !chromeSafe && installBrowser !== "desktop";
   const [copied, setCopied] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
-  const [installUrl, setInstallUrl] = useState("");
-
-  useEffect(() => {
-    setInstallUrl(`${window.location.origin}/install`);
-  }, []);
+  const installUrl = useSyncExternalStore(
+    () => () => undefined,
+    () => `${window.location.origin}/install`,
+    () => "",
+  );
 
   async function copyInstallLink() {
     const url = installUrl || `${window.location.origin}/install`;
