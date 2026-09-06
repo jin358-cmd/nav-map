@@ -22,7 +22,9 @@ import {
   disasterToCard,
 } from "@/components/overlay/event-detail-card";
 import { EventListPanel } from "@/components/overlay/event-list-panel";
+import { ParkingArrivalCard } from "@/components/overlay/parking-arrival-card";
 import { ParkingPanel } from "@/components/overlay/parking-panel";
+import { PlaceInfoCard } from "@/components/overlay/place-info-card";
 import { NextIntersectionHud } from "@/components/overlay/navigation-banner";
 import { RoadInformationCard } from "@/components/overlay/road-information-card";
 import { RouteConfirmBar } from "@/components/overlay/route-preview";
@@ -34,6 +36,7 @@ import { useLandscape } from "@/hooks/use-landscape";
 import { useYoutubeLibrary } from "@/hooks/use-youtube-library";
 import { useNavigationVoice } from "@/hooks/use-navigation-voice";
 import { useSpeedEnforcementView } from "@/hooks/use-speed-enforcement-view";
+import { useMapPois } from "@/hooks/use-map-pois";
 import { useParkingView } from "@/hooks/use-parking-view";
 import { useTrafficView } from "@/hooks/use-traffic-view";
 import { roadIntelFromCameras } from "@/lib/cctv-intel";
@@ -66,7 +69,20 @@ import {
   maneuverAlertActive,
 } from "@/lib/maneuver-guidance";
 import { pickActiveRouteAlert } from "@/lib/route-events";
+import {
+  customPlaceFromLngLat,
+  mapPlaceToHit,
+  parkingLotToPlace,
+  poiFeatureToPlace,
+  type MapPlace,
+} from "@/lib/map-place";
+import {
+  parkingArrivalPromptEnabled,
+  setParkingArrivalPromptEnabled,
+  subscribeParkingArrivalPrompt,
+} from "@/lib/parking-arrival-setting";
 import { destinationToHit } from "@/lib/poi-search";
+import { logRerouteTimings } from "@/lib/reroute-metrics";
 import { CITY_TRAFFIC_FOCUS_KM } from "@/lib/traffic-constants";
 import {
   DEMO_VEHICLE,
@@ -102,6 +118,7 @@ import { MapAttribution } from "@/components/overlay/map-attribution";
 import { SpeedHud, SpeedLimitBadge } from "@/components/overlay/speed-hud";
 import { TripStatusCluster } from "@/components/overlay/trip-status-cluster";
 import { approachingSpeedCameraLimit } from "@/lib/speed-camera-alert";
+import { formatUpdatedAt, trafficOriginLabel } from "@/lib/format";
 import {
   fetchAccidentReports,
   planDrivingRoute,
@@ -235,6 +252,14 @@ export function DrivingApp() {
   const [parkingOpen, setParkingOpen] = useState(false);
   const [parkingSort, setParkingSort] = useState<ParkingSort>("distance");
   const [selectedParking, setSelectedParking] = useState<ParkingLot | null>(null);
+  const [selectedMapPlace, setSelectedMapPlace] = useState<MapPlace | null>(null);
+  const [parkingArrivalOpen, setParkingArrivalOpen] = useState(false);
+  const parkingArrivalEnabled = useSyncExternalStore(
+    subscribeParkingArrivalPrompt,
+    parkingArrivalPromptEnabled,
+    () => true,
+  );
+  const parkingArrivalDismissedRef = useRef(false);
   const [route, setRoute] = useState<[number, number][]>([]);
   const [maneuver, setManeuver] = useState<NavigationManeuver | null>(null);
   const [destination, setDestination] = useState<RouteDestination | null>(null);
@@ -300,6 +325,7 @@ export function DrivingApp() {
   const reroutingRef = useRef(false);
   const lastRerouteAtRef = useRef(0);
   const lastRerouteSuccessAtRef = useRef(0);
+  const lastOffRouteAtRef = useRef(0);
   const rerouteAbortRef = useRef<AbortController | null>(null);
   const rerouteGenerationRef = useRef(0);
   const destinationRef = useRef<RouteDestination | null>(null);
@@ -427,6 +453,9 @@ export function DrivingApp() {
 
   const {
     origin: trafficOrigin,
+    source: trafficSource,
+    updatedAt: trafficUpdatedAt,
+    stale: trafficStale,
     scored: trafficScored,
     visible: traffic,
     error: trafficError,
@@ -457,7 +486,8 @@ export function DrivingApp() {
     reload: reloadDisasters,
   } = useDisasterView(refreshNonce);
 
-  const parkingCenter = destination?.location ?? null;
+  const parkingCenter =
+    destination?.location ?? (vehicle.source === "gps" ? vehicle : null);
   const {
     lots: parkingLots,
     origin: parkingOrigin,
@@ -465,8 +495,13 @@ export function DrivingApp() {
     fetchedAt: parkingFetchedAt,
   } = useParkingView({
     center: parkingCenter,
-    enabled: Boolean(destination) && parkingOpen,
+    enabled: parkingOpen,
     radiusKm: 4,
+  });
+  const mapPois = useMapPois({
+    viewport,
+    origin: searchOrigin,
+    enabled: true,
   });
 
   useEffect(() => {
@@ -725,6 +760,9 @@ export function DrivingApp() {
     }
     rememberAddress(hit);
     lastRouteHitRef.current = hit;
+    setSelectedMapPlace(null);
+    parkingArrivalDismissedRef.current = false;
+    setParkingArrivalOpen(false);
     setRouting(true);
     setRouteError(null);
     setSelectedCctv(null);
@@ -792,6 +830,46 @@ export function DrivingApp() {
     },
     [applyRoute],
   );
+
+  const handlePoiSelect = useCallback(
+    (poiId: string) => {
+      const feature = mapPois.find((item) => item.id === poiId);
+      if (!feature) return;
+      setSelectedCctv(null);
+      setSelectedEvent(null);
+      setSelectedParking(null);
+      setSelectedMapPlace(poiFeatureToPlace(feature, searchOrigin));
+    },
+    [mapPois, searchOrigin],
+  );
+
+  const handleEmptyMapClick = useCallback((location: { lng: number; lat: number }) => {
+    const place = customPlaceFromLngLat(location);
+    setSelectedCctv(null);
+    setSelectedEvent(null);
+    setSelectedParking(null);
+    setSelectedMapPlace(place);
+    void reversePlace(location).then((hit) => {
+      setSelectedMapPlace((current) =>
+        current?.id === place.id
+          ? {
+              ...current,
+              name: hit.name || "自訂位置",
+              address: hit.address || current.address,
+            }
+          : current,
+      );
+    });
+  }, []);
+
+  const handleToggleParking = useCallback(() => {
+    setParkingOpen((open) => {
+      const next = !open;
+      if (!next) setSelectedParking(null);
+      return next;
+    });
+    setFavoritesOpen(false);
+  }, []);
 
   const currentPlace = destination ? destinationToHit(destination) : null;
   const isCurrentFavorite = currentPlace ? isFavorite(currentPlace) : false;
@@ -888,6 +966,8 @@ export function DrivingApp() {
     displayVehicleLiveRef.current = snapped;
     setDisplayVehicle(snapped);
     setNavigating(true);
+    parkingArrivalDismissedRef.current = false;
+    setParkingArrivalOpen(false);
     setToolsDrawerOpen(false);
     setCameraMode("3d");
     setFollowVehicle(true);
@@ -929,10 +1009,11 @@ export function DrivingApp() {
   const rerouteFromHere = useCallback(async () => {
     const dest = destinationRef.current;
     const here = vehicleRef.current;
-    if (!dest || reroutingRef.current) return;
+    if (!dest) return;
     const now = Date.now();
-    if (now - lastRerouteSuccessAtRef.current < 8000) return;
-    if (now - lastRerouteAtRef.current < 2500) return;
+    if (reroutingRef.current && now - lastRerouteAtRef.current < 600) return;
+    if (now - lastRerouteSuccessAtRef.current < 1800) return;
+    if (now - lastRerouteAtRef.current < 600) return;
     rerouteAbortRef.current?.abort();
     const controller = new AbortController();
     rerouteAbortRef.current = controller;
@@ -942,6 +1023,10 @@ export function DrivingApp() {
     lastRerouteAtRef.current = now;
     setRerouting(true);
     setReroutePending(false);
+    const detectMs = lastOffRouteAtRef.current
+      ? now - lastOffRouteAtRef.current
+      : null;
+    const requestStarted = performance.now();
     const staleTimer = window.setTimeout(() => {
       if (
         rerouteGenerationRef.current === generation &&
@@ -949,9 +1034,9 @@ export function DrivingApp() {
       ) {
         setReroutePending(true);
       }
-    }, 5000);
-    try {
-      const plan = await planDrivingRoute(
+    }, 2500);
+    const requestOnce = () =>
+      planDrivingRoute(
         { lng: here.lng, lat: here.lat },
         {
           id: "reroute",
@@ -961,8 +1046,19 @@ export function DrivingApp() {
         },
         controller.signal,
         travelMode,
+        5_500,
       );
+    try {
+      let plan;
+      try {
+        plan = await requestOnce();
+      } catch (error) {
+        if (controller.signal.aborted) throw error;
+        plan = await requestOnce();
+      }
+      const responseMs = performance.now() - requestStarted;
       if (generation !== rerouteGenerationRef.current) return;
+      const parseStarted = performance.now();
       setRoute(plan.coordinates);
       setDestination(plan.destination);
       setManeuver(plan.maneuver);
@@ -973,10 +1069,27 @@ export function DrivingApp() {
       navigationTrackerRef.current = null;
       setNavigationProgress(null);
       lastRerouteSuccessAtRef.current = Date.now();
+      const parseMs = performance.now() - parseStarted;
+      const totalMs = performance.now() - requestStarted;
+      logRerouteTimings("ready", {
+        detectMs,
+        requestMs: responseMs,
+        responseMs,
+        parseMs,
+        renderMs: parseMs,
+        totalMs,
+        at: new Date().toISOString(),
+      });
     } catch (error) {
       if (controller.signal.aborted) return;
       if (generation !== rerouteGenerationRef.current) return;
-      setRouteError(error instanceof Error ? error.message : "重新規劃路線失敗");
+      setRouteError(
+        error instanceof Error && /abort|timeout|逾時/i.test(error.message)
+          ? "重新規劃逾時，請再試一次"
+          : error instanceof Error
+            ? error.message
+            : "重新規劃路線失敗",
+      );
     } finally {
       window.clearTimeout(staleTimer);
       if (generation === rerouteGenerationRef.current) {
@@ -989,8 +1102,37 @@ export function DrivingApp() {
 
   useEffect(() => {
     if (!navigating || !navigationProgress?.offRoute) return;
+    if (!lastOffRouteAtRef.current) lastOffRouteAtRef.current = Date.now();
     void rerouteFromHere();
   }, [navigating, navigationProgress?.offRoute, rerouteFromHere]);
+
+  useEffect(() => {
+    if (!navigationProgress?.offRoute) lastOffRouteAtRef.current = 0;
+  }, [navigationProgress?.offRoute]);
+
+  const remainingToDestination =
+    navigationProgress && routeDistanceMeters != null
+      ? Math.max(0, routeDistanceMeters - navigationProgress.routeMeters)
+      : null;
+
+  useEffect(() => {
+    if (!navigating || !parkingArrivalEnabled) return;
+    if (parkingArrivalDismissedRef.current) return;
+    if (remainingToDestination == null) return;
+    if (remainingToDestination > 800 || remainingToDestination < 40) return;
+    parkingArrivalDismissedRef.current = true;
+    const text = "即將抵達目的地，需要幫您尋找附近停車場嗎？";
+    const timer = window.setTimeout(() => {
+      setParkingArrivalOpen(true);
+      if (window.speechSynthesis && !window.speechSynthesis.speaking) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = "zh-TW";
+        utterance.rate = 1.05;
+        window.speechSynthesis.speak(utterance);
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [navigating, parkingArrivalEnabled, remainingToDestination]);
 
   const routeAlert = useMemo(
     () =>
@@ -1183,12 +1325,19 @@ export function DrivingApp() {
         parkingLots={parkingLots}
         selectedParkingId={selectedParking?.id ?? null}
         parkingVisible={parkingOpen}
+        mapPois={mapPois}
+        selectedPoiId={selectedMapPlace?.kind === "poi" ? selectedMapPlace.id : null}
         onParkingSelect={(id) => {
           const found = parkingLots.find((lot) => lot.id === id) ?? null;
           setSelectedParking(found);
           setParkingOpen(true);
-          if (found) focusEvent(found.location);
+          if (found) {
+            setSelectedMapPlace(parkingLotToPlace(found));
+            focusEvent(found.location);
+          }
         }}
+        onPoiSelect={handlePoiSelect}
+        onEmptyMapClick={handleEmptyMapClick}
         route={route}
         routeMeters={navigationProgress?.routeMeters ?? 0}
         distanceToNextMeters={distanceToNextMeters}
@@ -1453,7 +1602,12 @@ export function DrivingApp() {
 
       {!navigating ? (
         <div className="pointer-events-none absolute bottom-28 left-2 z-10 hidden max-w-[11rem] sm:bottom-36 sm:left-3 sm:block">
-          <Legend />
+          <Legend
+            trafficOrigin={trafficOrigin}
+            trafficSource={trafficSource}
+            trafficUpdatedAt={trafficUpdatedAt}
+            trafficStale={trafficStale}
+          />
         </div>
       ) : null}
 
@@ -1507,6 +1661,38 @@ export function DrivingApp() {
       ) : null}
 
       <footer className="hud-anchor-interactive absolute inset-x-0 bottom-0 z-50 flex max-w-[100vw] flex-col items-center gap-1.5 overflow-visible px-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))] pb-[max(0.45rem,env(safe-area-inset-bottom))] sm:p-4 sm:pt-0">
+        {parkingArrivalOpen ? (
+          <ParkingArrivalCard
+            onFind={() => {
+              setParkingArrivalOpen(false);
+              parkingArrivalDismissedRef.current = true;
+              setParkingOpen(true);
+            }}
+            onSkip={() => {
+              setParkingArrivalOpen(false);
+              parkingArrivalDismissedRef.current = true;
+            }}
+          />
+        ) : null}
+        {selectedMapPlace ? (
+          <PlaceInfoCard
+            place={selectedMapPlace}
+            favorite={isFavorite(mapPlaceToHit(selectedMapPlace))}
+            onNavigate={() => {
+              const hit = mapPlaceToHit(selectedMapPlace);
+              setSelectedMapPlace(null);
+              setParkingOpen(false);
+              void applyRoute(hit);
+            }}
+            onToggleFavorite={() => {
+              const hit = mapPlaceToHit(selectedMapPlace);
+              if (isFavorite(hit)) removeFavorite(hit);
+              else addFavorite(hit);
+              setSelectedMapPlace({ ...selectedMapPlace });
+            }}
+            onClose={() => setSelectedMapPlace(null)}
+          />
+        ) : null}
         {parkingOpen ? (
           <ParkingPanel
             lots={parkingLots}
@@ -1531,6 +1717,10 @@ export function DrivingApp() {
             onClose={() => {
               setParkingOpen(false);
               setSelectedParking(null);
+            }}
+            arrivalPromptEnabled={parkingArrivalEnabled}
+            onToggleArrivalPrompt={(enabled) => {
+              setParkingArrivalPromptEnabled(enabled);
             }}
           />
         ) : null}
@@ -1636,6 +1826,8 @@ export function DrivingApp() {
           accountUnavailable={googleAccount.unavailable}
           onSignIn={googleAccount.signIn}
           onSignOut={googleAccount.signOut}
+          parkingOn={parkingOpen}
+          onToggleParking={handleToggleParking}
           onPreviewOpen={() => {
             setFavoritesOpen(false);
             setSelectedCctv(null);
@@ -1665,14 +1857,24 @@ export function DrivingApp() {
   );
 }
 
-function Legend() {
+function Legend({
+  trafficOrigin,
+  trafficSource,
+  trafficUpdatedAt,
+  trafficStale,
+}: {
+  trafficOrigin?: "tdx-live" | "mock" | "unavailable";
+  trafficSource?: string;
+  trafficUpdatedAt?: string | null;
+  trafficStale?: boolean;
+} = {}) {
   const items = [
     { color: "bg-[#3ee0ff]", label: "導航路線" },
     { color: "bg-[#22c55e]", label: "順暢" },
     { color: "bg-[#facc15]", label: "車多" },
     { color: "bg-[#f97316]", label: "壅塞" },
     { color: "bg-[#ef4444]", label: "嚴重壅塞" },
-    { color: "bg-[#7f1d1d]", label: "接近停止" },
+    { color: "bg-[#7f1d1d]", label: "接近停滯" },
     { color: "bg-[#c084fc]", label: "CCTV" },
     { color: "bg-[#fbbf24]", label: "測速執法" },
     { color: "bg-[#22c55e]", label: "停車場（充足）" },
@@ -1689,6 +1891,12 @@ function Legend() {
           {item.label}
         </div>
       ))}
+      <p className="mt-1.5 text-[10px] text-zinc-500">
+        路況 {trafficOriginLabel(trafficOrigin ?? "unavailable")}
+        {trafficSource ? ` · ${trafficSource}` : ""}
+        {trafficStale ? " · 過期" : ""}
+        {trafficUpdatedAt ? ` · ${formatUpdatedAt(trafficUpdatedAt)}` : ""}
+      </p>
     </div>
   );
 }

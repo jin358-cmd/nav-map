@@ -222,8 +222,8 @@
 
 .vehicle-marker {
   position: relative;
-  width: 44px;
-  height: 52px;
+  width: 52px;
+  height: 61px;
   pointer-events: none;
 }
 

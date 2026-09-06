@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import {
   Check,
+  CircleParking,
   Heart,
   MapPin,
   Music2,
@@ -111,6 +112,8 @@ export function RoadInformationCard({
   accountUnavailable = false,
   onSignIn,
   onSignOut,
+  parkingOn = false,
+  onToggleParking,
 }: {
   items: RoadIntelItem[];
   origin: CctvDataOrigin;
@@ -143,6 +146,8 @@ export function RoadInformationCard({
   accountUnavailable?: boolean;
   onSignIn?: () => void;
   onSignOut?: () => void;
+  parkingOn?: boolean;
+  onToggleParking?: () => void;
 }) {
   const [openKind, setOpenKind] = useState<RoadIntelKind | null>(null);
   const selectedKind = activeKind ?? openKind;
@@ -243,6 +248,26 @@ export function RoadInformationCard({
           />
         </div>
         <div className="flex flex-row-reverse items-end justify-end gap-1.5">
+          <button
+            type="button"
+            title="停車"
+            aria-label="停車"
+            aria-pressed={parkingOn}
+            onClick={() => {
+              onPreviewOpen?.();
+              onToggleParking?.();
+            }}
+            className={cn(
+              "function-chip relative flex items-center justify-center border touch-manipulation",
+              parkingOn
+                ? "border-emerald-300/70 bg-emerald-500/30 text-emerald-100"
+                : "border-emerald-400/35 bg-emerald-500/15 text-emerald-200",
+              !parkingOn && "opacity-80",
+            )}
+          >
+            <CircleParking className="function-chip__icon" />
+            <span className="function-chip__label">停車</span>
+          </button>
           {BOTTOM_KIND_ORDER.map((kind) => (
             <KindChip
               key={kind}

@@ -4,7 +4,7 @@ export const CITY_TRAFFIC_NEARBY_KM = 8;
 export const CITY_TRAFFIC_FOCUS_KM = 5;
 export const CITY_TRAFFIC_PRIORITY_KM = 1;
 export const CITY_TRAFFIC_ROUTE_BUFFER_KM = 0.4;
-export const CITY_TRAFFIC_MAP_CAP = 40;
+export const CITY_TRAFFIC_MAP_CAP = 160;
 export const CITY_TRAFFIC_MOVE_REFRESH_KM = 0.35;
 export const CITY_TRAFFIC_ZOOM_REFRESH_DELTA = 0.55;
 

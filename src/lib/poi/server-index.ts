@@ -212,6 +212,34 @@ export async function searchTaiwanPoiIndex(
     }));
 }
 
+export function poisInBounds(
+  bounds: { west: number; south: number; east: number; north: number },
+  origin?: { lat: number; lng: number },
+  limit = 80,
+) {
+  const west = Math.min(bounds.west, bounds.east);
+  const east = Math.max(bounds.west, bounds.east);
+  const south = Math.min(bounds.south, bounds.north);
+  const north = Math.max(bounds.south, bounds.north);
+  const rows = MEMORY_INDEX.filter(
+    (poi) =>
+      poi.longitude >= west &&
+      poi.longitude <= east &&
+      poi.latitude >= south &&
+      poi.latitude <= north,
+  );
+  const ranked = origin
+    ? rows
+        .map((poi) => ({
+          poi,
+          km: distanceKm(origin, { lat: poi.latitude, lng: poi.longitude }),
+        }))
+        .sort((a, b) => a.km - b.km)
+        .map((row) => row.poi)
+    : rows;
+  return ranked.slice(0, Math.max(8, Math.min(limit, 160)));
+}
+
 export function poiIndexStats() {
   const bySource = new Map<string, number>();
   for (const row of MEMORY_INDEX) {

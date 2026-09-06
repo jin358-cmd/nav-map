@@ -33,11 +33,37 @@ import { approachCameraProgress } from "@/lib/upcoming-route";
 import { bindCctvLayerClicks, upsertCctvLayer } from "@/lib/cctv-layer";
 import {
   bindConstructionLayerClicks,
+  CONSTRUCTION_HIT_LAYER_ID,
+  CONSTRUCTION_LAYER_ID,
   upsertConstructionLayer,
 } from "@/lib/construction-layer";
-import { bindParkingLayerClicks, upsertParkingLayer } from "@/lib/parking-layer";
-import { bindAccidentLayerClicks, upsertAccidentLayer } from "@/lib/event-layer";
-import { bindDisasterLayerClicks, upsertDisasterLayer } from "@/lib/disaster-layer";
+import {
+  bindParkingLayerClicks,
+  PARKING_CLUSTER_LAYER_ID,
+  PARKING_HIT_LAYER_ID,
+  PARKING_LAYER_ID,
+  upsertParkingLayer,
+} from "@/lib/parking-layer";
+import {
+  bindPoiLayerClicks,
+  POI_HIT_LAYER_ID,
+  POI_LAYER_ID,
+  upsertPoiLayer,
+} from "@/lib/poi-layer";
+import { CCTV_LAYER_HIT_ID, CCTV_LAYER_ID } from "@/lib/cctv-constants";
+import type { MapPoiFeature } from "@/lib/map-place";
+import {
+  ACCIDENT_HIT_LAYER_ID,
+  ACCIDENT_LAYER_ID,
+  bindAccidentLayerClicks,
+  upsertAccidentLayer,
+} from "@/lib/event-layer";
+import {
+  bindDisasterLayerClicks,
+  DISASTER_HIT_LAYER_ID,
+  DISASTER_LAYER_ID,
+  upsertDisasterLayer,
+} from "@/lib/disaster-layer";
 import {
   clearGuidanceArrows,
   resetGuidanceArrowCache,
@@ -125,6 +151,8 @@ type DrivingMapProps = {
   parkingLots?: ParkingLot[];
   selectedParkingId?: string | null;
   parkingVisible?: boolean;
+  mapPois?: MapPoiFeature[];
+  selectedPoiId?: string | null;
   layerVisibility?: LayerKindVisibility;
   focusTarget?: MapFocusTarget | null;
   route: [number, number][];
@@ -149,6 +177,8 @@ type DrivingMapProps = {
   onAccidentSelect?: (accidentId: string) => void;
   onConstructionSelect?: (constructionId: string) => void;
   onParkingSelect?: (parkingId: string) => void;
+  onPoiSelect?: (poiId: string) => void;
+  onEmptyMapClick?: (location: { lng: number; lat: number }) => void;
   onUserPan: () => void;
   onViewportChange: (viewport: MapViewport) => void;
   onLongPress?: (location: { lng: number; lat: number }) => void;
@@ -357,6 +387,8 @@ export function DrivingMap({
   parkingLots = [],
   selectedParkingId = null,
   parkingVisible = false,
+  mapPois = [],
+  selectedPoiId = null,
   layerVisibility = DEFAULT_LAYER_VISIBILITY,
   focusTarget = null,
   route,
@@ -376,6 +408,8 @@ export function DrivingMap({
   onAccidentSelect,
   onConstructionSelect,
   onParkingSelect,
+  onPoiSelect,
+  onEmptyMapClick,
   onUserPan,
   onViewportChange,
   onLongPress,
@@ -393,6 +427,8 @@ export function DrivingMap({
   const onAccidentSelectRef = useRef(onAccidentSelect);
   const onConstructionSelectRef = useRef(onConstructionSelect);
   const onParkingSelectRef = useRef(onParkingSelect);
+  const onPoiSelectRef = useRef(onPoiSelect);
+  const onEmptyMapClickRef = useRef(onEmptyMapClick);
   const onUserPanRef = useRef(onUserPan);
   const onViewportChangeRef = useRef(onViewportChange);
   const onLongPressRef = useRef(onLongPress);
@@ -427,6 +463,8 @@ export function DrivingMap({
   const parkingLotsRef = useRef(parkingLots);
   const selectedParkingRef = useRef(selectedParkingId);
   const parkingVisibleRef = useRef(parkingVisible);
+  const mapPoisRef = useRef(mapPois);
+  const selectedPoiRef = useRef(selectedPoiId);
   const selectedDisasterRef = useRef(selectedDisasterId);
   const selectedAccidentRef = useRef(selectedAccidentId);
   const selectedConstructionRef = useRef(selectedConstructionId);
@@ -468,6 +506,8 @@ export function DrivingMap({
     onAccidentSelectRef.current = onAccidentSelect;
     onConstructionSelectRef.current = onConstructionSelect;
     onParkingSelectRef.current = onParkingSelect;
+    onPoiSelectRef.current = onPoiSelect;
+    onEmptyMapClickRef.current = onEmptyMapClick;
     onUserPanRef.current = onUserPan;
     onViewportChangeRef.current = onViewportChange;
     onLongPressRef.current = onLongPress;
@@ -506,6 +546,8 @@ export function DrivingMap({
     parkingLotsRef.current = parkingLots;
     selectedParkingRef.current = selectedParkingId;
     parkingVisibleRef.current = parkingVisible;
+    mapPoisRef.current = mapPois;
+    selectedPoiRef.current = selectedPoiId;
     selectedDisasterRef.current = selectedDisasterId;
     selectedAccidentRef.current = selectedAccidentId;
     selectedConstructionRef.current = selectedConstructionId;
@@ -527,6 +569,8 @@ export function DrivingMap({
     onAccidentSelect,
     onConstructionSelect,
     onParkingSelect,
+    onPoiSelect,
+    onEmptyMapClick,
     onUserPan,
     onViewportChange,
     onLongPress,
@@ -553,6 +597,8 @@ export function DrivingMap({
     parkingLots,
     selectedParkingId,
     parkingVisible,
+    mapPois,
+    selectedPoiId,
     layerVisibility,
     navigating,
     rerouting,
@@ -834,6 +880,8 @@ export function DrivingMap({
           parkingVisibleRef.current,
         );
         bindParkingLayerClicks(map, (id) => onParkingSelectRef.current?.(id));
+        upsertPoiLayer(map, mapPoisRef.current);
+        bindPoiLayerClicks(map, (id) => onPoiSelectRef.current?.(id));
         upsertGuidanceArrows(map);
       } catch (error) {
         console.error("Event layer skipped", error);
@@ -863,14 +911,57 @@ export function DrivingMap({
       rafRef.current = requestAnimationFrame(tick);
     };
 
-    const onMapClick = (event: { lngLat: { lng: number; lat: number } }) => {
-      if (!pickModeRef.current) return;
-      const { lng, lat } = event.lngLat;
-      pickMarkerRef.current?.remove();
-      pickMarkerRef.current = new Marker({ color: "#22d3ee", anchor: "bottom" })
-        .setLngLat([lng, lat])
-        .addTo(map);
-      onPickLocationRef.current?.({ lng, lat });
+    const onMapClick = (event: {
+      lngLat: { lng: number; lat: number };
+      point: { x: number; y: number };
+    }) => {
+      if (pickModeRef.current) {
+        const { lng, lat } = event.lngLat;
+        pickMarkerRef.current?.remove();
+        pickMarkerRef.current = new Marker({ color: "#22d3ee", anchor: "bottom" })
+          .setLngLat([lng, lat])
+          .addTo(map);
+        onPickLocationRef.current?.({ lng, lat });
+        return;
+      }
+      const candidateLayers = [
+        PARKING_HIT_LAYER_ID,
+        PARKING_LAYER_ID,
+        PARKING_CLUSTER_LAYER_ID,
+        CCTV_LAYER_HIT_ID,
+        CCTV_LAYER_ID,
+        ACCIDENT_HIT_LAYER_ID,
+        ACCIDENT_LAYER_ID,
+        CONSTRUCTION_HIT_LAYER_ID,
+        CONSTRUCTION_LAYER_ID,
+        DISASTER_HIT_LAYER_ID,
+        DISASTER_LAYER_ID,
+        POI_HIT_LAYER_ID,
+        POI_LAYER_ID,
+      ].filter((id) => map.getLayer(id));
+      const hits = candidateLayers.length
+        ? map.queryRenderedFeatures([event.point.x, event.point.y], {
+            layers: candidateLayers,
+          })
+        : [];
+      if (hits.length) {
+        const poiHit = hits.find(
+          (feature) =>
+            feature.layer.id === POI_HIT_LAYER_ID ||
+            feature.layer.id === POI_LAYER_ID,
+        );
+        const occupied = hits.some(
+          (feature) =>
+            feature.layer.id !== POI_HIT_LAYER_ID &&
+            feature.layer.id !== POI_LAYER_ID,
+        );
+        if (!occupied && poiHit && typeof poiHit.properties?.id === "string") {
+          onPoiSelectRef.current?.(poiHit.properties.id);
+        }
+        return;
+      }
+      if (navigatingRef.current) return;
+      onEmptyMapClickRef.current?.(event.lngLat);
     };
     map.on("style.load", markReady);
     map.on("load", markReady);
@@ -1175,6 +1266,8 @@ export function DrivingMap({
           parkingVisibleRef.current,
         );
         bindParkingLayerClicks(map, (id) => onParkingSelectRef.current?.(id));
+        upsertPoiLayer(map, mapPoisRef.current);
+        bindPoiLayerClicks(map, (id) => onPoiSelectRef.current?.(id));
         upsertGuidanceArrows(map);
       } catch (error) {
         console.error("Navigation overlays remount skipped", error);
@@ -1274,6 +1367,12 @@ export function DrivingMap({
     if (!readyRef.current || !isStyleReady(map)) return;
     upsertParkingLayer(map, parkingLots, selectedParkingId, parkingVisible);
   }, [parkingLots, parkingVisible, selectedParkingId]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!readyRef.current || !isStyleReady(map)) return;
+    upsertPoiLayer(map, mapPois);
+  }, [mapPois, selectedPoiId]);
 
   useEffect(() => {
     const map = mapRef.current;

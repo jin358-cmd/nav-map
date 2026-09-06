@@ -15,13 +15,22 @@ import {
   fetchTainanCityShapes,
   isTdxConfigured,
 } from "@/services/tdx-client";
-import type { TrafficDataOrigin, TrafficSegment } from "@/types/domain";
+import type { TrafficCatalog, TrafficDataOrigin } from "@/types/domain";
 
-export type TrafficCatalog = {
-  origin: TrafficDataOrigin;
-  segments: TrafficSegment[];
-  fetchedAt: string;
-};
+export type { TrafficCatalog };
+
+function catalogMeta(
+  origin: TrafficDataOrigin,
+  fetchedAt: string,
+  stale = false,
+): Pick<TrafficCatalog, "source" | "updatedAt" | "stale"> {
+  return {
+    source:
+      origin === "tdx-live" ? "tdx" : origin === "unavailable" ? "unavailable" : "mock",
+    updatedAt: fetchedAt,
+    stale,
+  };
+}
 
 type ShapeBundle = {
   sections: Awaited<ReturnType<typeof fetchTainanCitySections>>;
@@ -56,10 +65,12 @@ export async function loadTainanTraffic(
     liveCacheAt = Date.now();
     return catalog;
   }
+  const fetchedAt = new Date().toISOString();
   const empty: TrafficCatalog = {
     origin: "unavailable",
     segments: [],
-    fetchedAt: new Date().toISOString(),
+    fetchedAt,
+    ...catalogMeta("unavailable", fetchedAt),
   };
   liveCache = empty;
   liveCacheAt = Date.now();
@@ -78,6 +89,7 @@ function fromMock(): TrafficCatalog {
       }),
     ),
     fetchedAt: now,
+    ...catalogMeta("mock", now),
   };
 }
 
@@ -100,10 +112,12 @@ async function fromTdxLive(force: boolean): Promise<TrafficCatalog | null> {
     });
     if (!segments.length) return null;
 
+    const fetchedAt = new Date().toISOString();
     return {
       origin: "tdx-live",
       segments,
-      fetchedAt: new Date().toISOString(),
+      fetchedAt,
+      ...catalogMeta("tdx-live", fetchedAt),
     };
   } catch (error) {
     console.warn(

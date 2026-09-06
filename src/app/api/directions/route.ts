@@ -1,6 +1,17 @@
 import { maneuverFromOsrm, stepsFromOsrm, type OsrmStep } from "@/lib/osrm-maneuver";
 
 const OSRM_CAR = "https://router.project-osrm.org/route/v1/driving";
+const OSRM_TIMEOUT_MS = 4_500;
+
+type OsrmPayload = {
+  code?: string;
+  routes?: Array<{
+    distance: number;
+    duration: number;
+    geometry?: { coordinates?: [number, number][] };
+    legs?: Array<{ steps?: OsrmStep[] }>;
+  }>;
+};
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -20,19 +31,8 @@ export async function GET(request: Request) {
 
   if (travelMode === "motorcycle") {
     const motorcycleUrl = process.env.MOTORCYCLE_ROUTING_URL?.trim();
-    if (motorcycleUrl) {
-      return routeFromOsrmLike(
-        motorcycleUrl,
-        fromLng,
-        fromLat,
-        toLng,
-        toLat,
-        label,
-        "motorcycle",
-      );
-    }
     return routeFromOsrmLike(
-      OSRM_CAR,
+      motorcycleUrl || OSRM_CAR,
       fromLng,
       fromLat,
       toLng,
@@ -53,6 +53,31 @@ export async function GET(request: Request) {
   );
 }
 
+async function fetchOsrmRoute(endpoint: URL): Promise<OsrmPayload | null> {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), OSRM_TIMEOUT_MS);
+    try {
+      const response = await fetch(endpoint, {
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+        signal: controller.signal,
+      });
+      if (!response.ok) {
+        if (attempt === 0) continue;
+        return null;
+      }
+      return (await response.json()) as OsrmPayload;
+    } catch {
+      if (attempt === 0) continue;
+      return null;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  return null;
+}
+
 async function routeFromOsrmLike(
   baseUrl: string,
   fromLng: number,
@@ -64,7 +89,9 @@ async function routeFromOsrmLike(
 ) {
   const path = `${fromLng},${fromLat};${toLng},${toLat}`;
   const endpoint = new URL(
-    baseUrl.includes("{path}") ? baseUrl.replace("{path}", path) : `${baseUrl.replace(/\/$/, "")}/${path}`,
+    baseUrl.includes("{path}")
+      ? baseUrl.replace("{path}", path)
+      : `${baseUrl.replace(/\/$/, "")}/${path}`,
   );
   endpoint.searchParams.set("overview", "full");
   endpoint.searchParams.set("geometries", "geojson");
@@ -72,27 +99,21 @@ async function routeFromOsrmLike(
   endpoint.searchParams.set("alternatives", "false");
 
   try {
-    const response = await fetch(endpoint, {
-      headers: { Accept: "application/json" },
-      next: { revalidate: 120 },
-    });
-    if (!response.ok) {
-      return Response.json({ error: "路線規劃服務忙碌", travelMode }, { status: 502 });
+    const data = await fetchOsrmRoute(endpoint);
+    if (!data) {
+      return Response.json(
+        { error: "路線規劃逾時，請再試一次", travelMode },
+        { status: 504 },
+      );
     }
-    const data = (await response.json()) as {
-      code?: string;
-      routes?: Array<{
-        distance: number;
-        duration: number;
-        geometry?: { coordinates?: [number, number][] };
-        legs?: Array<{ steps?: OsrmStep[] }>;
-      }>;
-    };
     const route = data.routes?.[0];
     const coordinates = route?.geometry?.coordinates ?? [];
     if (data.code !== "Ok" || coordinates.length < 2) {
       return Response.json(
-        { error: travelMode === "motorcycle" ? "找不到可騎乘路線" : "找不到可開車路線", travelMode },
+        {
+          error: travelMode === "motorcycle" ? "找不到可騎乘路線" : "找不到可開車路線",
+          travelMode,
+        },
         { status: 404 },
       );
     }

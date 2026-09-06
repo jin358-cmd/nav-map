@@ -6,20 +6,18 @@ export async function GET(request: Request) {
 
   try {
     const catalog = await loadTainanTraffic(fresh);
-    const source =
-      catalog.origin === "tdx-live"
-        ? "tdx"
-        : catalog.origin === "unavailable"
-          ? "unavailable"
-          : "mock";
+    const stale =
+      catalog.origin !== "unavailable" &&
+      Date.now() - new Date(catalog.fetchedAt).getTime() > 8 * 60 * 1000;
     return Response.json(
       {
-        source,
-        updatedAt: catalog.fetchedAt,
+        source: catalog.source,
+        updatedAt: catalog.updatedAt ?? catalog.fetchedAt,
         traffic: catalog.segments,
         origin: catalog.origin,
         segments: catalog.segments,
         fetchedAt: catalog.fetchedAt,
+        stale: catalog.stale || stale,
       },
       {
         headers: {

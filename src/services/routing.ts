@@ -118,6 +118,7 @@ export async function planDrivingRoute(
   to: GeocodeHit,
   signal?: AbortSignal,
   mode: TravelMode = "car",
+  timeoutMs = 8_000,
 ): Promise<RoutePlan> {
   const params = new URLSearchParams({
     fromLng: String(from.lng),
@@ -127,8 +128,14 @@ export async function planDrivingRoute(
     label: to.name,
     mode,
   });
+  const timeout = AbortSignal.timeout(timeoutMs);
+  const merged =
+    signal && "any" in AbortSignal
+      ? AbortSignal.any([signal, timeout])
+      : signal ?? timeout;
   const response = await fetch(`/api/directions?${params.toString()}`, {
-    signal,
+    signal: merged,
+    cache: "no-store",
   });
   const data = (await response.json()) as RoutePlan & {
     error?: string;

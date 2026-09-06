@@ -74,7 +74,7 @@ export function trafficLevelLabel(level: TrafficLevel) {
   if (level === "slow") return "車多";
   if (level === "congested") return "壅塞";
   if (level === "severe") return "嚴重壅塞";
-  return "接近停止";
+  return "接近停滯";
 }
 
 export function formatUpdatedAt(iso: string) {

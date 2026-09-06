@@ -7,7 +7,7 @@ export function createVehicleMarkerElement(): HTMLDivElement {
   root.className = "vehicle-marker";
   root.innerHTML = `
     <div class="vehicle-marker__body" aria-hidden="true">
-      <svg viewBox="0 0 72 84" width="44" height="52">
+      <svg viewBox="0 0 72 84" width="52" height="61">
         <ellipse cx="36" cy="76" rx="18" ry="6" fill="rgba(15,23,42,0.28)"/>
         <path d="M22 70 L28 38 L20 34 L36 10 L52 34 L44 38 L50 70 Z" fill="#a16207"/>
         <path d="M24 68 L30 36 L36 14 L42 36 L48 68 L36 62 Z" fill="#ca8a04"/>

@@ -128,6 +128,9 @@ export type TrafficCatalog = {
   origin: TrafficDataOrigin;
   segments: TrafficSegment[];
   fetchedAt: string;
+  source: TrafficPublishSource;
+  updatedAt: string;
+  stale: boolean;
 };
 
 export type SpeedEnforcementPoint = {
@@ -309,6 +312,9 @@ export type GeocodeHit = {
   matchKind?: GeocodeMatchKind;
   confidence?: number;
   distanceMeters?: number;
+  category?: string;
+  phone?: string;
+  hours?: string;
 };
 
 export type RouteDestination = {

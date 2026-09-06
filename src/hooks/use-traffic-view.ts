@@ -52,10 +52,24 @@ async function fetchTrafficCatalog(
       updatedAt?: string;
       traffic?: TrafficCatalog["segments"];
     };
+    const fetchedAt = data.fetchedAt ?? data.updatedAt ?? new Date().toISOString();
+    const origin = data.origin;
+    const stale =
+      Boolean(data.stale) ||
+      (origin !== "unavailable" &&
+        Date.now() - new Date(fetchedAt).getTime() > 8 * 60 * 1000);
     return {
-      origin: data.origin,
+      origin,
       segments: data.segments ?? data.traffic ?? [],
-      fetchedAt: data.fetchedAt ?? data.updatedAt ?? new Date().toISOString(),
+      fetchedAt,
+      source: (data.source ??
+        (origin === "tdx-live"
+          ? "tdx"
+          : origin === "unavailable"
+            ? "unavailable"
+            : "mock")) as TrafficCatalog["source"],
+      updatedAt: data.updatedAt ?? fetchedAt,
+      stale,
     };
   } finally {
     window.clearTimeout(timer);
@@ -78,6 +92,9 @@ export function useTrafficView({
 }) {
   const [catalog, setCatalog] = useState<TrafficSegment[]>([]);
   const [origin, setOrigin] = useState<TrafficDataOrigin>("unavailable");
+  const [source, setSource] = useState<TrafficCatalog["source"]>("unavailable");
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
+  const [stale, setStale] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const searchLng = queryOrigin
@@ -98,7 +115,16 @@ export function useTrafficView({
   const applyCatalog = useCallback((result: TrafficCatalog) => {
     setCatalog(result.segments);
     setOrigin(result.origin);
-    setError(null);
+    setSource(result.source);
+    setUpdatedAt(result.updatedAt ?? result.fetchedAt);
+    setStale(result.stale);
+    setError(
+      result.origin === "unavailable"
+        ? "即時路況暫時無法取得"
+        : result.stale
+          ? "路況資料偏舊，仍顯示上次可靠資料"
+          : null,
+    );
   }, []);
 
   useEffect(() => {
@@ -115,6 +141,9 @@ export function useTrafficView({
         if (controller.signal.aborted) return;
         setCatalog([]);
         setOrigin("unavailable");
+        setSource("unavailable");
+        setUpdatedAt(null);
+        setStale(false);
         setError("資料暫時無法取得");
       })
       .finally(() => {
@@ -174,12 +203,18 @@ export function useTrafficView({
       .catch(() => {
         setCatalog([]);
         setOrigin("unavailable");
+        setSource("unavailable");
+        setUpdatedAt(null);
+        setStale(false);
         setError("資料暫時無法取得");
       });
   }, [applyCatalog]);
 
   return {
     origin,
+    source,
+    updatedAt,
+    stale,
     catalog,
     scored,
     visible,

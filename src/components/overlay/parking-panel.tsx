@@ -35,6 +35,8 @@ export function ParkingPanel({
   onSelect,
   onNavigate,
   onClose,
+  arrivalPromptEnabled = true,
+  onToggleArrivalPrompt,
 }: {
   lots: ParkingLot[];
   origin: ParkingCatalog["origin"];
@@ -45,6 +47,8 @@ export function ParkingPanel({
   onSelect: (lot: ParkingLot) => void;
   onNavigate: (lot: ParkingLot) => void;
   onClose: () => void;
+  arrivalPromptEnabled?: boolean;
+  onToggleArrivalPrompt?: (enabled: boolean) => void;
 }) {
   const ranked = sortParkingLots(lots, sort);
   const detail = selected;
@@ -56,6 +60,16 @@ export function ParkingPanel({
           <p className="text-[11px] text-zinc-500">
             {eventOriginLabel(origin)} · {fetchedAt ? formatUpdatedAt(fetchedAt) : "未提供"}
           </p>
+          {onToggleArrivalPrompt ? (
+            <button
+              type="button"
+              aria-pressed={arrivalPromptEnabled}
+              onClick={() => onToggleArrivalPrompt(!arrivalPromptEnabled)}
+              className="mt-1 text-left text-[11px] text-emerald-100/90 hover:text-white touch-manipulation"
+            >
+              到達前停車提醒 {arrivalPromptEnabled ? "ON" : "OFF"}
+            </button>
+          ) : null}
         </div>
         <button
           type="button"

@@ -13,15 +13,15 @@ export const DEMO_VEHICLE: VehiclePose = {
   source: "demo",
 };
 
-export const DRIVING_PITCH = 52;
+export const DRIVING_PITCH = 58;
 /**
  * 導航第一人稱前視。MapLibre pitch 不是駕駛「仰角」。
- * pitch≈56 約等於視線低於水平 34°，畫面呈現約 35° 道路前視。
+ * pitch≈64 約等於視線低於水平 26°，畫面更接近駕駛視角。
  */
-export const NAVIGATION_PITCH = 56;
+export const NAVIGATION_PITCH = 64;
 export const OVERVIEW_PITCH = 0;
-export const DRIVING_ZOOM = 17.05;
-export const DRIVING_ZOOM_MOBILE = 16.75;
+export const DRIVING_ZOOM = 17.38;
+export const DRIVING_ZOOM_MOBILE = 17.12;
 export const OVERHEAD_ZOOM = 15.4;
 /** 2D 導航 cruise：再近一級，仍留出路口預判距離。 */
 export const OVERHEAD_NAV_ZOOM = 16.95;
@@ -29,9 +29,9 @@ export const OVERHEAD_NAV_ZOOM_MOBILE = 16.75;
 export const OVERHEAD_TURN_ZOOM = 17.55;
 export const OVERHEAD_TURN_ZOOM_MOBILE = 17.35;
 /** 路口近距離上限，避免無限放大。 */
-export const INTERSECTION_ZOOM = 18.15;
-export const INTERSECTION_ZOOM_MOBILE = 17.85;
-export const INTERSECTION_PITCH = 50;
+export const INTERSECTION_ZOOM = 18.28;
+export const INTERSECTION_ZOOM_MOBILE = 18.05;
+export const INTERSECTION_PITCH = 60;
 export const INTERSECTION_APPROACH_METERS = 95;
 export const CRUISE_ZOOM_START_METERS = 500;
 export const PREPARE_ZOOM_METERS = 200;

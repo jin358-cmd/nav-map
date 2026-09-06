@@ -233,7 +233,8 @@ export function updateNavigationProgress({
     nearestProjection.distanceMeters + 10 < (localWindow?.distanceMeters ?? 999) &&
     Math.abs(nearestProjection.routeMeters - (previous?.routeMeters ?? 0)) > 70;
   const deviant = outsideRoute || headingAway || missedTurn || parallelRoad;
-  const samplesNeeded = (vehicle.accuracy ?? 10) > 28 ? 3 : 2;
+  const samplesNeeded =
+    (vehicle.accuracy ?? 10) > 28 ? 3 : (vehicle.accuracy ?? 10) <= 18 ? 1 : 2;
   const offRouteSamples = deviant ? (previous?.offRouteSamples ?? 0) + 1 : 0;
   const onRouteSamples = deviant ? 0 : (previous?.onRouteSamples ?? 0) + 1;
   const offRoute = previous?.offRoute
