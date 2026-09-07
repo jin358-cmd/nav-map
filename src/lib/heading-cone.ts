@@ -1,5 +1,5 @@
 import type { GeoJSONSource, Map as MapLibreMap } from "maplibre-gl";
-import { destinationPoint } from "@/lib/geo";
+import { damp, destinationPoint, headingDelta, lerpAngle } from "@/lib/geo";
 import type { LngLat, VehiclePose } from "@/types/domain";
 
 export const HEADING_CONE_SOURCE = "np-heading-cone";
@@ -9,6 +9,19 @@ export const HEADING_CONE_EDGE = "np-heading-cone-edge";
 const HALF_ANGLE_DEG = 60;
 const RADIUS_M = 92;
 const ARC_STEPS = 22;
+const CONE_HEADING_HOLD_DEG = 0.4;
+const CONE_HEADING_TAU = 0.055;
+
+export function stepConeHeading(
+  current: number,
+  target: number,
+  dtSeconds: number,
+) {
+  const jump = headingDelta(current, target);
+  if (jump < CONE_HEADING_HOLD_DEG) return current;
+  const tau = jump > 28 ? 0.03 : CONE_HEADING_TAU;
+  return lerpAngle(current, target, damp(dtSeconds, tau));
+}
 
 function firstLabelLayerId(map: MapLibreMap): string | undefined {
   const layers = map.getStyle()?.layers ?? [];

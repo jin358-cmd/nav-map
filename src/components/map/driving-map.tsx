@@ -89,6 +89,7 @@ import { damp, distanceKm, lerp, lerpAngle } from "@/lib/geo";
 import {
   ensureHeadingConeLayers,
   shouldShowHeadingCone,
+  stepConeHeading,
   upsertHeadingCone,
 } from "@/lib/heading-cone";
 import { createRouteProgressModel } from "@/lib/route-progress";
@@ -506,6 +507,7 @@ export function DrivingMap({
   const lastNavigatingMarkerRef = useRef<boolean | null>(null);
   const lastConeAtRef = useRef(0);
   const lastConeKeyRef = useRef("");
+  const coneHeadingRef = useRef<number | null>(null);
   const lastIntelAtRef = useRef(0);
   const lastIntelKeyRef = useRef("");
   const userZoomRef = useRef<number | null>(null);
@@ -740,13 +742,19 @@ export function DrivingMap({
           source: raw.source,
           headingAvailable: raw.headingAvailable,
         });
+        const coneTarget = raw.headingAvailable ? raw.heading : display.heading;
+        coneHeadingRef.current =
+          coneHeadingRef.current == null
+            ? coneTarget
+            : stepConeHeading(coneHeadingRef.current, coneTarget, dt);
+        const coneHeading = coneHeadingRef.current;
         const coneKey = showCone
-          ? `${display.lng.toFixed(5)},${display.lat.toFixed(5)},${display.heading.toFixed(1)}`
+          ? `${display.lng.toFixed(5)},${display.lat.toFixed(5)},${coneHeading.toFixed(2)}`
           : "off";
         if (
           !gestureBusy &&
           coneKey !== lastConeKeyRef.current &&
-          now - lastConeAtRef.current > 80
+          now - lastConeAtRef.current >= 16
         ) {
           lastConeAtRef.current = now;
           lastConeKeyRef.current = coneKey;
@@ -754,7 +762,7 @@ export function DrivingMap({
           upsertHeadingCone(
             mapNow,
             showCone ? { lng: display.lng, lat: display.lat } : null,
-            display.heading,
+            coneHeading,
             showCone,
           );
         }

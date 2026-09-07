@@ -59,7 +59,7 @@ export default function InstallPage() {
       <div className="w-full max-w-md rounded-[28px] border border-white/10 bg-black/55 p-6 shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur-xl">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/icons/navpilot.png"
+          src="/icons/navpilot.png?v=20260907"
           alt={APP_BOOKMARK_NAME}
           width={128}
           height={128}

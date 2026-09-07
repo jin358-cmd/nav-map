@@ -1,5 +1,6 @@
 import { formatTaiwanDisplayAddress } from "@/lib/geocoding/format-taiwan-display-address";
-import type { SavedPlace, SavedPlaceType } from "@/types/domain";
+import { distanceKm } from "@/lib/geo";
+import type { LngLat, SavedPlace, SavedPlaceType } from "@/types/domain";
 
 const STORAGE_KEY = "navpilot.saved-places.v1";
 const CHANGE_EVENT = "navpilot-saved-places";
@@ -115,6 +116,18 @@ export function renameSavedPlace(id: string, displayName: string) {
 
 export function deleteSavedPlace(id: string) {
   write(getSavedPlacesSnapshot().filter((place) => place.id !== id));
+}
+
+export function findSavedCustomPlace(location: LngLat, toleranceMeters = 25) {
+  return (
+    getSavedPlacesSnapshot().find(
+      (place) =>
+        place.type === "custom" &&
+        distanceKm(location, { lng: place.longitude, lat: place.latitude }) *
+          1000 <=
+          toleranceMeters,
+    ) ?? null
+  );
 }
 
 export function savedPlaceToHit(place: SavedPlace) {

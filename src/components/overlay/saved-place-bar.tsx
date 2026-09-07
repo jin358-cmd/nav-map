@@ -1,21 +1,23 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Briefcase, Home, Pencil } from "lucide-react";
+import { Briefcase, Home, MapPin, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatTaiwanDisplayAddress } from "@/lib/geocoding/format-taiwan-display-address";
-import type { SavedPlace } from "@/types/domain";
+import type { SavedPlace, SavedPlaceType } from "@/types/domain";
 
 export function SavedPlaceBar({
   home,
   work,
+  customs = [],
   onGo,
   onEdit,
 }: {
   home: SavedPlace | null;
   work: SavedPlace | null;
+  customs?: SavedPlace[];
   onGo: (place: SavedPlace) => void;
-  onEdit: (type: "home" | "work") => void;
+  onEdit: (type: SavedPlaceType, id?: string) => void;
 }) {
   return (
     <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -41,6 +43,16 @@ export function SavedPlaceBar({
         onGo={() => (work ? onGo(work) : onEdit("work"))}
         onEdit={() => onEdit("work")}
       />
+      {customs.map((place) => (
+        <Shortcut
+          key={place.id}
+          label={formatTaiwanDisplayAddress(place.displayName)}
+          set
+          icon={<MapPin className="size-3.5" />}
+          onGo={() => onGo(place)}
+          onEdit={() => onEdit("custom", place.id)}
+        />
+      ))}
     </div>
   );
 }

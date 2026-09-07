@@ -34,10 +34,13 @@ function searchMemoryKey(
   query: string,
   bias: LngLat | undefined,
   mode: GeocodeLookupMode,
+  region?: { city?: string; town?: string },
 ) {
   const lng = bias ? bias.lng.toFixed(2) : "";
   const lat = bias ? bias.lat.toFixed(2) : "";
-  return `${mode}|${query.trim()}|${lng}|${lat}`;
+  const city = region?.city ?? "";
+  const town = region?.town ?? "";
+  return `${mode}|${query.trim()}|${lng}|${lat}|${city}|${town}`;
 }
 
 export async function searchAddresses(
@@ -45,8 +48,9 @@ export async function searchAddresses(
   bias?: LngLat,
   signal?: AbortSignal,
   mode: GeocodeLookupMode = "search",
+  region?: { city?: string; town?: string },
 ): Promise<GeocodeHit[]> {
-  const memoryKey = searchMemoryKey(query, bias, mode);
+  const memoryKey = searchMemoryKey(query, bias, mode, region);
   const remembered = searchMemory.get(memoryKey);
   if (remembered && Date.now() - remembered.at < SEARCH_MEMORY_MS) {
     return remembered.hits;
@@ -56,6 +60,8 @@ export async function searchAddresses(
     params.set("lng", String(bias.lng));
     params.set("lat", String(bias.lat));
   }
+  if (region?.city) params.set("city", region.city);
+  if (region?.town) params.set("town", region.town);
   const response = await fetch(`/api/geocode?${params.toString()}`, { signal });
   if (!response.ok) {
     throw new Error("地址搜尋失敗");

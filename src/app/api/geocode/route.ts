@@ -38,6 +38,8 @@ export async function GET(request: Request) {
       longitude,
       signal: request.signal,
       mode,
+      locatedCity: url.searchParams.get("city")?.trim() || undefined,
+      locatedTown: url.searchParams.get("town")?.trim() || undefined,
     });
     const hits = toGeocodeHits(payload.results);
     return Response.json({

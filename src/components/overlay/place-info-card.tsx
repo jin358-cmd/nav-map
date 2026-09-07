@@ -1,34 +1,109 @@
 "use client";
 
-import { Heart, Navigation, X } from "lucide-react";
+import { useState } from "react";
+import { Check, Heart, Navigation, Pencil, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDistance, formatParkingRate, formatUpdatedAgo } from "@/lib/format";
 import { formatTaiwanDisplayAddress } from "@/lib/geocoding/format-taiwan-display-address";
 import type { MapPlace } from "@/lib/map-place";
 import { cn } from "@/lib/utils";
 
+function CustomNameBlock({
+  name,
+  onRename,
+}: {
+  name: string;
+  onRename: (name: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(name);
+
+  const commitRename = () => {
+    const next = draft.trim();
+    if (next) onRename(next);
+    setEditing(false);
+  };
+
+  if (editing) {
+    return (
+      <div className="mt-1 flex items-center gap-1">
+        <input
+          autoFocus
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") commitRename();
+            if (event.key === "Escape") {
+              setDraft(name);
+              setEditing(false);
+            }
+          }}
+          aria-label="自訂位置名稱"
+          className="h-9 min-w-0 flex-1 rounded-lg border border-cyan-300/30 bg-white/8 px-2 text-base font-semibold text-white outline-none"
+        />
+        <button
+          type="button"
+          aria-label="儲存名稱"
+          onClick={commitRename}
+          className="flex size-9 shrink-0 items-center justify-center rounded-lg text-cyan-200 hover:bg-white/10 touch-manipulation"
+        >
+          <Check className="size-4" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-w-0 items-center gap-1">
+      <h2 className="truncate text-lg font-bold leading-tight">{name}</h2>
+      <button
+        type="button"
+        aria-label="修改名稱"
+        onClick={() => {
+          setDraft(name);
+          setEditing(true);
+        }}
+        className="flex size-8 shrink-0 items-center justify-center rounded-lg text-zinc-400 hover:bg-white/10 hover:text-white touch-manipulation"
+      >
+        <Pencil className="size-3.5" />
+      </button>
+    </div>
+  );
+}
+
 export function PlaceInfoCard({
   place,
   favorite,
   onNavigate,
   onToggleFavorite,
+  onRename,
   onClose,
 }: {
   place: MapPlace;
   favorite: boolean;
   onNavigate: () => void;
   onToggleFavorite: () => void;
+  onRename?: (name: string) => void;
   onClose: () => void;
 }) {
   const address = formatTaiwanDisplayAddress(place.address);
+
   return (
     <article className="pointer-events-auto w-full max-w-xl rounded-2xl border border-cyan-300/20 bg-black/78 p-3 text-white shadow-[0_12px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl">
       <div className="mb-2 flex items-start justify-between gap-2">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="text-[11px] tracking-wide text-cyan-200">
             {place.categoryLabel ?? (place.kind === "custom" ? "自訂位置" : "地點")}
           </p>
-          <h2 className="truncate text-lg font-bold leading-tight">{place.name}</h2>
+          {onRename ? (
+            <CustomNameBlock
+              key={place.id}
+              name={place.name}
+              onRename={onRename}
+            />
+          ) : (
+            <h2 className="truncate text-lg font-bold leading-tight">{place.name}</h2>
+          )}
         </div>
         <button
           type="button"

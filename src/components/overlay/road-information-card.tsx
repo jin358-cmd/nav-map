@@ -107,6 +107,7 @@ export function RoadInformationCard({
   onSignIn,
   onSignOut,
   parkingOn = false,
+  parkingLoading = false,
   onToggleParking,
 }: {
   items: RoadIntelItem[];
@@ -140,6 +141,7 @@ export function RoadInformationCard({
   onSignIn?: () => void;
   onSignOut?: () => void;
   parkingOn?: boolean;
+  parkingLoading?: boolean;
   onToggleParking?: () => void;
 }) {
   const [openKind, setOpenKind] = useState<RoadIntelKind | null>(null);
@@ -244,8 +246,9 @@ export function RoadInformationCard({
           <button
             type="button"
             title="停車"
-            aria-label="停車"
+            aria-label={parkingLoading ? "停車，正在搜尋附近停車場" : "停車"}
             aria-pressed={parkingOn}
+            aria-busy={parkingLoading}
             onClick={() => {
               onPreviewOpen?.();
               onToggleParking?.();
@@ -253,11 +256,17 @@ export function RoadInformationCard({
             className={cn(
               "function-chip relative flex items-center justify-center border touch-manipulation",
               parkingOn
-                ? "border-emerald-300/70 bg-emerald-500/30 text-emerald-100"
-                : "border-emerald-400/35 bg-emerald-500/15 text-emerald-200",
+                ? "border-sky-300/80 bg-sky-500/35 text-sky-100"
+                : "border-sky-400/40 bg-sky-500/15 text-sky-200",
               !parkingOn && "opacity-80",
             )}
           >
+            {parkingLoading ? (
+              <span
+                className="parking-chip-spinner"
+                aria-hidden
+              />
+            ) : null}
             <CircleParking className="function-chip__icon" />
             <span className="function-chip__label">停車</span>
           </button>

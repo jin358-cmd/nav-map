@@ -1,9 +1,40 @@
 import { formatTaiwanDisplayAddress } from "@/lib/geocoding/format-taiwan-display-address";
+import { comparableTaiwanText } from "@/lib/geocoding/normalizeTaiwanAddress";
 import { distanceKm } from "@/lib/geo";
 import { expandPoiQueries, normalizePoiKey } from "@/lib/poi/aliases";
 import { classifyPoiQuery, isDoorplateQuery, prefersNearby } from "@/lib/poi/intent";
 import { SEARCH_RESULT_LIMIT } from "@/lib/search-constants";
 import type { GeocodeHit, LngLat } from "@/types/domain";
+
+export type SearchRegion = {
+  city: string;
+  town: string;
+};
+
+function regionHaystack(hit: Pick<GeocodeHit, "name" | "address">) {
+  return comparableTaiwanText(`${hit.name} ${hit.address}`);
+}
+
+function queryNamesOtherCity(query: string, locatedCity: string) {
+  if (!locatedCity) return false;
+  const hay = comparableTaiwanText(query);
+  const located = comparableTaiwanText(locatedCity);
+  if (!located || hay.includes(located)) return false;
+  return /[縣市]/u.test(query);
+}
+
+export function scoreLocatedRegion(
+  hit: Pick<GeocodeHit, "name" | "address">,
+  region: SearchRegion | null | undefined,
+) {
+  if (!region?.city && !region?.town) return 0;
+  const hay = regionHaystack(hit);
+  const city = comparableTaiwanText(region.city);
+  const town = comparableTaiwanText(region.town);
+  if (town && hay.includes(town)) return 4;
+  if (city && hay.includes(city)) return 2;
+  return 0;
+}
 
 export { isDoorplateQuery } from "@/lib/poi/intent";
 export { expandPoiQueries as expandKeywordQueries, normalizePoiKey as normalizeSearchKey } from "@/lib/poi/aliases";
@@ -55,21 +86,29 @@ export function instantKeywordHits(
   origin: LngLat | null,
   extras: GeocodeHit[] = [],
   limit = 8,
+  region?: SearchRegion | null,
 ): GeocodeHit[] {
-  return rankSearchHits(mergeSearchHits(matchSavedPlaces(query, extras), 24), query, origin).slice(
-    0,
-    limit,
-  );
+  return rankSearchHits(
+    mergeSearchHits(matchSavedPlaces(query, extras), 24),
+    query,
+    origin,
+    region,
+  ).slice(0, limit);
 }
 
 export function rankSearchHits(
   hits: GeocodeHit[],
   query: string,
   origin: LngLat | null,
+  region?: SearchRegion | null,
 ): GeocodeHit[] {
   const intent = classifyPoiQuery(query);
   const nearby = Boolean(origin && prefersNearby(intent));
+  const located =
+    region && !queryNamesOtherCity(query, region.city) ? region : null;
   return [...hits].sort((a, b) => {
+    const regionDelta = scoreLocatedRegion(b, located) - scoreLocatedRegion(a, located);
+    if (regionDelta !== 0) return regionDelta;
     const nameDelta = scoreNameMatch(query, b.name) - scoreNameMatch(query, a.name);
     if (nearby && origin) {
       if (nameDelta >= 4) return nameDelta;

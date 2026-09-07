@@ -4,6 +4,7 @@ import { matchLandmarks } from "@/data/landmarks";
 import { distanceKm } from "@/lib/geo";
 import { formatTaiwanDisplayAddress } from "@/lib/geocoding/format-taiwan-display-address";
 import {
+  comparableTaiwanText,
   matchKindLabel,
   normalizeTaiwanAddress,
   relaxedAddressQueries,
@@ -123,12 +124,29 @@ function mergeResults(rows: GeocodeResult[]) {
   return kept;
 }
 
+function textHasRegion(text: string, token: string) {
+  if (!token) return false;
+  return comparableTaiwanText(text).includes(comparableTaiwanText(token));
+}
+
+function locatedRegionScore(
+  item: GeocodeResult,
+  city: string,
+  town: string,
+) {
+  const hay = `${item.label} ${item.formattedAddress}`;
+  if (town && textHasRegion(hay, town)) return 4;
+  if (city && textHasRegion(hay, city)) return 2;
+  return 0;
+}
+
 function sortResults(
   rows: GeocodeResult[],
   parsedCity: string,
   parsedTown: string,
   preferLane: boolean,
   origin?: { lat: number; lng: number },
+  located?: { city: string; town: string },
 ) {
   const kindRank = preferLane
     ? {
@@ -157,17 +175,23 @@ function sortResults(
     osm: 6,
     google: 7,
   };
+  const preferCity = parsedCity || located?.city || "";
+  const preferTown = parsedTown || located?.town || "";
   return [...rows].sort((a, b) => {
+    const regionDelta =
+      locatedRegionScore(b, preferCity, preferTown) -
+      locatedRegionScore(a, preferCity, preferTown);
+    if (regionDelta !== 0) return regionDelta;
     if (a.exactHouseNumber !== b.exactHouseNumber) {
       return a.exactHouseNumber ? -1 : 1;
     }
     const kindDelta = kindRank[a.matchKind] - kindRank[b.matchKind];
     if (kindDelta !== 0) return kindDelta;
-    const cityA = parsedCity && a.formattedAddress.includes(parsedCity.replaceAll("台", "臺"));
-    const cityB = parsedCity && b.formattedAddress.includes(parsedCity.replaceAll("台", "臺"));
+    const cityA = parsedCity && textHasRegion(a.formattedAddress, parsedCity);
+    const cityB = parsedCity && textHasRegion(b.formattedAddress, parsedCity);
     if (Boolean(cityA) !== Boolean(cityB)) return cityA ? -1 : 1;
-    const townA = parsedTown && a.formattedAddress.includes(parsedTown);
-    const townB = parsedTown && b.formattedAddress.includes(parsedTown);
+    const townA = parsedTown && textHasRegion(a.formattedAddress, parsedTown);
+    const townB = parsedTown && textHasRegion(b.formattedAddress, parsedTown);
     if (Boolean(townA) !== Boolean(townB)) return townA ? -1 : 1;
     const sourceDelta = sourceRank[a.source] - sourceRank[b.source];
     if (sourceDelta !== 0) return sourceDelta;
@@ -234,6 +258,8 @@ export async function searchGeocode(
     longitude?: number;
     signal?: AbortSignal;
     mode?: GeocodeLookupMode;
+    locatedCity?: string;
+    locatedTown?: string;
   } = {},
 ): Promise<GeocodeResponse> {
   const mode: GeocodeLookupMode = options.mode ?? "search";
@@ -273,9 +299,17 @@ export async function searchGeocode(
   const cached = await readAddressCache(parsed.normalizedAddress, key);
   if (cached?.length) statuses.cache = "ok";
 
-  const rankedLocals = withDistance(
-    mergeResults([...locals, ...(cached ?? [])]),
+  const located = {
+    city: options.locatedCity?.trim() || "",
+    town: options.locatedTown?.trim() || "",
+  };
+  const rankedLocals = sortResults(
+    withDistance(mergeResults([...locals, ...(cached ?? [])]), origin),
+    parsed.parts.city,
+    parsed.parts.town,
+    parsed.hasLaneOrAlley,
     origin,
+    located,
   ).slice(0, SEARCH_RESULT_LIMIT);
   const qualityCount = rankedLocals.filter((item) => (item.confidence ?? 0) >= 0.7).length;
   const localReady =
@@ -363,6 +397,7 @@ export async function searchGeocode(
       parsed.parts.town,
       parsed.hasLaneOrAlley,
       origin,
+      located,
     ),
   ).slice(0, SEARCH_RESULT_LIMIT);
 

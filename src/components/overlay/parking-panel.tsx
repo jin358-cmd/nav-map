@@ -39,6 +39,7 @@ export function ParkingPanel({
   lots,
   origin,
   fetchedAt,
+  loading = false,
   selected,
   sort,
   onSort,
@@ -51,6 +52,7 @@ export function ParkingPanel({
   lots: ParkingLot[];
   origin: ParkingCatalog["origin"];
   fetchedAt?: string | null;
+  loading?: boolean;
   selected: ParkingLot | null;
   sort: ParkingSort;
   onSort: (sort: ParkingSort) => void;
@@ -147,7 +149,16 @@ export function ParkingPanel({
           </Button>
         </article>
       ) : null}
-      {ranked.length === 0 ? (
+      {loading && ranked.length === 0 ? (
+        <div
+          className="flex flex-col items-center justify-center gap-2 px-1 py-6 text-sm text-sky-100"
+          role="status"
+          aria-live="polite"
+        >
+          <span className="parking-panel-spinner" aria-hidden />
+          正在搜尋附近停車場…
+        </div>
+      ) : ranked.length === 0 ? (
         <p className="px-1 py-3 text-sm text-zinc-300">
           {origin === "unavailable" ? "資料暫時無法取得" : "附近沒有停車場資料"}
         </p>

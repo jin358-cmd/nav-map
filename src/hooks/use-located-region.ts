@@ -2,18 +2,24 @@
 
 import { useEffect, useRef, useState } from "react";
 import { distanceKm } from "@/lib/geo";
+import type { SearchRegion } from "@/lib/poi-search";
 import type { LngLat } from "@/types/domain";
 
 const REQUERY_KM = 2.4;
+const EMPTY_REGION: SearchRegion = { city: "", town: "" };
 
-export function useLocatedRegion(point: LngLat) {
-  const [city, setCity] = useState("");
+export function useLocatedRegion(point: LngLat | null) {
+  const [region, setRegion] = useState<SearchRegion>(EMPTY_REGION);
   const lastQuery = useRef<LngLat | null>(null);
+  const lng = point?.lng ?? null;
+  const lat = point?.lat ?? null;
 
   useEffect(() => {
+    if (lng == null || lat == null) return;
+    const next = { lng, lat };
     if (
       lastQuery.current &&
-      distanceKm(lastQuery.current, point) < REQUERY_KM
+      distanceKm(lastQuery.current, next) < REQUERY_KM
     ) {
       return;
     }
@@ -22,14 +28,16 @@ export function useLocatedRegion(point: LngLat) {
     const timer = window.setTimeout(() => controller.abort(), 6_000);
 
     void fetch(
-      `/api/region?lng=${encodeURIComponent(String(point.lng))}&lat=${encodeURIComponent(String(point.lat))}`,
+      `/api/region?lng=${encodeURIComponent(String(lng))}&lat=${encodeURIComponent(String(lat))}`,
       { signal: controller.signal, cache: "no-store" },
     )
       .then((response) => (response.ok ? response.json() : null))
-      .then((payload: { city?: string } | null) => {
-        if (typeof payload?.city === "string" && payload.city.trim()) {
-          setCity(payload.city.trim());
-          lastQuery.current = point;
+      .then((payload: { city?: string; town?: string } | null) => {
+        const city = typeof payload?.city === "string" ? payload.city.trim() : "";
+        const town = typeof payload?.town === "string" ? payload.town.trim() : "";
+        if (city) {
+          setRegion({ city, town });
+          lastQuery.current = next;
         }
       })
       .catch(() => undefined)
@@ -39,7 +47,7 @@ export function useLocatedRegion(point: LngLat) {
       controller.abort();
       window.clearTimeout(timer);
     };
-  }, [point.lat, point.lng]);
+  }, [lat, lng]);
 
-  return city;
+  return region;
 }

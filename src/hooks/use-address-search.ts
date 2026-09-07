@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { SearchRegion } from "@/lib/poi-search";
 import { searchAddresses } from "@/services/routing";
 import type { GeocodeHit, LngLat } from "@/types/domain";
 
@@ -10,6 +11,7 @@ export function useAddressSearch(
   query: string,
   bias: LngLat | null,
   composing: boolean,
+  region: SearchRegion | null = null,
 ) {
   const [suggestHits, setSuggestHits] = useState<GeocodeHit[]>([]);
   const [remoteHits, setRemoteHits] = useState<GeocodeHit[]>([]);
@@ -22,6 +24,8 @@ export function useAddressSearch(
   const searchAbortRef = useRef<AbortController | null>(null);
   const biasLng = bias?.lng;
   const biasLat = bias?.lat;
+  const locatedCity = region?.city ?? "";
+  const locatedTown = region?.town ?? "";
   const needle = query.trim();
   const submitted = submittedQuery.length > 0 && submittedQuery === needle;
 
@@ -39,7 +43,15 @@ export function useAddressSearch(
         : undefined;
     const timer = window.setTimeout(() => {
       setSuggesting(true);
-      void searchAddresses(needle, origin, controller.signal, "suggest")
+      void searchAddresses(
+        needle,
+        origin,
+        controller.signal,
+        "suggest",
+        locatedCity || locatedTown
+          ? { city: locatedCity, town: locatedTown }
+          : undefined,
+      )
         .then((rows) => {
           if (generation !== suggestGenerationRef.current) return;
           setSuggestHits(rows);
@@ -58,7 +70,7 @@ export function useAddressSearch(
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [biasLat, biasLng, composing, needle]);
+  }, [biasLat, biasLng, composing, locatedCity, locatedTown, needle]);
 
   useEffect(() => {
     if (!submittedQuery || needle === submittedQuery) return;
@@ -90,7 +102,15 @@ export function useAddressSearch(
           ? { lng: biasLng, lat: biasLat }
           : undefined;
 
-      void searchAddresses(next, origin, controller.signal, "search")
+      void searchAddresses(
+        next,
+        origin,
+        controller.signal,
+        "search",
+        locatedCity || locatedTown
+          ? { city: locatedCity, town: locatedTown }
+          : undefined,
+      )
         .then((rows) => {
           if (generation !== searchGenerationRef.current) return;
           setRemoteHits(rows);
@@ -106,7 +126,7 @@ export function useAddressSearch(
           if (generation === searchGenerationRef.current) setSearching(false);
         });
     },
-    [biasLat, biasLng],
+    [biasLat, biasLng, locatedCity, locatedTown],
   );
 
   return {

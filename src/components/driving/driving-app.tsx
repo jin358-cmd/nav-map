@@ -37,6 +37,7 @@ import { useYoutubeLibrary } from "@/hooks/use-youtube-library";
 import { useNavigationVoice } from "@/hooks/use-navigation-voice";
 import { useSpeedEnforcementView } from "@/hooks/use-speed-enforcement-view";
 import { useMapPois } from "@/hooks/use-map-pois";
+import { useLocatedRegion } from "@/hooks/use-located-region";
 import { useParkingView } from "@/hooks/use-parking-view";
 import { roadIntelFromCameras } from "@/lib/cctv-intel";
 import { deriveAccidentIntel, mapVisibleAccidents } from "@/lib/accident-query";
@@ -109,6 +110,7 @@ import {
 } from "@/lib/map-display-mode";
 import {
   deleteSavedPlace,
+  findSavedCustomPlace,
   getSavedPlacesSnapshot,
   getServerSavedPlacesSnapshot,
   renameSavedPlace,
@@ -227,6 +229,7 @@ export function DrivingApp() {
   const [editingPlaceType, setEditingPlaceType] = useState<SavedPlaceType | null>(
     null,
   );
+  const [editingPlaceId, setEditingPlaceId] = useState<string | null>(null);
   const [pickMode, setPickMode] = useState(false);
   const [pickLocation, setPickLocation] = useState<{
     lng: number;
@@ -304,6 +307,15 @@ export function DrivingApp() {
   );
   const homePlace = savedPlaces.find((place) => place.type === "home") ?? null;
   const workPlace = savedPlaces.find((place) => place.type === "work") ?? null;
+  const customPlaces = savedPlaces.filter((place) => place.type === "custom");
+  const editingPlace =
+    (editingPlaceId
+      ? savedPlaces.find((place) => place.id === editingPlaceId)
+      : null) ??
+    (editingPlaceType && editingPlaceType !== "custom"
+      ? savedPlaces.find((place) => place.type === editingPlaceType)
+      : null) ??
+    null;
   const landscape = useLandscape();
   const drawerOpen = toolsDrawerOpen;
   const dismissedRouteAlertIdRef = useRef<string | null>(null);
@@ -485,11 +497,20 @@ export function DrivingApp() {
     origin: parkingOrigin,
     error: parkingError,
     fetchedAt: parkingFetchedAt,
+    loading: parkingLoading,
   } = useParkingView({
     center: parkingCenter,
-    enabled: parkingOpen,
+    enabled: Boolean(parkingCenter),
     radiusMeters: parkingRadiusMeters,
   });
+  const regionPoint = useMemo(
+    () =>
+      vehicle.source === "gps"
+        ? { lng: vehicle.lng, lat: vehicle.lat }
+        : searchOrigin,
+    [searchOrigin, vehicle.lat, vehicle.lng, vehicle.source],
+  );
+  const locatedRegion = useLocatedRegion(regionPoint);
   const mapPois = useMapPois({
     viewport,
     origin: searchOrigin,
@@ -828,21 +849,31 @@ export function DrivingApp() {
   );
 
   const handleEmptyMapClick = useCallback((location: { lng: number; lat: number }) => {
+    const saved = findSavedCustomPlace(location);
     const place = customPlaceFromLngLat(location);
+    if (saved) {
+      place.id = saved.id;
+      place.name = saved.displayName;
+      place.address = saved.originalAddress || place.address;
+    }
     setSelectedCctv(null);
     setSelectedEvent(null);
     setSelectedParking(null);
     setSelectedMapPlace(place);
     void reversePlace(location).then((hit) => {
-      setSelectedMapPlace((current) =>
-        current?.id === place.id
-          ? {
-              ...current,
-              name: hit.name || "自訂位置",
-              address: hit.address || current.address,
-            }
-          : current,
-      );
+      setSelectedMapPlace((current) => {
+        if (current?.id !== place.id) return current;
+        const named = findSavedCustomPlace(location);
+        return {
+          ...current,
+          name:
+            named?.displayName ||
+            (current.name && current.name !== "自訂位置"
+              ? current.name
+              : hit.name || "自訂位置"),
+          address: hit.address || current.address,
+        };
+      });
     });
   }, []);
 
@@ -1412,9 +1443,7 @@ export function DrivingApp() {
         <div className="hud-anchor-interactive absolute top-[max(5.5rem,env(safe-area-inset-top))] left-3 right-3 z-50 sm:left-3 sm:right-auto">
           <PlaceEditor
             type={editingPlaceType}
-            existing={
-              savedPlaces.find((place) => place.type === editingPlaceType) ?? null
-            }
+            existing={editingPlace}
             currentLocation={{ lng: vehicle.lng, lat: vehicle.lat }}
             pickLocation={pickLocation}
             pickAddress={pickAddress}
@@ -1425,14 +1454,16 @@ export function DrivingApp() {
             }}
             onConfirmPick={() => {
               if (!pickLocation || !editingPlaceType) return;
-              const current =
-                savedPlaces.find((place) => place.type === editingPlaceType) ??
-                null;
               upsertSavedPlace({
+                id: editingPlace?.id,
                 type: editingPlaceType,
                 displayName:
-                  current?.displayName ??
-                  (editingPlaceType === "home" ? "住家" : "公司"),
+                  editingPlace?.displayName ??
+                  (editingPlaceType === "home"
+                    ? "住家"
+                    : editingPlaceType === "work"
+                      ? "公司"
+                      : "自訂位置"),
                 originalAddress: pickAddress ?? undefined,
                 latitude: pickLocation.lat,
                 longitude: pickLocation.lng,
@@ -1440,6 +1471,7 @@ export function DrivingApp() {
               setPickMode(false);
               setPickLocation(null);
               setEditingPlaceType(null);
+              setEditingPlaceId(null);
             }}
             onReselect={() => {
               setPickLocation(null);
@@ -1453,25 +1485,26 @@ export function DrivingApp() {
             }}
             onSave={(input) => {
               if (!editingPlaceType) return;
-              upsertSavedPlace({ type: editingPlaceType, ...input });
+              upsertSavedPlace({
+                id: editingPlace?.id,
+                type: editingPlaceType,
+                ...input,
+              });
               setEditingPlaceType(null);
+              setEditingPlaceId(null);
               setPickMode(false);
             }}
             onRename={(displayName) => {
-              const current = savedPlaces.find(
-                (place) => place.type === editingPlaceType,
-              );
-              if (current) renameSavedPlace(current.id, displayName);
+              if (editingPlace) renameSavedPlace(editingPlace.id, displayName);
             }}
             onDelete={() => {
-              const current = savedPlaces.find(
-                (place) => place.type === editingPlaceType,
-              );
-              if (current) deleteSavedPlace(current.id);
+              if (editingPlace) deleteSavedPlace(editingPlace.id);
               setEditingPlaceType(null);
+              setEditingPlaceId(null);
             }}
             onClose={() => {
               setEditingPlaceType(null);
+              setEditingPlaceId(null);
               setPickMode(false);
               setPickLocation(null);
             }}
@@ -1524,6 +1557,7 @@ export function DrivingApp() {
             <>
               <AddressSearch
                 bias={searchBias}
+                region={locatedRegion}
                 busy={routing}
                 error={routeError}
                 onSelect={(hit) => void applyRoute(hit)}
@@ -1531,9 +1565,11 @@ export function DrivingApp() {
               <SavedPlaceBar
                 home={homePlace}
                 work={workPlace}
+                customs={customPlaces}
                 onGo={(place) => void applyRoute(savedPlaceToHit(place))}
-                onEdit={(type) => {
+                onEdit={(type, id) => {
                   setEditingPlaceType(type);
+                  setEditingPlaceId(id ?? null);
                   setPickMode(false);
                   setPickLocation(null);
                 }}
@@ -1666,6 +1702,27 @@ export function DrivingApp() {
               else addFavorite(hit);
               setSelectedMapPlace({ ...selectedMapPlace });
             }}
+            onRename={
+              selectedMapPlace.kind === "custom"
+                ? (name) => {
+                    const saved = upsertSavedPlace({
+                      id:
+                        findSavedCustomPlace(selectedMapPlace.location)?.id ??
+                        selectedMapPlace.id,
+                      type: "custom",
+                      displayName: name,
+                      originalAddress: selectedMapPlace.address,
+                      latitude: selectedMapPlace.location.lat,
+                      longitude: selectedMapPlace.location.lng,
+                    });
+                    setSelectedMapPlace({
+                      ...selectedMapPlace,
+                      id: saved.id,
+                      name: saved.displayName,
+                    });
+                  }
+                : undefined
+            }
             onClose={() => setSelectedMapPlace(null)}
           />
         ) : null}
@@ -1674,6 +1731,7 @@ export function DrivingApp() {
             lots={parkingLots}
             origin={parkingOrigin}
             fetchedAt={parkingFetchedAt}
+            loading={parkingLoading}
             selected={selectedParking}
             sort={parkingSort}
             onSort={setParkingSort}
@@ -1802,6 +1860,7 @@ export function DrivingApp() {
           onSignIn={googleAccount.signIn}
           onSignOut={googleAccount.signOut}
           parkingOn={parkingOpen}
+          parkingLoading={parkingLoading}
           onToggleParking={handleToggleParking}
           onPreviewOpen={() => {
             setFavoritesOpen(false);

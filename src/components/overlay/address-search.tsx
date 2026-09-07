@@ -50,6 +50,7 @@ import type { GeocodeHit, LngLat } from "@/types/domain";
 
 type AddressSearchProps = {
   bias: LngLat | null;
+  region?: { city: string; town: string } | null;
   busy: boolean;
   error: string | null;
   onSelect: (hit: GeocodeHit) => void;
@@ -57,6 +58,7 @@ type AddressSearchProps = {
 
 export function AddressSearch({
   bias,
+  region = null,
   busy,
   error,
   onSelect,
@@ -91,8 +93,8 @@ export function AddressSearch({
     () =>
       needle.length < 1
         ? []
-        : instantKeywordHits(needle, biasBucket, [...history, ...favorites]),
-    [biasBucket, favorites, history, needle],
+        : instantKeywordHits(needle, biasBucket, [...history, ...favorites], 8, region),
+    [biasBucket, favorites, history, needle, region],
   );
 
   const selectHit = useCallback(
@@ -111,7 +113,7 @@ export function AddressSearch({
     },
     [biasBucket, onSelect],
   );
-  const lookup = useAddressSearch(needle, biasBucket, composing);
+  const lookup = useAddressSearch(needle, biasBucket, composing, region);
   const pendingVoiceSubmitRef = useRef(false);
 
   const submitLookup = lookup.submit;
@@ -180,6 +182,7 @@ export function AddressSearch({
           mergeSearchHits([...instantHits, ...previewHits], 24),
           needle,
           biasBucket,
+          region,
         );
   const shownHits = expanded ? visibleHits : visibleHits.slice(0, SEARCH_FIRST_SCREEN);
   const userFavorites = useMemo(
@@ -284,6 +287,9 @@ export function AddressSearch({
               : lookup.submitted
                 ? "已查門牌與地圖 · 點選結果開始導航"
                 : "輸入中只顯示紀錄、快取與附近店家 · 按搜尋或 Enter 查門牌"}
+            {region?.city
+              ? ` · 優先 ${region.city}${region.town}`
+              : ""}
           </p>
           {needle.length >= 1 ? (
             <button

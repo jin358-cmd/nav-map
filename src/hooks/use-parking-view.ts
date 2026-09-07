@@ -55,6 +55,7 @@ export function useParkingView({
     fetchedAt: "",
   });
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const generationRef = useRef(0);
 
   const searchLng = center ? Number((Math.round(center.lng * 200) / 200).toFixed(5)) : null;
@@ -72,6 +73,7 @@ export function useParkingView({
     generationRef.current = generation;
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
+      setLoading(true);
       void fetchParking(
         { lng: searchLng, lat: searchLat },
         radiusMeters,
@@ -81,6 +83,7 @@ export function useParkingView({
           if (generation !== generationRef.current) return;
           setCatalog(next);
           setError(next.origin === "unavailable" ? "資料暫時無法取得" : null);
+          setLoading(false);
         })
         .catch((caught: unknown) => {
           if (generation !== generationRef.current) return;
@@ -91,6 +94,7 @@ export function useParkingView({
             fetchedAt: new Date().toISOString(),
           });
           setError("資料暫時無法取得");
+          setLoading(false);
         });
     }, 400);
     return () => {
@@ -99,13 +103,12 @@ export function useParkingView({
     };
   }, [enabled, radiusMeters, requestKey, searchLat, searchLng]);
 
-  const lots: ParkingLot[] = enabled ? catalog.lots : [];
-
   return {
-    lots,
+    lots: catalog.lots,
     origin: catalog.origin,
     error: enabled ? error : null,
     fetchedAt: catalog.fetchedAt || null,
+    loading: enabled && loading,
     reload: () => {
       generationRef.current += 1;
     },
