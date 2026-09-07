@@ -360,6 +360,16 @@ export function formatTaiwanRoadName(
   const compact = compactTaiwanText(stripLeadingPostal(address));
   const parts = parseDisplayParts(compact);
   const rebuilt = rebuildRoadFromParts(parts);
+  if (!parts.city && !parts.town) {
+    const stripped = stripLeadingPostal(compact);
+    if (stripped && !/[縣市區鄉鎮]/.test(stripped)) {
+      if (/口/.test(stripped) && (!rebuilt || stripped.startsWith(rebuilt))) {
+        return stripped;
+      }
+      if (!rebuilt) return stripped;
+    }
+  }
+  if (rebuilt) return rebuilt;
   if (rebuilt) return rebuilt;
 
   let rest = compact;
