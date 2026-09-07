@@ -1,0 +1,1837 @@
+{
+  "base": "http://127.0.0.1:43145",
+  "averageHttpMs": 30.2,
+  "androidDevice": "NOT AVAILABLE in this environment",
+  "rows": [
+    {
+      "city": "台北",
+      "q": "全",
+      "httpMs": 84,
+      "localMs": 45.7,
+      "prefixMs": 45.7,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "全國電子",
+        "全國電子",
+        "全家便利商店",
+        "全家便利商店",
+        "全郁藥師藥局"
+      ]
+    },
+    {
+      "city": "台北",
+      "q": "全家",
+      "httpMs": 62.7,
+      "localMs": 54.46,
+      "prefixMs": 54.46,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "全家便利商店",
+        "全家便利商店",
+        "全家 蘆洲恆德店",
+        "全家便利商店",
+        "全家便利商店"
+      ]
+    },
+    {
+      "city": "台北",
+      "q": "全聯",
+      "httpMs": 86.2,
+      "localMs": 78.17,
+      "prefixMs": 78.17,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 4,
+      "names": [
+        "全聯",
+        "全聯",
+        "全聯",
+        "全聯"
+      ]
+    },
+    {
+      "city": "台北",
+      "q": "7",
+      "httpMs": 37.7,
+      "localMs": 32.01,
+      "prefixMs": 32.01,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "7-Eleven",
+        "7-Eleven",
+        "7-Eleven",
+        "7-Eleven",
+        "7-Eleven"
+      ]
+    },
+    {
+      "city": "台北",
+      "q": "711",
+      "httpMs": 43.4,
+      "localMs": 37.6,
+      "prefixMs": 37.6,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "7-Eleven",
+        "7-Eleven",
+        "7-Eleven",
+        "7-Eleven",
+        "7-Eleven"
+      ]
+    },
+    {
+      "city": "台北",
+      "q": "7-ELEVEN",
+      "httpMs": 33.4,
+      "localMs": 27.37,
+      "prefixMs": 27.37,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "7-Eleven",
+        "7-11",
+        "7-11",
+        "7-Eleven",
+        "中正路711巷"
+      ]
+    },
+    {
+      "city": "台北",
+      "q": "星",
+      "httpMs": 29.8,
+      "localMs": 23.46,
+      "prefixMs": 23.46,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "星巴克",
+        "星巴克",
+        "星巴克",
+        "星巴克",
+        "星巴克"
+      ]
+    },
+    {
+      "city": "台北",
+      "q": "星巴克",
+      "httpMs": 30.3,
+      "localMs": 24.76,
+      "prefixMs": 24.76,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "星巴克",
+        "星巴克",
+        "星巴克",
+        "星巴克",
+        "星巴克"
+      ]
+    },
+    {
+      "city": "台北",
+      "q": "麥",
+      "httpMs": 33.3,
+      "localMs": 27.42,
+      "prefixMs": 27.42,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "麥當勞",
+        "麥當勞",
+        "麥當勞",
+        "麥當勞",
+        "麥當勞"
+      ]
+    },
+    {
+      "city": "台北",
+      "q": "麥當勞",
+      "httpMs": 33.7,
+      "localMs": 27.47,
+      "prefixMs": 27.47,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "麥當勞",
+        "麥當勞",
+        "麥當勞",
+        "麥當勞",
+        "麥當勞"
+      ]
+    },
+    {
+      "city": "台北",
+      "q": "加",
+      "httpMs": 17.3,
+      "localMs": 11.25,
+      "prefixMs": 11.25,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "加油站",
+        "加油站",
+        "中崙加油站",
+        "台灣中油 濱江大直橋加油加氣站",
+        "山隆興隆加油站（加盟）"
+      ]
+    },
+    {
+      "city": "台北",
+      "q": "加油站",
+      "httpMs": 13.4,
+      "localMs": 7.44,
+      "prefixMs": 7.44,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "中崙加油站",
+        "台灣中油 濱江大直橋加油加氣站",
+        "山隆興隆加油站（加盟）",
+        "台灣中油 福林路加油站",
+        "泰新加油站"
+      ]
+    },
+    {
+      "city": "台北",
+      "q": "停",
+      "httpMs": 26,
+      "localMs": 20.08,
+      "prefixMs": 20.08,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "臺北車站K區地下街停車場車道",
+        "臺北車站西側地上停車場",
+        "新生高架停車場(林森北路107巷口)",
+        "建國停車場",
+        "大一女舍前自行車停車場"
+      ]
+    },
+    {
+      "city": "台北",
+      "q": "停車場",
+      "httpMs": 19,
+      "localMs": 13.17,
+      "prefixMs": 13.17,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "臺北車站K區地下街停車場車道",
+        "臺北車站西側地上停車場",
+        "臺北車站東區地下停車場車道",
+        "新生高架停車場(林森北路107巷口)",
+        "建國停車場"
+      ]
+    },
+    {
+      "city": "台北",
+      "q": "藥",
+      "httpMs": 24.7,
+      "localMs": 17.98,
+      "prefixMs": 17.98,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "正康藥局",
+        "日藥本鋪",
+        "大樹藥局",
+        "大樹藥局",
+        "好安心藥局"
+      ]
+    },
+    {
+      "city": "台北",
+      "q": "藥局",
+      "httpMs": 18.8,
+      "localMs": 12.32,
+      "prefixMs": 12.32,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "正康藥局",
+        "日藥本鋪",
+        "大樹藥局",
+        "大樹藥局",
+        "好安心藥局"
+      ]
+    },
+    {
+      "city": "台北",
+      "q": "醫",
+      "httpMs": 32.5,
+      "localMs": 25.63,
+      "prefixMs": 25.63,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "台大醫院",
+        "台大醫院",
+        "國立臺灣大學醫學院附設醫院",
+        "臺北市立聯合醫院中興院區",
+        "臺北醫學大學附設醫院"
+      ]
+    },
+    {
+      "city": "台北",
+      "q": "醫院",
+      "httpMs": 21.4,
+      "localMs": 15.72,
+      "prefixMs": 15.72,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "台大醫院",
+        "台大醫院",
+        "國立臺灣大學醫學院附設醫院",
+        "臺北市立聯合醫院中興院區",
+        "臺北醫學大學附設醫院"
+      ]
+    },
+    {
+      "city": "新北",
+      "q": "全",
+      "httpMs": 46.8,
+      "localMs": 38.85,
+      "prefixMs": 38.85,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "全國電子",
+        "全國電子",
+        "全家便利商店",
+        "全家便利商店",
+        "全郁藥師藥局"
+      ]
+    },
+    {
+      "city": "新北",
+      "q": "全家",
+      "httpMs": 4.8,
+      "localMs": 0,
+      "prefixMs": 0,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "全家便利商店",
+        "全家便利商店",
+        "全家 蘆洲恆德店",
+        "全家便利商店",
+        "全家便利商店"
+      ]
+    },
+    {
+      "city": "新北",
+      "q": "全聯",
+      "httpMs": 3.8,
+      "localMs": 0,
+      "prefixMs": 0,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 4,
+      "names": [
+        "全聯",
+        "全聯",
+        "全聯",
+        "全聯"
+      ]
+    },
+    {
+      "city": "新北",
+      "q": "7",
+      "httpMs": 36.6,
+      "localMs": 29.85,
+      "prefixMs": 29.85,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "7-Eleven",
+        "7-Eleven",
+        "7-Eleven",
+        "7-Eleven",
+        "7-Eleven"
+      ]
+    },
+    {
+      "city": "新北",
+      "q": "711",
+      "httpMs": 9.1,
+      "localMs": 0,
+      "prefixMs": 0,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "7-Eleven",
+        "7-Eleven",
+        "7-Eleven",
+        "7-Eleven",
+        "7-Eleven"
+      ]
+    },
+    {
+      "city": "新北",
+      "q": "7-ELEVEN",
+      "httpMs": 3.7,
+      "localMs": 0,
+      "prefixMs": 0,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "7-Eleven",
+        "7-11",
+        "7-11",
+        "7-Eleven",
+        "中正路711巷"
+      ]
+    },
+    {
+      "city": "新北",
+      "q": "星",
+      "httpMs": 29.4,
+      "localMs": 23.79,
+      "prefixMs": 23.79,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "星巴克",
+        "星巴克",
+        "星巴克",
+        "星巴克",
+        "星巴克"
+      ]
+    },
+    {
+      "city": "新北",
+      "q": "星巴克",
+      "httpMs": 4.2,
+      "localMs": 0,
+      "prefixMs": 0,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "星巴克",
+        "星巴克",
+        "星巴克",
+        "星巴克",
+        "星巴克"
+      ]
+    },
+    {
+      "city": "新北",
+      "q": "麥",
+      "httpMs": 34.1,
+      "localMs": 28.76,
+      "prefixMs": 28.76,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "麥當勞",
+        "麥當勞",
+        "麥當勞",
+        "麥當勞",
+        "麥當勞"
+      ]
+    },
+    {
+      "city": "新北",
+      "q": "麥當勞",
+      "httpMs": 4.4,
+      "localMs": 0,
+      "prefixMs": 0,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "麥當勞",
+        "麥當勞",
+        "麥當勞",
+        "麥當勞",
+        "麥當勞"
+      ]
+    },
+    {
+      "city": "新北",
+      "q": "加",
+      "httpMs": 17,
+      "localMs": 10.83,
+      "prefixMs": 10.83,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "加油站",
+        "加油站",
+        "山隆興隆加油站（加盟）",
+        "泰新加油站",
+        "中崙加油站"
+      ]
+    },
+    {
+      "city": "新北",
+      "q": "加油站",
+      "httpMs": 4.2,
+      "localMs": 0,
+      "prefixMs": 0,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "中崙加油站",
+        "台灣中油 濱江大直橋加油加氣站",
+        "山隆興隆加油站（加盟）",
+        "台灣中油 福林路加油站",
+        "泰新加油站"
+      ]
+    },
+    {
+      "city": "新北",
+      "q": "停",
+      "httpMs": 26.6,
+      "localMs": 20.2,
+      "prefixMs": 20.2,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "Hi PARKING 新北建八路停車場",
+        "善美停車場",
+        "樹林區第三平面停車場",
+        "臺北車站西側地上停車場",
+        "城市車旅 樹林福順站"
+      ]
+    },
+    {
+      "city": "新北",
+      "q": "停車場",
+      "httpMs": 5.2,
+      "localMs": 0,
+      "prefixMs": 0,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "臺北車站K區地下街停車場車道",
+        "臺北車站西側地上停車場",
+        "臺北車站東區地下停車場車道",
+        "新生高架停車場(林森北路107巷口)",
+        "建國停車場"
+      ]
+    },
+    {
+      "city": "新北",
+      "q": "藥",
+      "httpMs": 25,
+      "localMs": 18.12,
+      "prefixMs": 18.12,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "大樹藥局",
+        "大樹藥局",
+        "日藥本鋪",
+        "正康藥局",
+        "好安心藥局"
+      ]
+    },
+    {
+      "city": "新北",
+      "q": "藥局",
+      "httpMs": 3.9,
+      "localMs": 0,
+      "prefixMs": 0,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "正康藥局",
+        "日藥本鋪",
+        "大樹藥局",
+        "大樹藥局",
+        "好安心藥局"
+      ]
+    },
+    {
+      "city": "新北",
+      "q": "醫",
+      "httpMs": 31.9,
+      "localMs": 24.73,
+      "prefixMs": 24.73,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "亞東醫院",
+        "亞東醫院",
+        "輔大醫院",
+        "衛生福利部雙和醫院",
+        "樂生療養院迴龍院區"
+      ]
+    },
+    {
+      "city": "新北",
+      "q": "醫院",
+      "httpMs": 4.8,
+      "localMs": 0,
+      "prefixMs": 0,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "台大醫院",
+        "台大醫院",
+        "國立臺灣大學醫學院附設醫院",
+        "臺北市立聯合醫院中興院區",
+        "臺北醫學大學附設醫院"
+      ]
+    },
+    {
+      "city": "桃園",
+      "q": "全",
+      "httpMs": 46.5,
+      "localMs": 39.44,
+      "prefixMs": 39.44,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "全國電子",
+        "全國電子",
+        "全家便利商店",
+        "全家便利商店",
+        "全郁藥師藥局"
+      ]
+    },
+    {
+      "city": "桃園",
+      "q": "全家",
+      "httpMs": 4.3,
+      "localMs": 0,
+      "prefixMs": 0,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "全家便利商店",
+        "全家便利商店",
+        "全家 蘆洲恆德店",
+        "全家便利商店",
+        "全家便利商店"
+      ]
+    },
+    {
+      "city": "桃園",
+      "q": "全聯",
+      "httpMs": 3.3,
+      "localMs": 0,
+      "prefixMs": 0,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 4,
+      "names": [
+        "全聯",
+        "全聯",
+        "全聯",
+        "全聯"
+      ]
+    },
+    {
+      "city": "桃園",
+      "q": "7",
+      "httpMs": 40.3,
+      "localMs": 34.05,
+      "prefixMs": 34.05,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "7-Eleven",
+        "7-Eleven",
+        "7-Eleven",
+        "7-Eleven",
+        "7-Eleven"
+      ]
+    },
+    {
+      "city": "桃園",
+      "q": "711",
+      "httpMs": 9.4,
+      "localMs": 0,
+      "prefixMs": 0,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "7-Eleven",
+        "7-Eleven",
+        "7-Eleven",
+        "7-Eleven",
+        "7-Eleven"
+      ]
+    },
+    {
+      "city": "桃園",
+      "q": "7-ELEVEN",
+      "httpMs": 9.9,
+      "localMs": 0,
+      "prefixMs": 0,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "7-Eleven",
+        "7-11",
+        "7-11",
+        "7-Eleven",
+        "中正路711巷"
+      ]
+    },
+    {
+      "city": "桃園",
+      "q": "星",
+      "httpMs": 38.9,
+      "localMs": 27.14,
+      "prefixMs": 27.14,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "星巴克",
+        "星巴克",
+        "星巴克",
+        "星巴克",
+        "星巴克"
+      ]
+    },
+    {
+      "city": "桃園",
+      "q": "星巴克",
+      "httpMs": 5.1,
+      "localMs": 0,
+      "prefixMs": 0,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "星巴克",
+        "星巴克",
+        "星巴克",
+        "星巴克",
+        "星巴克"
+      ]
+    },
+    {
+      "city": "桃園",
+      "q": "麥",
+      "httpMs": 35.1,
+      "localMs": 29.43,
+      "prefixMs": 29.43,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "麥當勞",
+        "麥當勞",
+        "麥當勞",
+        "麥當勞",
+        "麥當勞"
+      ]
+    },
+    {
+      "city": "桃園",
+      "q": "麥當勞",
+      "httpMs": 5.4,
+      "localMs": 0,
+      "prefixMs": 0,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "麥當勞",
+        "麥當勞",
+        "麥當勞",
+        "麥當勞",
+        "麥當勞"
+      ]
+    },
+    {
+      "city": "桃園",
+      "q": "加",
+      "httpMs": 17.2,
+      "localMs": 10.95,
+      "prefixMs": 10.95,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "加油站",
+        "加油站",
+        "長榮加油站",
+        "士香加油站",
+        "士香加油站"
+      ]
+    },
+    {
+      "city": "桃園",
+      "q": "加油站",
+      "httpMs": 4,
+      "localMs": 0,
+      "prefixMs": 0,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "中崙加油站",
+        "台灣中油 濱江大直橋加油加氣站",
+        "山隆興隆加油站（加盟）",
+        "台灣中油 福林路加油站",
+        "泰新加油站"
+      ]
+    },
+    {
+      "city": "桃園",
+      "q": "停",
+      "httpMs": 26.4,
+      "localMs": 20.69,
+      "prefixMs": 20.69,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "城市車旅",
+        "城市車旅",
+        "和雲行動",
+        "LI PARKING",
+        "TRDC parking area"
+      ]
+    },
+    {
+      "city": "桃園",
+      "q": "停車場",
+      "httpMs": 4.7,
+      "localMs": 0,
+      "prefixMs": 0,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "臺北車站K區地下街停車場車道",
+        "臺北車站西側地上停車場",
+        "臺北車站東區地下停車場車道",
+        "新生高架停車場(林森北路107巷口)",
+        "建國停車場"
+      ]
+    },
+    {
+      "city": "桃園",
+      "q": "藥",
+      "httpMs": 24.6,
+      "localMs": 17.7,
+      "prefixMs": 17.7,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "大樹藥局",
+        "大樹藥局",
+        "民富大藥局",
+        "全郁藥師藥局",
+        "pharmacy"
+      ]
+    },
+    {
+      "city": "桃園",
+      "q": "藥局",
+      "httpMs": 3.9,
+      "localMs": 0,
+      "prefixMs": 0,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "正康藥局",
+        "日藥本鋪",
+        "大樹藥局",
+        "大樹藥局",
+        "好安心藥局"
+      ]
+    },
+    {
+      "city": "桃園",
+      "q": "醫",
+      "httpMs": 32.4,
+      "localMs": 25.11,
+      "prefixMs": 25.11,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "聖保祿醫院",
+        "敏盛醫院",
+        "臺北榮民總醫院桃園分院",
+        "部立桃園醫院",
+        "桃園醫院"
+      ]
+    },
+    {
+      "city": "桃園",
+      "q": "醫院",
+      "httpMs": 3.9,
+      "localMs": 0,
+      "prefixMs": 0,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "台大醫院",
+        "台大醫院",
+        "國立臺灣大學醫學院附設醫院",
+        "臺北市立聯合醫院中興院區",
+        "臺北醫學大學附設醫院"
+      ]
+    },
+    {
+      "city": "台中",
+      "q": "全",
+      "httpMs": 48.5,
+      "localMs": 41.08,
+      "prefixMs": 41.08,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "全國電子",
+        "全國電子",
+        "全家便利商店",
+        "全家便利商店",
+        "全聯"
+      ]
+    },
+    {
+      "city": "台中",
+      "q": "全家",
+      "httpMs": 60.5,
+      "localMs": 54.81,
+      "prefixMs": 54.81,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "中國醫藥大學東區分院",
+        "全家",
+        "全家便利商店",
+        "全家便利商店",
+        "全家便利商店"
+      ]
+    },
+    {
+      "city": "台中",
+      "q": "全聯",
+      "httpMs": 81.7,
+      "localMs": 76.83,
+      "prefixMs": 76.83,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 4,
+      "names": [
+        "全聯",
+        "全聯",
+        "全聯",
+        "全聯"
+      ]
+    },
+    {
+      "city": "台中",
+      "q": "7",
+      "httpMs": 41.2,
+      "localMs": 35.98,
+      "prefixMs": 35.98,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "7-Eleven",
+        "7-Eleven",
+        "7-Eleven",
+        "7-Eleven",
+        "7-Eleven"
+      ]
+    },
+    {
+      "city": "台中",
+      "q": "711",
+      "httpMs": 32.9,
+      "localMs": 27.34,
+      "prefixMs": 27.34,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "7-Eleven",
+        "7-Eleven",
+        "711號攤位",
+        "文心南三路711巷",
+        "7-Eleven"
+      ]
+    },
+    {
+      "city": "台中",
+      "q": "7-ELEVEN",
+      "httpMs": 40.9,
+      "localMs": 28.38,
+      "prefixMs": 28.38,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "711號攤位",
+        "文心南三路711巷",
+        "7-11",
+        "康莊路711巷",
+        "新富路711巷"
+      ]
+    },
+    {
+      "city": "台中",
+      "q": "星",
+      "httpMs": 55.2,
+      "localMs": 38.75,
+      "prefixMs": 38.75,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "星巴克",
+        "星巴克",
+        "星巴克",
+        "星巴克",
+        "星巴克"
+      ]
+    },
+    {
+      "city": "台中",
+      "q": "星巴克",
+      "httpMs": 51.4,
+      "localMs": 33.15,
+      "prefixMs": 33.15,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "星巴克",
+        "星巴克",
+        "星巴克",
+        "星巴克",
+        "星巴克"
+      ]
+    },
+    {
+      "city": "台中",
+      "q": "麥",
+      "httpMs": 49.7,
+      "localMs": 39.83,
+      "prefixMs": 39.83,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "麥當勞",
+        "麥當勞",
+        "麥當勞",
+        "麥當勞",
+        "麥當勞"
+      ]
+    },
+    {
+      "city": "台中",
+      "q": "麥當勞",
+      "httpMs": 58.1,
+      "localMs": 47.17,
+      "prefixMs": 47.17,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "麥當勞",
+        "麥當勞",
+        "麥當勞",
+        "麥當勞",
+        "麥當勞"
+      ]
+    },
+    {
+      "city": "台中",
+      "q": "加",
+      "httpMs": 23.5,
+      "localMs": 15.55,
+      "prefixMs": 15.55,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "加油站",
+        "加油站",
+        "中村加油站",
+        "中村加油站",
+        "好市多台中店加油站"
+      ]
+    },
+    {
+      "city": "台中",
+      "q": "加油站",
+      "httpMs": 16,
+      "localMs": 9.58,
+      "prefixMs": 9.58,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "中村加油站",
+        "中村加油站",
+        "好市多台中店加油站",
+        "中油鴻陞加油站",
+        "北基加油站雅潭站"
+      ]
+    },
+    {
+      "city": "台中",
+      "q": "停",
+      "httpMs": 39.3,
+      "localMs": 30.94,
+      "prefixMs": 30.94,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "停車場徑",
+        "停車場通道",
+        "Parking Entrance",
+        "高速停車場",
+        "高鐵台中站停車場"
+      ]
+    },
+    {
+      "city": "台中",
+      "q": "停車場",
+      "httpMs": 123.1,
+      "localMs": 12.65,
+      "prefixMs": 12.65,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "停車場徑",
+        "停車場通道",
+        "停車場徑",
+        "Parking Entrance",
+        "高速停車場"
+      ]
+    },
+    {
+      "city": "台中",
+      "q": "藥",
+      "httpMs": 28.1,
+      "localMs": 20.46,
+      "prefixMs": 20.46,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "美榮藥局",
+        "大樹藥局",
+        "大樹藥局",
+        "十全藥局",
+        "綠思健保連鎖藥局"
+      ]
+    },
+    {
+      "city": "台中",
+      "q": "藥局",
+      "httpMs": 19.6,
+      "localMs": 11.04,
+      "prefixMs": 11.04,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "美榮藥局",
+        "大樹藥局",
+        "大樹藥局",
+        "十全藥局",
+        "綠思健保連鎖藥局"
+      ]
+    },
+    {
+      "city": "台中",
+      "q": "醫",
+      "httpMs": 33.3,
+      "localMs": 27.13,
+      "prefixMs": 27.13,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "臺中醫院",
+        "中國醫藥大學附設醫院",
+        "林新醫院",
+        "林新醫院",
+        "國軍臺中總醫院"
+      ]
+    },
+    {
+      "city": "台中",
+      "q": "醫院",
+      "httpMs": 21.3,
+      "localMs": 16.02,
+      "prefixMs": 16.02,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "臺中醫院",
+        "中國醫藥大學附設醫院",
+        "林新醫院",
+        "林新醫院",
+        "國軍臺中總醫院"
+      ]
+    },
+    {
+      "city": "台南",
+      "q": "全",
+      "httpMs": 46.9,
+      "localMs": 39.8,
+      "prefixMs": 39.8,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "全國電子",
+        "全國電子",
+        "全家便利商店",
+        "全家便利商店",
+        "全聯"
+      ]
+    },
+    {
+      "city": "台南",
+      "q": "全家",
+      "httpMs": 54.2,
+      "localMs": 48.58,
+      "prefixMs": 48.58,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "全家便利商店",
+        "全家便利商店",
+        "全家",
+        "全家便利商店",
+        "全家便利商店"
+      ]
+    },
+    {
+      "city": "台南",
+      "q": "全聯",
+      "httpMs": 84.1,
+      "localMs": 79,
+      "prefixMs": 79,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 4,
+      "names": [
+        "全聯",
+        "全聯",
+        "全聯",
+        "全聯"
+      ]
+    },
+    {
+      "city": "台南",
+      "q": "7",
+      "httpMs": 37,
+      "localMs": 30.66,
+      "prefixMs": 30.66,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "7-Eleven",
+        "7-Eleven",
+        "7-Eleven",
+        "7-Eleven",
+        "7-Eleven"
+      ]
+    },
+    {
+      "city": "台南",
+      "q": "711",
+      "httpMs": 33.9,
+      "localMs": 28.85,
+      "prefixMs": 28.85,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "7-Eleven",
+        "7-Eleven",
+        "7-Eleven",
+        "7-Eleven",
+        "歸仁地政事務所"
+      ]
+    },
+    {
+      "city": "台南",
+      "q": "7-ELEVEN",
+      "httpMs": 33,
+      "localMs": 27.19,
+      "prefixMs": 27.19,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "歸仁地政事務所",
+        "711",
+        "臺南監獄",
+        "高鐵台南站",
+        "台南"
+      ]
+    },
+    {
+      "city": "台南",
+      "q": "星",
+      "httpMs": 30,
+      "localMs": 23.57,
+      "prefixMs": 23.57,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "星巴克",
+        "星巴克",
+        "星巴克",
+        "星巴克",
+        "星巴克"
+      ]
+    },
+    {
+      "city": "台南",
+      "q": "星巴克",
+      "httpMs": 29.4,
+      "localMs": 23.85,
+      "prefixMs": 23.85,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "星巴克",
+        "星巴克",
+        "星巴克",
+        "星巴克",
+        "星巴克"
+      ]
+    },
+    {
+      "city": "台南",
+      "q": "麥",
+      "httpMs": 34.7,
+      "localMs": 29.71,
+      "prefixMs": 29.71,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "麥當勞",
+        "麥當勞",
+        "麥當勞",
+        "麥當勞",
+        "麥當勞"
+      ]
+    },
+    {
+      "city": "台南",
+      "q": "麥當勞",
+      "httpMs": 34.2,
+      "localMs": 27.95,
+      "prefixMs": 27.95,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "麥當勞",
+        "麥當勞",
+        "麥當勞",
+        "麥當勞",
+        "麥當勞"
+      ]
+    },
+    {
+      "city": "台南",
+      "q": "加",
+      "httpMs": 16.8,
+      "localMs": 9.47,
+      "prefixMs": 9.47,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "加油站",
+        "加油站",
+        "山上加油站",
+        "五甲尾加油站",
+        "南化(加油站)"
+      ]
+    },
+    {
+      "city": "台南",
+      "q": "加油站",
+      "httpMs": 12.9,
+      "localMs": 7.47,
+      "prefixMs": 7.47,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "山上加油站",
+        "五甲尾加油站",
+        "南化(加油站)",
+        "台糖加油站",
+        "水美加油站"
+      ]
+    },
+    {
+      "city": "台南",
+      "q": "停",
+      "httpMs": 26.5,
+      "localMs": 20.22,
+      "prefixMs": 20.22,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "台灣聯通",
+        "大興四路外停車場",
+        "崇明E6停車場(崇興路)",
+        "復華一街停車場",
+        "臺南監獄前停車場"
+      ]
+    },
+    {
+      "city": "台南",
+      "q": "停車場",
+      "httpMs": 18.6,
+      "localMs": 13.41,
+      "prefixMs": 13.41,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "台灣聯通",
+        "大興四路外停車場",
+        "崇明E6停車場(崇興路)",
+        "復華一街停車場",
+        "臺南監獄前停車場"
+      ]
+    },
+    {
+      "city": "台南",
+      "q": "藥",
+      "httpMs": 25.7,
+      "localMs": 18.99,
+      "prefixMs": 18.99,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "五代全民藥局",
+        "大樹藥局",
+        "和信藥局",
+        "大樹藥局",
+        "三欣藥局"
+      ]
+    },
+    {
+      "city": "台南",
+      "q": "藥局",
+      "httpMs": 18.8,
+      "localMs": 11.13,
+      "prefixMs": 11.13,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "五代全民藥局",
+        "大樹藥局",
+        "和信藥局",
+        "大樹藥局",
+        "三欣藥局"
+      ]
+    },
+    {
+      "city": "台南",
+      "q": "醫",
+      "httpMs": 30.8,
+      "localMs": 24.73,
+      "prefixMs": 24.73,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "台南醫院",
+        "台南醫院",
+        "郭綜合醫院",
+        "成大醫院",
+        "市立醫院(崇明路)"
+      ]
+    },
+    {
+      "city": "台南",
+      "q": "醫院",
+      "httpMs": 21.4,
+      "localMs": 16.16,
+      "prefixMs": 16.16,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "台南醫院",
+        "台南醫院",
+        "郭綜合醫院",
+        "成大醫院",
+        "市立醫院(崇明路)"
+      ]
+    },
+    {
+      "city": "高雄",
+      "q": "全",
+      "httpMs": 48.1,
+      "localMs": 40.52,
+      "prefixMs": 40.52,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "全國電子",
+        "全國電子",
+        "全聯",
+        "全家便利商店",
+        "全家便利商店"
+      ]
+    },
+    {
+      "city": "高雄",
+      "q": "全家",
+      "httpMs": 58.2,
+      "localMs": 51.78,
+      "prefixMs": 51.78,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "全家便利商店",
+        "全家便利商店",
+        "全家便利商店",
+        "全家便利商店",
+        "全家便利商店"
+      ]
+    },
+    {
+      "city": "高雄",
+      "q": "全聯",
+      "httpMs": 85.1,
+      "localMs": 80.74,
+      "prefixMs": 80.74,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 4,
+      "names": [
+        "全聯",
+        "全聯",
+        "全聯",
+        "全聯"
+      ]
+    },
+    {
+      "city": "高雄",
+      "q": "7",
+      "httpMs": 39.6,
+      "localMs": 32.97,
+      "prefixMs": 32.97,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "7-Eleven",
+        "7-Eleven",
+        "7-Eleven",
+        "7-Eleven",
+        "7-Eleven"
+      ]
+    },
+    {
+      "city": "高雄",
+      "q": "711",
+      "httpMs": 32.9,
+      "localMs": 27.4,
+      "prefixMs": 27.4,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "7-Eleven",
+        "7-Eleven",
+        "7-Eleven",
+        "7-Eleven",
+        "九如四路711巷"
+      ]
+    },
+    {
+      "city": "高雄",
+      "q": "7-ELEVEN",
+      "httpMs": 33.5,
+      "localMs": 27.99,
+      "prefixMs": 27.99,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "7-Eleven",
+        "九如四路711巷",
+        "九如四路711巷2弄",
+        "鼎中路711巷17弄",
+        "鼎中路711巷39弄"
+      ]
+    },
+    {
+      "city": "高雄",
+      "q": "星",
+      "httpMs": 28.4,
+      "localMs": 23.38,
+      "prefixMs": 23.38,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "星巴克",
+        "星巴克",
+        "星巴克",
+        "星巴克",
+        "星巴克"
+      ]
+    },
+    {
+      "city": "高雄",
+      "q": "星巴克",
+      "httpMs": 28.7,
+      "localMs": 23.86,
+      "prefixMs": 23.86,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "星巴克",
+        "星巴克",
+        "星巴克",
+        "星巴克",
+        "星巴克"
+      ]
+    },
+    {
+      "city": "高雄",
+      "q": "麥",
+      "httpMs": 34.5,
+      "localMs": 28.19,
+      "prefixMs": 28.19,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "麥當勞",
+        "麥當勞",
+        "麥當勞",
+        "麥當勞",
+        "麥當勞"
+      ]
+    },
+    {
+      "city": "高雄",
+      "q": "麥當勞",
+      "httpMs": 35.7,
+      "localMs": 30.17,
+      "prefixMs": 30.17,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "麥當勞",
+        "麥當勞",
+        "麥當勞",
+        "麥當勞",
+        "麥當勞"
+      ]
+    },
+    {
+      "city": "高雄",
+      "q": "加",
+      "httpMs": 15.6,
+      "localMs": 9.65,
+      "prefixMs": 9.65,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "加油站(前鎮加工區)",
+        "加油站",
+        "全國加油站",
+        "水美加油站",
+        "九大加油站"
+      ]
+    },
+    {
+      "city": "高雄",
+      "q": "加油站",
+      "httpMs": 12.4,
+      "localMs": 6.22,
+      "prefixMs": 6.22,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "加油站(前鎮加工區)",
+        "全國加油站",
+        "水美加油站",
+        "九大加油站",
+        "五甲尾加油站"
+      ]
+    },
+    {
+      "city": "高雄",
+      "q": "停",
+      "httpMs": 26.6,
+      "localMs": 20.71,
+      "prefixMs": 20.71,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "龍華停車場",
+        "CITY PARKING 城市車旅停車場入口(家樂福鼎山)",
+        "金馬公有停車場",
+        "明仁公共停車場通道",
+        "后安停車場"
+      ]
+    },
+    {
+      "city": "高雄",
+      "q": "停車場",
+      "httpMs": 19.5,
+      "localMs": 13.92,
+      "prefixMs": 13.92,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "龍華停車場",
+        "CITY PARKING 城市車旅停車場入口(家樂福鼎山)",
+        "金馬公有停車場",
+        "明仁公共停車場通道",
+        "后安停車場"
+      ]
+    },
+    {
+      "city": "高雄",
+      "q": "藥",
+      "httpMs": 25.6,
+      "localMs": 18.64,
+      "prefixMs": 18.64,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "興中好藥局",
+        "合康健保藥局",
+        "大樹藥局",
+        "大樹藥局",
+        "黃藥局"
+      ]
+    },
+    {
+      "city": "高雄",
+      "q": "藥局",
+      "httpMs": 17.8,
+      "localMs": 12.35,
+      "prefixMs": 12.35,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "興中好藥局",
+        "合康健保藥局",
+        "大樹藥局",
+        "大樹藥局",
+        "黃藥局"
+      ]
+    },
+    {
+      "city": "高雄",
+      "q": "醫",
+      "httpMs": 30.8,
+      "localMs": 24.72,
+      "prefixMs": 24.72,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "高雄市立民生醫院",
+        "高雄市立民生醫院",
+        "聯合醫院",
+        "聯合醫院",
+        "國軍高雄總醫院"
+      ]
+    },
+    {
+      "city": "高雄",
+      "q": "醫院",
+      "httpMs": 21.7,
+      "localMs": 14.96,
+      "prefixMs": 14.96,
+      "fallbackMs": null,
+      "stage": "local",
+      "count": 24,
+      "names": [
+        "高雄市立民生醫院",
+        "高雄市立民生醫院",
+        "聯合醫院",
+        "聯合醫院",
+        "國軍高雄總醫院"
+      ]
+    }
+  ]
+}

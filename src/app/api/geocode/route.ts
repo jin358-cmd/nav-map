@@ -18,7 +18,7 @@ export async function GET(request: Request) {
   const latitude = Number.isFinite(biasLat) ? biasLat : undefined;
   const longitude = Number.isFinite(biasLng) ? biasLng : undefined;
 
-  if (query.length < 2) {
+  if (query.length < 1) {
     const parsed = normalizeTaiwanAddress(query);
     return Response.json({
       query,

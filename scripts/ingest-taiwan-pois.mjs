@@ -46,6 +46,23 @@ function normalize(value) {
     .replace(/[\s\-_.＋+]/g, "");
 }
 
+function nameFitsBrand(name, brand) {
+  if (!brand) return true;
+  const n = normalize(name);
+  const b = normalize(brand);
+  if (!n || !b) return true;
+  if (n.includes(b) || (n.length >= 2 && b.includes(n))) return true;
+  if (b.includes("7eleven") || b === "711") {
+    return /7eleven|統一超商|小七|^711$/.test(n) || n.startsWith("7eleven") || n.startsWith("711");
+  }
+  if (b.includes("familymart") || b.includes("全家")) return n.includes("全家") || n.includes("familymart");
+  if (b.includes("pxmart") || b.includes("全聯")) return n.includes("全聯") || n.includes("pxmart");
+  if (b.includes("starbucks") || b.includes("星巴克")) return n.includes("星巴克") || n.includes("starbucks");
+  if (b.includes("mcdonald") || b.includes("麥當勞")) return n.includes("麥當勞") || n.includes("mcdonald");
+  if (b.includes("elife") || b.includes("全國電子")) return n.includes("全國電子") || n.includes("elife");
+  return false;
+}
+
 function inTaiwan(lat, lng) {
   return lng >= 118 && lng <= 123 && lat >= 20 && lat <= 27;
 }
@@ -89,6 +106,7 @@ async function searchPhoton(query, meta, county) {
     const lng = Number(feature.geometry?.coordinates?.[0]);
     const lat = Number(feature.geometry?.coordinates?.[1]);
     const name = feature.properties?.name || query;
+    if (meta.brand && !nameFitsBrand(name, meta.brand)) return null;
     const address = [
       feature.properties?.state,
       feature.properties?.district,

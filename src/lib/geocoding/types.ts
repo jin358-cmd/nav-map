@@ -29,6 +29,10 @@ export type GeocodeResult = {
   distanceMeters?: number;
   exactHouseNumber?: boolean;
   matchKind: GeocodeMatchKind;
+  category?: string;
+  branchName?: string | null;
+  phone?: string;
+  hours?: string;
 };
 
 export type GeocodeLookupMode = "suggest" | "search";

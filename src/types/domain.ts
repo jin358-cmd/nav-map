@@ -313,6 +313,7 @@ export type GeocodeHit = {
   confidence?: number;
   distanceMeters?: number;
   category?: string;
+  branchName?: string;
   phone?: string;
   hours?: string;
 };

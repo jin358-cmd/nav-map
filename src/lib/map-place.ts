@@ -46,6 +46,22 @@ export type MapPoiFeature = {
   updatedAt: string;
 };
 
+export function geocodeHitToPlace(hit: GeocodeHit): MapPlace {
+  return {
+    id: hit.id,
+    kind: "poi",
+    name: hit.name,
+    category: hit.category,
+    categoryLabel: poiCategoryLabel(hit.category),
+    address: hit.address,
+    location: hit.location,
+    distanceMeters: hit.distanceMeters,
+    source: hit.source,
+    phone: hit.phone,
+    hours: hit.hours,
+  };
+}
+
 export function mapPlaceToHit(place: MapPlace): GeocodeHit {
   return {
     id: place.id,

@@ -428,5 +428,9 @@ export function toGeocodeHits(results: GeocodeResult[]) {
     matchKind: item.matchKind,
     confidence: item.confidence,
     distanceMeters: item.distanceMeters,
+    category: item.category,
+    branchName: item.branchName ?? undefined,
+    phone: item.phone,
+    hours: item.hours,
   }));
 }

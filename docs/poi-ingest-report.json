@@ -1,29 +1,30 @@
 {
   "dataset": "taiwan_poi_index",
-  "source": "OpenStreetMap via Nominatim/Photon",
-  "license": "ODbL",
-  "total": 546,
-  "failed": 0,
+  "source": "OpenStreetMap Overpass + Photon (ODbL)",
+  "companyRegistry": "not-imported (commercial registration ≠ navigable POI)",
+  "total": 945,
+  "failed": 14,
   "bySource": {
-    "osm": 546
+    "osm": 945
   },
   "byCategory": {
-    "convenience": 155,
+    "convenience": 345,
     "fuel": 37,
     "parking": 62,
     "pharmacy": 57,
     "hospital": 73,
-    "landmark": 34,
-    "restaurant": 61,
-    "cafe": 67
+    "landmark": 52,
+    "other": 66,
+    "restaurant": 129,
+    "cafe": 124
   },
-  "byCounty": {
-    "臺北市": 78,
-    "新北市": 60,
-    "桃園市": 75,
-    "臺中市": 80,
-    "臺南市": 76,
-    "高雄市": 74,
+  "byCity": {
+    "新北市": 140,
+    "臺北市": 142,
+    "臺中市": 138,
+    "臺南市": 145,
+    "桃園市": 132,
+    "高雄市": 145,
     "花蓮縣": 42,
     "澎湖縣": 29,
     "未知": 32

@@ -42,6 +42,7 @@ import {
   rankSearchHits,
 } from "@/lib/poi-search";
 import { SEARCH_FIRST_SCREEN } from "@/lib/search-constants";
+import { poiCategoryLabel } from "@/lib/poi/category-label";
 import { useAddressSearch } from "@/hooks/use-address-search";
 import { useSpeechToText } from "@/hooks/use-speech-to-text";
 import { cn } from "@/lib/utils";
@@ -172,6 +173,7 @@ export function AddressSearch({
 
   const searching = lookup.searching;
   const suggesting = lookup.suggesting && !lookup.submitted;
+  const searchingMore = lookup.searchingMore && !lookup.submitted;
   const previewHits = lookup.submitted
     ? mergeSearchHits([...lookup.suggestHits, ...lookup.remoteHits], 24)
     : lookup.suggestHits;
@@ -191,9 +193,11 @@ export function AddressSearch({
   );
   const emptyHint =
     needle.length >= 1 && !searching && !busy && visibleHits.length === 0
-      ? lookup.submitted
-        ? "找不到符合的地點"
-        : "輸入時會先找本機索引與紀錄。按搜尋或 Enter 再查門牌地圖。"
+      ? searchingMore
+        ? "搜尋更多來源中…"
+        : !lookup.suggestSettled || suggesting
+          ? null
+          : "找不到符合的地點"
       : null;
 
   return (
@@ -286,7 +290,7 @@ export function AddressSearch({
               ? "正在聽取語音…說完後會查門牌與地圖"
               : lookup.submitted
                 ? "已查門牌與地圖 · 點選結果開始導航"
-                : "輸入中只顯示紀錄、快取與附近店家 · 按搜尋或 Enter 查門牌"}
+                : "輸入即可顯示店家建議，不必按 Enter"}
             {region?.city
               ? ` · 優先 ${region.city}${region.town}`
               : ""}
@@ -393,7 +397,7 @@ export function AddressSearch({
             </div>
           ) : null}
 
-          {searching || suggesting || busy ? (
+          {searching || busy ? (
             <div
               className="mx-3 my-2 flex items-center gap-2 rounded-xl bg-white/8 px-3 py-2 text-sm text-white"
               role="status"
@@ -425,6 +429,11 @@ export function AddressSearch({
                     <span className="min-w-0">
                       <span className="block truncate text-sm text-white">
                         {formatTaiwanDisplayAddress(hit.name)}
+                        {hit.branchName ? (
+                          <span className="ml-1 text-[12px] font-normal text-zinc-300">
+                            {hit.branchName}
+                          </span>
+                        ) : null}
                       </span>
                       {hit.address &&
                       !sameTaiwanDisplayTitle(hit.name, hit.address) ? (
@@ -432,11 +441,16 @@ export function AddressSearch({
                           {formatTaiwanDisplayAddress(hit.address)}
                         </span>
                       ) : null}
-                      {meters != null ? (
-                        <span className="mt-0.5 block text-[11px] text-cyan-200/90">
-                          {formatDistance(meters)}
-                        </span>
-                      ) : null}
+                      <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-cyan-200/90">
+                        {meters != null ? (
+                          <span>{formatDistance(meters)}</span>
+                        ) : null}
+                        {hit.category ? (
+                          <span className="text-zinc-400">{poiCategoryLabel(hit.category)}</span>
+                        ) : null}
+                        {hit.hours ? <span className="text-zinc-400">{hit.hours}</span> : null}
+                        {hit.phone ? <span className="text-zinc-400">{hit.phone}</span> : null}
+                      </span>
                       {hit.matchKind ? (
                         <span
                           className={cn(

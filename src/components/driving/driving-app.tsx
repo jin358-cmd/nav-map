@@ -71,6 +71,7 @@ import {
 import { pickActiveRouteAlert } from "@/lib/route-events";
 import {
   customPlaceFromLngLat,
+  geocodeHitToPlace,
   mapPlaceToHit,
   parkingLotToPlace,
   poiFeatureToPlace,
@@ -1584,7 +1585,16 @@ export function DrivingApp() {
                 region={locatedRegion}
                 busy={routing}
                 error={routeError}
-                onSelect={(hit) => void applyRoute(hit)}
+                onSelect={(hit) => {
+                  setParkingOpen(false);
+                  setFavoritesOpen(false);
+                  setEventListKind(null);
+                  setSelectedEvent(null);
+                  setSelectedCctv(null);
+                  setSelectedParking(null);
+                  setSelectedMapPlace(geocodeHitToPlace(hit));
+                  focusEvent(hit.location);
+                }}
               />
               <SavedPlaceBar
                 home={homePlace}

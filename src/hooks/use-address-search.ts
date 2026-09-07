@@ -2,10 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { SearchRegion } from "@/lib/poi-search";
+import { SUGGEST_DEBOUNCE_MS, SUGGEST_MIN_CHARS } from "@/lib/search-constants";
 import { searchAddresses } from "@/services/routing";
 import type { GeocodeHit, LngLat } from "@/types/domain";
-
-const SUGGEST_DEBOUNCE_MS = 180;
 
 export function useAddressSearch(
   query: string,
@@ -14,11 +13,14 @@ export function useAddressSearch(
   region: SearchRegion | null = null,
 ) {
   const [suggestHits, setSuggestHits] = useState<GeocodeHit[]>([]);
+  const [suggestFor, setSuggestFor] = useState("");
   const [remoteHits, setRemoteHits] = useState<GeocodeHit[]>([]);
   const [submittedQuery, setSubmittedQuery] = useState("");
   const [suggesting, setSuggesting] = useState(false);
+  const [searchingMore, setSearchingMore] = useState(false);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [suggestSettled, setSuggestSettled] = useState(true);
   const suggestGenerationRef = useRef(0);
   const searchGenerationRef = useRef(0);
   const searchAbortRef = useRef<AbortController | null>(null);
@@ -30,7 +32,7 @@ export function useAddressSearch(
   const submitted = submittedQuery.length > 0 && submittedQuery === needle;
 
   useEffect(() => {
-    if (composing || needle.length < 2) {
+    if (composing || needle.length < SUGGEST_MIN_CHARS) {
       return;
     }
 
@@ -41,28 +43,47 @@ export function useAddressSearch(
       biasLng != null && biasLat != null
         ? { lng: biasLng, lat: biasLat }
         : undefined;
+    const regionArg =
+      locatedCity || locatedTown
+        ? { city: locatedCity, town: locatedTown }
+        : undefined;
     const timer = window.setTimeout(() => {
       setSuggesting(true);
-      void searchAddresses(
-        needle,
-        origin,
-        controller.signal,
-        "suggest",
-        locatedCity || locatedTown
-          ? { city: locatedCity, town: locatedTown }
-          : undefined,
-      )
-        .then((rows) => {
+      setSearchingMore(false);
+      void searchAddresses(needle, origin, controller.signal, "suggest", regionArg)
+        .then(async (rows) => {
           if (generation !== suggestGenerationRef.current) return;
-          setSuggestHits(rows);
+          setSuggestFor(needle);
+          if (rows.length) {
+            setSuggestHits(rows);
+            setSearchingMore(false);
+            return;
+          }
+          setSuggestHits([]);
+          if (needle.length < 2) return;
+          setSearchingMore(true);
+          const extra = await searchAddresses(
+            needle,
+            origin,
+            controller.signal,
+            "search",
+            regionArg,
+          );
+          if (generation !== suggestGenerationRef.current) return;
+          setSuggestHits(extra);
+          setSuggestFor(needle);
         })
         .catch((cause: unknown) => {
           if (generation !== suggestGenerationRef.current) return;
           if (cause instanceof DOMException && cause.name === "AbortError") return;
           setSuggestHits([]);
+          setSuggestFor(needle);
         })
         .finally(() => {
-          if (generation === suggestGenerationRef.current) setSuggesting(false);
+          if (generation !== suggestGenerationRef.current) return;
+          setSuggesting(false);
+          setSearchingMore(false);
+          setSuggestSettled(true);
         });
     }, SUGGEST_DEBOUNCE_MS);
 
@@ -129,11 +150,16 @@ export function useAddressSearch(
     [biasLat, biasLng, locatedCity, locatedTown],
   );
 
+  const hitsForNeedle = suggestFor === needle ? suggestHits : [];
+  const settledForNeedle = needle.length < SUGGEST_MIN_CHARS || (suggestFor === needle && suggestSettled);
+
   return {
-    suggestHits: needle.length < 2 ? [] : suggestHits,
+    suggestHits: needle.length < SUGGEST_MIN_CHARS ? [] : hitsForNeedle,
     remoteHits: submitted ? remoteHits : [],
     submitted,
-    suggesting: needle.length >= 2 && suggesting,
+    suggesting: needle.length >= SUGGEST_MIN_CHARS && suggesting,
+    searchingMore: needle.length >= SUGGEST_MIN_CHARS && searchingMore,
+    suggestSettled: settledForNeedle,
     searching: submitted && searching,
     error: submitted && needle.length >= 1 ? error : null,
     submit,

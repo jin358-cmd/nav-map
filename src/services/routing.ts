@@ -62,7 +62,8 @@ export async function searchAddresses(
   }
   if (region?.city) params.set("city", region.city);
   if (region?.town) params.set("town", region.town);
-  const response = await fetch(`/api/geocode?${params.toString()}`, { signal });
+  const path = mode === "suggest" ? `/api/suggest?${params.toString()}` : `/api/geocode?${params.toString()}`;
+  const response = await fetch(path, { signal });
   if (!response.ok) {
     throw new Error("地址搜尋失敗");
   }
@@ -93,6 +94,10 @@ export async function searchAddresses(
         matchKind: item.matchKind,
         confidence: item.confidence,
         distanceMeters: item.distanceMeters,
+        category: item.category,
+        branchName: item.branchName ?? undefined,
+        phone: item.phone,
+        hours: item.hours,
       } satisfies GeocodeHit,
     ];
   });

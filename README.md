@@ -74,7 +74,7 @@ npm start
 
 定位權限可拒絕；拒絕後地圖仍可用，車輛標記留在預設中心。GPS 授權成功則移到目前位置。
 
-頂部可輸入地址或地標。輸入期間只顯示搜尋歷史、本機店家／地標，以及已寫入的地址快取。按 **Enter**、搜尋按鈕或「搜尋「…」」後，才向國土測繪圖資服務雲、TGOS（需金鑰）與 OpenStreetMap／Nominatim 查門牌。MapLibre 模式不使用 Google Geocoding／Places。成功選定的目的地會保存在搜尋列（最多 6 筆，可點選重用或清除）。導航終點為黃色圓點，外圈持續擴散。選定後搜尋列會收起，改顯示確認列。點 **確認** 後進入駕駛畫面。
+頂部搜尋列從第 1 個字開始即時 Suggest（debounce 110ms，不必按 Enter）。伺服器以 OSM 台灣 POI 索引做 prefix／品牌／模糊搜尋，本地沒有才補查國土測繪圖資服務雲、TGOS 與 Nominatim。MapLibre 模式不使用 Google Geocoding／Places。點建議結果會定位並開啟 POI 資訊卡（可導航、可收藏）。成功選定的目的地會保存在搜尋列。詳見 [`docs/poi-search.md`](docs/poi-search.md)。
 
 ## 第一階段已完成功能
 
