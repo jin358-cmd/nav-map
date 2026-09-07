@@ -53,7 +53,7 @@ function nameFitsBrand(name, brand) {
   if (!n || !b) return true;
   if (n.includes(b) || (n.length >= 2 && b.includes(n))) return true;
   if (b.includes("7eleven") || b === "711") {
-    return /7eleven|統一超商|小七|^711$/.test(n) || n.startsWith("7eleven") || n.startsWith("711");
+    return /7eleven|統一超商|小七|^711/.test(n) || n.startsWith("7eleven");
   }
   if (b.includes("familymart") || b.includes("全家")) return n.includes("全家") || n.includes("familymart");
   if (b.includes("pxmart") || b.includes("全聯")) return n.includes("全聯") || n.includes("pxmart");

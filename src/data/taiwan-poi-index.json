@@ -109,7 +109,7 @@
     "nameNormalized": "711咖啡座",
     "aliases": [
       "711",
-      "7-11",
+      "711",
       "統一超商"
     ],
     "category": "convenience",
@@ -2291,13 +2291,9 @@
     "id": "osm-N-4684554101",
     "name": "711號攤位",
     "nameNormalized": "711號攤位",
-    "aliases": [
-      "711",
-      "7-11",
-      "統一超商"
-    ],
+    "aliases": [],
     "category": "convenience",
-    "brand": "7-Eleven",
+    "brand": null,
     "branchName": null,
     "address": "東區建成路",
     "addressNormalized": "東區建成路",
@@ -2311,7 +2307,7 @@
     "updatedAt": "2026-09-07T09:28:30.115Z",
     "license": "ODbL",
     "confidence": 0.82,
-    "isActive": true
+    "isActive": false
   },
   {
     "id": "osm-N-8377468423",
