@@ -1366,8 +1366,8 @@ export function DrivingApp() {
           setSelectedEvent(null);
           setSelectedCctv(null);
           setMusicMode("off");
+          setSelectedMapPlace(null);
           if (found) {
-            setSelectedMapPlace(parkingLotToPlace(found));
             focusEvent(found.location);
           }
         }}
