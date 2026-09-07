@@ -879,22 +879,33 @@ export function DrivingApp() {
 
   const handleToggleParking = useCallback(() => {
     setParkingOpen((open) => {
-      const next = !open;
-      if (!next) setSelectedParking(null);
-      return next;
+      if (open) {
+        setSelectedParking(null);
+        return false;
+      }
+      return true;
     });
     setFavoritesOpen(false);
+    setEventListKind(null);
+    setSelectedEvent(null);
+    setSelectedCctv(null);
+    setMusicMode("off");
+    setSelectedMapPlace(null);
+    setParkingSort("distance");
   }, []);
 
   const currentPlace = destination ? destinationToHit(destination) : null;
   const isCurrentFavorite = currentPlace ? isFavorite(currentPlace) : false;
 
   const handleHeartClick = useCallback(() => {
+    setFavoritesOpen((open) => !open);
+    setParkingOpen(false);
+    setSelectedParking(null);
     setSelectedCctv(null);
     setSelectedEvent(null);
     setEventListKind(null);
-    setMusicMode((mode) => (mode === "open" ? "mini" : mode));
-    setFavoritesOpen((open) => !open);
+    setMusicMode("off");
+    setSelectedMapPlace(null);
   }, []);
 
   const clearRoute = useCallback(() => {
@@ -1268,6 +1279,11 @@ export function DrivingApp() {
         if (eventListKind === kind) setEventListKind(null);
         return;
       }
+      setParkingOpen(false);
+      setSelectedParking(null);
+      setFavoritesOpen(false);
+      setMusicMode("off");
+      setSelectedMapPlace(null);
       if (!visible) {
         setLayerVisibility((current) => ({ ...current, [kind]: true }));
       }
@@ -1343,7 +1359,13 @@ export function DrivingApp() {
         onParkingSelect={(id) => {
           const found = parkingLots.find((lot) => lot.id === id) ?? null;
           setSelectedParking(found);
+          setParkingSort("distance");
           setParkingOpen(true);
+          setFavoritesOpen(false);
+          setEventListKind(null);
+          setSelectedEvent(null);
+          setSelectedCctv(null);
+          setMusicMode("off");
           if (found) {
             setSelectedMapPlace(parkingLotToPlace(found));
             focusEvent(found.location);
@@ -1678,7 +1700,14 @@ export function DrivingApp() {
             onFind={() => {
               setParkingArrivalOpen(false);
               parkingArrivalDismissedRef.current = true;
+              setParkingSort("distance");
               setParkingOpen(true);
+              setFavoritesOpen(false);
+              setEventListKind(null);
+              setSelectedEvent(null);
+              setSelectedCctv(null);
+              setMusicMode("off");
+              setSelectedMapPlace(null);
             }}
             onSkip={() => {
               setParkingArrivalOpen(false);
@@ -1867,15 +1896,19 @@ export function DrivingApp() {
             setFavoritesOpen(false);
             setSelectedCctv(null);
             setSelectedEvent(null);
-            setMusicMode((mode) => (mode === "open" ? "mini" : mode));
+            setEventListKind(null);
+            setMusicMode("off");
           }}
           onToggleMusic={() => {
             setFavoritesOpen(false);
+            setParkingOpen(false);
+            setSelectedParking(null);
             setSelectedCctv(null);
             setSelectedEvent(null);
+            setEventListKind(null);
+            setSelectedMapPlace(null);
             setMusicMode((mode) => {
               if (mode === "off") return "open";
-              if (mode === "open") return "mini";
               return "off";
             });
           }}

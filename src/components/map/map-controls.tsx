@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Box, LayoutGrid, LocateFixed, Square } from "lucide-react";
+import { LayoutGrid, LocateFixed } from "lucide-react";
 import { MapStyleMenu } from "@/components/overlay/map-style-menu";
 import { Button } from "@/components/ui/button";
 import {
@@ -77,9 +77,9 @@ export function MapControls({
         tone={tone}
       >
         {cameraMode === "3d" ? (
-          <Box className="size-6" strokeWidth={2.5} />
+          <span className="text-[13px] font-bold leading-none tracking-wide">3D</span>
         ) : (
-          <Square className="size-6" strokeWidth={2.5} />
+          <FlatPlanIcon />
         )}
       </ControlButton>
       <MapStyleMenu
@@ -103,6 +103,25 @@ export function MapControls({
         </ControlButton>
       ) : null}
     </div>
+  );
+}
+
+function FlatPlanIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="size-6"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinejoin="round"
+      strokeLinecap="round"
+      aria-hidden
+    >
+      <path d="M3.5 8.5 L20.5 8.5 L18 18.5 H6 Z" />
+      <path d="M12 8.5 V18.5" />
+      <path d="M6.2 13.2 H17.8" />
+    </svg>
   );
 }
 

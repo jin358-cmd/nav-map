@@ -4,7 +4,6 @@ import { Navigation, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   formatDistance,
-  formatParkingRate,
   formatUpdatedAgo,
 } from "@/lib/format";
 import { parkingOwnershipLabel } from "@/lib/parking/brands";
@@ -23,29 +22,6 @@ const SORT_BUTTONS: Array<{ value: ParkingSort; label: string }> = [
   { value: "remaining", label: "格數" },
 ];
 
-function spacesLabel(lot: ParkingLot) {
-  if (lot.availabilityStatus === "unknown" || lot.carAvailable == null) {
-    return "格數未提供";
-  }
-  if (lot.availabilityStatus === "stale") {
-    return `${lot.carAvailable}格（可能過期）`;
-  }
-  return `${lot.carAvailable}格`;
-}
-
-function ownershipName(lot: ParkingLot) {
-  return `${parkingOwnershipLabel(lot.publicLot)} ${lot.name}`;
-}
-
-function lotLine(lot: ParkingLot) {
-  return [
-    lot.distanceMeters != null ? formatDistance(lot.distanceMeters) : "距離未提供",
-    ownershipName(lot),
-    formatParkingRate(lot),
-    spacesLabel(lot),
-  ].join(" · ");
-}
-
 function cityFromOrigin(origin: ParkingCatalog["origin"]) {
   if (origin === "tainan-open") return "臺南市";
   if (origin === "taipei-open") return "臺北市";
@@ -60,15 +36,21 @@ function parkingUpdateTitle(
   const area = (city || cityFromOrigin(origin)).replaceAll("台", "臺");
   const ago = fetchedAt ? formatUpdatedAgo(fetchedAt) : "剛剛";
   return area
-    ? `${area}公有/民營停車場更新・${ago}`
-    : `公有/民營停車場更新・${ago}`;
+    ? `${area}公有／民營停車場(更新・${ago})`
+    : `公有／民營停車場(更新・${ago})`;
 }
 
-function markerClass(lot: ParkingLot) {
-  if (lot.fill === "plenty") return "bg-emerald-400";
-  if (lot.fill === "limited") return "bg-amber-300";
-  if (lot.fill === "full") return "bg-red-400";
-  return "bg-zinc-400";
+function yellowLotLine(lot: ParkingLot) {
+  const distance =
+    lot.distanceMeters != null ? formatDistance(lot.distanceMeters) : "距離未提供";
+  const place =
+    formatTaiwanDisplayAddress(lot.address) ||
+    `${parkingOwnershipLabel(lot.publicLot)} ${lot.name}`;
+  const spaces =
+    lot.carAvailable == null || lot.availabilityStatus === "unknown"
+      ? "(約—格)"
+      : `(約${lot.carAvailable}格)`;
+  return `${distance}・${place}・${spaces}`;
 }
 
 export function ParkingPanel({
@@ -101,7 +83,6 @@ export function ParkingPanel({
   onToggleArrivalPrompt?: (enabled: boolean) => void;
 }) {
   const ranked = sortParkingLots(lots, sort);
-  const detail = selected;
   return (
     <section className="pointer-events-auto w-full max-w-xl rounded-2xl border border-white/15 bg-black/80 p-3 text-white shadow-[0_12px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl">
       <div className="mb-2 flex items-start justify-between gap-2">
@@ -165,24 +146,6 @@ export function ParkingPanel({
           </button>
         ))}
       </div>
-      {detail ? (
-        <article className="mb-2 rounded-xl bg-white/8 p-2.5">
-          <p className="truncate text-sm font-semibold text-zinc-100">
-            {lotLine(detail)}
-          </p>
-          <p className="mt-1 truncate text-[11px] text-zinc-500">
-            {formatTaiwanDisplayAddress(detail.address) || "地址未提供"}
-          </p>
-          <Button
-            type="button"
-            onClick={() => onNavigate(detail)}
-            className="mt-2 h-11 w-full rounded-xl bg-sky-400 text-[#041016] hover:bg-sky-300 touch-manipulation"
-          >
-            <Navigation className="size-4" />
-            導航前往
-          </Button>
-        </article>
-      ) : null}
       {loading && ranked.length === 0 ? (
         <div
           className="flex flex-col items-center justify-center gap-2 px-1 py-6 text-sm text-sky-100"
@@ -197,29 +160,33 @@ export function ParkingPanel({
           {origin === "unavailable" ? "資料暫時無法取得" : "附近沒有停車場資料"}
         </p>
       ) : (
-        <ul className="max-h-40 overflow-y-auto">
+        <ul className="max-h-52 space-y-2 overflow-y-auto">
           {ranked.map((lot) => (
             <li key={lot.id}>
-              <button
-                type="button"
-                onClick={() => onSelect(lot)}
+              <div
                 className={cn(
-                  "flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left touch-manipulation",
-                  selected?.id === lot.id ? "bg-white/12" : "hover:bg-white/8",
+                  "rounded-xl border px-2.5 py-2",
+                  selected?.id === lot.id
+                    ? "border-amber-300/55 bg-amber-400/18"
+                    : "border-sky-300/25 bg-sky-950/55",
                 )}
               >
-                <span
-                  className={cn(
-                    "flex size-9 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-[#041016]",
-                    markerClass(lot),
-                  )}
+                <button
+                  type="button"
+                  onClick={() => onSelect(lot)}
+                  className="w-full truncate text-left text-[13px] font-semibold text-yellow-300 touch-manipulation"
                 >
-                  {lot.carAvailable == null ? "P?" : `P${Math.max(0, lot.carAvailable)}`}
-                </span>
-                <span className="min-w-0 flex-1 truncate text-[13px] text-zinc-100">
-                  {lotLine(lot)}
-                </span>
-              </button>
+                  {yellowLotLine(lot)}
+                </button>
+                <Button
+                  type="button"
+                  onClick={() => onNavigate(lot)}
+                  className="mt-1.5 h-10 w-full rounded-xl bg-yellow-300 text-[#041016] hover:bg-yellow-200 touch-manipulation"
+                >
+                  <Navigation className="size-4" />
+                  導航前往
+                </Button>
+              </div>
             </li>
           ))}
         </ul>
