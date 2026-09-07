@@ -131,6 +131,7 @@
 
 .function-drawer {
   position: relative;
+  align-self: flex-end;
   transform: translateY(0);
   opacity: 1;
   transition:
@@ -177,6 +178,21 @@
   right: 0.05rem;
 }
 
+.parking-p-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border-radius: 999px;
+  border: 2px solid #38bdf8;
+  background: transparent;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
 .parking-chip-spinner {
   position: absolute;
   inset: 0.22rem;
@@ -202,7 +218,7 @@
   animation: parking-chip-spin 0.7s linear infinite;
 }
 
-@media (max-width: 430px) {
+@media (max-width: 430px) and (orientation: landscape) {
   .function-chip {
     width: 2.55rem;
     min-height: 2.55rem;
@@ -844,6 +860,62 @@
 }
 
 @media (orientation: portrait) {
+  .function-drawer {
+    align-self: center;
+  }
+
+  .function-menu {
+    align-items: center;
+  }
+
+  .function-menu__title {
+    justify-content: center;
+  }
+
+  .function-favorites-pop {
+    left: 50%;
+    right: auto;
+    width: min(22rem, calc(100vw - 1.5rem));
+    transform: translateX(-50%);
+  }
+
+  .function-chip {
+    width: min(4.9rem, 22vw);
+    min-height: min(4.7rem, 21vw);
+    padding: 0.4rem 0.16rem 0.32rem;
+    gap: 0.18rem;
+    border-radius: 1.05rem;
+  }
+
+  .function-chip__icon {
+    width: 2.4rem;
+    height: 2.4rem;
+  }
+
+  .function-chip__label {
+    font-size: 12px;
+  }
+
+  .function-chip__badge {
+    min-width: 1.15rem;
+    font-size: 11px;
+    line-height: 1.15rem;
+  }
+
+  .parking-p-mark {
+    border-width: 2.5px;
+    font-size: 1.35rem;
+  }
+
+  .parking-chip-spinner {
+    inset: 0.28rem;
+    border-width: 3px;
+  }
+
+  .hud-anchor-trip--drawer {
+    bottom: max(14.25rem, calc(env(safe-area-inset-bottom) + 13rem));
+  }
+
   .hud-anchor-trip {
     width: min(68vw, 21.5rem);
     max-width: calc(100vw - 7.25rem - env(safe-area-inset-right));

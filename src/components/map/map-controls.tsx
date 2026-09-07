@@ -77,7 +77,9 @@ export function MapControls({
         tone={tone}
       >
         {cameraMode === "3d" ? (
-          <span className="text-[13px] font-bold leading-none tracking-wide">3D</span>
+          <span className="text-[1.4rem] font-black leading-none tracking-tight">
+            3D
+          </span>
         ) : (
           <FlatPlanIcon />
         )}

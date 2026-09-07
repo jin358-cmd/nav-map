@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import {
   Check,
-  CircleParking,
   Heart,
   MapPin,
   Music2,
@@ -176,12 +175,12 @@ export function RoadInformationCard({
   };
 
   return (
-    <section className="pointer-events-auto relative inline-flex flex-col items-end text-white">
-      <div className="mb-1.5 flex w-full items-center justify-end gap-2 px-0.5">
+    <section className="function-menu pointer-events-auto relative inline-flex flex-col items-end text-white">
+      <div className="function-menu__title mb-1.5 flex w-full items-center justify-end gap-2 px-0.5">
         <p className="text-[11px] tracking-wide text-zinc-300">功能選單</p>
       </div>
       {favoritesOpen ? (
-        <div className="absolute bottom-full right-0 z-30 mb-2 w-[min(20rem,calc(100vw-1.25rem))]">
+        <div className="function-favorites-pop absolute bottom-full right-0 z-30 mb-2 w-[min(20rem,calc(100vw-1.25rem))]">
           <FavoritesPanel
             favorites={favorites}
             canFavorite={canFavorite}
@@ -267,7 +266,9 @@ export function RoadInformationCard({
                 aria-hidden
               />
             ) : null}
-            <CircleParking className="function-chip__icon" />
+            <span className="parking-p-mark function-chip__icon" aria-hidden>
+              P
+            </span>
             <span className="function-chip__label">停車</span>
           </button>
           {BOTTOM_KIND_ORDER.map((kind) => (

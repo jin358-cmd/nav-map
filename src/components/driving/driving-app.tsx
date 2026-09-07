@@ -1697,7 +1697,15 @@ export function DrivingApp() {
       ) : null}
 
       {parkingOpen ? (
-        <div className="pointer-events-none absolute inset-0 z-[60] flex items-center justify-center px-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))]">
+        <div
+          className={
+            landscape
+              ? "pointer-events-none absolute inset-0 z-[60] flex items-center justify-center px-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))]"
+              : drawerOpen
+                ? "pointer-events-none absolute inset-0 z-[60] flex items-end justify-center px-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] pb-[max(14.75rem,calc(env(safe-area-inset-bottom)+13.5rem))]"
+                : "pointer-events-none absolute inset-0 z-[60] flex items-end justify-center px-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] pb-[max(1.25rem,calc(env(safe-area-inset-bottom)+0.75rem))]"
+          }
+        >
           <div className="pointer-events-auto w-full max-w-xl">
             <ParkingPanel
               lots={parkingLots}
@@ -1858,8 +1866,8 @@ export function DrivingApp() {
           id="navpilot-function-drawer"
           className={
             drawerOpen
-              ? "function-drawer self-end"
-              : "function-drawer function-drawer--closed self-end"
+              ? "function-drawer"
+              : "function-drawer function-drawer--closed"
           }
         >
         <RoadInformationCard
