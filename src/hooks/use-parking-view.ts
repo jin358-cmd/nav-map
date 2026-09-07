@@ -44,10 +44,12 @@ export function useParkingView({
   center,
   enabled,
   radiusMeters = PARKING_DEFAULT_RADIUS_M,
+  refreshMs = 0,
 }: {
   center: LngLat | null;
   enabled: boolean;
   radiusMeters?: number;
+  refreshMs?: number;
 }) {
   const [catalog, setCatalog] = useState<ParkingCatalog>({
     origin: "unavailable",
@@ -57,6 +59,7 @@ export function useParkingView({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const generationRef = useRef(0);
+  const hasLotsRef = useRef(false);
 
   const searchLng = center ? Number((Math.round(center.lng * 200) / 200).toFixed(5)) : null;
   const searchLat = center ? Number((Math.round(center.lat * 200) / 200).toFixed(5)) : null;
@@ -82,6 +85,7 @@ export function useParkingView({
         .then((next) => {
           if (generation !== generationRef.current) return;
           setCatalog(next);
+          hasLotsRef.current = next.lots.length > 0;
           setError(next.origin === "unavailable" ? "資料暫時無法取得" : null);
           setLoading(false);
         })
@@ -93,6 +97,7 @@ export function useParkingView({
             lots: [],
             fetchedAt: new Date().toISOString(),
           });
+          hasLotsRef.current = false;
           setError("資料暫時無法取得");
           setLoading(false);
         });
@@ -102,6 +107,64 @@ export function useParkingView({
       controller.abort();
     };
   }, [enabled, radiusMeters, requestKey, searchLat, searchLng]);
+
+  useEffect(() => {
+    if (
+      !enabled ||
+      refreshMs <= 0 ||
+      searchLng == null ||
+      searchLat == null ||
+      requestKey == null
+    ) {
+      return;
+    }
+    let cancelled = false;
+    let controller = new AbortController();
+
+    const run = () => {
+      controller.abort();
+      controller = new AbortController();
+      const generation = generationRef.current + 1;
+      generationRef.current = generation;
+      const signal = controller.signal;
+      void fetchParking(
+        { lng: searchLng, lat: searchLat },
+        radiusMeters,
+        signal,
+      )
+        .then((next) => {
+          if (cancelled || generation !== generationRef.current) return;
+          setCatalog(next);
+          hasLotsRef.current = next.lots.length > 0;
+          setError(next.origin === "unavailable" ? "資料暫時無法取得" : null);
+          setLoading(false);
+        })
+        .catch((caught: unknown) => {
+          if (cancelled || generation !== generationRef.current) return;
+          if (caught instanceof DOMException && caught.name === "AbortError") return;
+          if (hasLotsRef.current) {
+            setLoading(false);
+            return;
+          }
+          setCatalog({
+            origin: "unavailable",
+            lots: [],
+            fetchedAt: new Date().toISOString(),
+          });
+          hasLotsRef.current = false;
+          setError("資料暫時無法取得");
+          setLoading(false);
+        });
+    };
+
+    run();
+    const interval = window.setInterval(run, refreshMs);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      controller.abort();
+    };
+  }, [enabled, radiusMeters, refreshMs, requestKey, searchLat, searchLng]);
 
   return {
     lots: catalog.lots,

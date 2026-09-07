@@ -4,10 +4,14 @@ import { Navigation, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   formatDistance,
+  formatParkingRate,
   formatUpdatedAgo,
 } from "@/lib/format";
 import { parkingOwnershipLabel } from "@/lib/parking/brands";
-import { formatTaiwanDisplayAddress } from "@/lib/geocoding/format-taiwan-display-address";
+import {
+  formatTaiwanDisplayAddress,
+  formatTaiwanRoadName,
+} from "@/lib/geocoding/format-taiwan-display-address";
 import { sortParkingLots } from "@/lib/parking-sort";
 import { cn } from "@/lib/utils";
 import type {
@@ -40,9 +44,30 @@ function parkingUpdateTitle(
     : `公有／民營停車場(更新・${ago})`;
 }
 
-function yellowLotLine(lot: ParkingLot) {
+function markerClass(lot: ParkingLot) {
+  if (lot.fill === "plenty") return "bg-emerald-400";
+  if (lot.fill === "limited") return "bg-amber-300";
+  if (lot.fill === "full") return "bg-red-400";
+  return "bg-zinc-400";
+}
+
+function spacesBadge(lot: ParkingLot) {
+  if (lot.carAvailable == null || lot.availabilityStatus === "unknown") {
+    return "—格";
+  }
+  return `${Math.max(0, lot.carAvailable)}格`;
+}
+
+function yellowLotLine(lot: ParkingLot, sort: ParkingSort) {
   const distance =
     lot.distanceMeters != null ? formatDistance(lot.distanceMeters) : "距離未提供";
+  if (sort === "price") {
+    const road =
+      formatTaiwanRoadName(lot.address) ||
+      formatTaiwanRoadName(lot.name) ||
+      lot.name;
+    return `${distance}・${formatParkingRate(lot)}・${road}`;
+  }
   const place =
     formatTaiwanDisplayAddress(lot.address) ||
     `${parkingOwnershipLabel(lot.publicLot)} ${lot.name}`;
@@ -148,7 +173,7 @@ export function ParkingPanel({
       </div>
       {loading && ranked.length === 0 ? (
         <div
-          className="flex flex-col items-center justify-center gap-2 px-1 py-6 text-sm text-sky-100"
+          className="flex min-h-[min(19.5rem,48vh)] flex-col items-center justify-center gap-2 px-1 py-6 text-sm text-sky-100"
           role="status"
           aria-live="polite"
         >
@@ -160,32 +185,42 @@ export function ParkingPanel({
           {origin === "unavailable" ? "資料暫時無法取得" : "附近沒有停車場資料"}
         </p>
       ) : (
-        <ul className="max-h-52 space-y-2 overflow-y-auto">
+        <ul className="max-h-[min(24rem,56vh)] min-h-[min(19.5rem,48vh)] space-y-2 overflow-y-auto">
           {ranked.map((lot) => (
             <li key={lot.id}>
               <div
                 className={cn(
-                  "rounded-xl border px-2.5 py-2",
+                  "flex items-center gap-2 rounded-xl border px-2.5 py-2",
                   selected?.id === lot.id
                     ? "border-amber-300/55 bg-amber-400/18"
                     : "border-sky-300/25 bg-sky-950/55",
                 )}
               >
-                <button
-                  type="button"
-                  onClick={() => onSelect(lot)}
-                  className="w-full truncate text-left text-[13px] font-semibold text-yellow-300 touch-manipulation"
+                <span
+                  className={cn(
+                    "flex size-11 shrink-0 items-center justify-center rounded-full px-0.5 text-center text-[10px] font-semibold leading-tight text-[#041016]",
+                    markerClass(lot),
+                  )}
                 >
-                  {yellowLotLine(lot)}
-                </button>
-                <Button
-                  type="button"
-                  onClick={() => onNavigate(lot)}
-                  className="mt-1.5 h-10 w-full rounded-xl bg-yellow-300 text-[#041016] hover:bg-yellow-200 touch-manipulation"
-                >
-                  <Navigation className="size-4" />
-                  導航前往
-                </Button>
+                  {spacesBadge(lot)}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <button
+                    type="button"
+                    onClick={() => onSelect(lot)}
+                    className="w-full truncate text-left text-[13px] font-semibold text-yellow-300 touch-manipulation"
+                  >
+                    {yellowLotLine(lot, sort)}
+                  </button>
+                  <Button
+                    type="button"
+                    onClick={() => onNavigate(lot)}
+                    className="mt-1.5 h-10 w-full rounded-xl bg-sky-300 text-[#041016] hover:bg-sky-200 touch-manipulation"
+                  >
+                    <Navigation className="size-4" />
+                    導航前往
+                  </Button>
+                </div>
               </div>
             </li>
           ))}

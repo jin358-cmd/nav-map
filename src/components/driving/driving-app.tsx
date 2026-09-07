@@ -79,6 +79,7 @@ import {
 import {
   PARKING_CURRENT_LOCATION_RADIUS_M,
   PARKING_DESTINATION_RADIUS_M,
+  PARKING_PANEL_REFRESH_MS,
 } from "@/lib/parking/constants";
 import {
   parkingArrivalPromptEnabled,
@@ -502,6 +503,7 @@ export function DrivingApp() {
     center: parkingCenter,
     enabled: Boolean(parkingCenter),
     radiusMeters: parkingRadiusMeters,
+    refreshMs: parkingOpen ? PARKING_PANEL_REFRESH_MS : 0,
   });
   const regionPoint = useMemo(
     () =>
@@ -1694,6 +1696,44 @@ export function DrivingApp() {
         </div>
       ) : null}
 
+      {parkingOpen ? (
+        <div className="pointer-events-none absolute inset-0 z-[60] flex items-center justify-center px-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))]">
+          <div className="pointer-events-auto w-full max-w-xl">
+            <ParkingPanel
+              lots={parkingLots}
+              origin={parkingOrigin}
+              fetchedAt={parkingFetchedAt}
+              city={locatedRegion.city}
+              loading={parkingLoading}
+              selected={selectedParking}
+              sort={parkingSort}
+              onSort={setParkingSort}
+              onSelect={(lot) => {
+                setSelectedParking(lot);
+                focusEvent(lot.location);
+              }}
+              onNavigate={(lot) => {
+                setParkingOpen(false);
+                void applyRoute({
+                  id: `parking-${lot.id}`,
+                  name: lot.name,
+                  address: formatTaiwanDisplayAddress(lot.address || lot.name),
+                  location: lot.location,
+                });
+              }}
+              onClose={() => {
+                setParkingOpen(false);
+                setSelectedParking(null);
+              }}
+              arrivalPromptEnabled={parkingArrivalEnabled}
+              onToggleArrivalPrompt={(enabled) => {
+                setParkingArrivalPromptEnabled(enabled);
+              }}
+            />
+          </div>
+        </div>
+      ) : null}
+
       <footer className="hud-anchor-interactive absolute inset-x-0 bottom-0 z-50 flex max-w-[100vw] flex-col items-center gap-1.5 overflow-visible px-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))] pb-[max(0.45rem,env(safe-area-inset-bottom))] sm:p-4 sm:pt-0">
         {parkingArrivalOpen ? (
           <ParkingArrivalCard
@@ -1753,39 +1793,6 @@ export function DrivingApp() {
                 : undefined
             }
             onClose={() => setSelectedMapPlace(null)}
-          />
-        ) : null}
-        {parkingOpen ? (
-          <ParkingPanel
-            lots={parkingLots}
-            origin={parkingOrigin}
-            fetchedAt={parkingFetchedAt}
-            city={locatedRegion.city}
-            loading={parkingLoading}
-            selected={selectedParking}
-            sort={parkingSort}
-            onSort={setParkingSort}
-            onSelect={(lot) => {
-              setSelectedParking(lot);
-              focusEvent(lot.location);
-            }}
-            onNavigate={(lot) => {
-              setParkingOpen(false);
-              void applyRoute({
-                id: `parking-${lot.id}`,
-                name: lot.name,
-                address: formatTaiwanDisplayAddress(lot.address || lot.name),
-                location: lot.location,
-              });
-            }}
-            onClose={() => {
-              setParkingOpen(false);
-              setSelectedParking(null);
-            }}
-            arrivalPromptEnabled={parkingArrivalEnabled}
-            onToggleArrivalPrompt={(enabled) => {
-              setParkingArrivalPromptEnabled(enabled);
-            }}
           />
         ) : null}
         {eventListKind ? (

@@ -127,6 +127,18 @@ function rebuildFromParts(parts: ReturnType<typeof parseDisplayParts>) {
   ]);
 }
 
+function rebuildRoadFromParts(parts: ReturnType<typeof parseDisplayParts>) {
+  return joinParts([
+    parts.road,
+    parts.section,
+    parts.lane,
+    parts.alley,
+    houseToken(parts.number, parts.subNumber),
+    parts.floor,
+    parts.room,
+  ]);
+}
+
 function formatCommaSeparated(value: string) {
   const tokens = value
     .split(",")
@@ -280,4 +292,79 @@ export function unifiedConfirmAddress(
     return stripAccuracyLabels(`${titleCore} · ${line}`);
   }
   return stripAccuracyLabels(title.length >= line.length ? title : line);
+}
+
+function formatCommaSeparatedRoad(value: string) {
+  const tokens = value
+    .split(",")
+    .map((token) => token.trim())
+    .filter(Boolean);
+  if (tokens.length < 2) return "";
+
+  const dropBare = /^(?:台灣|臺灣|Taiwan|ROC|\d{3,6})$/i;
+  const kept: string[] = [];
+
+  for (const token of tokens) {
+    if (dropBare.test(token) || OSM_DROP_TOKEN.test(token)) continue;
+    if (/[縣市]$/u.test(token) && token.length <= 4) continue;
+    if (/[區鎮鄉]$/u.test(token) || (token.endsWith("市") && token.length <= 4)) {
+      continue;
+    }
+    if (/[村里]$/u.test(token)) continue;
+    if (/\b(?:District|City|County|Township|Village|Neighborhood)\b/i.test(token)) {
+      continue;
+    }
+    if (
+      /(?:路|街|大道|道|段|巷|弄|號|樓|室)$/u.test(token) ||
+      /^(?:No\.?\s*)\d+/i.test(token) ||
+      /\b(?:Road|Street|Rd\.?|St\.?|Ave\.?|Avenue|Section)\b/i.test(token)
+    ) {
+      kept.push(token);
+    }
+  }
+
+  const english = kept.some((token) => /[A-Za-z]/.test(token));
+  return kept.join(english ? " " : "");
+}
+
+function stripLeadingPostal(value: string) {
+  return value.replace(/^\d{3,6}\s*/, "").trim();
+}
+
+/** 只保留路／街／段／巷／弄／號，省略郵遞區號與縣市區鄉鎮。 */
+export function formatTaiwanRoadName(
+  input: string | TaiwanDisplayAddressInput | null | undefined,
+): string {
+  if (input == null) return "";
+  if (typeof input === "object") {
+    const number = input.houseNumber || input.number || "";
+    const road = joinParts([
+      input.road,
+      input.section,
+      input.lane,
+      input.alley,
+      number,
+      input.floor,
+      input.room,
+    ]);
+    if (road) return road;
+    return input.fullAddress ? formatTaiwanRoadName(input.fullAddress) : "";
+  }
+
+  const trimmed = stripLeadingPostal(input.trim());
+  if (!trimmed) return "";
+  const { address } = peelNotes(trimmed);
+  const commaForm = formatCommaSeparatedRoad(address);
+  if (commaForm) return commaForm;
+
+  const compact = compactTaiwanText(stripLeadingPostal(address));
+  const parts = parseDisplayParts(compact);
+  const rebuilt = rebuildRoadFromParts(parts);
+  if (rebuilt) return rebuilt;
+
+  let rest = compact;
+  if (parts.city && rest.startsWith(parts.city)) rest = rest.slice(parts.city.length);
+  if (parts.town && rest.startsWith(parts.town)) rest = rest.slice(parts.town.length);
+  rest = rest.replace(VILLAGE_RE, "").replace(NEIGHBORHOOD_RE, "");
+  return stripLeadingPostal(rest);
 }

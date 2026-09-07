@@ -11,6 +11,8 @@ export const TAIPEI_PARK_AVAIL_URL =
 export const OSM_OVERPASS_URL = "https://overpass-api.de/api/interpreter";
 export const PARKING_STALE_AFTER_MS = 10 * 60 * 1000;
 export const PARKING_AVAIL_SYNC_MS = 3 * 60 * 1000;
+/** Occupancy refresh while the nearby parking panel is open. */
+export const PARKING_PANEL_REFRESH_MS = 10 * 1000;
 export const PARKING_LOT_SYNC_MS = 24 * 60 * 60 * 1000;
 export const PARKING_DEFAULT_RADIUS_M = 1000;
 export const PARKING_CURRENT_LOCATION_RADIUS_M = 3000;
