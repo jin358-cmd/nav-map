@@ -1731,6 +1731,7 @@ export function DrivingApp() {
             lots={parkingLots}
             origin={parkingOrigin}
             fetchedAt={parkingFetchedAt}
+            city={locatedRegion.city}
             loading={parkingLoading}
             selected={selectedParking}
             sort={parkingSort}
