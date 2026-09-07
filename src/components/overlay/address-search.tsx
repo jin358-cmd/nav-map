@@ -32,7 +32,6 @@ import {
   formatTaiwanDisplayAddress,
   sameTaiwanDisplayTitle,
 } from "@/lib/geocoding/format-taiwan-display-address";
-import { matchKindLabel } from "@/lib/geocoding/normalizeTaiwanAddress";
 import { formatDistance } from "@/lib/format";
 import { distanceKm } from "@/lib/geo";
 import {
@@ -417,51 +416,43 @@ export function AddressSearch({
                     ? Math.round(distanceKm(biasBucket, hit.location) * 1000)
                     : undefined);
                 return (
-                <li key={hit.id} className="flex items-start">
+                <li key={hit.id} className="flex items-center">
                   <button
                     type="button"
                     onClick={() => {
                       selectHit(hit);
                     }}
-                    className="flex min-w-0 flex-1 items-start gap-2.5 px-3 py-2.5 text-left hover:bg-white/8 touch-manipulation"
+                    className="flex min-w-0 flex-1 items-center gap-2.5 px-3 py-2.5 text-left hover:bg-white/8 touch-manipulation"
                   >
-                    <MapPin className="mt-0.5 size-4 shrink-0 text-cyan-300" />
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm text-white">
+                    <MapPin className="size-4 shrink-0 text-cyan-300" />
+                    <span className="block min-w-0 truncate whitespace-nowrap text-lg leading-7 text-white">
+                      <span className="font-medium">
                         {formatTaiwanDisplayAddress(hit.name)}
-                        {hit.branchName ? (
-                          <span className="ml-1 text-[12px] font-normal text-zinc-300">
-                            {hit.branchName}
-                          </span>
-                        ) : null}
                       </span>
+                      {hit.branchName ? (
+                        <span className="text-zinc-200"> {hit.branchName}</span>
+                      ) : null}
                       {hit.address &&
                       !sameTaiwanDisplayTitle(hit.name, hit.address) ? (
-                        <span className="block truncate text-[11px] text-zinc-500">
-                          {formatTaiwanDisplayAddress(hit.address)}
+                        <span className="text-zinc-400">
+                          {" "}
+                          · {formatTaiwanDisplayAddress(hit.address)}
                         </span>
                       ) : null}
-                      <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-cyan-200/90">
-                        {meters != null ? (
-                          <span>{formatDistance(meters)}</span>
-                        ) : null}
-                        {hit.category ? (
-                          <span className="text-zinc-400">{poiCategoryLabel(hit.category)}</span>
-                        ) : null}
-                        {hit.hours ? <span className="text-zinc-400">{hit.hours}</span> : null}
-                        {hit.phone ? <span className="text-zinc-400">{hit.phone}</span> : null}
-                      </span>
-                      {hit.matchKind ? (
-                        <span
-                          className={cn(
-                            "mt-0.5 inline-block rounded-full px-1.5 py-px text-[10px]",
-                            hit.exactHouseNumber
-                              ? "bg-cyan-400/15 text-cyan-200"
-                              : "bg-white/8 text-zinc-400",
-                          )}
-                        >
-                          {matchKindLabel(hit.matchKind)}
+                      {meters != null ? (
+                        <span className="text-cyan-200"> · {formatDistance(meters)}</span>
+                      ) : null}
+                      {hit.category ? (
+                        <span className="text-zinc-400">
+                          {" "}
+                          · {poiCategoryLabel(hit.category)}
                         </span>
+                      ) : null}
+                      {hit.hours ? (
+                        <span className="text-zinc-400"> · {hit.hours}</span>
+                      ) : null}
+                      {hit.phone ? (
+                        <span className="text-zinc-400"> · {hit.phone}</span>
                       ) : null}
                     </span>
                   </button>
@@ -472,7 +463,7 @@ export function AddressSearch({
                       if (isFavorite(hit)) removeFavorite(hit);
                       else addFavorite(hit);
                     }}
-                    className="mt-1.5 mr-2 flex size-8 shrink-0 items-center justify-center rounded-full text-rose-300 hover:bg-white/10 touch-manipulation"
+                    className="mr-2 flex size-8 shrink-0 items-center justify-center rounded-full text-rose-300 hover:bg-white/10 touch-manipulation"
                   >
                     <Heart
                       className={cn(
