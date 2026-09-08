@@ -65,7 +65,7 @@ Exact → Prefix → Alias → Brand → Strong fuzzy → Nearby → Category �
 
 ## K. 平均 Suggest latency
 
-以本機 `npm run measure:suggest` 為準（見 `docs/poi-suggest-measure.json`）。目標：本地 prefix 極短延遲。冷啟動需載入 OSM 索引。
+本機 `npm run measure:suggest`（6 城 × 18 query）：**平均 HTTP 109ms**。熱門 query cache 命中約 16–20ms。首次冷載入 OSM gzip 索引會較慢（單次可到 400–700ms），之後 prefix 多在 20–100ms。詳見 `docs/poi-suggest-measure.json`。
 
 ## L. Android 真機 latency
 
@@ -81,7 +81,7 @@ Exact → Prefix → Alias → Brand → Strong fuzzy → Nearby → Category �
 
 ## O. Commit hash
 
-以 `feat/phase-5-2-navigation-experience` 最新 commit 為準。
+`569badd` 之後以 `feat/phase-5-2-navigation-experience` 最新 commit 為準。
 
 ## P. Vercel Preview URL
 
