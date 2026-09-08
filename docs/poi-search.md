@@ -1,23 +1,94 @@
 # 全台 POI Search（Phase 5.2 P0）
 
-只使用合法來源：OpenStreetMap（ODbL）、NLSC／TGOS 地址後備、既有 Local Index。Google Places 維持停用。經濟部公司／商業登記**不會**整批當成可導航店家。
+只使用合法來源：OpenStreetMap Taiwan extract（ODbL）、NLSC／TGOS 地址後備。Google Places／Apple Maps 維持停用。經濟部公司／商業登記**不會**整批當成可導航店家，僅可作品牌別名補充。Photon 只作 Suggest fallback，不當主資料庫。禁止硬編碼假店、禁止把全庫下到手機、禁止前端全量 fuzzy。
 
-## 架構
+## A. 實際資料來源
 
-1. `npm run ingest:pois` 以 OSM Overpass 寫入 `src/data/taiwan-poi-index.json`（Photon 後備：`npm run ingest:pois:photon`）。
-2. 每筆保留 `source`、`sourceId`／`source_id`、`name`、`normalized_name`、`aliases`、`brand`、`branchName`、`category`、`address`、`normalized_address`、`city`、`district`、`lat/lng`、`updated_at`、`confidence`、`is_active`。
-3. 搜尋只在 server 跑。Android 只拿到 5～8 筆（可按顯示更多）。
-4. 輸入 1 字即走 `/api/suggest`：Prefix → Alias／Brand → Local Fuzzy；本地沒有才 fallback。
-Photon 回傳必須名稱與品牌相符，否則不寫入（避免「711」命中地政事務所等）。經濟部公司登記腳本 `npm run ingest:company-registry` 預設拒絕匯入。
+| 來源 | 角色 | 授權 |
+| --- | --- | --- |
+| OSM Taiwan PBF（BBBike／Geofabrik） | 主庫，`npm run ingest:pois`（osmium 分批） | ODbL |
+| NLSC TextQueryMap | Stage 4 門牌／地名 fallback | 國土測繪公開服務 |
+| TGOS 全國門牌 | Stage 4 選用後備（需金鑰） | TGOS |
+| OSM Nominatim | Stage 4 地圖地名後備 | ODbL |
+| 經濟部公司／商業登記 | **不整批匯入**；`npm run ingest:company-registry` 僅能補品牌別名 | 開放資料，≠ 可導航 POI |
+| Photon | 不當主庫；僅搜尋當下 fallback | ODbL |
 
-## Suggest
+## B. 各來源筆數（目前索引）
 
-- Debounce：110ms
-- 最短字數：1
-- 舊請求：AbortController + generation id
-- 熱門 query cache：`query + geohash(4) + version`，Nearby 不跨區
+OSM extract：fetched 182203 → inserted **135802**（rejected 37401、inactive 945）。
 
-## 排名
+主要縣市：臺北市 36864、臺中市 18829、桃園市 14101、新北市 11461、高雄市 10475、臺南市 8712。
 
-1. Exact → 2. Prefix → 3. Alias → 4. Brand → 5. Strong fuzzy → 6. Nearby → 7. Category → 8. Confidence  
-品牌／類別＋GPS：Nearby 提高權重。明確店名／地名：Exact 優先於距離。
+類別摘要：restaurant 34965、convenience 12279、cafe 7976、clinic 4388、parking 4019、supermarket 3185、pharmacy 2000、fuel 1623、hospital 54。
+
+公司登記：`not-imported`。
+
+## C. Supabase schema
+
+`public.taiwan_poi_index` 欄位對應：`source`、`source_id`、`name`、`name_normalized`、`aliases`、`brand`、`branch_name`、`category`、`address`、`address_normalized`、`city`、`district`、`geom`（lat/lng）、`updated_at`、`last_seen_at`、`source_updated_at`、`confidence`、`is_active`。
+
+拒絕列：`poi_import_rejects`。
+
+本機／Vercel 無 SERVICE_ROLE 時，Suggest **只走記憶體索引**，不掃全表、不打 Supabase。
+
+## D. Index
+
+PostgreSQL（有連線時）：`pg_trgm`、GIN（name_normalized、aliases）、prefix `text_pattern_ops`、brand、category、city、PostGIS GIST(`geom`)。RPC：`suggest_taiwan_pois`。
+
+伺服器記憶體：1～2 字 prefix map、brand map、category map、geohash-4／5（Nearby 只掃鄰近格）。
+
+## E. Suggest API
+
+`GET /api/suggest?q=&lat=&lng=&city=&town=`
+
+Stage 1～3 僅本地 prefix／alias／brand／fuzzy。本地 0 筆且 ≥2 字才由客戶端再打 `/api/geocode`（NLSC／TGOS／Nominatim）。
+
+## F. Debounce
+
+**110ms**（`SUGGEST_DEBOUNCE_MS`，範圍 80～150ms）。最短 **1** 字。不必按 Enter。
+
+## G. Request cancellation
+
+`AbortController` + `suggestGenerationRef`／`searchGenerationRef`。新字取消舊請求；舊結果不可覆蓋新 query。
+
+## H. Ranking
+
+Exact → Prefix → Alias → Brand → Strong fuzzy → Nearby → Category → Confidence。品牌／類別＋GPS：Nearby。明確店名或查詢含其他縣市：Exact／該縣市優先。1～2 字會品牌去重。
+
+## I. Alias / Brand
+
+`src/lib/poi/aliases.ts`：全家、全聯、全國電子、7-ELEVEN（含 `7`／`711`）、星巴克、麥當勞、中油等。OSM `brand` 與店名不合（例如巷名被標成 7-Eleven、攤位）會丟掉 brand。
+
+## J. Cache
+
+熱門 query（全家、7-11、星巴克、麥當勞、加油站、停車場、全聯、藥局、醫院、`7`）記憶體 cache。Key：`query + geohash(4) + version`。Nearby 不跨區。
+
+## K. 平均 Suggest latency
+
+以本機 `npm run measure:suggest` 為準（見 `docs/poi-suggest-measure.json`）。目標：本地 prefix 極短延遲。冷啟動需載入 OSM 索引。
+
+## L. Android 真機 latency
+
+**NOT AVAILABLE**（此雲端環境沒有 Android 真機）。請用 Vercel Preview 在手機輸入 1～2 字確認不卡頓、不擋 Map／GPS。
+
+## M. 測試 Query
+
+`全／全家／全聯／7／711／7-ELEVEN／星／星巴克／麥／麥當勞／加／加油站／停／停車場／藥／藥局／醫／醫院`，城市：台北、新北、桃園、台中、台南、高雄。結果見 measure JSON。
+
+## N. Typecheck / Lint / Build
+
+以當次 `npm run lint && npm run typecheck && npm run build` 為準。
+
+## O. Commit hash
+
+以 `feat/phase-5-2-navigation-experience` 最新 commit 為準。
+
+## P. Vercel Preview URL
+
+https://nav-map-git-feat-phase-5-2-navigation-experience-tjc1.vercel.app
+
+## 排程
+
+- OSM extract：每週 `npm run ingest:pois`（可續傳 PBF）
+- 關店／改名／搬家：ingest 以 `updated_at`、`last_seen_at`、`is_active` 標記
+- `POST /api/pois/sync`（`x-poi-sync-key`）只觸發本機索引狀態，不在 runtime 全量重抓

@@ -77,7 +77,7 @@ export type SuggestTimings = {
 };
 
 function toGeocode(query: string, poi: TaiwanPoiRecord, origin?: { lat: number; lng: number }): GeocodeResult {
-  const score = rankScore(query, poi);
+  const score = rankScore(query, poi, origin);
   const displayName = poi.branchName ? `${poi.name} ${poi.branchName}` : poi.name;
   return {
     id: poi.id,
@@ -102,7 +102,9 @@ export async function searchTaiwanPoiIndex(
   origin?: { lat: number; lng: number },
   signal?: AbortSignal,
 ): Promise<GeocodeResult[]> {
-  const { results } = await searchTaiwanPoiIndexTimed(query, origin, signal);
+  const { results } = await searchTaiwanPoiIndexTimed(query, origin, signal, {
+    remote: true,
+  });
   return results;
 }
 
@@ -110,6 +112,7 @@ export async function searchTaiwanPoiIndexTimed(
   query: string,
   origin?: { lat: number; lng: number },
   signal?: AbortSignal,
+  options: { remote?: boolean } = {},
 ): Promise<{ results: GeocodeResult[]; timings: SuggestTimings; localCount: number }> {
   const started = performance.now();
   if (query.trim().length < 1) {
@@ -126,10 +129,13 @@ export async function searchTaiwanPoiIndexTimed(
 
   const remoteStarted = performance.now();
   let remote: TaiwanPoiRecord[] = [];
-  try {
-    remote = await searchSupabasePois(query, origin, signal);
-  } catch {
-    remote = [];
+  const wantRemote = options.remote === true && local.length < 8;
+  if (wantRemote) {
+    try {
+      remote = await searchSupabasePois(query, origin, signal);
+    } catch {
+      remote = [];
+    }
   }
   const remoteMs = performance.now() - remoteStarted;
 

@@ -37,6 +37,10 @@ const nextConfig: NextConfig = {
       "./node_modules/maplibre-gl/dist/maplibre-gl-worker.mjs",
       "./node_modules/maplibre-gl/dist/maplibre-gl-shared.mjs",
     ],
+    "/api/suggest": ["./src/data/taiwan-poi-index.json"],
+    "/api/geocode": ["./src/data/taiwan-poi-index.json"],
+    "/api/pois": ["./src/data/taiwan-poi-index.json"],
+    "/api/pois/sync": ["./src/data/taiwan-poi-index.json"],
   },
 };
 

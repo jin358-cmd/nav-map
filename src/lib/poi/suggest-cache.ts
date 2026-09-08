@@ -3,11 +3,12 @@ import "server-only";
 import { encodeGeohash } from "@/lib/poi/geohash";
 import type { GeocodeResult } from "@/lib/geocoding/types";
 
-export const SUGGEST_CACHE_VERSION = "poi-suggest-5";
+export const SUGGEST_CACHE_VERSION = "poi-suggest-6";
 const HOT_TTL_MS = 10 * 60 * 1000;
 const HOT_QUERIES = new Set(
   [
     "全家",
+    "7",
     "7-11",
     "711",
     "7-eleven",

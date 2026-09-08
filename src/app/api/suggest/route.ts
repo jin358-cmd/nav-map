@@ -57,7 +57,9 @@ export async function GET(request: Request) {
   }
 
   const started = performance.now();
-  const local = await searchTaiwanPoiIndexTimed(query, origin, request.signal);
+  const local = await searchTaiwanPoiIndexTimed(query, origin, request.signal, {
+    remote: false,
+  });
   if (local.results.length || !wantFallback) {
     if (local.results.length && isHotSuggestQuery(query)) {
       writeSuggestCache(cacheKey, local.results);
