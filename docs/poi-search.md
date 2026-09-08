@@ -1,6 +1,6 @@
 # 全台 POI Search（Phase 5.2 P0）
 
-只使用合法來源：OpenStreetMap Taiwan extract（ODbL）、NLSC／TGOS 地址後備。Google Places／Apple Maps 維持停用。經濟部公司／商業登記**不會**整批當成可導航店家，僅可作品牌別名補充。Photon 只作 Suggest fallback，不當主資料庫。禁止硬編碼假店、禁止把全庫下到手機、禁止前端全量 fuzzy。
+只使用合法來源：OpenStreetMap Taiwan extract（ODbL）、經濟部商工行政資料開放平臺 CSV（OGDL）、NLSC／TGOS 地址後備。Google Places／Apple Maps／中華黃頁網站維持不爬。經濟部公司／商業登記**僅匯入核准設立、且門牌能配到座標的店面業別**（餐館、零售、藥局、加油站等），並套中華黃頁食衣住行育樂分類。Photon 只作 Suggest fallback。禁止硬編碼假店、禁止把全庫下到手機、禁止前端全量 fuzzy。
 
 ## A. 實際資料來源
 
@@ -10,20 +10,21 @@
 | NLSC TextQueryMap | Stage 4 門牌／地名 fallback | 國土測繪公開服務 |
 | TGOS 全國門牌 | Stage 4 選用後備（需金鑰） | TGOS |
 | OSM Nominatim | Stage 4 地圖地名後備 | ODbL |
-| 經濟部公司／商業登記 | **不整批匯入**；`npm run ingest:company-registry` 僅能補品牌別名 | 開放資料，≠ 可導航 POI |
+| 經濟部商工開放平臺 CSV | 全國店面業別（核准設立＋門牌座標） | OGDL-Taiwan-1.0 |
+| 國土測繪 TextQueryMap | 公司／商業地址門牌配對 | 國土測繪公開服務 |
 | Photon | 不當主庫；僅搜尋當下 fallback | ODbL |
 
 ## B. 各來源筆數（目前索引）
 
 OSM extract：fetched 182203 → inserted **135802**（rejected 37401、inactive 945），再以官網門市更新超商。
 
-目前索引：active **139964**／total **140890**。官方超商抓取：7-ELEVEN **7314**、全家 **4524**（合併後品牌列 7-Eleven 8021、FamilyMart 4993）。便利商店類 **16441**。
+目前索引：active **146859**／total **147686**（含經濟部店面 **10939** 筆已配門牌）。官方超商抓取：7-ELEVEN **7314**、全家 **4524**。
 
 主要縣市（含官網門市）：臺北市 36706、臺中市 19352、桃園市 14196、新北市 12968、高雄市 10979、臺南市 9056。
 
 類別摘要：restaurant 34965、convenience 16441、cafe 7976、clinic 4388、parking 4019、supermarket 3185、pharmacy 2000、fuel 1623、hospital 54。
 
-公司登記：`not-imported`。
+公司登記：`npm run ingest:company-registry`（經濟部 CSV ＋ NLSC 門牌；可續跑）。
 
 ## C. Supabase schema
 
@@ -83,7 +84,7 @@ Exact → Prefix → Alias → Brand → Strong fuzzy → Nearby → Category �
 
 ## O. Commit hash
 
-`feat/phase-5-2-navigation-experience` 最新 commit（此次 Suggest 加速之後）。
+`adb3f26` on `feat/phase-5-2-navigation-experience`
 
 ## P. Vercel Preview URL
 
@@ -93,6 +94,7 @@ https://nav-map-git-feat-phase-5-2-navigation-experience-tjc1.vercel.app
 
 - OSM extract：每週 `npm run ingest:pois`（可續傳 PBF）
 - 全國連鎖門市：`npm run ingest:chains`（優先 7-ELEVEN／全家官網地圖；萊爾富／OK 在公開接口可用時一併更新）
+- 經濟部店面：`npm run ingest:company-registry`（商工 CSV ＋ NLSC 門牌，可續跑；`GCIS_NLSC_LIMIT` 控制本次配對筆數）
 - 僅重算中華黃頁圖層：`npm run ingest:pois:classify`
 - 關店／改名／搬家：ingest 以 `updated_at`、`last_seen_at`、`is_active` 標記
 - `POST /api/pois/sync`（`x-poi-sync-key`）只觸發本機索引狀態，不在 runtime 全量重抓
