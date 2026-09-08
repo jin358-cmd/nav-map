@@ -91,7 +91,7 @@ export function PlaceInfoCard({
 
   return (
     <article className="pointer-events-auto w-full max-w-xl rounded-2xl border border-white/16 bg-black/80 p-3 text-white shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl">
-      <div className="mb-2 flex items-start justify-between gap-2">
+      <div className="mb-2 flex items-start gap-2">
         <div className="min-w-0 flex-1">
           {place.brand ? (
             <p className="truncate text-[12px] text-cyan-100/80">{place.brand}</p>
@@ -106,7 +106,24 @@ export function PlaceInfoCard({
             <h2 className="truncate text-lg font-bold leading-tight">{place.name}</h2>
           )}
         </div>
-        <HudCloseButton label="關閉地點資訊" onClick={onClose} />
+        <div className="flex w-12 shrink-0 flex-col items-center">
+          <div className="flex size-12 items-center justify-center">
+            <HudCloseButton label="關閉地點資訊" onClick={onClose} />
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            aria-pressed={favorite}
+            aria-label={favorite ? "移出最愛" : "加入最愛"}
+            onClick={onToggleFavorite}
+            className={cn(
+              "size-12 shrink-0 text-rose-200 hover:bg-white/10 hover:text-rose-100",
+              favorite && "text-rose-100",
+            )}
+          >
+            <Heart className={cn("size-5", favorite && "fill-rose-500 text-rose-400")} />
+          </Button>
+        </div>
       </div>
       <dl className="grid gap-1.5 text-[13px] text-zinc-200">
         {address ? (
@@ -200,27 +217,14 @@ export function PlaceInfoCard({
           </div>
         ) : null}
       </dl>
-      <div className="mt-3 flex gap-2">
+      <div className="mt-3">
         <Button
           type="button"
           onClick={onNavigate}
-          className="h-12 min-h-12 flex-1 rounded-xl bg-cyan-400 text-base font-semibold text-[#041016] hover:bg-cyan-300"
+          className="h-12 min-h-12 w-full rounded-xl bg-cyan-400 text-base font-semibold text-[#041016] hover:bg-cyan-300"
         >
           <Navigation className="size-4" />
           {place.kind === "parking" ? "導航前往" : "開始導航"}
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          aria-pressed={favorite}
-          aria-label={favorite ? "移出最愛" : "加入最愛"}
-          onClick={onToggleFavorite}
-          className={cn(
-            "size-12 shrink-0 text-rose-200 hover:bg-white/10 hover:text-rose-100",
-            favorite && "text-rose-100",
-          )}
-        >
-          <Heart className={cn("size-5", favorite && "fill-rose-500 text-rose-400")} />
         </Button>
       </div>
     </article>

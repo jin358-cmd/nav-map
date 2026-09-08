@@ -74,9 +74,9 @@ export function RouteConfirmBar({
 
   return (
     <div className="pointer-events-auto mx-auto w-[min(100%,24.5rem)] rounded-2xl border border-cyan-300/20 bg-black/78 shadow-[0_10px_40px_rgba(0,0,0,0.5)] backdrop-blur-xl">
-      <div className="flex w-full flex-col gap-2.5 px-3.5 py-3">
-        <div className="flex items-start gap-1.5">
-          <div className="min-w-0 flex-1">
+      <div className="flex w-full items-start gap-1.5 px-3.5 py-3">
+        <div className="flex min-w-0 flex-1 flex-col gap-2.5">
+          <div className="min-w-0">
             <p className="truncate text-lg leading-tight font-bold tracking-tight text-white">
               {storeName}
             </p>
@@ -92,29 +92,26 @@ export function RouteConfirmBar({
               {` · ${formatCoords(destination.location)}`}
             </p>
           </div>
-          <HudCloseButton label="取消路線，重新搜尋" onClick={onClear} />
-        </div>
-        <div className="flex gap-1.5">
-          {(["car", "motorcycle"] as const).map((mode) => (
-            <button
-              key={mode}
-              type="button"
-              onClick={() => onTravelMode(mode)}
-              className={cn(
-                "h-9 rounded-full px-3 text-sm",
-                travelMode === mode
-                  ? "bg-cyan-400 text-[#041016]"
-                  : "bg-white/8 text-zinc-200",
-              )}
-            >
-              {travelModeLabel(mode)}
-            </button>
-          ))}
-        </div>
-        <div className="flex w-full items-center gap-1.5">
+          <div className="flex gap-1.5">
+            {(["car", "motorcycle"] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => onTravelMode(mode)}
+                className={cn(
+                  "h-9 rounded-full px-3 text-sm",
+                  travelMode === mode
+                    ? "bg-cyan-400 text-[#041016]"
+                    : "bg-white/8 text-zinc-200",
+                )}
+              >
+                {travelModeLabel(mode)}
+              </button>
+            ))}
+          </div>
           <p
             className={cn(
-              "min-w-0 flex-1 truncate text-base font-medium",
+              "min-w-0 truncate text-base font-medium",
               error
                 ? "text-amber-200"
                 : rerouting || (motorcycleUnsupported && travelMode === "motorcycle")
@@ -138,6 +135,24 @@ export function RouteConfirmBar({
                       </>
                     )}
           </p>
+          <Button
+            type="button"
+            onClick={onStartNav}
+            disabled={
+              rerouting ||
+              Boolean(error) ||
+              distanceMeters == null ||
+              (motorcycleUnsupported && travelMode === "motorcycle")
+            }
+            className="h-12 min-h-12 w-full rounded-xl bg-cyan-400 text-base font-semibold text-[#041016] hover:bg-cyan-300"
+          >
+            開始導航
+          </Button>
+        </div>
+        <div className="flex w-11 shrink-0 flex-col items-center">
+          <div className="flex size-11 items-center justify-center">
+            <HudCloseButton label="取消路線，重新搜尋" onClick={onClear} />
+          </div>
           {onToggleFavorite ? (
             <button
               type="button"
@@ -154,19 +169,6 @@ export function RouteConfirmBar({
             </button>
           ) : null}
         </div>
-        <Button
-          type="button"
-          onClick={onStartNav}
-          disabled={
-            rerouting ||
-            Boolean(error) ||
-            distanceMeters == null ||
-            (motorcycleUnsupported && travelMode === "motorcycle")
-          }
-          className="h-12 min-h-12 w-full rounded-xl bg-cyan-400 text-base font-semibold text-[#041016] hover:bg-cyan-300"
-        >
-          開始導航
-        </Button>
       </div>
     </div>
   );
