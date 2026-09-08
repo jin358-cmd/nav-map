@@ -173,6 +173,101 @@
   pointer-events: none;
 }
 
+.poi-layer-read-hud {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 8.5rem;
+  padding: 0.85rem 1rem 0.8rem;
+  border-radius: 1.15rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(0, 0, 0, 0.78);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.poi-layer-read-hud__label {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #ecfeff;
+}
+
+.poi-layer-read-pie {
+  --poi-progress: 0;
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 3.55rem;
+  height: 3.55rem;
+  border-radius: 999px;
+  background: conic-gradient(
+    #67e8f9 calc(var(--poi-progress) * 1%),
+    rgba(255, 255, 255, 0.12) 0
+  );
+  box-shadow: inset 0 0 0 2px rgba(103, 232, 249, 0.28);
+  transition: background 90ms linear;
+}
+
+.poi-layer-read-pie__hole {
+  display: grid;
+  place-items: center;
+  width: 2.15rem;
+  height: 2.15rem;
+  border-radius: 999px;
+  background: #0b0d11;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #ecfeff;
+}
+
+.poi-layer-read-pie--compact,
+.poi-layer-read-pie--banner {
+  flex-shrink: 0;
+  box-shadow: inset 0 0 0 1px rgba(103, 232, 249, 0.35);
+}
+
+.poi-layer-read-pie--compact {
+  width: 1.7rem;
+  height: 1.7rem;
+}
+
+.poi-layer-read-pie--banner {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.poi-layer-read-pie--compact::after,
+.poi-layer-read-pie--banner::after {
+  content: "";
+  border-radius: 999px;
+  background: #0b0d11;
+}
+
+.poi-layer-read-pie--compact::after {
+  width: 0.62rem;
+  height: 0.62rem;
+}
+
+.poi-layer-read-pie--banner::after {
+  width: 0.42rem;
+  height: 0.42rem;
+}
+
+.poi-layer-read-anchor {
+  position: absolute;
+  inset: 0;
+  z-index: 36;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
 .function-drawer {
   position: relative;
   align-self: flex-end;

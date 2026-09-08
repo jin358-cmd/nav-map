@@ -25,6 +25,7 @@ import { EventListPanel } from "@/components/overlay/event-list-panel";
 import { FavoritesPanel } from "@/components/overlay/favorites-panel";
 import { ParkingArrivalCard } from "@/components/overlay/parking-arrival-card";
 import { PoiLayerDrawer } from "@/components/overlay/poi-layer-drawer";
+import { PoiLayerReadProgress } from "@/components/overlay/poi-layer-read-progress";
 import { ParkingPanel } from "@/components/overlay/parking-panel";
 import { PlaceInfoCard } from "@/components/overlay/place-info-card";
 import { NextIntersectionHud } from "@/components/overlay/navigation-banner";
@@ -537,11 +538,12 @@ export function DrivingApp() {
     [searchOrigin, vehicle.lat, vehicle.lng, vehicle.source],
   );
   const locatedRegion = useLocatedRegion(regionPoint);
-  const mapPois = useMapPois({
-    viewport,
-    origin: searchOrigin,
-    enabled: anyPoiLayerOn(poiLayerVisibility) || poiMenuOpen,
-  });
+  const { pois: mapPois, loading: poiLayersLoading, progress: poiLayersProgress } =
+    useMapPois({
+      viewport,
+      origin: searchOrigin,
+      enabled: anyPoiLayerOn(poiLayerVisibility) || poiMenuOpen,
+    });
   const visibleMapPois = useMemo(
     () =>
       mapPois.filter((poi) =>
@@ -1611,6 +1613,12 @@ export function DrivingApp() {
 
       <div className="driving-vignette pointer-events-none absolute inset-0" />
 
+      {poiLayersLoading ? (
+        <div className="poi-layer-read-anchor">
+          <PoiLayerReadProgress progress={poiLayersProgress} />
+        </div>
+      ) : null}
+
       {styleHint ? (
         <p className="pointer-events-none absolute top-[max(4.5rem,env(safe-area-inset-top))] left-1/2 z-30 -translate-x-1/2 rounded-full bg-black/70 px-3 py-1 text-xs text-amber-100">
           {styleHint}
@@ -1825,6 +1833,8 @@ export function DrivingApp() {
           <PoiLayerDrawer
             open={poiMenuOpen}
             visibility={poiLayerVisibility}
+            loading={poiLayersLoading}
+            progress={poiLayersProgress}
             onToggle={(id) =>
               setPoiLayerVisibility((current) => ({
                 ...current,
@@ -1844,6 +1854,8 @@ export function DrivingApp() {
           styleMenuOpen={styleMenuOpen}
           toolsDrawerOpen={drawerOpen}
           poiMenuOpen={poiMenuOpen}
+          poiLayersLoading={poiLayersLoading}
+          poiLayersProgress={poiLayersProgress}
           navigating={navigating}
           onLocate={() => void locate()}
           onToggleCamera={() =>

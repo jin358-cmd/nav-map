@@ -18,8 +18,12 @@ export function useMapPois({
   enabled?: boolean;
 }) {
   const [pois, setPois] = useState<MapPoiFeature[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
   const originRef = useRef(origin);
   const fetchedKeyRef = useRef<string | null>(null);
+  const hideTimerRef = useRef<number | null>(null);
+  const readGenRef = useRef(0);
 
   useEffect(() => {
     originRef.current = origin;
@@ -40,11 +44,21 @@ export function useMapPois({
 
   useEffect(() => {
     if (!key || !bounds) {
-      return;
+      readGenRef.current += 1;
+      if (hideTimerRef.current) {
+        window.clearTimeout(hideTimerRef.current);
+        hideTimerRef.current = null;
+      }
+      const reset = window.setTimeout(() => {
+        setLoading(false);
+        setProgress(0);
+      }, 0);
+      return () => window.clearTimeout(reset);
     }
     if (fetchedKeyRef.current === key) {
       return;
     }
+    const readGen = ++readGenRef.current;
     const controller = new AbortController();
     const params = new URLSearchParams({
       west: String(bounds.west),
@@ -58,8 +72,51 @@ export function useMapPois({
       params.set("lng", String(here.lng));
       params.set("lat", String(here.lat));
     }
+
+    let tick: number | null = null;
+    const clearTick = () => {
+      if (tick != null) {
+        window.clearInterval(tick);
+        tick = null;
+      }
+    };
+    const beginRead = () => {
+      if (readGenRef.current !== readGen) return;
+      if (hideTimerRef.current) {
+        window.clearTimeout(hideTimerRef.current);
+        hideTimerRef.current = null;
+      }
+      setLoading(true);
+      setProgress(8);
+      tick = window.setInterval(() => {
+        if (readGenRef.current !== readGen) return;
+        setProgress((current) => {
+          if (current >= 88) return current;
+          return Math.min(88, current + Math.max(0.7, (88 - current) * 0.07));
+        });
+      }, 120);
+    };
+    const finishRead = (ok: boolean) => {
+      if (readGenRef.current !== readGen) return;
+      clearTick();
+      if (!ok) {
+        setLoading(false);
+        setProgress(0);
+        return;
+      }
+      setProgress(100);
+      if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = window.setTimeout(() => {
+        if (readGenRef.current !== readGen) return;
+        setLoading(false);
+        setProgress(0);
+        hideTimerRef.current = null;
+      }, 320);
+    };
+
     const delay = fetchedKeyRef.current ? 80 : 0;
     const timer = window.setTimeout(() => {
+      beginRead();
       void fetch(`/api/pois?${params}`, { signal: controller.signal })
         .then(async (response) => {
           if (!response.ok) throw new Error("poi viewport failed");
@@ -69,16 +126,32 @@ export function useMapPois({
           if (controller.signal.aborted) return;
           fetchedKeyRef.current = key;
           setPois(data.pois ?? []);
+          finishRead(true);
         })
         .catch(() => {
-          if (!controller.signal.aborted) setPois([]);
+          if (!controller.signal.aborted) {
+            setPois([]);
+            finishRead(false);
+          }
         });
     }, delay);
     return () => {
       window.clearTimeout(timer);
+      clearTick();
       controller.abort();
     };
   }, [bounds, key, zoom]);
 
-  return key ? pois : [];
+  useEffect(() => {
+    return () => {
+      if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current);
+    };
+  }, []);
+
+  const reading = Boolean(key) && loading;
+  return {
+    pois: key ? pois : [],
+    loading: reading,
+    progress: reading ? progress : 0,
+  };
 }

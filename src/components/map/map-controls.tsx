@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { LayoutGrid, LocateFixed, ShoppingBag } from "lucide-react";
 import { MapStyleMenu } from "@/components/overlay/map-style-menu";
+import { PoiLayerReadProgress } from "@/components/overlay/poi-layer-read-progress";
 import { Button } from "@/components/ui/button";
 import {
   mapControlButtonClass,
@@ -27,6 +28,8 @@ type MapControlsProps = {
   styleMenuOpen: boolean;
   toolsDrawerOpen?: boolean;
   poiMenuOpen?: boolean;
+  poiLayersLoading?: boolean;
+  poiLayersProgress?: number;
   navigating?: boolean;
   onLocate: () => void;
   onToggleCamera: () => void;
@@ -46,6 +49,8 @@ export function MapControls({
   styleMenuOpen,
   toolsDrawerOpen = false,
   poiMenuOpen = false,
+  poiLayersLoading = false,
+  poiLayersProgress = 0,
   onLocate,
   onToggleCamera,
   onMapDisplayMode,
@@ -65,14 +70,24 @@ export function MapControls({
     <div className="pointer-events-auto flex flex-col items-end gap-2.5">
       {onTogglePoiMenu ? (
         <ControlButton
-          label={poiMenuOpen ? "收合生活圖層" : "開啟生活圖層"}
+          label={
+            poiLayersLoading
+              ? "生活圖層讀取中"
+              : poiMenuOpen
+                ? "收合生活圖層"
+                : "開啟生活圖層"
+          }
           onClick={onTogglePoiMenu}
-          active={poiMenuOpen}
+          active={poiMenuOpen || poiLayersLoading}
           expanded={poiMenuOpen}
           controls="navpilot-poi-layers"
           tone={tone}
         >
-          <ShoppingBag className="size-6" strokeWidth={2.5} />
+          {poiLayersLoading ? (
+            <PoiLayerReadProgress compact progress={poiLayersProgress} />
+          ) : (
+            <ShoppingBag className="size-6" strokeWidth={2.5} />
+          )}
         </ControlButton>
       ) : null}
       <ControlButton

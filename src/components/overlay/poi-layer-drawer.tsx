@@ -6,15 +6,20 @@ import {
   type PoiLayerVisibility,
   type PoiMainLayerId,
 } from "@/lib/poi/main-layers";
+import { PoiLayerReadBanner } from "@/components/overlay/poi-layer-read-progress";
 import { cn } from "@/lib/utils";
 
 export function PoiLayerDrawer({
   open,
   visibility,
+  loading = false,
+  progress = 0,
   onToggle,
 }: {
   open: boolean;
   visibility: PoiLayerVisibility;
+  loading?: boolean;
+  progress?: number;
   onToggle: (id: PoiMainLayerId) => void;
 }) {
   return (
@@ -25,8 +30,10 @@ export function PoiLayerDrawer({
         "poi-layer-drawer pointer-events-auto rounded-2xl border border-white/15 bg-black/80 px-2 py-2 shadow-[0_12px_32px_rgba(0,0,0,0.45)] backdrop-blur-xl",
         !open && "poi-layer-drawer--closed",
       )}
+      aria-busy={loading || undefined}
     >
       <p className="mb-1.5 px-1 text-[11px] tracking-wide text-zinc-300">生活圖層</p>
+      {loading ? <PoiLayerReadBanner progress={progress} /> : null}
       <div className="flex flex-col gap-1">
         {POI_MAIN_LAYERS.map((layer) => {
           const on = visibility[layer.id];
