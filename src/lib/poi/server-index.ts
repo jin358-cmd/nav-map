@@ -1,6 +1,8 @@
 import "server-only";
 
-import taiwanPoiIndex from "@/data/taiwan-poi-index.json";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { gunzipSync } from "node:zlib";
 import { distanceKm } from "@/lib/geo";
 import type { GeocodeResult } from "@/lib/geocoding/types";
 import { buildPoiIndexes, diversifyByBrand, searchIndexedPois } from "@/lib/poi/prefix-index";
@@ -12,7 +14,25 @@ import {
   type TaiwanPoiRow,
 } from "@/lib/poi/schema";
 
-const MEMORY_INDEX: TaiwanPoiRecord[] = (taiwanPoiIndex as Array<Record<string, unknown>>)
+function loadPoiPayload(): Array<Record<string, unknown>> {
+  const gz = join(process.cwd(), "src/data/taiwan-poi-index.json.gz");
+  const json = join(process.cwd(), "src/data/taiwan-poi-index.json");
+  try {
+    if (existsSync(gz)) {
+      return JSON.parse(gunzipSync(readFileSync(gz)).toString("utf8")) as Array<
+        Record<string, unknown>
+      >;
+    }
+    if (existsSync(json)) {
+      return JSON.parse(readFileSync(json).toString("utf8")) as Array<Record<string, unknown>>;
+    }
+  } catch {
+    return [];
+  }
+  return [];
+}
+
+const MEMORY_INDEX: TaiwanPoiRecord[] = loadPoiPayload()
   .map((row) => hydratePoiRecord(row))
   .filter((row): row is TaiwanPoiRecord => Boolean(row && row.isActive));
 

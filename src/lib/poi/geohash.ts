@@ -44,3 +44,16 @@ export function encodeGeohash(
   }
   return hash;
 }
+
+/** Neighboring cells via small lat/lng offsets. Used for nearby suggest, not full-table distance. */
+export function nearbyGeohashes(lat: number, lng: number, precision = 5) {
+  const dlat = precision >= 5 ? 0.044 : 0.18;
+  const dlng = precision >= 5 ? 0.088 : 0.36;
+  const hashes = new Set<string>();
+  for (const la of [-dlat, 0, dlat]) {
+    for (const ln of [-dlng, 0, dlng]) {
+      hashes.add(encodeGeohash(lat + la, lng + ln, precision));
+    }
+  }
+  return [...hashes];
+}

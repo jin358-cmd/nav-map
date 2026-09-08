@@ -1,33 +1,205 @@
 {
   "dataset": "taiwan_poi_index",
-  "source": "OpenStreetMap Overpass + Photon (ODbL)",
-  "companyRegistry": "not-imported (commercial registration ≠ navigable POI)",
-  "total": 945,
-  "failed": 14,
+  "source": "OpenStreetMap extract via BBBike/Geofabrik (ODbL)",
+  "extract": "taiwan.osm.pbf",
+  "photon": "not-used-as-primary",
+  "companyRegistry": "not-imported",
+  "fetched": 182203,
+  "inserted": 135802,
+  "updated": 0,
+  "deduplicated": 9000,
+  "rejected": 37401,
+  "inactive": 945,
+  "durationMs": 4891,
+  "errorCount": 0,
+  "batchSize": 1000,
   "bySource": {
-    "osm": 945
+    "osm": 135802
   },
   "byCategory": {
-    "convenience": 345,
-    "fuel": 37,
-    "parking": 62,
-    "pharmacy": 57,
-    "hospital": 73,
-    "landmark": 52,
-    "other": 66,
-    "restaurant": 129,
-    "cafe": 124
+    "other": 54597,
+    "restaurant": 34965,
+    "landmark": 3467,
+    "supermarket": 3185,
+    "cafe": 7976,
+    "parking": 4019,
+    "hotel": 2129,
+    "convenience": 12279,
+    "pharmacy": 2000,
+    "mall": 108,
+    "clinic": 4388,
+    "park": 592,
+    "school": 600,
+    "government": 2987,
+    "station": 833,
+    "hospital": 54,
+    "fuel": 1623
   },
   "byCity": {
-    "新北市": 140,
-    "臺北市": 142,
-    "臺中市": 138,
-    "臺南市": 145,
-    "桃園市": 132,
-    "高雄市": 145,
-    "花蓮縣": 42,
-    "澎湖縣": 29,
-    "未知": 32
+    "臺北市": 36864,
+    "桃園市": 14101,
+    "連江縣": 310,
+    "高雄市": 10475,
+    "臺南市": 8712,
+    "嘉義縣": 1893,
+    "新竹市": 3778,
+    "臺中市": 18829,
+    "新北市": 11461,
+    "基隆市": 1237,
+    "彰化縣": 2931,
+    "臺東縣": 2335,
+    "南投縣": 4345,
+    "宜蘭縣": 2990,
+    "雲林縣": 2493,
+    "新竹縣": 2657,
+    "花蓮縣": 2902,
+    "屏東縣": 2097,
+    "苗栗縣": 2723,
+    "金門縣": 438,
+    "嘉義市": 1665,
+    "未知": 147,
+    "澎湖縣": 419
   },
-  "written": "src/data/taiwan-poi-index.json"
+  "counties": {
+    "臺北市": {
+      "fetched": 40618,
+      "imported": 36864,
+      "rejected": 0,
+      "dedup": 0
+    },
+    "新北市": {
+      "fetched": 11712,
+      "imported": 11461,
+      "rejected": 0,
+      "dedup": 0
+    },
+    "桃園市": {
+      "fetched": 15111,
+      "imported": 14101,
+      "rejected": 0,
+      "dedup": 0
+    },
+    "臺中市": {
+      "fetched": 20006,
+      "imported": 18829,
+      "rejected": 0,
+      "dedup": 0
+    },
+    "臺南市": {
+      "fetched": 9163,
+      "imported": 8712,
+      "rejected": 0,
+      "dedup": 0
+    },
+    "高雄市": {
+      "fetched": 10898,
+      "imported": 10475,
+      "rejected": 0,
+      "dedup": 0
+    },
+    "基隆市": {
+      "fetched": 1315,
+      "imported": 1237,
+      "rejected": 0,
+      "dedup": 0
+    },
+    "新竹市": {
+      "fetched": 4224,
+      "imported": 3778,
+      "rejected": 0,
+      "dedup": 0
+    },
+    "新竹縣": {
+      "fetched": 2691,
+      "imported": 2657,
+      "rejected": 0,
+      "dedup": 0
+    },
+    "苗栗縣": {
+      "fetched": 2767,
+      "imported": 2723,
+      "rejected": 0,
+      "dedup": 0
+    },
+    "彰化縣": {
+      "fetched": 3232,
+      "imported": 2931,
+      "rejected": 0,
+      "dedup": 0
+    },
+    "南投縣": {
+      "fetched": 4492,
+      "imported": 4345,
+      "rejected": 0,
+      "dedup": 0
+    },
+    "雲林縣": {
+      "fetched": 2644,
+      "imported": 2493,
+      "rejected": 0,
+      "dedup": 0
+    },
+    "嘉義市": {
+      "fetched": 1710,
+      "imported": 1665,
+      "rejected": 0,
+      "dedup": 0
+    },
+    "嘉義縣": {
+      "fetched": 1936,
+      "imported": 1893,
+      "rejected": 0,
+      "dedup": 0
+    },
+    "屏東縣": {
+      "fetched": 2136,
+      "imported": 2097,
+      "rejected": 0,
+      "dedup": 0
+    },
+    "宜蘭縣": {
+      "fetched": 3191,
+      "imported": 2990,
+      "rejected": 0,
+      "dedup": 0
+    },
+    "花蓮縣": {
+      "fetched": 3210,
+      "imported": 2902,
+      "rejected": 0,
+      "dedup": 0
+    },
+    "臺東縣": {
+      "fetched": 2411,
+      "imported": 2335,
+      "rejected": 0,
+      "dedup": 0
+    },
+    "澎湖縣": {
+      "fetched": 427,
+      "imported": 419,
+      "rejected": 0,
+      "dedup": 0
+    },
+    "金門縣": {
+      "fetched": 440,
+      "imported": 438,
+      "rejected": 0,
+      "dedup": 0
+    },
+    "連江縣": {
+      "fetched": 319,
+      "imported": 310,
+      "rejected": 0,
+      "dedup": 0
+    },
+    "未知": {
+      "fetched": 37550,
+      "imported": 147,
+      "rejected": 37401,
+      "dedup": 0
+    }
+  },
+  "written": "src/data/taiwan-poi-index.json",
+  "rejects": "docs/poi-import-rejects.json"
 }

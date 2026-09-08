@@ -7,6 +7,7 @@ import {
   matchedExactPlace,
   normalizePoiKey,
 } from "@/lib/poi/aliases";
+import { countyFromLngLat, countyMentionedInQuery } from "@/lib/poi/counties";
 import { classifyPoiQuery, prefersNearby } from "@/lib/poi/intent";
 import type { TaiwanPoiRecord } from "@/lib/poi/schema";
 
@@ -84,7 +85,11 @@ export function matchTier(query: string, poi: TaiwanPoiRecord): MatchTier {
   return "none";
 }
 
-export function rankScore(query: string, poi: TaiwanPoiRecord) {
+export function rankScore(
+  query: string,
+  poi: TaiwanPoiRecord,
+  origin?: { lat: number; lng: number },
+) {
   const tier = matchTier(query, poi);
   let score = TIER_SCORE[tier];
   const exact = matchedExactPlace(query);
@@ -92,6 +97,15 @@ export function rankScore(query: string, poi: TaiwanPoiRecord) {
     score = Math.max(score, 110);
   }
   score += Math.round((poi.confidence ?? 0.8) * 8);
+  const namedCity = countyMentionedInQuery(query);
+  if (namedCity && normalizePoiKey(poi.city ?? "") === normalizePoiKey(namedCity)) {
+    score += 14;
+  } else if (!namedCity && origin) {
+    const here = countyFromLngLat(origin.lat, origin.lng);
+    if (here && normalizePoiKey(poi.city ?? "") === normalizePoiKey(here)) {
+      score += 6;
+    }
+  }
   return score;
 }
 
@@ -103,8 +117,8 @@ export function rankPois(
   const intent = classifyPoiQuery(query);
   const nearby = Boolean(origin && prefersNearby(intent));
   return [...rows].sort((a, b) => {
-    const sa = rankScore(query, a);
-    const sb = rankScore(query, b);
+    const sa = rankScore(query, a, origin);
+    const sb = rankScore(query, b, origin);
     const delta = sb - sa;
     if (nearby && origin && Math.abs(delta) < 12) {
       const da = distanceKm(origin, { lat: a.latitude, lng: a.longitude });

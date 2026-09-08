@@ -6,7 +6,7 @@
 
 | 來源 | 角色 | 授權 |
 | --- | --- | --- |
-| OSM Taiwan PBF（BBBike／Geofabrik） | 主庫，`npm run ingest:pois`（osmium 分批） | ODbL |
+| OSM Taiwan PBF（BBBike／Geofabrik） | 主庫，`npm run ingest:pois`（osmium 分批，部署用 `.json.gz`） | ODbL |
 | NLSC TextQueryMap | Stage 4 門牌／地名 fallback | 國土測繪公開服務 |
 | TGOS 全國門牌 | Stage 4 選用後備（需金鑰） | TGOS |
 | OSM Nominatim | Stage 4 地圖地名後備 | ODbL |

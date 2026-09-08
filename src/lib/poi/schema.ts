@@ -1,13 +1,21 @@
-import { nameFitsBrand } from "@/lib/poi/aliases";
+import { BRAND_ALIASES, nameFitsBrand, normalizePoiKey } from "@/lib/poi/aliases";
 
 export const POI_CATEGORIES = [
   "convenience",
+  "supermarket",
   "cafe",
   "restaurant",
   "fuel",
   "parking",
   "hospital",
+  "clinic",
   "pharmacy",
+  "school",
+  "hotel",
+  "government",
+  "station",
+  "mall",
+  "park",
   "landmark",
   "other",
 ] as const;
@@ -37,6 +45,8 @@ export type TaiwanPoiRecord = {
   license: string;
   confidence: number;
   isActive: boolean;
+  lastSeenAt?: string;
+  sourceUpdatedAt?: string;
 };
 
 export type TaiwanPoiRow = {
@@ -90,6 +100,16 @@ export function hydratePoiRecord(row: Partial<TaiwanPoiRecord> & Record<string, 
     brand = null;
     keptAliases = [];
   }
+  const brandMeta = BRAND_ALIASES.find((item) => item.brand === brand);
+  if (brandMeta) {
+    keptAliases = [
+      ...new Set([
+        ...keptAliases,
+        ...brandMeta.keys.map(normalizePoiKey),
+        ...brandMeta.names.map(normalizePoiKey),
+      ]),
+    ];
+  }
   return {
     id: String(row.id ?? `${row.source ?? "osm"}-${row.sourceId ?? row.source_id ?? ""}`),
     name,
@@ -111,6 +131,8 @@ export function hydratePoiRecord(row: Partial<TaiwanPoiRecord> & Record<string, 
     license: String(row.license ?? "ODbL"),
     confidence: Number.isFinite(Number(row.confidence)) ? Number(row.confidence) : 0.8,
     isActive: row.isActive !== false && row.is_active !== false,
+    lastSeenAt: String(row.lastSeenAt ?? row.last_seen_at ?? "") || undefined,
+    sourceUpdatedAt: String(row.sourceUpdatedAt ?? row.source_updated_at ?? "") || undefined,
   };
 }
 
