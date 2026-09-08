@@ -197,8 +197,9 @@ const DEFAULT_LAYER_VISIBILITY: LayerKindVisibility = {
   disaster: true,
 };
 
-const SOFT_RESTART_COOLDOWN_MS = 4200;
-const SOFT_RESTART_ATTEMPT_GAP_MS = 900;
+const LIVE_REROUTE_COOLDOWN_MS = 8000;
+const LIVE_REROUTE_RETRY_MS = 2800;
+const LIVE_REROUTE_TIMEOUT_MS = 8000;
 const PARKING_REMINDER_METERS = 800;
 const PARKING_REMINDER_MIN_METERS = 40;
 const PARKING_REMINDER_SHRINK_MS = 15_000;
@@ -306,7 +307,6 @@ export function DrivingApp() {
   );
   const parkingArrivalDismissedRef = useRef(false);
   const arrivalFiredRef = useRef(false);
-  const restartLockRef = useRef(false);
   const [route, setRoute] = useState<[number, number][]>([]);
   const [maneuver, setManeuver] = useState<NavigationManeuver | null>(null);
   const [destination, setDestination] = useState<RouteDestination | null>(null);
@@ -1131,7 +1131,6 @@ export function DrivingApp() {
 
   const exitNavigation = useCallback(() => {
     rerouteAbortRef.current?.abort();
-    restartLockRef.current = false;
     reroutingRef.current = false;
     setRerouting(false);
     setReroutePending(false);
@@ -1188,11 +1187,6 @@ export function DrivingApp() {
   const rerouteFromHere = useCallback(async () => {
     const dest = destinationRef.current;
     const raw = vehicleLiveRef.current ?? vehicleRef.current;
-    const snapped = displayVehicleLiveRef.current;
-    const here = {
-      lng: raw.lng,
-      lat: raw.lat,
-    };
     if (!dest) return;
     if (arrivalFiredRef.current) return;
     const tracker = navigationTrackerRef.current;
@@ -1200,25 +1194,19 @@ export function DrivingApp() {
       completeArrival();
       return;
     }
+    if (reroutingRef.current) return;
     const now = Date.now();
-    if (restartLockRef.current) return;
-    if (now - lastRerouteSuccessAtRef.current < SOFT_RESTART_COOLDOWN_MS) return;
-    if (now - lastRerouteAtRef.current < SOFT_RESTART_ATTEMPT_GAP_MS) return;
+    if (now - lastRerouteSuccessAtRef.current < LIVE_REROUTE_COOLDOWN_MS) return;
+    if (now - lastRerouteAtRef.current < LIVE_REROUTE_RETRY_MS) return;
     rerouteAbortRef.current?.abort();
     const controller = new AbortController();
     rerouteAbortRef.current = controller;
     const generation = rerouteGenerationRef.current + 1;
     rerouteGenerationRef.current = generation;
-    restartLockRef.current = true;
     reroutingRef.current = true;
     lastRerouteAtRef.current = now;
     setRerouting(true);
     setReroutePending(false);
-    setNavigating(false);
-    navigationTrackerRef.current = null;
-    setNavigationProgress(null);
-    setManeuver(null);
-    setRouteDurationSeconds(null);
     const detectMs = lastOffRouteAtRef.current
       ? now - lastOffRouteAtRef.current
       : null;
@@ -1231,12 +1219,9 @@ export function DrivingApp() {
         setReroutePending(true);
       }
     }, 2500);
-    const origin = {
-      lng: snapped?.lng ?? here.lng,
-      lat: snapped?.lat ?? here.lat,
-    };
-    const requestOnce = () =>
-      planDrivingRoute(
+    const origin = { lng: raw.lng, lat: raw.lat };
+    try {
+      const plan = await planDrivingRoute(
         origin,
         {
           id: "reroute",
@@ -1246,16 +1231,8 @@ export function DrivingApp() {
         },
         controller.signal,
         travelMode,
-        5_500,
+        LIVE_REROUTE_TIMEOUT_MS,
       );
-    try {
-      let plan;
-      try {
-        plan = await requestOnce();
-      } catch (error) {
-        if (controller.signal.aborted) throw error;
-        plan = await requestOnce();
-      }
       const responseMs = performance.now() - requestStarted;
       if (generation !== rerouteGenerationRef.current) return;
       const parseStarted = performance.now();
@@ -1271,9 +1248,9 @@ export function DrivingApp() {
       });
       setManeuver(plan.maneuver);
       setRouteSteps(steps);
-      setRouteEpoch((value) => value + 1);
       setRouteDurationSeconds(plan.durationSeconds);
       setRouteDistanceMeters(plan.distanceMeters);
+      setRouteError(null);
       const pose = vehicleLiveRef.current ?? vehicleRef.current;
       const next = model
         ? updateNavigationProgress({
@@ -1294,20 +1271,18 @@ export function DrivingApp() {
         : null;
       displayVehicleLiveRef.current = snappedPose;
       setDisplayVehicle(snappedPose);
-      setNavigating(true);
       setFollowVehicle(true);
       setUserAdjustedMap(false);
       panIntentRef.current = false;
       lastRerouteSuccessAtRef.current = Date.now();
       const parseMs = performance.now() - parseStarted;
-      const totalMs = performance.now() - requestStarted;
-      logRerouteTimings("ready", {
+      logRerouteTimings("live-swap", {
         detectMs,
         requestMs: responseMs,
         responseMs,
         parseMs,
         renderMs: parseMs,
-        totalMs,
+        totalMs: performance.now() - requestStarted,
         at: new Date().toISOString(),
       });
     } catch (error) {
@@ -1315,15 +1290,14 @@ export function DrivingApp() {
       if (generation !== rerouteGenerationRef.current) return;
       setRouteError(
         error instanceof Error && /abort|timeout|逾時/i.test(error.message)
-          ? "重新規劃逾時，請再試一次"
+          ? "路線更新逾時，將自動再試"
           : error instanceof Error
             ? error.message
-            : "重新規劃路線失敗",
+            : "路線更新失敗，將自動再試",
       );
     } finally {
       window.clearTimeout(staleTimer);
       if (generation === rerouteGenerationRef.current) {
-        restartLockRef.current = false;
         reroutingRef.current = false;
         setRerouting(false);
         setReroutePending(false);
@@ -1342,6 +1316,12 @@ export function DrivingApp() {
     if (navigationProgress.arrived || arrivalFiredRef.current) return;
     if (!lastOffRouteAtRef.current) lastOffRouteAtRef.current = Date.now();
     void rerouteFromHere();
+    const timer = window.setInterval(() => {
+      if (arrivalFiredRef.current) return;
+      if (!navigationTrackerRef.current?.offRoute) return;
+      void rerouteFromHere();
+    }, LIVE_REROUTE_RETRY_MS);
+    return () => window.clearInterval(timer);
   }, [
     navigating,
     navigationProgress?.arrived,

@@ -60,9 +60,10 @@ function spacesBadge(lot: ParkingLot) {
   return `${Math.max(0, lot.carAvailable)}格`;
 }
 
-function parkingNameLine(lot: ParkingLot) {
+function parkingFacilityName(lot: ParkingLot) {
   const tag = parkingOwnershipLabel(lot.publicLot);
-  const name = lot.name.replace(/^(公有|民營|公營)\s*/u, "").trim() || lot.name;
+  let name = lot.name.replace(/^(公有|民營|公營)\s*/u, "").trim() || lot.name;
+  if (!/停車/.test(name)) name = `${name}停車場`;
   return `${tag} ${name}`;
 }
 
@@ -88,18 +89,18 @@ function parkingLotCopy(lot: ParkingLot, sort: ParkingSort) {
   const road = parkingRoad(lot);
   const rate = formatParkingRate(lot);
   const spaces = occupancyLabel(lot) ?? "格數未提供";
-  const name = parkingNameLine(lot);
+  const name = parkingFacilityName(lot);
   if (sort === "price") {
     return {
       highlight: rate,
-      rest: distance,
+      rest: `${distance} ${name}`,
       address: road,
     };
   }
   if (sort === "remaining") {
     return {
       highlight: spaces,
-      rest: distance,
+      rest: `${distance} ${name}`,
       address: road,
     };
   }
@@ -164,49 +165,16 @@ export function ParkingPanel({
         <p className="min-w-0 truncate text-sm font-semibold leading-tight tracking-wide text-zinc-100">
           {header.title}
         </p>
-        <div className="flex shrink-0 items-center gap-1.5">
-          {onToggleArrivalPrompt ? (
-            <div className="flex items-center gap-1.5">
-              <p className="text-[11px] leading-none text-zinc-200">到達前提醒</p>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={arrivalPromptEnabled}
-                aria-label={`到達前提醒 ${arrivalPromptEnabled ? "ON" : "OFF"}`}
-                onClick={() => onToggleArrivalPrompt(!arrivalPromptEnabled)}
-                className={cn(
-                  "relative inline-flex h-4 w-8 shrink-0 items-center rounded-full px-0.5 touch-manipulation",
-                  arrivalPromptEnabled ? "bg-emerald-500" : "bg-red-500",
-                )}
-              >
-                <span
-                  className={cn(
-                    "size-3 rounded-full bg-white shadow transition-transform",
-                    arrivalPromptEnabled ? "translate-x-3.5" : "translate-x-0",
-                  )}
-                />
-              </button>
-              <span
-                className={cn(
-                  "text-[10px] font-semibold",
-                  arrivalPromptEnabled ? "text-emerald-300" : "text-red-300",
-                )}
-              >
-                {arrivalPromptEnabled ? "ON" : "OFF"}
-              </span>
-            </div>
-          ) : null}
-          <HudCloseButton
-            label="關閉停車場"
-            onClick={(event) => {
-              event.stopPropagation();
-              onClose();
-            }}
-          />
-        </div>
+        <HudCloseButton
+          label="關閉停車場"
+          onClick={(event) => {
+            event.stopPropagation();
+            onClose();
+          }}
+        />
       </div>
       <p className="mb-2 text-[11px] leading-tight text-zinc-400">{header.updated}</p>
-      <div className="mb-2 flex gap-1.5">
+      <div className="mb-2 flex items-center gap-1.5">
         {SORT_BUTTONS.map((item) => (
           <button
             key={item.value}
@@ -220,6 +188,37 @@ export function ParkingPanel({
             {item.label}
           </button>
         ))}
+        {onToggleArrivalPrompt ? (
+          <div className="ml-auto flex shrink-0 items-center gap-1">
+            <p className="text-[11px] leading-none text-zinc-200">到達前提醒</p>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={arrivalPromptEnabled}
+              aria-label={`到達前提醒 ${arrivalPromptEnabled ? "ON" : "OFF"}`}
+              onClick={() => onToggleArrivalPrompt(!arrivalPromptEnabled)}
+              className={cn(
+                "relative inline-flex h-4 w-8 shrink-0 items-center rounded-full px-0.5 touch-manipulation",
+                arrivalPromptEnabled ? "bg-emerald-500" : "bg-red-500",
+              )}
+            >
+              <span
+                className={cn(
+                  "size-3 rounded-full bg-white shadow transition-transform",
+                  arrivalPromptEnabled ? "translate-x-3.5" : "translate-x-0",
+                )}
+              />
+            </button>
+            <span
+              className={cn(
+                "text-[10px] font-semibold",
+                arrivalPromptEnabled ? "text-emerald-300" : "text-red-300",
+              )}
+            >
+              {arrivalPromptEnabled ? "ON" : "OFF"}
+            </span>
+          </div>
+        ) : null}
       </div>
       {loading && ranked.length === 0 ? (
         <div

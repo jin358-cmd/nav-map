@@ -97,6 +97,9 @@ async function routeFromOsrmLike(
   endpoint.searchParams.set("geometries", "geojson");
   endpoint.searchParams.set("steps", "true");
   endpoint.searchParams.set("alternatives", "false");
+  if (travelMode === "motorcycle") {
+    endpoint.searchParams.set("exclude", "motorway");
+  }
 
   try {
     const data = await fetchOsrmRoute(endpoint);

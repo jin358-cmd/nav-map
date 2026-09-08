@@ -83,38 +83,21 @@ export function RouteConfirmBar({
     durationSeconds != null ? formatEtaClock(durationSeconds) : null;
 
   return (
-    <div className="pointer-events-auto mx-auto w-[min(100%,20rem)] rounded-2xl border border-cyan-300/20 bg-black/78 shadow-[0_10px_40px_rgba(0,0,0,0.5)] backdrop-blur-xl">
-      <div className="flex w-full flex-col gap-2 px-3 py-2.5">
+    <div className="pointer-events-auto mx-auto w-[min(100%,24.5rem)] rounded-2xl border border-cyan-300/20 bg-black/78 shadow-[0_10px_40px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+      <div className="flex w-full flex-col gap-2.5 px-3.5 py-3">
         <div className="flex items-start gap-1.5">
           <div className="min-w-0 flex-1">
-            <p className="truncate text-base leading-tight font-bold tracking-tight text-white">
+            <p className="truncate text-lg leading-tight font-bold tracking-tight text-white">
               {storeName}
             </p>
-            <p className="mt-0.5 truncate text-[12px] leading-snug text-zinc-200">
+            <p className="mt-0.5 truncate text-[14px] leading-snug text-zinc-200">
               {addressLine}
             </p>
-            <p className="mt-0.5 truncate text-[12px] leading-snug tabular-nums text-cyan-100/90">
+            <p className="mt-0.5 truncate text-[14px] leading-snug tabular-nums text-cyan-100/90">
               {coordLine}
             </p>
           </div>
-          <div className="flex shrink-0 items-center gap-1">
-            {onToggleFavorite ? (
-              <button
-                type="button"
-                onClick={onToggleFavorite}
-                aria-pressed={favorite}
-                aria-label={favorite ? "移出最愛" : "加入最愛"}
-                title={favorite ? "移出最愛" : "加入最愛"}
-                className="flex size-8 items-center justify-center rounded-full text-rose-300 hover:bg-white/10 hover:text-rose-100 touch-manipulation"
-              >
-                <Heart
-                  className={cn("size-4", favorite && "fill-rose-500 text-rose-400")}
-                  strokeWidth={2.1}
-                />
-              </button>
-            ) : null}
-            <HudCloseButton label="取消路線，重新搜尋" onClick={onClear} />
-          </div>
+          <HudCloseButton label="取消路線，重新搜尋" onClick={onClear} />
         </div>
         <div className="flex gap-1.5">
           {(["car", "motorcycle"] as const).map((mode) => (
@@ -123,7 +106,7 @@ export function RouteConfirmBar({
               type="button"
               onClick={() => onTravelMode(mode)}
               className={cn(
-                "h-8 rounded-full px-2.5 text-xs",
+                "h-9 rounded-full px-3 text-sm",
                 travelMode === mode
                   ? "bg-cyan-400 text-[#041016]"
                   : "bg-white/8 text-zinc-200",
@@ -133,22 +116,39 @@ export function RouteConfirmBar({
             </button>
           ))}
         </div>
-        <p
-          className={cn(
-            "w-full text-[11px] font-medium",
-            error ? "text-amber-200" : "text-cyan-200",
-          )}
-        >
-          {error
-            ? error
-            : rerouting
-              ? "正在規劃路線…"
-              : motorcycleUnsupported && travelMode === "motorcycle"
-                ? "機車模式尚未設定（NOT CONFIGURED）"
-                : `${travelModeLabel(travelMode)}${
-                    etaMinutes != null ? ` · 約 ${etaMinutes} 分鐘` : ""
-                  }${etaClock ? ` · 預計 ${etaClock} 抵達` : ""}`}
-        </p>
+        <div className="flex w-full items-center gap-1.5">
+          <p
+            className={cn(
+              "min-w-0 flex-1 truncate text-sm font-medium",
+              error ? "text-amber-200" : "text-cyan-200",
+            )}
+          >
+            {error
+              ? error
+              : rerouting
+                ? "正在規劃路線…"
+                : motorcycleUnsupported && travelMode === "motorcycle"
+                  ? "機車模式尚未設定（NOT CONFIGURED）"
+                  : `${travelModeLabel(travelMode)}${
+                      etaMinutes != null ? ` · 約 ${etaMinutes} 分鐘` : ""
+                    }${etaClock ? ` · 預計 ${etaClock} 抵達` : ""}`}
+          </p>
+          {onToggleFavorite ? (
+            <button
+              type="button"
+              onClick={onToggleFavorite}
+              aria-pressed={favorite}
+              aria-label={favorite ? "移出最愛" : "加入最愛"}
+              title={favorite ? "移出最愛" : "加入最愛"}
+              className="flex size-9 shrink-0 items-center justify-center rounded-full text-rose-300 hover:bg-white/10 hover:text-rose-100 touch-manipulation"
+            >
+              <Heart
+                className={cn("size-5", favorite && "fill-rose-500 text-rose-400")}
+                strokeWidth={2.1}
+              />
+            </button>
+          ) : null}
+        </div>
         <Button
           type="button"
           onClick={onStartNav}
@@ -158,7 +158,7 @@ export function RouteConfirmBar({
             distanceMeters == null ||
             (motorcycleUnsupported && travelMode === "motorcycle")
           }
-          className="h-11 min-h-11 w-full rounded-xl bg-cyan-400 text-sm font-semibold text-[#041016] hover:bg-cyan-300"
+          className="h-12 min-h-12 w-full rounded-xl bg-cyan-400 text-base font-semibold text-[#041016] hover:bg-cyan-300"
         >
           開始導航
         </Button>
