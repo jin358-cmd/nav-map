@@ -481,8 +481,18 @@ export function formatDistanceRoadLabel(
   input: string | TaiwanDisplayAddressInput | null | undefined,
 ): string {
   const street = formatTaiwanStreetName(input);
-  if (!street || isAdminOnlyLabel(street)) return "";
-  return street;
+  if (!street) return "";
+  const cleaned = compactTaiwanText(street)
+    .replaceAll("臺南市", "")
+    .replaceAll("台南市", "")
+    .replaceAll("臺", "台")
+    .replace(/[\u4e00-\u9fff]{1,3}[縣市]/gu, "")
+    .replace(/^[\u4e00-\u9fff]{1,4}[區鄉鎮]/u, "")
+    .trim();
+  if (!cleaned || isAdminOnlyLabel(cleaned)) return "";
+  if (!/(?:路|街|大道|道|段|巷|線)/u.test(cleaned)) return "";
+  if (/台南市|臺南市/.test(cleaned)) return "";
+  return cleaned;
 }
 
 /** 開始導航卡第二列：完整地址；沒有門牌時改顯示路名＋段。 */

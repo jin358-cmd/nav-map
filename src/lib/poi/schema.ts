@@ -3,6 +3,7 @@ import {
   keepTaggedChainBrand,
   nameFitsBrand,
   normalizePoiKey,
+  resolveCanonicalBrand,
 } from "@/lib/poi/aliases";
 import {
   poiMainLayerFromCategory,
@@ -111,7 +112,11 @@ export function hydratePoiRecord(row: Partial<TaiwanPoiRecord> & Record<string, 
     ? [...new Set(row.aliases.map((item) => compactKey(String(item))).filter(Boolean))]
     : [];
   const category = (row.category as PoiCategory) || "other";
-  let brand = (row.brand as string | null) ?? null;
+  let brand = resolveCanonicalBrand(
+    (row.brand as string | null) ?? null,
+    name,
+    category,
+  );
   let keptAliases = aliases;
   if (brand && !keepTaggedChainBrand(name, brand, category)) {
     brand = null;

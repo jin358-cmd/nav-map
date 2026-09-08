@@ -16,11 +16,11 @@ export const BRAND_ALIASES: { keys: string[]; names: string[]; brand: string; ca
   { keys: ["麥當勞", "麥當", "mcdonalds", "mcdonald", "mcd"], names: ["麥當勞"], brand: "McDonald's", category: "restaurant" },
   { keys: ["肯德基", "kfc"], names: ["肯德基"], brand: "KFC", category: "restaurant" },
   { keys: ["摩斯", "mos"], names: ["摩斯漢堡"], brand: "MOS Burger", category: "restaurant" },
-  { keys: ["中油", "cpc", "台灣中油"], names: ["台灣中油", "中油"], brand: "CPC", category: "fuel" },
-  { keys: ["台塑", "formosa", "台塑石油", "台塑石化"], names: ["台塑石油", "台塑石化"], brand: "Formosa", category: "fuel" },
-  { keys: ["台亞", "fpcc", "台亞石油"], names: ["台亞石油", "台亞"], brand: "台亞", category: "fuel" },
-  { keys: ["全國加油", "npc加油"], names: ["全國加油站"], brand: "全國", category: "fuel" },
-  { keys: ["速邁樂", "speed"], names: ["速邁樂"], brand: "速邁樂", category: "fuel" },
+  { keys: ["中油", "cpc", "台灣中油", "中國石油", "中油加油站"], names: ["台灣中油", "中油", "中國石油"], brand: "CPC", category: "fuel" },
+  { keys: ["台塑", "formosa", "台塑石油", "台塑石化", "台塑加油站"], names: ["台塑石油", "台塑石化", "台塑"], brand: "Formosa", category: "fuel" },
+  { keys: ["台亞", "fpcc", "台亞石油", "台亞加油站"], names: ["台亞石油", "台亞"], brand: "台亞", category: "fuel" },
+  { keys: ["全國加油站", "全國加油", "npc加油", "npc"], names: ["全國加油站", "全國"], brand: "全國", category: "fuel" },
+  { keys: ["速邁樂", "smile", "統一速邁樂", "速邁樂加油站"], names: ["速邁樂", "Smile"], brand: "速邁樂", category: "fuel" },
 ];
 
 export const CONVENIENCE_CHAIN_BRANDS = new Set([
@@ -139,39 +139,94 @@ export function nameFitsBrand(name: string, brand: string | null): boolean {
   if (b.includes("costco") || b.includes("好市多")) return n.includes("好市多") || n.includes("costco");
   if (b.includes("simple") || b.includes("美廉社")) return n.includes("美廉社") || n.includes("simplemart");
   if (b === "85c" || b.includes("85度")) return n.includes("85") || n.includes("85度");
-  if (b === "cpc" || b.includes("中油")) {
-    return n.includes("中油") || n.includes("cpc") || n.includes("加油") || n.includes("gas");
+  if (b === "cpc" || b.includes("中油") || b.includes("中國石油")) {
+    return n.includes("中油") || n.includes("cpc") || n.includes("中國石油") || n.includes("台灣中油");
   }
   if (b.includes("formosa") || b.includes("台塑")) {
-    return n.includes("台塑") || n.includes("formosa") || n.includes("加油");
+    return n.includes("台塑") || n.includes("formosa");
   }
   if (b.includes("台亞") || b === "fpcc") {
-    return n.includes("台亞") || n.includes("加油");
+    return n.includes("台亞") || n.includes("fpcc");
   }
   if (b === "全國" || b.includes("npc")) {
-    return n.includes("全國") || n.includes("加油");
+    return (n.includes("全國") && !n.includes("電子")) || n.includes("npc");
   }
-  if (b.includes("速邁樂") || b.includes("speed")) {
-    return n.includes("速邁樂") || n.includes("加油");
+  if (b.includes("速邁樂") || b.includes("smile")) {
+    return n.includes("速邁樂") || n.includes("smile");
   }
   return false;
 }
 
+export function inferFuelChainBrand(name: string, brand?: string | null) {
+  const hay = `${brand ?? ""} ${name}`.replaceAll("臺", "台");
+  if (/台亞/.test(hay)) return "台亞";
+  if (/台塑/.test(hay)) return "Formosa";
+  if (/速邁樂|smile/i.test(hay)) return "速邁樂";
+  if (/全國加油站|全國加油/.test(hay) || (/(?:^|[^\u4e00-\u9fff])全國(?:$|[^\u4e00-\u9fff電])/.test(hay) && /加油|npc/i.test(hay))) {
+    return "全國";
+  }
+  if (/中油|中國石油|台灣中油|(?:^|[^a-z])cpc(?:$|[^a-z])/i.test(hay)) return "CPC";
+  return null;
+}
+
+export function resolveCanonicalBrand(
+  brand: string | null | undefined,
+  name = "",
+  category?: PoiCategory | null,
+) {
+  const tagged = (brand ?? "").trim();
+  if (!category || category === "fuel") {
+    const fuel = inferFuelChainBrand(name, tagged);
+    if (fuel) return fuel;
+  }
+  if (tagged) {
+    const exact = BRAND_ALIASES.find((item) => item.brand === tagged);
+    if (exact && (!category || exact.category === category)) return exact.brand;
+    const key = normalizePoiKey(tagged);
+    const aliased = BRAND_ALIASES.find((item) => {
+      if (category && item.category !== category) return false;
+      if (normalizePoiKey(item.brand) === key) return true;
+      if (item.names.some((label) => {
+        const token = normalizePoiKey(label);
+        return token.length >= 2 && (key === token || key.includes(token));
+      })) return true;
+      return item.keys.some((alias) => {
+        const token = normalizePoiKey(alias);
+        return token.length >= 2 && (key === token || key.includes(token));
+      });
+    });
+    if (aliased) return aliased.brand;
+  }
+  if (name) {
+    const named = BRAND_ALIASES.find((item) => {
+      if (category && item.category !== category) return false;
+      return nameFitsBrand(name, item.brand);
+    });
+    if (named) return named.brand;
+  }
+  return tagged || null;
+}
+
+/** Drop Photon/OSM brand tags that do not match the actual POI name. */
 export function keepTaggedChainBrand(
   name: string,
   brand: string | null,
   category?: PoiCategory | null,
 ) {
-  if (!brand) return false;
-  if (nameFitsBrand(name, brand)) return true;
+  const resolved = resolveCanonicalBrand(brand, name, category);
+  if (!resolved) return false;
+  if (nameFitsBrand(name, resolved)) return true;
   if (/攤位|號攤|郵筒|公車/.test(name)) return false;
-  const known = BRAND_ALIASES.find((item) => item.brand === brand);
+  const known = BRAND_ALIASES.find((item) => item.brand === resolved);
   if (!known) return false;
   if (known.category === "convenience") {
-    return category === "convenience" || CONVENIENCE_CHAIN_BRANDS.has(brand);
+    return category === "convenience" || CONVENIENCE_CHAIN_BRANDS.has(resolved);
   }
   if (known.category === "fuel") {
-    return category === "fuel" || FUEL_CHAIN_BRANDS.has(brand);
+    return category === "fuel" || FUEL_CHAIN_BRANDS.has(resolved);
+  }
+  if (known.category === "hotel") {
+    return category === "hotel";
   }
   return false;
 }
