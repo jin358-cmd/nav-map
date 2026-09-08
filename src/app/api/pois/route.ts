@@ -1,11 +1,21 @@
 import { POI_MAIN_LAYER_IDS, type PoiMainLayerId } from "@/lib/poi/main-layers";
 import { poisInBounds, poisNearby } from "@/lib/poi/server-index";
-import type { TaiwanPoiRecord } from "@/lib/poi/schema";
+import { POI_CATEGORIES, type PoiCategory, type TaiwanPoiRecord } from "@/lib/poi/schema";
 
 function readNumber(value: string | null) {
   if (!value) return undefined;
   const number = Number(value);
   return Number.isFinite(number) ? number : undefined;
+}
+
+function readCategories(value: string | null): PoiCategory[] | undefined {
+  if (!value) return undefined;
+  const wanted = new Set(POI_CATEGORIES);
+  const categories = value
+    .split(",")
+    .map((item) => item.trim())
+    .filter((item): item is PoiCategory => wanted.has(item as PoiCategory));
+  return categories.length ? categories : undefined;
 }
 
 function readLayers(value: string | null): PoiMainLayerId[] | undefined {
@@ -46,6 +56,7 @@ export async function GET(request: Request) {
   const radius = readNumber(url.searchParams.get("radius")) ?? 2600;
   const limit = readNumber(url.searchParams.get("limit")) ?? 80;
   const requested = readLayers(url.searchParams.get("layers"));
+  const categories = readCategories(url.searchParams.get("categories"));
   const layers = requested ?? [...POI_MAIN_LAYER_IDS];
   const preferPhone = url.searchParams.get("preferPhone") === "1";
   const origin =
@@ -61,7 +72,14 @@ export async function GET(request: Request) {
     ) {
       return Response.json({ error: "請提供臺灣範圍內的定位點" }, { status: 400 });
     }
-    const rows = poisNearby(origin, radius, layers, Math.min(limit, 24), preferPhone);
+    const rows = poisNearby(
+      origin,
+      radius,
+      categories ? undefined : layers,
+      Math.min(limit, 24),
+      preferPhone,
+      categories,
+    );
     return Response.json(
       { pois: rows.map(serializePoi) },
       {

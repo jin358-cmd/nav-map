@@ -1,13 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Phone } from "lucide-react";
-import { poiCategoryLabel } from "@/lib/poi/category-label";
-import { POI_LAYER_COLORS, POI_MAIN_LAYERS, type PoiMainLayerId } from "@/lib/poi/main-layers";
 import { formatDistance } from "@/lib/format";
 import { formatTaiwanDisplayAddress, formatTaiwanRoadName } from "@/lib/geocoding/format-taiwan-display-address";
 import { distanceKm } from "@/lib/geo";
 import { poiFeatureToPlace } from "@/lib/map-place";
+import { SEARCH_SHORTCUTS, type SearchShortcutId } from "@/lib/search-shortcuts";
 import { useYellowPagesNearby } from "@/hooks/use-yellow-pages-nearby";
 import { cn } from "@/lib/utils";
 import type { GeocodeHit, LngLat } from "@/types/domain";
@@ -19,42 +17,52 @@ export function YellowPagesSearchStrip({
   origin: LngLat | null;
   onSelect: (hit: GeocodeHit) => void;
 }) {
-  const [layer, setLayer] = useState<PoiMainLayerId | null>(null);
-  const { pois, loading, error } = useYellowPagesNearby({ origin, layer });
-  const selected = POI_MAIN_LAYERS.find((item) => item.id === layer) ?? null;
+  const [shortcut, setShortcut] = useState<SearchShortcutId | null>(null);
+  const { pois, loading, error } = useYellowPagesNearby({ origin, shortcut });
+  const selected = SEARCH_SHORTCUTS.find((item) => item.id === shortcut) ?? null;
 
   return (
     <div className="mb-1.5">
-      <div className="flex gap-1 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {POI_MAIN_LAYERS.map((item) => {
-          const on = layer === item.id;
+      <div className="grid grid-cols-4 gap-1">
+        {SEARCH_SHORTCUTS.map((item) => {
+          const on = shortcut === item.id;
+          const Icon = item.icon;
           return (
             <button
               key={item.id}
               type="button"
               aria-pressed={on}
-              aria-label={`${item.yp}附近店家`}
-              onClick={() => setLayer((current) => (current === item.id ? null : item.id))}
+              aria-label={
+                item.id === "fuel" ? "加油站，含汽機車充電站" : `${item.label}附近`
+              }
+              title={item.hint}
+              onClick={() =>
+                setShortcut((current) => (current === item.id ? null : item.id))
+              }
               className={cn(
-                "flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold touch-manipulation",
+                "flex min-w-0 flex-col items-center gap-0.5 rounded-xl px-1 py-1.5 text-center touch-manipulation",
                 on ? "text-[#042f2e]" : "bg-black/55 text-zinc-100",
               )}
               style={
                 on
-                  ? { background: POI_LAYER_COLORS[item.id] }
+                  ? { background: item.color }
                   : { border: "1px solid rgba(255,255,255,0.14)" }
               }
             >
-              <span>{item.short}</span>
-              <span className={on ? "opacity-90" : "text-zinc-400"}>{item.yp}</span>
+              <Icon className="size-5 shrink-0" strokeWidth={2.2} aria-hidden />
+              <span className="max-w-full truncate text-[10px] font-semibold leading-tight sm:text-[11px]">
+                {item.label}
+              </span>
             </button>
           );
         })}
       </div>
-      {layer ? (
+      {shortcut ? (
         <div className="mt-1 max-h-44 overflow-y-auto rounded-2xl border border-white/12 bg-black/72 px-2 py-1.5 shadow-[0_10px_28px_rgba(0,0,0,0.4)] backdrop-blur-xl">
           <p className="px-1 pb-1 text-[10px] tracking-wide text-zinc-400">
-            {selected ? `${selected.yp} · 附近店家` : "附近店家"}
+            {selected
+              ? `${selected.label}${selected.id === "fuel" ? " · 含汽機車充電站" : ""}`
+              : "附近店家"}
           </p>
           {loading ? (
             <p className="px-1 py-2 text-sm text-zinc-300">讀取中…</p>
@@ -70,7 +78,11 @@ export function YellowPagesSearchStrip({
                 const meters = origin
                   ? Math.round(distanceKm(origin, poi.location) * 1000)
                   : undefined;
-                const phone = poi.phone?.trim() || "";
+                const branch =
+                  poi.branchName?.trim() || formatTaiwanDisplayAddress(poi.name);
+                const address =
+                  formatTaiwanRoadName(poi.address) ||
+                  formatTaiwanDisplayAddress(poi.address);
                 return (
                   <li key={poi.id}>
                     <button
@@ -94,18 +106,11 @@ export function YellowPagesSearchStrip({
                     >
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-semibold text-white">
-                          {formatTaiwanDisplayAddress(poi.name)}
+                          {branch}
                         </span>
-                        <span className="block truncate text-[11px] text-zinc-400">
-                          {formatTaiwanRoadName(poi.address) || "地址未提供"}
-                        </span>
-                        <span className="mt-0.5 flex items-center gap-1 text-[11px] text-cyan-100/90">
-                          <Phone className="size-3 shrink-0" />
-                          {phone || "未提供"}
-                          <span className="text-zinc-500">
-                            · {poiCategoryLabel(poi.category)}
-                            {meters != null ? ` · ${formatDistance(meters)}` : ""}
-                          </span>
+                        <span className="block truncate text-[12px] text-zinc-200">
+                          {meters != null ? `${formatDistance(meters)} · ` : ""}
+                          {address || "地址未提供"}
                         </span>
                       </span>
                     </button>

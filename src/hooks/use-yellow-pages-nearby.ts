@@ -2,36 +2,37 @@
 
 import { useEffect, useState } from "react";
 import type { MapPoiFeature } from "@/lib/map-place";
-import type { PoiMainLayerId } from "@/lib/poi/main-layers";
+import type { SearchShortcutId } from "@/lib/search-shortcuts";
+import { searchShortcutById } from "@/lib/search-shortcuts";
 import type { LngLat } from "@/types/domain";
 
 export function useYellowPagesNearby({
   origin,
-  layer,
+  shortcut,
 }: {
   origin: LngLat | null;
-  layer: PoiMainLayerId | null;
+  shortcut: SearchShortcutId | null;
 }) {
   const [pois, setPois] = useState<MapPoiFeature[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const lng = origin?.lng ?? null;
   const lat = origin?.lat ?? null;
-  const ready = Boolean(layer && lng != null && lat != null);
+  const selected = searchShortcutById(shortcut);
+  const ready = Boolean(selected && lng != null && lat != null);
 
   useEffect(() => {
-    if (!ready || !layer || lng == null || lat == null) return;
+    if (!ready || !selected || lng == null || lat == null) return;
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
       setLoading(true);
       setError(null);
       const params = new URLSearchParams({
         nearby: "1",
-        preferPhone: "1",
-        layers: layer,
+        categories: selected.categories.join(","),
         lng: String(lng),
         lat: String(lat),
-        radius: "2800",
+        radius: selected.id === "fuel" ? "4200" : "2800",
         limit: "14",
       });
       void fetch(`/api/pois?${params}`, { signal: controller.signal })
@@ -55,7 +56,7 @@ export function useYellowPagesNearby({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [layer, lat, lng, ready]);
+  }, [lat, lng, ready, selected]);
 
   if (!ready) {
     return { pois: [] as MapPoiFeature[], loading: false, error: null };

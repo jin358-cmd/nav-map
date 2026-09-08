@@ -233,6 +233,7 @@ export function poisInBounds(
   origin?: { lat: number; lng: number },
   limit = 80,
   layers?: PoiMainLayerId[],
+  categories?: string[],
 ) {
   const west = Math.min(bounds.west, bounds.east);
   const east = Math.max(bounds.west, bounds.east);
@@ -240,13 +241,17 @@ export function poisInBounds(
   const north = Math.max(bounds.south, bounds.north);
   const wantedLayers = layers?.length ? layers : [...POI_MAIN_LAYER_IDS];
   const wanted = new Set(wantedLayers);
+  const categorySet = categories?.length ? new Set(categories) : null;
   const rows = poisInGridBounds({ west, south, east, north }).filter(
     (poi) =>
       poi.longitude >= west &&
       poi.longitude <= east &&
       poi.latitude >= south &&
       poi.latitude <= north &&
-      wanted.has(poi.mainCategory),
+      (categorySet
+        ? categorySet.has(poi.category) ||
+          (categorySet.has("fuel") && poi.subcategory === "charging")
+        : wanted.has(poi.mainCategory)),
   );
   const ranked = rows
     .map((poi) => ({
@@ -258,6 +263,9 @@ export function poisInBounds(
     }))
     .sort((a, b) => a.pick - b.pick || a.km - b.km)
     .map((row) => row.poi);
+  if (categorySet) {
+    return ranked.slice(0, Math.max(limit, 80));
+  }
   const perLayer = Math.max(
     80,
     Math.min(140, Math.ceil(Math.max(limit, 560) / wanted.size)),
@@ -281,6 +289,7 @@ export function poisNearby(
   layers?: PoiMainLayerId[],
   limit = 16,
   preferPhone = false,
+  categories?: string[],
 ) {
   const span = Math.max(400, Math.min(8000, radiusMeters)) / 111000;
   const cos = Math.max(0.2, Math.cos((origin.lat * Math.PI) / 180));
@@ -293,7 +302,8 @@ export function poisNearby(
     },
     origin,
     Math.max(limit * 4, 80),
-    layers,
+    categories?.length ? undefined : layers,
+    categories,
   );
   const radiusKm = radiusMeters / 1000;
   const ranked = rows
