@@ -31,6 +31,7 @@ type MapControlsProps = {
   poiLayersLoading?: boolean;
   poiLayersProgress?: number;
   navigating?: boolean;
+  toolsDrawer?: ReactNode;
   onLocate: () => void;
   onToggleCamera: () => void;
   onMapDisplayMode: (mode: MapDisplayMode) => void;
@@ -51,6 +52,7 @@ export function MapControls({
   poiMenuOpen = false,
   poiLayersLoading = false,
   poiLayersProgress = 0,
+  toolsDrawer = null,
   onLocate,
   onToggleCamera,
   onMapDisplayMode,
@@ -132,16 +134,34 @@ export function MapControls({
         onToggle={onToggleStyleMenu}
       />
       {onToggleToolsDrawer ? (
-        <ControlButton
-          label={toolsDrawerOpen ? "收合功能列" : "開啟功能列"}
-          onClick={onToggleToolsDrawer}
-          active={toolsDrawerOpen}
-          expanded={toolsDrawerOpen}
-          controls="navpilot-function-drawer"
-          tone={tone}
-        >
-          <LayoutGrid className="size-6" strokeWidth={2.5} />
-        </ControlButton>
+        <div className="relative">
+          <div
+            className={cn(
+              "absolute right-full bottom-0 z-30 mr-2",
+              !toolsDrawerOpen && "pointer-events-none",
+            )}
+          >
+            <div
+              id="navpilot-function-drawer"
+              className={cn(
+                "function-drawer",
+                !toolsDrawerOpen && "function-drawer--closed",
+              )}
+            >
+              {toolsDrawer}
+            </div>
+          </div>
+          <ControlButton
+            label={toolsDrawerOpen ? "收合功能列" : "開啟功能列"}
+            onClick={onToggleToolsDrawer}
+            active={toolsDrawerOpen}
+            expanded={toolsDrawerOpen}
+            controls="navpilot-function-drawer"
+            tone={tone}
+          >
+            <LayoutGrid className="size-6" strokeWidth={2.5} />
+          </ControlButton>
+        </div>
       ) : null}
     </div>
   );

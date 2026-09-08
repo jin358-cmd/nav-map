@@ -1865,7 +1865,7 @@ export function DrivingApp() {
 
       <div
         className={
-          styleMenuOpen || poiMenuOpen
+          styleMenuOpen || poiMenuOpen || drawerOpen
             ? "hud-anchor-rail hud-anchor-interactive"
             : "hud-anchor-rail"
         }
@@ -1913,17 +1913,20 @@ export function DrivingApp() {
           onTogglePoiMenu={() => {
             setPoiMenuOpen((open) => !open);
             setStyleMenuOpen(false);
+            setToolsDrawerOpen(false);
             setFavoritesOpen(false);
           }}
-          onToggleToolsDrawer={() =>
+          onToggleToolsDrawer={() => {
+            setStyleMenuOpen(false);
+            setPoiMenuOpen(false);
             setToolsDrawerOpen((open) => {
               const next = !open;
               if (!next && routeAlert) {
                 dismissedRouteAlertIdRef.current = routeAlert.id;
               }
               return next;
-            })
-          }
+            });
+          }}
           onMapDisplayMode={(mode) => {
             if (mode === mapDisplayMode && pendingMapDisplayMode == null) {
               setStyleMenuOpen(false);
@@ -1933,7 +1936,60 @@ export function DrivingApp() {
             setStyleMenuOpen(false);
             setStyleHint(null);
           }}
-          onToggleStyleMenu={() => setStyleMenuOpen((open) => !open)}
+          onToggleStyleMenu={() => {
+            setStyleMenuOpen((open) => !open);
+            setPoiMenuOpen(false);
+            setToolsDrawerOpen(false);
+          }}
+          toolsDrawer={
+            <RoadInformationCard
+              items={intel}
+              origin={origin}
+              disasterOrigin={disasterOrigin}
+              emptyHint="目前畫面內尚無 CCTV、事故或災害情報。"
+              onSelectCctv={selectCamera}
+              layerVisibility={layerVisibility}
+              activeKind={eventListKind ?? selectedEvent?.kind ?? null}
+              onKindClick={handleKindClick}
+              musicOpen={musicMode !== "off"}
+              favorites={userFavorites}
+              favoritesOpen={favoritesOpen}
+              isCurrentFavorite={isCurrentFavorite}
+              routeAlert={routeAlert}
+              compact
+              onHeartClick={handleHeartClick}
+              account={googleAccount.account}
+              accountBusy={googleAccount.busy}
+              accountHint={googleAccount.hint}
+              accountConfigured={googleAccount.configured}
+              accountUnavailable={googleAccount.unavailable}
+              onSignIn={googleAccount.signIn}
+              onSignOut={googleAccount.signOut}
+              parkingOn={parkingOpen}
+              parkingLoading={parkingLoading}
+              onToggleParking={handleToggleParking}
+              onPreviewOpen={() => {
+                setFavoritesOpen(false);
+                setSelectedCctv(null);
+                setSelectedEvent(null);
+                setEventListKind(null);
+                setMusicMode("off");
+              }}
+              onToggleMusic={() => {
+                setFavoritesOpen(false);
+                setParkingOpen(false);
+                setSelectedParking(null);
+                setSelectedCctv(null);
+                setSelectedEvent(null);
+                setEventListKind(null);
+                setSelectedMapPlace(null);
+                setMusicMode((mode) => {
+                  if (mode === "off") return "open";
+                  return "off";
+                });
+              }}
+            />
+          }
         />
       </div>
 
@@ -1957,11 +2013,7 @@ export function DrivingApp() {
       </div>
 
       {navigating ? (
-        <div
-          className={
-            drawerOpen ? "hud-anchor-trip hud-anchor-trip--drawer" : "hud-anchor-trip"
-          }
-        >
+        <div className="hud-anchor-trip">
           {cameraSpeedLimit ? (
             <div className="speed-camera-caution-float">
               <SpeedCameraCaution alert={cameraSpeedLimit} />
@@ -2202,62 +2254,6 @@ export function DrivingApp() {
             }}
           />
         ) : null}
-        </div>
-        <div
-          id="navpilot-function-drawer"
-          className={
-            drawerOpen
-              ? "function-drawer"
-              : "function-drawer function-drawer--closed"
-          }
-        >
-        <RoadInformationCard
-          items={intel}
-          origin={origin}
-          disasterOrigin={disasterOrigin}
-          emptyHint="目前畫面內尚無 CCTV、事故或災害情報。"
-          onSelectCctv={selectCamera}
-          layerVisibility={layerVisibility}
-          activeKind={eventListKind ?? selectedEvent?.kind ?? null}
-          onKindClick={handleKindClick}
-          musicOpen={musicMode !== "off"}
-          favorites={userFavorites}
-          favoritesOpen={favoritesOpen}
-          isCurrentFavorite={isCurrentFavorite}
-          routeAlert={routeAlert}
-          compact
-          onHeartClick={handleHeartClick}
-          account={googleAccount.account}
-          accountBusy={googleAccount.busy}
-          accountHint={googleAccount.hint}
-          accountConfigured={googleAccount.configured}
-          accountUnavailable={googleAccount.unavailable}
-          onSignIn={googleAccount.signIn}
-          onSignOut={googleAccount.signOut}
-          parkingOn={parkingOpen}
-          parkingLoading={parkingLoading}
-          onToggleParking={handleToggleParking}
-          onPreviewOpen={() => {
-            setFavoritesOpen(false);
-            setSelectedCctv(null);
-            setSelectedEvent(null);
-            setEventListKind(null);
-            setMusicMode("off");
-          }}
-          onToggleMusic={() => {
-            setFavoritesOpen(false);
-            setParkingOpen(false);
-            setSelectedParking(null);
-            setSelectedCctv(null);
-            setSelectedEvent(null);
-            setEventListKind(null);
-            setSelectedMapPlace(null);
-            setMusicMode((mode) => {
-              if (mode === "off") return "open";
-              return "off";
-            });
-          }}
-        />
         </div>
       </footer>
 
