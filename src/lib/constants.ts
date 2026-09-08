@@ -13,15 +13,15 @@ export const DEMO_VEHICLE: VehiclePose = {
   source: "demo",
 };
 
-export const DRIVING_PITCH = 58;
+export const DRIVING_PITCH = 60;
 /**
- * 導航 3D：駕駛仰角 15°（視線低於水平 15°）。
- * MapLibre pitch = 90 − 仰角 = 75。
+ * 3D 駕駛視角：pitch 60°（相機在車後上方往前看）。
+ * 建物可見頂面與立面，地面光圈清楚，消失點約在畫面中上。
  */
-export const NAVIGATION_PITCH = 75;
-/** 直式導航同樣維持仰角 15°。 */
-export const NAVIGATION_PITCH_PORTRAIT = 75;
-export const INTERSECTION_PITCH_PORTRAIT = 75;
+export const NAVIGATION_PITCH = 60;
+/** 直式導航與橫式同一 3D 仰角。 */
+export const NAVIGATION_PITCH_PORTRAIT = 60;
+export const INTERSECTION_PITCH_PORTRAIT = 62;
 export const DRIVING_ZOOM_PORTRAIT = 17.98;
 export const OVERVIEW_PITCH = 0;
 export const DRIVING_ZOOM = 17.72;
@@ -37,7 +37,7 @@ export const OVERHEAD_TURN_ZOOM_PORTRAIT = 18.08;
 /** 路口近距離上限，避免無限放大。 */
 export const INTERSECTION_ZOOM = 18.28;
 export const INTERSECTION_ZOOM_MOBILE = 18.05;
-export const INTERSECTION_PITCH = 75;
+export const INTERSECTION_PITCH = 62;
 export const INTERSECTION_APPROACH_METERS = 95;
 export const CRUISE_ZOOM_START_METERS = 500;
 export const PREPARE_ZOOM_METERS = 200;
@@ -58,8 +58,8 @@ export const MANEUVER_RECOVER_MS = 1800;
 /** 懸空橘色箭頭：200 公尺開始出現 */
 export const GUIDANCE_ARROW_APPROACH_METERS = 200;
 
-/** 瀏覽時車輛約在畫面 65%；導航 3D 直立約 72%。 */
-export const BROWSE_VEHICLE_Y = 0.65;
+/** 瀏覽 3D：車輛約在畫面下三分之一；導航 3D 略再偏低，前方視野拉長。 */
+export const BROWSE_VEHICLE_Y = 0.68;
 export const NAV_VEHICLE_Y = 0.72;
 /** 直立 2D 導航：車輛偏下，前方路口／路標在畫面中下。 */
 export const NAV_2D_PORTRAIT_VEHICLE_Y = 0.78;

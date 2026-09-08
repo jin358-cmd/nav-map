@@ -113,7 +113,7 @@ function applyLightDrivingTheme(map: MapLibreMap) {
             ["coalesce", ["get", "render_height"], ["get", "height"], 10],
             1.35,
           ],
-          "fill-extrusion-opacity": 0.55,
+          "fill-extrusion-opacity": 0.78,
         },
       });
     } catch {

@@ -131,7 +131,7 @@ export function applyDarkDrivingTheme(map: MapLibreMap) {
             ["get", "render_min_height"],
             0,
           ],
-          "fill-extrusion-opacity": 0.55,
+          "fill-extrusion-opacity": 0.78,
         },
       });
     } catch {
@@ -150,7 +150,7 @@ export function applyDarkDrivingTheme(map: MapLibreMap) {
   if (map.getLayer("building-3d")) {
     try {
       map.setPaintProperty("building-3d", "fill-extrusion-color", GRAY.buildingExtrusion);
-      map.setPaintProperty("building-3d", "fill-extrusion-opacity", 0.55);
+      map.setPaintProperty("building-3d", "fill-extrusion-opacity", 0.78);
     } catch {
       /* keep existing extrusion */
     }
