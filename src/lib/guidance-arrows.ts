@@ -4,7 +4,7 @@ import type {
   Map as MapLibreMap,
 } from "maplibre-gl";
 import {
-  shouldShowGuidanceSigns,
+  shouldShowGroundBow,
   turnGuidanceLine,
   turnMarqueeArrows,
 } from "@/lib/upcoming-route";
@@ -15,7 +15,7 @@ export const GUIDANCE_LAYER_ID = "navpilot-turn-arrows-layer";
 export const TURN_LINE_SOURCE_ID = "navpilot-turn-line";
 export const TURN_LINE_GLOW_ID = "navpilot-turn-line-glow";
 export const TURN_LINE_LAYER_ID = "navpilot-turn-line-layer";
-const CHEVRON_IMAGE_ID = "navpilot-ground-chevron-v2";
+const CHEVRON_IMAGE_ID = "navpilot-ground-chevron-blue-v4";
 
 let showing = false;
 
@@ -31,6 +31,25 @@ function emptyLine() {
   };
 }
 
+function strokeChevron(
+  ctx: CanvasRenderingContext2D,
+  outer: number,
+  inner: number,
+  depth: number,
+  width: number,
+  color: string,
+) {
+  ctx.beginPath();
+  ctx.moveTo(-depth, inner);
+  ctx.lineTo(0, -outer);
+  ctx.lineTo(depth, inner);
+  ctx.lineWidth = width;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = color;
+  ctx.stroke();
+}
+
 function createChevronImage() {
   const size = 192;
   const canvas = document.createElement("canvas");
@@ -41,26 +60,14 @@ function createChevronImage() {
   ctx.clearRect(0, 0, size, size);
   ctx.translate(size / 2, size / 2);
 
-  const chevron = (outer: number, inner: number, depth: number) => {
-    ctx.beginPath();
-    ctx.moveTo(0, -outer);
-    ctx.lineTo(depth, inner);
-    ctx.lineTo(depth * 0.58, inner);
-    ctx.lineTo(0, -outer + (inner + outer) * 0.42);
-    ctx.lineTo(-depth * 0.58, inner);
-    ctx.lineTo(-depth, inner);
-    ctx.closePath();
-  };
-
-  chevron(62, 54, 78);
-  ctx.fillStyle = "#422006";
-  ctx.fill();
-  chevron(54, 44, 66);
-  ctx.fillStyle = "#facc15";
-  ctx.fill();
-  chevron(38, 32, 42);
-  ctx.fillStyle = "#fef08a";
-  ctx.fill();
+  ctx.save();
+  ctx.shadowColor = "rgba(14, 165, 233, 0.95)";
+  ctx.shadowBlur = 18;
+  strokeChevron(ctx, 58, 48, 78, 28, "#075985");
+  ctx.restore();
+  strokeChevron(ctx, 56, 44, 72, 20, "#0284c7");
+  strokeChevron(ctx, 52, 38, 64, 13, "#38bdf8");
+  strokeChevron(ctx, 48, 32, 54, 6, "#e0f2fe");
 
   return ctx.getImageData(0, 0, size, size);
 }
@@ -70,6 +77,25 @@ function ensureImages(map: MapLibreMap) {
   const image = createChevronImage();
   if (image) map.addImage(CHEVRON_IMAGE_ID, image, { pixelRatio: 2 });
 }
+
+const TURN_GLOW_WIDTH: ExpressionSpecification = [
+  "interpolate",
+  ["linear"],
+  ["zoom"],
+  12,
+  14,
+  17,
+  32,
+];
+const TURN_LINE_WIDTH: ExpressionSpecification = [
+  "interpolate",
+  ["linear"],
+  ["zoom"],
+  12,
+  8,
+  17,
+  16,
+];
 
 function ensureTurnLine(map: MapLibreMap) {
   if (!map.getSource(TURN_LINE_SOURCE_ID)) {
@@ -84,13 +110,18 @@ function ensureTurnLine(map: MapLibreMap) {
       type: "line",
       source: TURN_LINE_SOURCE_ID,
       paint: {
-        "line-color": "#fde047",
-        "line-width": ["interpolate", ["linear"], ["zoom"], 12, 10, 17, 22],
-        "line-opacity": 0.42,
-        "line-blur": 4,
+        "line-color": "#38bdf8",
+        "line-width": TURN_GLOW_WIDTH,
+        "line-opacity": 0.36,
+        "line-blur": 7,
       },
       layout: { "line-cap": "round", "line-join": "round" },
     });
+  } else {
+    map.setPaintProperty(TURN_LINE_GLOW_ID, "line-color", "#38bdf8");
+    map.setPaintProperty(TURN_LINE_GLOW_ID, "line-width", TURN_GLOW_WIDTH);
+    map.setPaintProperty(TURN_LINE_GLOW_ID, "line-opacity", 0.36);
+    map.setPaintProperty(TURN_LINE_GLOW_ID, "line-blur", 7);
   }
   if (!map.getLayer(TURN_LINE_LAYER_ID)) {
     map.addLayer({
@@ -98,12 +129,16 @@ function ensureTurnLine(map: MapLibreMap) {
       type: "line",
       source: TURN_LINE_SOURCE_ID,
       paint: {
-        "line-color": "#facc15",
-        "line-width": ["interpolate", ["linear"], ["zoom"], 12, 5.5, 17, 12],
-        "line-opacity": 0.98,
+        "line-color": "#7dd3fc",
+        "line-width": TURN_LINE_WIDTH,
+        "line-opacity": 0.46,
       },
       layout: { "line-cap": "round", "line-join": "round" },
     });
+  } else {
+    map.setPaintProperty(TURN_LINE_LAYER_ID, "line-color", "#7dd3fc");
+    map.setPaintProperty(TURN_LINE_LAYER_ID, "line-width", TURN_LINE_WIDTH);
+    map.setPaintProperty(TURN_LINE_LAYER_ID, "line-opacity", 0.46);
   }
 }
 
@@ -113,13 +148,13 @@ function chevronSize(): ExpressionSpecification {
     ["linear"],
     ["zoom"],
     14.2,
-    ["*", ["get", "scale"], 0.86],
+    ["*", ["get", "scale"], 0.92],
     16.2,
-    ["*", ["get", "scale"], 1.22],
+    ["*", ["get", "scale"], 1.32],
     17.4,
-    ["*", ["get", "scale"], 1.48],
+    ["*", ["get", "scale"], 1.62],
     18.4,
-    ["*", ["get", "scale"], 1.68],
+    ["*", ["get", "scale"], 1.86],
   ];
 }
 
@@ -205,7 +240,7 @@ export function upsertGuidanceArrows(
   const live =
     navigating &&
     options.isTurn === true &&
-    shouldShowGuidanceSigns(distanceToNext, showing);
+    shouldShowGroundBow(distanceToNext, showing);
   showing = live;
 
   const line =
@@ -218,7 +253,8 @@ export function upsertGuidanceArrows(
           true,
         )
       : [];
-  const arrows = line.length >= 2 ? turnMarqueeArrows(line, phase) : [];
+  const arrows =
+    line.length >= 2 ? turnMarqueeArrows(line, phase, distanceToNext) : [];
 
   const data = {
     type: "FeatureCollection" as const,

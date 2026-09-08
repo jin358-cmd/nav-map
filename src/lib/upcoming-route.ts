@@ -1,4 +1,6 @@
 import {
+  GROUND_BOW_APPROACH_METERS,
+  GROUND_BOW_EXIT_METERS,
   GUIDANCE_SIGN_APPROACH_METERS,
   GUIDANCE_SIGN_EXIT_METERS,
   INTERSECTION_APPROACH_METERS,
@@ -285,7 +287,16 @@ export function shouldShowGuidanceSigns(
   return distanceToNext <= GUIDANCE_SIGN_APPROACH_METERS;
 }
 
-/** 路口前 150 公尺：車頭到轉彎點的黃色引導線。 */
+export function shouldShowGroundBow(
+  distanceToNext: number,
+  wasShowing = false,
+) {
+  if (!Number.isFinite(distanceToNext)) return false;
+  if (wasShowing) return distanceToNext <= GROUND_BOW_EXIT_METERS;
+  return distanceToNext <= GROUND_BOW_APPROACH_METERS;
+}
+
+/** 路口前：車頭沿轉彎軌跡的地面引導線（弓型）。 */
 export function turnGuidanceLine(
   route: [number, number][],
   routeMeters: number,
@@ -293,30 +304,47 @@ export function turnGuidanceLine(
   cueMeters?: number,
   wasShowing = false,
 ): [number, number][] {
-  if (route.length < 2 || !shouldShowGuidanceSigns(distanceToNext, wasShowing)) {
+  if (route.length < 2 || !shouldShowGroundBow(distanceToNext, wasShowing)) {
     return [];
   }
   const turnAt = Number.isFinite(cueMeters)
     ? Math.max(routeMeters, cueMeters as number)
     : routeMeters + Math.max(0, distanceToNext);
-  const ahead = Math.max(56, turnAt - routeMeters + 22);
-  return sliceRouteAhead(route, routeMeters + 3, ahead);
+  const ahead = Math.max(72, turnAt - routeMeters + 56);
+  return sliceRouteAhead(route, routeMeters + 4, ahead);
 }
 
-const TURN_MARQUEE_SPACING_M = 28;
+function bowApproach(distanceToNext: number) {
+  if (distanceToNext <= 50) return 1;
+  if (distanceToNext >= GROUND_BOW_APPROACH_METERS) return 0;
+  if (distanceToNext <= 100) {
+    return 0.55 + 0.45 * ((100 - distanceToNext) / 50);
+  }
+  return (
+    0.55 *
+    ((GROUND_BOW_APPROACH_METERS - distanceToNext) /
+      (GROUND_BOW_APPROACH_METERS - 100))
+  );
+}
 
-/** 黃色地面弓型箭頭：沿引導線順行慢速跑馬燈。 */
+function bowSpacingMeters(distanceToNext: number) {
+  return 28 - bowApproach(distanceToNext) * 13;
+}
+
+/** 藍色地面弓型箭頭：沿轉彎軌跡順行，近路口更大更亮更密。 */
 export function turnMarqueeArrows(
   line: [number, number][],
   phase = 0,
+  distanceToNext = GROUND_BOW_APPROACH_METERS,
 ): GuidanceArrow[] {
   if (line.length < 2) return [];
-  const spacing = TURN_MARQUEE_SPACING_M;
+  const approach = bowApproach(distanceToNext);
+  const spacing = bowSpacingMeters(distanceToNext);
   const cycle = ((phase % 1) + 1) % 1;
   const shift = (1 - cycle) * spacing;
   const total = lineLengthMeters(line);
   const placed: GuidanceArrow[] = [];
-  let leftover = spacing * 0.28 - shift;
+  let leftover = spacing * 0.22 - shift;
   let along = 0;
 
   for (let index = 1; index < line.length; index += 1) {
@@ -331,16 +359,16 @@ export function turnMarqueeArrows(
     let cursor = leftover;
     while (cursor < length) {
       const at = along + cursor;
-      if (cursor >= 0 && at >= 8) {
+      if (cursor >= 0 && at >= 6) {
         const ratio = cursor / length;
         const t = total > 0 ? Math.min(1, Math.max(0, at / total)) : 0;
         placed.push({
           lng: from.lng + (to.lng - from.lng) * ratio,
           lat: from.lat + (to.lat - from.lat) * ratio,
           bearing,
-          opacity: 0.78 + t * 0.22,
+          opacity: 0.62 + approach * 0.18 + t * 0.28,
           kind: "straight",
-          scale: 1.35 + t * 0.7,
+          scale: 1.18 + approach * 0.42 + t * (0.7 + approach * 0.38),
         });
       }
       cursor += spacing;

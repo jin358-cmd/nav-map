@@ -67,6 +67,9 @@ export const MANEUVER_RECOVER_MS = 1800;
 /** 立體弓型導覽標示：轉彎前 150 公尺出現 */
 export const GUIDANCE_SIGN_APPROACH_METERS = 150;
 export const GUIDANCE_SIGN_EXIT_METERS = 168;
+/** 地面藍色弓型箭頭：約 200 公尺開始出現，近路口加密加亮 */
+export const GROUND_BOW_APPROACH_METERS = 200;
+export const GROUND_BOW_EXIT_METERS = 218;
 /** @deprecated 改用 GUIDANCE_SIGN_APPROACH_METERS */
 export const GUIDANCE_ARROW_APPROACH_METERS = GUIDANCE_SIGN_APPROACH_METERS;
 /** 直式：黃線出現後開始拉近，到此距離達上限並維持。 */
