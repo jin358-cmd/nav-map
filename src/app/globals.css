@@ -902,15 +902,20 @@
   border-radius: 0.85rem;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(0, 0, 0, 0.5);
+  text-align: center;
 }
 
 .hud-speed-gps__value {
+  width: 100%;
   font-size: clamp(20px, 11.5cqi, 30px);
+  text-align: center;
 }
 
 .hud-speed-gps__unit {
+  width: 100%;
   margin-top: 0.15rem;
   font-size: 11px;
+  text-align: center;
 }
 
 .hud-speed-limit-slot {

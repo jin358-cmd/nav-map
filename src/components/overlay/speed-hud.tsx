@@ -20,7 +20,7 @@ export function SpeedHud({ sample }: { sample: SpeedSample }) {
   const display = kmh == null ? "--" : String(Math.round(kmh));
 
   return (
-    <div className="hud-speed-gps pointer-events-none flex w-full flex-col items-start justify-center px-2">
+    <div className="hud-speed-gps pointer-events-none flex w-full flex-col items-center justify-center">
       <p className="hud-speed-gps__value font-black leading-none tabular-nums text-white">
         {display}
       </p>
