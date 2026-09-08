@@ -48,8 +48,8 @@ export function subscribeDeviceCompass(onHeading: (heading: number) => void): ()
       return;
     }
     const jump = headingDelta(smoothed, heading);
-    if (jump > 75) return;
-    smoothed = lerpAngle(smoothed, heading, damp(dt, 0.38));
+    const alpha = jump > 55 ? damp(dt, 0.16) : damp(dt, 0.62);
+    smoothed = lerpAngle(smoothed, heading, alpha);
     onHeading(smoothed);
   };
 

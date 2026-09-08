@@ -1,4 +1,9 @@
-import { BRAND_ALIASES, nameFitsBrand, normalizePoiKey } from "@/lib/poi/aliases";
+import {
+  BRAND_ALIASES,
+  keepTaggedChainBrand,
+  nameFitsBrand,
+  normalizePoiKey,
+} from "@/lib/poi/aliases";
 import {
   poiMainLayerFromCategory,
   poiSubcategoryFromCategory,
@@ -105,9 +110,10 @@ export function hydratePoiRecord(row: Partial<TaiwanPoiRecord> & Record<string, 
   const aliases = Array.isArray(row.aliases)
     ? [...new Set(row.aliases.map((item) => compactKey(String(item))).filter(Boolean))]
     : [];
+  const category = (row.category as PoiCategory) || "other";
   let brand = (row.brand as string | null) ?? null;
   let keptAliases = aliases;
-  if (brand && !nameFitsBrand(name, brand)) {
+  if (brand && !keepTaggedChainBrand(name, brand, category)) {
     brand = null;
     keptAliases = [];
   }
@@ -128,7 +134,6 @@ export function hydratePoiRecord(row: Partial<TaiwanPoiRecord> & Record<string, 
       ]),
     ];
   }
-  const category = (row.category as PoiCategory) || "other";
   const subcategory =
     String(row.subcategory ?? row.sub_category ?? "").trim() ||
     poiSubcategoryFromCategory(category);

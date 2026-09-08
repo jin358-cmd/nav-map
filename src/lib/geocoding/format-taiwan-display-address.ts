@@ -449,6 +449,21 @@ export function formatTaiwanStreetName(
     .trim();
 }
 
+const COUNTY_CITY_ONLY = /^(?:[\u4e00-\u9fff]{1,3}[縣市])$/u;
+
+/** 距離列：路名＋段，不含縣市、行政區、巷弄門牌。 */
+export function formatDistanceRoadLabel(
+  input: string | TaiwanDisplayAddressInput | null | undefined,
+): string {
+  const street = formatTaiwanStreetName(input);
+  if (!street) return "";
+  const compact = compactTaiwanText(street).replaceAll("臺", "台");
+  if (COUNTY_CITY_ONLY.test(compact) || compact === "台灣" || compact === "台湾") {
+    return "";
+  }
+  return street;
+}
+
 /** 路口：中華路 至 民生路 → 中華路 × 民生路 */
 export function formatIntersectionLabel(value: string) {
   return value

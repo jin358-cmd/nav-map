@@ -1,10 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { MapPoiFeature } from "@/lib/map-place";
+import { distanceKm } from "@/lib/geo";
 import type { SearchShortcutId } from "@/lib/search-shortcuts";
 import { searchShortcutById } from "@/lib/search-shortcuts";
 import type { LngLat } from "@/types/domain";
+
+export type NearbyShortcutPoi = MapPoiFeature & { distanceMeters: number };
+
+function quantizeNearbyOrigin(origin: LngLat | null): LngLat | null {
+  if (!origin) return null;
+  const step = 0.0012;
+  return {
+    lng: Math.round(origin.lng / step) * step,
+    lat: Math.round(origin.lat / step) * step,
+  };
+}
 
 export function useYellowPagesNearby({
   origin,
@@ -13,19 +25,34 @@ export function useYellowPagesNearby({
   origin: LngLat | null;
   shortcut: SearchShortcutId | null;
 }) {
-  const [pois, setPois] = useState<MapPoiFeature[]>([]);
+  const [pois, setPois] = useState<NearbyShortcutPoi[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const lng = origin?.lng ?? null;
-  const lat = origin?.lat ?? null;
+  const [fetchedFor, setFetchedFor] = useState<SearchShortcutId | null>(null);
+  const originLng = origin?.lng ?? null;
+  const originLat = origin?.lat ?? null;
+  const bucket = useMemo(
+    () =>
+      originLng == null || originLat == null
+        ? null
+        : quantizeNearbyOrigin({ lng: originLng, lat: originLat }),
+    [originLat, originLng],
+  );
+  const lng = bucket?.lng ?? null;
+  const lat = bucket?.lat ?? null;
   const selected = searchShortcutById(shortcut);
+  const selectedId = selected?.id ?? null;
   const ready = Boolean(selected && lng != null && lat != null);
+  const shortcutRef = useRef<SearchShortcutId | null>(null);
 
   useEffect(() => {
-    if (!ready || !selected || lng == null || lat == null) return;
+    if (!selected || lng == null || lat == null) return;
+
+    const shortcutChanged = shortcutRef.current !== selected.id;
+    shortcutRef.current = selected.id;
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
-      setLoading(true);
+      if (shortcutChanged) setLoading(true);
       setError(null);
       const params = new URLSearchParams({
         nearby: "1",
@@ -42,24 +69,37 @@ export function useYellowPagesNearby({
         })
         .then((data) => {
           if (controller.signal.aborted) return;
-          setPois(data.pois ?? []);
+          const originFix = { lng, lat };
+          setFetchedFor(selected.id);
+          setPois(
+            (data.pois ?? []).map((poi) => ({
+              ...poi,
+              distanceMeters: Math.round(distanceKm(originFix, poi.location) * 1000),
+            })),
+          );
           setLoading(false);
         })
         .catch(() => {
           if (controller.signal.aborted) return;
-          setPois([]);
+          setFetchedFor(selected.id);
           setLoading(false);
           setError("附近店家讀取失敗");
         });
-    }, 0);
+    }, shortcutChanged ? 0 : 280);
+
     return () => {
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [lat, lng, ready, selected]);
+  }, [lat, lng, selected]);
 
-  if (!ready) {
-    return { pois: [] as MapPoiFeature[], loading: false, error: null };
+  if (!ready || !selectedId) {
+    return { pois: [] as NearbyShortcutPoi[], loading: false, error: null };
   }
-  return { pois, loading, error };
+  const stale = fetchedFor !== selectedId;
+  return {
+    pois: stale ? [] : pois,
+    loading: stale || loading,
+    error: stale ? null : error,
+  };
 }

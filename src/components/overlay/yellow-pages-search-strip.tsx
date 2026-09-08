@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { formatDistance } from "@/lib/format";
-import { formatTaiwanDisplayAddress, formatTaiwanRoadName } from "@/lib/geocoding/format-taiwan-display-address";
-import { distanceKm } from "@/lib/geo";
+import { formatDistanceRoadLabel } from "@/lib/geocoding/format-taiwan-display-address";
 import { poiFeatureToPlace } from "@/lib/map-place";
+import { formatLayerPoiTitle } from "@/lib/poi/display";
 import { SEARCH_SHORTCUTS, type SearchShortcutId } from "@/lib/search-shortcuts";
 import { useYellowPagesNearby } from "@/hooks/use-yellow-pages-nearby";
 import { cn } from "@/lib/utils";
@@ -64,9 +64,9 @@ export function YellowPagesSearchStrip({
               ? `${selected.label}${selected.id === "fuel" ? " · 含汽機車充電站" : ""}`
               : "附近店家"}
           </p>
-          {loading ? (
+          {loading && pois.length === 0 ? (
             <p className="px-1 py-2 text-sm text-zinc-300">讀取中…</p>
-          ) : error ? (
+          ) : error && pois.length === 0 ? (
             <p className="px-1 py-2 text-sm text-amber-200">{error}</p>
           ) : pois.length === 0 ? (
             <p className="px-1 py-2 text-sm text-zinc-300">
@@ -75,14 +75,8 @@ export function YellowPagesSearchStrip({
           ) : (
             <ul>
               {pois.map((poi) => {
-                const meters = origin
-                  ? Math.round(distanceKm(origin, poi.location) * 1000)
-                  : undefined;
-                const branch =
-                  poi.branchName?.trim() || formatTaiwanDisplayAddress(poi.name);
-                const address =
-                  formatTaiwanRoadName(poi.address) ||
-                  formatTaiwanDisplayAddress(poi.address);
+                const title = formatLayerPoiTitle(poi);
+                const street = formatDistanceRoadLabel(poi.address);
                 return (
                   <li key={poi.id}>
                     <button
@@ -91,12 +85,12 @@ export function YellowPagesSearchStrip({
                         const place = poiFeatureToPlace(poi, origin);
                         onSelect({
                           id: place.id,
-                          name: place.name,
-                          address: place.address,
+                          name: title,
+                          address: street || place.address,
                           location: place.location,
                           source: "index",
                           matchKind: "landmark",
-                          distanceMeters: place.distanceMeters,
+                          distanceMeters: poi.distanceMeters,
                           category: place.category,
                           phone: place.phone,
                           branchName: poi.branchName || undefined,
@@ -106,11 +100,11 @@ export function YellowPagesSearchStrip({
                     >
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-semibold text-white">
-                          {branch}
+                          {title}
                         </span>
                         <span className="block truncate text-[12px] text-zinc-200">
-                          {meters != null ? `${formatDistance(meters)} · ` : ""}
-                          {address || "地址未提供"}
+                          {formatDistance(poi.distanceMeters)}
+                          {street ? ` · ${street}` : ""}
                         </span>
                       </span>
                     </button>
