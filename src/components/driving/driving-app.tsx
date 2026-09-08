@@ -63,6 +63,12 @@ import {
   type PoiLayerVisibility,
   type PoiMainLayerId,
 } from "@/lib/poi/main-layers";
+import {
+  allPoiSubFlags,
+  anyPoiSubOn,
+  defaultPoiSubVisibility,
+  type PoiSubVisibility,
+} from "@/lib/poi/subcategories";
 import { isDemoLandmarkPreset } from "@/data/landmarks";
 import { formatTaiwanRoadName } from "@/lib/geocoding/format-taiwan-display-address";
 import { cn } from "@/lib/utils";
@@ -280,6 +286,8 @@ export function DrivingApp() {
   );
   const [poiLayerVisibility, setPoiLayerVisibility] =
     useState<PoiLayerVisibility>(DEFAULT_POI_LAYER_VISIBILITY);
+  const [poiSubVisibility, setPoiSubVisibility] =
+    useState<PoiSubVisibility>(defaultPoiSubVisibility);
   const [poiMenuOpen, setPoiMenuOpen] = useState(false);
   const [poiReadFocus, setPoiReadFocus] = useState<PoiMainLayerId | null>(null);
   const [focusTarget, setFocusTarget] = useState<MapFocusTarget | null>(null);
@@ -557,15 +565,15 @@ export function DrivingApp() {
   const visibleMapPois = useMemo(
     () =>
       mapPois.filter((poi) =>
-        poi.mainLayer
-          ? poiLayerVisibility[poi.mainLayer]
-          : isPoiLayerVisible(
-              poiLayerVisibility,
-              poi.category,
-              poi.subcategory,
-            ),
+        isPoiLayerVisible(
+          poiLayerVisibility,
+          poi.category,
+          poi.subcategory,
+          poiSubVisibility,
+          poi.mainLayer,
+        ),
       ),
-    [mapPois, poiLayerVisibility],
+    [mapPois, poiLayerVisibility, poiSubVisibility],
   );
 
   useEffect(() => {
@@ -1910,17 +1918,54 @@ export function DrivingApp() {
           <PoiLayerDrawer
             open={poiMenuOpen}
             visibility={poiLayerVisibility}
+            subVisibility={poiSubVisibility}
             loading={poiLayersLoading}
             progress={poiLayersProgress}
             loadingLabel={poiLayersReadLabel}
-            onToggle={(id) =>
+            onToggle={(id) => {
               setPoiLayerVisibility((current) => {
-                const next = { ...current, [id]: !current[id] };
-                if (next[id]) setPoiReadFocus(id);
+                const nextOn = !current[id];
+                if (nextOn) {
+                  setPoiReadFocus(id);
+                  setPoiSubVisibility((subs) =>
+                    anyPoiSubOn(id, subs)
+                      ? subs
+                      : { ...subs, [id]: allPoiSubFlags(id, true) },
+                  );
+                } else {
+                  setPoiReadFocus((focus) => (focus === id ? null : focus));
+                }
+                return { ...current, [id]: nextOn };
+              });
+            }}
+            onToggleSub={(id, subId) => {
+              setPoiSubVisibility((current) => {
+                const layer = {
+                  ...current[id],
+                  [subId]: !current[id][subId],
+                };
+                const anyOn = Object.values(layer).some(Boolean);
+                setPoiLayerVisibility((visibility) => {
+                  if (visibility[id] === anyOn) return visibility;
+                  if (anyOn) setPoiReadFocus(id);
+                  else setPoiReadFocus((focus) => (focus === id ? null : focus));
+                  return { ...visibility, [id]: anyOn };
+                });
+                return { ...current, [id]: layer };
+              });
+            }}
+            onSetAllSubs={(id, on) => {
+              setPoiSubVisibility((current) => ({
+                ...current,
+                [id]: allPoiSubFlags(id, on),
+              }));
+              setPoiLayerVisibility((visibility) => {
+                if (visibility[id] === on) return visibility;
+                if (on) setPoiReadFocus(id);
                 else setPoiReadFocus((focus) => (focus === id ? null : focus));
-                return next;
-              })
-            }
+                return { ...visibility, [id]: on };
+              });
+            }}
           />
         </div>
         <MapControls

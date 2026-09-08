@@ -2,7 +2,7 @@ import type { PoiMainLayerId } from "@/lib/poi/main-layers";
 
 /**
  * 中華電信黃頁水平分類（食品餐飲、衣著配件、住屋居家、行車運輸、
- * 教育文化、休閒育樂、醫療保健）對應到生活圖層食衣住行育樂。
+ * 教育文化、休閒育樂、醫療保健）對應到生活圈圖層食衣住行育樂。
  * 來源：中華黃頁行業分類（26 大類之生活消費水平分類）。
  */
 export const YELLOW_PAGES_LAYERS: Array<{

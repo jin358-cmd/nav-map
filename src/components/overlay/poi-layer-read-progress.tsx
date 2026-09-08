@@ -1,13 +1,14 @@
 "use client";
 
 import type { CSSProperties } from "react";
+import { LIFE_CIRCLE_LAYER_LABEL } from "@/lib/poi/main-layers";
 import { cn } from "@/lib/utils";
 
 function readCopy(label: string) {
-  const trimmed = label.trim() || "全國生活圖層";
+  const trimmed = label.trim() || LIFE_CIRCLE_LAYER_LABEL;
   if (trimmed.endsWith("讀取中")) {
     return {
-      name: trimmed.slice(0, -3).trim() || "全國生活圖層",
+      name: trimmed.slice(0, -3).trim() || LIFE_CIRCLE_LAYER_LABEL,
       status: "讀取中",
     };
   }
@@ -17,7 +18,7 @@ function readCopy(label: string) {
 export function PoiLayerReadProgress({
   progress,
   compact = false,
-  label = "全國生活圖層",
+  label = LIFE_CIRCLE_LAYER_LABEL,
 }: {
   progress: number;
   compact?: boolean;
@@ -60,7 +61,7 @@ export function PoiLayerReadProgress({
 
 export function PoiLayerReadBanner({
   progress,
-  label = "全國生活圖層",
+  label = LIFE_CIRCLE_LAYER_LABEL,
   className,
 }: {
   progress: number;

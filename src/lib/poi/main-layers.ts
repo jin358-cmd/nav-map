@@ -1,4 +1,5 @@
 import { yellowPagesLayerFromTags } from "@/lib/poi/yellow-pages";
+import { resolvePoiSubcategoryId, type PoiSubVisibility } from "@/lib/poi/subcategories";
 
 export {
   YELLOW_PAGES_LAYERS,
@@ -31,6 +32,8 @@ export const POI_MAIN_LAYERS: Array<{
   { id: "leisure", label: "樂 · 休閒育樂", short: "樂", yp: "休閒育樂" },
   { id: "medical", label: "醫 · 醫療保健", short: "醫", yp: "醫療保健" },
 ];
+
+export const LIFE_CIRCLE_LAYER_LABEL = "生活圈圖層";
 
 export type PoiLayerVisibility = Record<PoiMainLayerId, boolean>;
 
@@ -74,7 +77,7 @@ export function poiReadLabel(visibility: PoiLayerVisibility, focus?: PoiMainLaye
   const on = POI_MAIN_LAYERS.filter((layer) => visibility[layer.id]);
   if (on.length === 1) return on[0].yp;
   if (on.length > 1) return on.map((layer) => layer.yp).join("、");
-  return "全國生活圖層";
+  return LIFE_CIRCLE_LAYER_LABEL;
 }
 
 /** 中華黃頁水平分類：食品餐飲／衣著配件／住屋居家／行車運輸／教育文化／休閒育樂／醫療保健。 */
@@ -93,6 +96,13 @@ export function isPoiLayerVisible(
   visibility: PoiLayerVisibility,
   category?: string | null,
   subcategory?: string | null,
+  subVisibility?: PoiSubVisibility,
+  mainLayer?: PoiMainLayerId | null,
 ) {
-  return visibility[poiMainLayerFromCategory(category, subcategory)];
+  const layer = mainLayer ?? poiMainLayerFromCategory(category, subcategory);
+  if (!visibility[layer]) return false;
+  if (!subVisibility) return true;
+  return Boolean(
+    subVisibility[layer]?.[resolvePoiSubcategoryId(layer, category, subcategory)],
+  );
 }
