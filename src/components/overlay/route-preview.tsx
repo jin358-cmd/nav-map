@@ -149,10 +149,12 @@ export function RouteConfirmBar({
             開始導航
           </Button>
         </div>
-        <div className="flex w-11 shrink-0 flex-col items-center">
-          <div className="flex size-11 items-center justify-center">
-            <HudCloseButton label="取消路線，重新搜尋" onClick={onClear} />
-          </div>
+        <div className="flex w-11 shrink-0 flex-col items-center gap-1.5">
+          <HudCloseButton
+            size="lg"
+            label="取消路線，重新搜尋"
+            onClick={onClear}
+          />
           {onToggleFavorite ? (
             <button
               type="button"
@@ -160,10 +162,10 @@ export function RouteConfirmBar({
               aria-pressed={favorite}
               aria-label={favorite ? "移出最愛" : "加入最愛"}
               title={favorite ? "移出最愛" : "加入最愛"}
-              className="flex size-11 shrink-0 items-center justify-center rounded-full text-rose-300 hover:bg-white/10 hover:text-rose-100 touch-manipulation"
+              className="flex size-11 shrink-0 items-center justify-center rounded-full border-[1.5px] border-white/55 bg-black/40 text-rose-300 shadow-[0_0_0_1px_rgba(0,0,0,0.18)] hover:bg-white/14 hover:text-rose-100 touch-manipulation"
             >
               <Heart
-                className={cn("size-7", favorite && "fill-rose-500 text-rose-400")}
+                className={cn("size-6", favorite && "fill-rose-500 text-rose-400")}
                 strokeWidth={2.1}
               />
             </button>

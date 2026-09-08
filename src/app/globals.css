@@ -292,6 +292,16 @@
   height: 0.72rem;
 }
 
+.hud-window-close--lg {
+  width: 2.75rem;
+  height: 2.75rem;
+}
+
+.hud-window-close--lg svg {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
 .poi-layer-read-hud {
   display: flex;
   flex-direction: column;

@@ -14,7 +14,7 @@ export function HudCloseButton({
   label: string;
   onClick?: (event: MouseEvent<HTMLButtonElement>) => void;
   className?: string;
-  size?: "sm" | "md";
+  size?: "sm" | "md" | "lg";
   title?: string;
 }) {
   return (
@@ -26,6 +26,7 @@ export function HudCloseButton({
       className={cn(
         "hud-window-close touch-manipulation",
         size === "sm" && "hud-window-close--sm",
+        size === "lg" && "hud-window-close--lg",
         className,
       )}
     >

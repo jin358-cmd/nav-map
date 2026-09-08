@@ -106,23 +106,24 @@ export function PlaceInfoCard({
             <h2 className="truncate text-lg font-bold leading-tight">{place.name}</h2>
           )}
         </div>
-        <div className="flex w-12 shrink-0 flex-col items-center">
-          <div className="flex size-12 items-center justify-center">
-            <HudCloseButton label="關閉地點資訊" onClick={onClose} />
-          </div>
-          <Button
+        <div className="flex w-11 shrink-0 flex-col items-center gap-1.5">
+          <HudCloseButton
+            size="lg"
+            label="關閉地點資訊"
+            onClick={onClose}
+          />
+          <button
             type="button"
-            variant="ghost"
             aria-pressed={favorite}
             aria-label={favorite ? "移出最愛" : "加入最愛"}
             onClick={onToggleFavorite}
             className={cn(
-              "size-12 shrink-0 text-rose-200 hover:bg-white/10 hover:text-rose-100",
+              "flex size-11 shrink-0 items-center justify-center rounded-full border-[1.5px] border-white/55 bg-black/40 text-rose-200 shadow-[0_0_0_1px_rgba(0,0,0,0.18)] hover:bg-white/14 hover:text-rose-100 touch-manipulation",
               favorite && "text-rose-100",
             )}
           >
-            <Heart className={cn("size-5", favorite && "fill-rose-500 text-rose-400")} />
-          </Button>
+            <Heart className={cn("size-6", favorite && "fill-rose-500 text-rose-400")} />
+          </button>
         </div>
       </div>
       <dl className="grid gap-1.5 text-[13px] text-zinc-200">
