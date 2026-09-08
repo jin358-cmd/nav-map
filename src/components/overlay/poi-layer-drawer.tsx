@@ -26,7 +26,8 @@ export function PoiLayerDrawer({
         !open && "poi-layer-drawer--closed",
       )}
     >
-      <p className="mb-1.5 px-1 text-[11px] tracking-wide text-zinc-300">生活圖層</p>
+      <p className="mb-1 px-1 text-[11px] tracking-wide text-zinc-300">生活圖層</p>
+      <p className="mb-1.5 px-1 text-[10px] leading-snug text-zinc-500">中華黃頁分類</p>
       <div className="flex flex-col gap-1">
         {POI_MAIN_LAYERS.map((layer) => {
           const on = visibility[layer.id];
@@ -38,7 +39,7 @@ export function PoiLayerDrawer({
               aria-label={`${layer.label}圖層 ${on ? "顯示" : "隱藏"}`}
               onClick={() => onToggle(layer.id)}
               className={cn(
-                "flex h-10 w-full items-center gap-2 rounded-xl px-2 text-left text-sm font-semibold touch-manipulation",
+                "flex min-h-10 w-full items-center gap-2 rounded-xl px-2 py-1 text-left touch-manipulation",
                 on ? "bg-white/16 text-white" : "bg-white/6 text-zinc-300",
               )}
             >
@@ -47,7 +48,12 @@ export function PoiLayerDrawer({
                 style={{ background: POI_LAYER_COLORS[layer.id] }}
                 aria-hidden
               />
-              {layer.label === "醫療／生活" ? "醫" : layer.label}
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold leading-tight">{layer.short}</span>
+                <span className="block text-[10px] font-medium leading-tight text-zinc-400">
+                  {layer.yp}
+                </span>
+              </span>
               <span className="ml-auto text-[10px] font-medium text-zinc-400">
                 {on ? "開" : "關"}
               </span>

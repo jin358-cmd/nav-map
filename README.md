@@ -74,7 +74,7 @@ npm start
 
 定位權限可拒絕；拒絕後地圖仍可用，車輛標記留在預設中心。GPS 授權成功則移到目前位置。
 
-頂部搜尋列從第 1 個字開始即時 Suggest（debounce 110ms，不必按 Enter）。伺服器以 OSM 台灣 extract（osmium，非 Photon 主庫）做 prefix／品牌／鄰近搜尋，本地沒有才補查國土測繪圖資服務雲、TGOS 與 Nominatim。更新索引：`npm run ingest:pois`（batch upsert，中斷後從 checkpoint 續跑，不會從 Batch 001 重來）。核對筆數：`npm run verify:pois`。MapLibre 模式不使用 Google Geocoding／Places。點建議結果會定位並開啟 POI 資訊卡（可導航、可收藏）。詳見 [`docs/poi-search.md`](docs/poi-search.md)。
+頂部搜尋列從第 1 個字開始即時 Suggest（debounce 110ms，不必按 Enter）。伺服器以 OSM 台灣 extract（osmium，非 Photon 主庫）做 prefix／品牌／鄰近搜尋，本地沒有才補查國土測繪圖資服務雲、TGOS 與 Nominatim。更新索引：`npm run ingest:pois`（OSM extract）與 `npm run ingest:chains`（7-ELEVEN／全家官網門市，優先超商）。生活圖層依中華黃頁分類。核對筆數：`npm run verify:pois`。MapLibre 模式不使用 Google Geocoding／Places。點建議結果會定位並開啟 POI 資訊卡（可導航、可收藏）。詳見 [`docs/poi-search.md`](docs/poi-search.md)。
 
 ## 第一階段已完成功能
 

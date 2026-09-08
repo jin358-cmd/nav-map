@@ -6,7 +6,7 @@ import { gunzipSync } from "node:zlib";
 import { distanceKm } from "@/lib/geo";
 import type { GeocodeResult } from "@/lib/geocoding/types";
 import { buildPoiIndexes, diversifyByBrand, searchIndexedPois } from "@/lib/poi/prefix-index";
-import type { PoiMainLayerId } from "@/lib/poi/main-layers";
+import { POI_MAIN_LAYER_IDS, type PoiMainLayerId } from "@/lib/poi/main-layers";
 import { rankPois, rankScore } from "@/lib/poi/rank";
 import {
   hydratePoiRecord,
@@ -38,6 +38,47 @@ const MEMORY_INDEX: TaiwanPoiRecord[] = loadPoiPayload()
   .filter((row): row is TaiwanPoiRecord => Boolean(row && row.isActive));
 
 const INDEXES = buildPoiIndexes(MEMORY_INDEX);
+
+/** ~3 km cells so viewport queries skip the full 13万+ scan. */
+const GRID_DEG = 0.03;
+const SPATIAL_GRID = new Map<string, TaiwanPoiRecord[]>();
+
+function gridCell(lat: number, lng: number) {
+  return `${Math.floor(lat / GRID_DEG)}:${Math.floor(lng / GRID_DEG)}`;
+}
+
+for (const poi of MEMORY_INDEX) {
+  const key = gridCell(poi.latitude, poi.longitude);
+  const bucket = SPATIAL_GRID.get(key);
+  if (bucket) bucket.push(poi);
+  else SPATIAL_GRID.set(key, [poi]);
+}
+
+function poisInGridBounds(bounds: {
+  west: number;
+  south: number;
+  east: number;
+  north: number;
+}) {
+  const minLat = Math.floor(bounds.south / GRID_DEG);
+  const maxLat = Math.floor(bounds.north / GRID_DEG);
+  const minLng = Math.floor(bounds.west / GRID_DEG);
+  const maxLng = Math.floor(bounds.east / GRID_DEG);
+  const out: TaiwanPoiRecord[] = [];
+  for (let lat = minLat; lat <= maxLat; lat += 1) {
+    for (let lng = minLng; lng <= maxLng; lng += 1) {
+      const bucket = SPATIAL_GRID.get(`${lat}:${lng}`);
+      if (bucket) out.push(...bucket);
+    }
+  }
+  return out;
+}
+
+function layerPickRank(poi: TaiwanPoiRecord) {
+  if (poi.category === "convenience") return 0;
+  if (poi.brand) return 1;
+  return 2;
+}
 
 function supabaseConfig() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "";
@@ -190,33 +231,32 @@ export function poisInBounds(
   const east = Math.max(bounds.west, bounds.east);
   const south = Math.min(bounds.south, bounds.north);
   const north = Math.max(bounds.south, bounds.north);
-  const wanted = layers?.length ? new Set(layers) : null;
-  const rows = MEMORY_INDEX.filter(
+  const wantedLayers = layers?.length ? layers : [...POI_MAIN_LAYER_IDS];
+  const wanted = new Set(wantedLayers);
+  const rows = poisInGridBounds({ west, south, east, north }).filter(
     (poi) =>
       poi.longitude >= west &&
       poi.longitude <= east &&
       poi.latitude >= south &&
       poi.latitude <= north &&
-      (!wanted || wanted.has(poi.mainCategory)),
+      wanted.has(poi.mainCategory),
   );
-  const ranked = origin
-    ? rows
-        .map((poi) => ({
-          poi,
-          km: distanceKm(origin, { lat: poi.latitude, lng: poi.longitude }),
-        }))
-        .sort((a, b) => a.km - b.km)
-        .map((row) => row.poi)
-    : rows;
-  if (!wanted) {
-    return ranked.slice(0, Math.max(8, Math.min(limit, 160)));
-  }
+  const ranked = rows
+    .map((poi) => ({
+      poi,
+      km: origin
+        ? distanceKm(origin, { lat: poi.latitude, lng: poi.longitude })
+        : 0,
+      pick: layerPickRank(poi),
+    }))
+    .sort((a, b) => a.pick - b.pick || a.km - b.km)
+    .map((row) => row.poi);
   const perLayer = Math.max(
-    40,
-    Math.min(400, Math.ceil(Math.min(limit, 800) / wanted.size)),
+    80,
+    Math.min(140, Math.ceil(Math.max(limit, 560) / wanted.size)),
   );
   const picked: TaiwanPoiRecord[] = [];
-  for (const layer of wanted) {
+  for (const layer of wantedLayers) {
     let count = 0;
     for (const poi of ranked) {
       if (poi.mainCategory !== layer) continue;

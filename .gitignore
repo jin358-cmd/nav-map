@@ -36,6 +36,7 @@ yarn-error.log*
 
 # OSM POI ingest writes a large JSON; deploy uses the gzipped copy
 src/data/taiwan-poi-index.json
+src/data/poi-chain-ingest-checkpoint.json
 
 # vercel
 .vercel

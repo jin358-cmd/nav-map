@@ -54,7 +54,6 @@ import { rememberAddress } from "@/lib/address-history";
 import { segmentAnchor } from "@/lib/traffic-query";
 import {
   DEFAULT_POI_LAYER_VISIBILITY,
-  activePoiLayerIds,
   anyPoiLayerOn,
   isPoiLayerVisible,
   type PoiLayerVisibility,
@@ -541,8 +540,7 @@ export function DrivingApp() {
   const mapPois = useMapPois({
     viewport,
     origin: searchOrigin,
-    enabled: anyPoiLayerOn(poiLayerVisibility),
-    layers: activePoiLayerIds(poiLayerVisibility),
+    enabled: anyPoiLayerOn(poiLayerVisibility) || poiMenuOpen,
   });
   const visibleMapPois = useMemo(
     () =>

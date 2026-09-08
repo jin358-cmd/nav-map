@@ -10,6 +10,8 @@
     "typecheck": "tsc --noEmit",
     "update:speed-enforcement": "node scripts/update-speed-enforcement-data.mjs",
     "ingest:pois": "node scripts/ingest-osm-extract.mjs",
+    "ingest:chains": "node scripts/ingest-chain-stores.mjs",
+    "ingest:pois:classify": "node scripts/ingest-chain-stores.mjs --classify-only",
     "ingest:pois:overpass": "node scripts/ingest-osm-overpass-pois.mjs",
     "ingest:pois:photon": "node scripts/ingest-taiwan-pois.mjs",
     "ingest:company-registry": "node scripts/import-company-registry.mjs",

@@ -31,7 +31,7 @@ export function PoiLayerBar({
                 : "bg-white/10 text-zinc-300",
             )}
           >
-            {layer.label === "醫療／生活" ? "醫" : layer.label}
+            {layer.short}
           </button>
         );
       })}

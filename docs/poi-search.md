@@ -90,5 +90,11 @@ https://nav-map-git-feat-phase-5-2-navigation-experience-tjc1.vercel.app
 ## 排程
 
 - OSM extract：每週 `npm run ingest:pois`（可續傳 PBF）
+- 全國連鎖門市：`npm run ingest:chains`（優先 7-ELEVEN／全家官網地圖；萊爾富／OK 在公開接口可用時一併更新）
+- 僅重算中華黃頁圖層：`npm run ingest:pois:classify`
 - 關店／改名／搬家：ingest 以 `updated_at`、`last_seen_at`、`is_active` 標記
 - `POST /api/pois/sync`（`x-poi-sync-key`）只觸發本機索引狀態，不在 runtime 全量重抓
+
+## 生活圖層
+
+開關只影響地圖圓點顯示，不限制搜尋。切換時客戶端已預抓視野內全部黃頁大類，不再依開關重打 API。分類對齊中華黃頁水平類：食品餐飲、衣著配件、住屋居家、行車運輸、教育文化、休閒育樂、醫療保健。

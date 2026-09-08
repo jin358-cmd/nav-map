@@ -1,3 +1,10 @@
+import { yellowPagesLayerFromTags } from "@/lib/poi/yellow-pages";
+
+export {
+  YELLOW_PAGES_LAYERS,
+  yellowPagesLayerFromTags,
+} from "@/lib/poi/yellow-pages";
+
 export const POI_MAIN_LAYER_IDS = [
   "food",
   "clothing",
@@ -13,14 +20,16 @@ export type PoiMainLayerId = (typeof POI_MAIN_LAYER_IDS)[number];
 export const POI_MAIN_LAYERS: Array<{
   id: PoiMainLayerId;
   label: string;
+  short: string;
+  yp: string;
 }> = [
-  { id: "food", label: "食" },
-  { id: "clothing", label: "衣" },
-  { id: "housing", label: "住" },
-  { id: "transport", label: "行" },
-  { id: "education", label: "育" },
-  { id: "leisure", label: "樂" },
-  { id: "medical", label: "醫療／生活" },
+  { id: "food", label: "食 · 食品餐飲", short: "食", yp: "食品餐飲" },
+  { id: "clothing", label: "衣 · 衣著配件", short: "衣", yp: "衣著配件" },
+  { id: "housing", label: "住 · 住屋居家", short: "住", yp: "住屋居家" },
+  { id: "transport", label: "行 · 行車運輸", short: "行", yp: "行車運輸" },
+  { id: "education", label: "育 · 教育文化", short: "育", yp: "教育文化" },
+  { id: "leisure", label: "樂 · 休閒育樂", short: "樂", yp: "休閒育樂" },
+  { id: "medical", label: "醫 · 醫療保健", short: "醫", yp: "醫療保健" },
 ];
 
 export type PoiLayerVisibility = Record<PoiMainLayerId, boolean>;
@@ -45,6 +54,10 @@ export const POI_LAYER_COLORS: Record<PoiMainLayerId, string> = {
   medical: "#ef4444",
 };
 
+export function defaultPoiLayerVisibility(): PoiLayerVisibility {
+  return { ...DEFAULT_POI_LAYER_VISIBILITY };
+}
+
 export function activePoiLayerIds(visibility: PoiLayerVisibility): PoiMainLayerId[] {
   return POI_MAIN_LAYER_IDS.filter((id) => visibility[id]);
 }
@@ -53,88 +66,12 @@ export function anyPoiLayerOn(visibility: PoiLayerVisibility) {
   return POI_MAIN_LAYER_IDS.some((id) => visibility[id]);
 }
 
-const CATEGORY_TO_MAIN: Record<string, PoiMainLayerId> = {
-  restaurant: "food",
-  cafe: "food",
-  convenience: "food",
-  supermarket: "food",
-  hotel: "housing",
-  parking: "transport",
-  fuel: "transport",
-  station: "transport",
-  school: "education",
-  landmark: "leisure",
-  mall: "leisure",
-  park: "leisure",
-  hospital: "medical",
-  clinic: "medical",
-  pharmacy: "medical",
-  government: "medical",
-  other: "leisure",
-};
-
-const SUBCATEGORY_TO_MAIN: Record<string, PoiMainLayerId> = {
-  restaurant: "food",
-  cafe: "food",
-  breakfast: "food",
-  "fast-food": "food",
-  drink: "food",
-  convenience: "food",
-  supermarket: "food",
-  "food-shop": "food",
-  clothing: "clothing",
-  shoes: "clothing",
-  sportswear: "clothing",
-  accessories: "clothing",
-  hotel: "housing",
-  hostel: "housing",
-  homestay: "housing",
-  furniture: "housing",
-  home: "housing",
-  "building-materials": "housing",
-  parking: "transport",
-  fuel: "transport",
-  charging: "transport",
-  railway: "transport",
-  mrt: "transport",
-  bus: "transport",
-  "car-rental": "transport",
-  "auto-repair": "transport",
-  school: "education",
-  tutoring: "education",
-  library: "education",
-  museum: "education",
-  education: "education",
-  attraction: "leisure",
-  park: "leisure",
-  cinema: "leisure",
-  mall: "leisure",
-  entertainment: "leisure",
-  sports: "leisure",
-  hospital: "medical",
-  clinic: "medical",
-  pharmacy: "medical",
-  bank: "medical",
-  atm: "medical",
-  "post-office": "medical",
-  police: "medical",
-  "fire-station": "medical",
-  government: "medical",
-  "public-facility": "medical",
-};
-
+/** 中華黃頁水平分類：食品餐飲／衣著配件／住屋居家／行車運輸／教育文化／休閒育樂／醫療保健。 */
 export function poiMainLayerFromCategory(
   category?: string | null,
   subcategory?: string | null,
 ): PoiMainLayerId {
-  if (subcategory) {
-    const mapped = SUBCATEGORY_TO_MAIN[subcategory.toLowerCase()];
-    if (mapped) return mapped;
-  }
-  if (category && CATEGORY_TO_MAIN[category]) {
-    return CATEGORY_TO_MAIN[category];
-  }
-  return "leisure";
+  return yellowPagesLayerFromTags(category, subcategory);
 }
 
 export function poiSubcategoryFromCategory(category?: string | null) {

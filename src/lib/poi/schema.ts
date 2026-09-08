@@ -123,10 +123,7 @@ export function hydratePoiRecord(row: Partial<TaiwanPoiRecord> & Record<string, 
   const subcategory =
     String(row.subcategory ?? row.sub_category ?? "").trim() ||
     poiSubcategoryFromCategory(category);
-  const mainCategory =
-    (row.mainCategory as PoiMainLayerId | undefined) ||
-    (row.main_category as PoiMainLayerId | undefined) ||
-    poiMainLayerFromCategory(category, subcategory);
+  const mainCategory = poiMainLayerFromCategory(category, subcategory);
   return {
     id: String(row.id ?? `${row.source ?? "osm"}-${row.sourceId ?? row.source_id ?? ""}`),
     name,

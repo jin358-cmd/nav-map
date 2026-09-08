@@ -26,7 +26,8 @@ export async function GET(request: Request) {
   const lng = readNumber(url.searchParams.get("lng"));
   const lat = readNumber(url.searchParams.get("lat"));
   const limit = readNumber(url.searchParams.get("limit")) ?? 80;
-  const layers = readLayers(url.searchParams.get("layers"));
+  const requested = readLayers(url.searchParams.get("layers"));
+  const layers = requested ?? [...POI_MAIN_LAYER_IDS];
 
   if (
     west === undefined ||
@@ -62,7 +63,7 @@ export async function GET(request: Request) {
     },
     {
       headers: {
-        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=180",
+        "Cache-Control": "public, max-age=15, s-maxage=15, stale-while-revalidate=60",
       },
     },
   );

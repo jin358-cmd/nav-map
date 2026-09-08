@@ -7,6 +7,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { basename } from "node:path";
 import { gzipSync } from "node:zlib";
+import { yellowPagesLayerFromTags } from "./yellow-pages.mjs";
 
 const USER_AGENT = "NavPilot/0.1 (https://github.com/jin358-cmd/nav-map)";
 const CACHE_DIR = "/tmp/osm-taiwan";
@@ -379,6 +380,9 @@ function subcategoryFromTags(tags, category) {
   if (shop === "clothes" || shop === "boutique") return "clothing";
   if (shop === "shoes") return "shoes";
   if (shop === "sports") return "sportswear";
+  if (shop === "jewelry") return "jewelry";
+  if (shop === "bag") return "bag";
+  if (shop === "books" || shop === "stationery") return "bookstore";
   if (shop === "furniture") return "furniture";
   if (shop === "doityourself" || shop === "hardware") return "building-materials";
   if (tourism === "hostel") return "hostel";
@@ -395,22 +399,7 @@ function subcategoryFromTags(tags, category) {
 }
 
 function mainLayerFrom(category, subcategory) {
-  const key = String(subcategory || category || "");
-  const food = new Set(["restaurant", "cafe", "breakfast", "fast-food", "drink", "convenience", "supermarket", "food-shop"]);
-  const clothing = new Set(["clothing", "shoes", "sportswear", "accessories"]);
-  const housing = new Set(["hotel", "hostel", "homestay", "furniture", "home", "building-materials"]);
-  const transport = new Set(["parking", "fuel", "charging", "railway", "mrt", "bus", "car-rental", "auto-repair", "station"]);
-  const education = new Set(["school", "tutoring", "library", "museum", "education"]);
-  const leisure = new Set(["attraction", "park", "cinema", "mall", "entertainment", "sports", "landmark"]);
-  const medical = new Set(["hospital", "clinic", "pharmacy", "bank", "atm", "post-office", "police", "fire-station", "government", "public-facility"]);
-  if (food.has(key) || food.has(category)) return "food";
-  if (clothing.has(key)) return "clothing";
-  if (housing.has(key) || housing.has(category)) return "housing";
-  if (transport.has(key) || transport.has(category)) return "transport";
-  if (education.has(key) || education.has(category)) return "education";
-  if (medical.has(key) || medical.has(category)) return "medical";
-  if (leisure.has(key) || leisure.has(category)) return "leisure";
-  return "leisure";
+  return yellowPagesLayerFromTags(category, subcategory);
 }
 
 function keepNavigable(row) {
@@ -423,7 +412,7 @@ function slimRow(row) {
   return {
     ...row,
     subcategory,
-    mainCategory: row.mainCategory || mainLayerFrom(row.category, subcategory),
+    mainCategory: mainLayerFrom(row.category, subcategory),
   };
 }
 
