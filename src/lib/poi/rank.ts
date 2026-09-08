@@ -102,6 +102,10 @@ export function rankScore(
     const prefixed = brandsForPrefix(query);
     if (prefixed.some((item) => item.brand === poi.brand)) score += 28;
   }
+  const categoryHit = matchedCategory(query);
+  if (needle.length <= 2 && categoryHit && poi.category === categoryHit.category) {
+    score += 28;
+  }
   const namedCity = countyMentionedInQuery(query);
   if (namedCity && normalizePoiKey(poi.city ?? "") === normalizePoiKey(namedCity)) {
     score += 14;
