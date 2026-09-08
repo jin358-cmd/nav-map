@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import type { YoutubePlaylist } from "@/lib/constants";
-import { GOOGLE_CLIENT_ID } from "@/lib/google-identity";
 import {
   fetchYoutubeLibrary,
   statusMessage,
@@ -19,7 +18,7 @@ export function useYoutubeLibrary(
   );
 
   useEffect(() => {
-    if (!GOOGLE_CLIENT_ID || !accessToken) return;
+    if (!accessToken) return;
     let cancelled = false;
     void fetchYoutubeLibrary(accessToken).then((result) => {
       if (!cancelled) setLoaded({ ...result, token: accessToken });
@@ -29,9 +28,6 @@ export function useYoutubeLibrary(
     };
   }, [accessToken]);
 
-  if (!GOOGLE_CLIENT_ID) {
-    return empty("unconfigured");
-  }
   if (!signedIn) {
     return empty("idle");
   }

@@ -6,17 +6,19 @@ import { getFavoritesSnapshot, subscribeFavorites } from "@/lib/favorites";
 import {
   GOOGLE_ACCESS_EVENT,
   GOOGLE_ACCOUNT_EVENT,
-  GOOGLE_CLIENT_ID,
+  GOOGLE_CLIENT_ID_EVENT,
   GOOGLE_LOGIN_SCOPES,
   YOUTUBE_READONLY_SCOPE,
   YOUTUBE_SCOPES,
   YOUTUBE_TOKEN_EVENT,
   fetchGoogleProfile,
+  getGoogleClientId,
   hasScope,
   loadGoogleIdentityScript,
   readGoogleAccess,
   readStoredAccount,
   readYoutubeAccess,
+  resolveGoogleClientId,
   writeGoogleAccess,
   writeStoredAccount,
   writeYoutubeAccess,
@@ -67,19 +69,31 @@ export function useGoogleAccount() {
   );
   const [busy, setBusy] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
+  const [clientId, setClientId] = useState(getGoogleClientId);
+  const [configReady, setConfigReady] = useState(() => Boolean(getGoogleClientId()));
   const [sdkStatus, setSdkStatus] = useState<"idle" | "loading" | "ready" | "error">(
-    GOOGLE_CLIENT_ID ? "loading" : "idle",
+    getGoogleClientId() ? "loading" : "idle",
   );
   const accountRef = useRef<GoogleAccount | null>(account);
-  const configured = Boolean(GOOGLE_CLIENT_ID);
+  const configured = Boolean(clientId);
 
   useEffect(() => {
     accountRef.current = account;
   }, [account]);
 
   useEffect(() => {
+    const sync = () => setClientId(getGoogleClientId());
+    window.addEventListener(GOOGLE_CLIENT_ID_EVENT, sync);
+    void resolveGoogleClientId().then((id) => {
+      setClientId(id);
+      setConfigReady(true);
+    });
+    return () => window.removeEventListener(GOOGLE_CLIENT_ID_EVENT, sync);
+  }, []);
+
+  useEffect(() => {
     if (!configured) {
-      if (process.env.NODE_ENV === "development" && !warnedMissingClientId) {
+      if (process.env.NODE_ENV === "development" && configReady && !warnedMissingClientId) {
         warnedMissingClientId = true;
         console.warn("Google OAuth client ID is missing.");
       }
@@ -96,7 +110,7 @@ export function useGoogleAccount() {
     return () => {
       cancelled = true;
     };
-  }, [configured]);
+  }, [configured, configReady]);
 
   const applyAccount = useCallback((next: GoogleAccount | null) => {
     accountRef.current = next;
@@ -107,10 +121,11 @@ export function useGoogleAccount() {
     scope: string,
     prompt: "" | "consent" | "select_account" = "consent",
   ) => {
-    if (!GOOGLE_CLIENT_ID) {
-      return Promise.resolve({ token: null, scopes: "", reason: "unconfigured" as const });
-    }
-    return loadGoogleIdentityScript().then(
+    return resolveGoogleClientId().then((oauthClientId) => {
+      if (!oauthClientId) {
+        return { token: null, scopes: "", reason: "unconfigured" as const };
+      }
+      return loadGoogleIdentityScript().then(
       () =>
         new Promise<{
           token: string | null;
@@ -123,12 +138,12 @@ export function useGoogleAccount() {
             return;
           }
           const client = oauth.initTokenClient({
-            client_id: GOOGLE_CLIENT_ID,
+            client_id: oauthClientId,
             scope,
             include_granted_scopes: true,
             hint: accountRef.current?.email,
             callback: (response) => {
-              if (!response.access_token) {
+              if (response.error || !response.access_token) {
                 resolve({ token: null, scopes: "", reason: "error" });
                 return;
               }
@@ -163,25 +178,28 @@ export function useGoogleAccount() {
           });
           client.requestAccessToken({ prompt });
         }),
-    );
+      );
+    });
   }, []);
 
   const signIn = useCallback(() => {
-    if (!configured) {
-      setHint("Google 登入尚未完成設定");
-      return;
-    }
-    if (sdkStatus === "error") {
-      setHint("目前無法連線 Google 登入，請稍後再試。");
-      return;
-    }
     setBusy(true);
     setHint(null);
-    void requestGoogleAccess(GOOGLE_LOGIN_SCOPES, "consent")
-      .then(async ({ token, reason }) => {
+    void resolveGoogleClientId()
+      .then(async (id) => {
+        if (!id) {
+          setHint("Google 登入尚未完成設定");
+          return;
+        }
+        if (sdkStatus === "error") {
+          setHint("目前無法連線 Google 登入，請稍後再試。");
+          return;
+        }
+        const { token, reason } = await requestGoogleAccess(GOOGLE_LOGIN_SCOPES, "consent");
         if (!token) {
           if (reason === "cancel" || reason === "popup") setHint("已取消登入。");
           else if (reason === "origin") setHint("登入網域尚未加入 Google Authorized Origins。");
+          else if (reason === "unconfigured") setHint("Google 登入尚未完成設定");
           else setHint("登入沒有完成，請再試一次。");
           return;
         }
@@ -198,10 +216,11 @@ export function useGoogleAccount() {
         setHint("目前無法連線 Google 登入，請稍後再試。");
       })
       .finally(() => setBusy(false));
-  }, [applyAccount, configured, requestGoogleAccess, sdkStatus]);
+  }, [applyAccount, requestGoogleAccess, sdkStatus]);
 
   const connectYoutube = useCallback(async () => {
-    if (!configured) {
+    const id = await resolveGoogleClientId();
+    if (!id) {
       setHint("Google 登入尚未完成設定");
       return null;
     }
@@ -221,6 +240,7 @@ export function useGoogleAccount() {
     if (!token) {
       if (reason === "cancel" || reason === "popup") setHint("已取消 YouTube 授權。");
       else if (reason === "origin") setHint("登入網域尚未加入 Google Authorized Origins。");
+      else if (reason === "unconfigured") setHint("Google 登入尚未完成設定");
       else setHint("無法取得 YouTube 授權，請再試一次。");
       return null;
     }
@@ -231,7 +251,7 @@ export function useGoogleAccount() {
     }
     setHint(null);
     return token;
-  }, [configured, requestGoogleAccess, signIn]);
+  }, [requestGoogleAccess, signIn]);
 
   useEffect(() => {
     if (!account) return;
@@ -288,10 +308,10 @@ export function useGoogleAccount() {
   return {
     account,
     ready: true,
-    busy: busy || sdkStatus === "loading",
+    busy: busy || !configReady || sdkStatus === "loading",
     hint,
     configured,
-    unavailable: !configured || sdkStatus === "error",
+    unavailable: (configReady && !configured) || sdkStatus === "error",
     sdkStatus,
     youtubeAccessToken: youtubeAccess?.accessToken ?? null,
     youtubeAuthorized: Boolean(youtubeAccess?.accessToken),

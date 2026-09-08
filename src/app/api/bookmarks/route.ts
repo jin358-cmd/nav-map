@@ -1,33 +1,43 @@
 import { readCloudFavorites, sanitizeFavorites, writeCloudFavorites } from "@/lib/cloud-bookmarks";
+import { readGoogleOAuthClientId } from "@/lib/google-oauth-env";
 
 export const dynamic = "force-dynamic";
 
 type TokenInfo = {
   sub?: string;
   aud?: string;
+  azp?: string;
   exp?: string;
   email?: string;
 };
+
+function isJwt(token: string) {
+  return token.split(".").length === 3;
+}
+
+async function tokenInfo(token: string, kind: "access_token" | "id_token") {
+  const response = await fetch(
+    `https://oauth2.googleapis.com/tokeninfo?${kind}=${encodeURIComponent(token)}`,
+    { cache: "no-store" },
+  );
+  if (!response.ok) return null;
+  return (await response.json()) as TokenInfo;
+}
 
 async function verifyGoogleToken(request: Request) {
   const header = request.headers.get("authorization") ?? "";
   const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
   if (!token) return null;
 
-  const expectedAud =
-    process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID?.trim() ||
-    process.env.GOOGLE_CLIENT_ID?.trim() ||
-    "";
+  const expectedAud = readGoogleOAuthClientId();
 
   try {
-    const response = await fetch(
-      `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(token)}`,
-      { cache: "no-store" },
-    );
-    if (!response.ok) return null;
-    const info = (await response.json()) as TokenInfo;
-    if (!info.sub) return null;
-    if (expectedAud && info.aud && info.aud !== expectedAud) return null;
+    const info = isJwt(token)
+      ? (await tokenInfo(token, "id_token")) ?? (await tokenInfo(token, "access_token"))
+      : (await tokenInfo(token, "access_token")) ?? (await tokenInfo(token, "id_token"));
+    if (!info?.sub) return null;
+    const audience = info.aud || info.azp || "";
+    if (expectedAud && audience && audience !== expectedAud) return null;
     const exp = Number(info.exp);
     if (Number.isFinite(exp) && exp * 1000 < Date.now()) return null;
     return info.sub;

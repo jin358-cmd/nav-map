@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist_Mono, Noto_Sans_TC } from "next/font/google";
 import { InstallBootstrap } from "@/components/pwa/install-bootstrap";
+import { GoogleAuthBootstrap } from "@/components/auth/google-auth-bootstrap";
 import { APP_BOOKMARK_NAME, APP_TAGLINE } from "@/lib/app-brand";
 import "./globals.css";
 
@@ -46,7 +47,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="zh-Hant"
       className={`dark ${notoSansTc.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        <link rel="preconnect" href="https://accounts.google.com" />
+        <link rel="preconnect" href="https://www.googleapis.com" />
+      </head>
       <body className="min-h-full bg-[#0b0d11] text-foreground touch-manipulation">
+        <GoogleAuthBootstrap />
         <InstallBootstrap />
         {children}
       </body>

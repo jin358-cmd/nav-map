@@ -13,7 +13,7 @@ Google 帳號登入（書籤）與 YouTube 播放清單授權是**分開的 scop
    - **Google Drive API**（書籤 appData）
 4. 「API 和服務 → 憑證 → 建立憑證 → OAuth 用戶端 ID」。
 5. Application type 選 **Web application**。
-6. 只把 **Client ID** 填進 `NEXT_PUBLIC_GOOGLE_CLIENT_ID`。
+6. 把 **Client ID** 填進 `NEXT_PUBLIC_GOOGLE_CLIENT_ID` 或伺服器端 `GOOGLE_CLIENT_ID`。
    **Client Secret 不得出現在前端、不得加 `NEXT_PUBLIC_`。**
 
 ## 2. Authorized JavaScript Origins
@@ -54,7 +54,7 @@ App 只會列出 API 回傳的可讀取播放清單。
 
 | 變數 | 環境 | 說明 |
 | --- | --- | --- |
-| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Preview、Production | Web OAuth Client ID |
+| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` 或 `GOOGLE_CLIENT_ID` | Preview、Production | Web OAuth Client ID |
 | `GOOGLE_PLACES_API_KEY` | 不要設 `NEXT_PUBLIC_` | 與登入無關，MapLibre 模式不會用來畫地圖 |
 
 設定後必須**重新部署**。本機改 `.env.local` 後要重開 `npm run dev`。

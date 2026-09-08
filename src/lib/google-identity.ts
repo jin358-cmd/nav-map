@@ -1,3 +1,5 @@
+import { readGoogleOAuthClientId } from "@/lib/google-oauth-env";
+
 export type GoogleAccount = {
   sub: string;
   name: string;
@@ -7,8 +9,39 @@ export type GoogleAccount = {
   exp: number;
 };
 
-export const GOOGLE_CLIENT_ID =
-  process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID?.trim() ?? "";
+export const GOOGLE_CLIENT_ID_EVENT = "navpilot-google-client-id";
+
+let runtimeGoogleClientId = readGoogleOAuthClientId();
+let googleClientIdPromise: Promise<string> | null = null;
+
+export function getGoogleClientId() {
+  return runtimeGoogleClientId;
+}
+
+/** @deprecated Use getGoogleClientId() — value may arrive after /api/auth/google-config. */
+export const GOOGLE_CLIENT_ID = runtimeGoogleClientId;
+
+export async function resolveGoogleClientId(): Promise<string> {
+  if (runtimeGoogleClientId) return runtimeGoogleClientId;
+  if (typeof window === "undefined") return readGoogleOAuthClientId();
+  if (!googleClientIdPromise) {
+    googleClientIdPromise = fetch("/api/auth/google-config", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) return "";
+        const data = (await response.json()) as { clientId?: string | null };
+        runtimeGoogleClientId = data.clientId?.trim() || "";
+        if (runtimeGoogleClientId) {
+          window.dispatchEvent(new Event(GOOGLE_CLIENT_ID_EVENT));
+        }
+        return runtimeGoogleClientId;
+      })
+      .catch(() => {
+        googleClientIdPromise = null;
+        return "";
+      });
+  }
+  return googleClientIdPromise;
+}
 
 export const GOOGLE_ACCOUNT_STORAGE_KEY = "navpilot.google.v1";
 export const GOOGLE_ACCOUNT_EVENT = "navpilot-google-account";

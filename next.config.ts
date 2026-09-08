@@ -28,6 +28,8 @@ const nextConfig: NextConfig = {
         source: "/:path*",
         headers: [
           { key: "Permissions-Policy", value: "geolocation=(self), microphone=(self)" },
+          { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
         ],
       },
     ];
