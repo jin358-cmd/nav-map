@@ -15,11 +15,13 @@
 
 ## B. 各來源筆數（目前索引）
 
-OSM extract：fetched 182203 → inserted **135802**（rejected 37401、inactive 945）。
+OSM extract：fetched 182203 → inserted **135802**（rejected 37401、inactive 945），再以官網門市更新超商。
 
-主要縣市：臺北市 36864、臺中市 18829、桃園市 14101、新北市 11461、高雄市 10475、臺南市 8712。
+目前索引：active **139964**／total **140890**。官方超商抓取：7-ELEVEN **7314**、全家 **4524**（合併後品牌列 7-Eleven 8021、FamilyMart 4993）。便利商店類 **16441**。
 
-類別摘要：restaurant 34965、convenience 12279、cafe 7976、clinic 4388、parking 4019、supermarket 3185、pharmacy 2000、fuel 1623、hospital 54。
+主要縣市（含官網門市）：臺北市 36706、臺中市 19352、桃園市 14196、新北市 12968、高雄市 10979、臺南市 9056。
+
+類別摘要：restaurant 34965、convenience 16441、cafe 7976、clinic 4388、parking 4019、supermarket 3185、pharmacy 2000、fuel 1623、hospital 54。
 
 公司登記：`not-imported`。
 

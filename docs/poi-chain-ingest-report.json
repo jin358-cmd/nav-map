@@ -1,0 +1,136 @@
+{
+  "dataset": "taiwan_poi_index",
+  "source": "official-chain-locators",
+  "brands": [
+    "7-Eleven",
+    "FamilyMart"
+  ],
+  "remapped": 136747,
+  "fetched": 11838,
+  "updated": 7695,
+  "inserted": 4143,
+  "errors": [],
+  "stats": {
+    "familyMart": 4524,
+    "sevenEleven": 7314,
+    "cities": {
+      "台北市": {
+        "towns": 12,
+        "familyMart": 645,
+        "sevenEleven": 976
+      },
+      "新北市": {
+        "towns": 29,
+        "familyMart": 968,
+        "sevenEleven": 1227
+      },
+      "桃園市": {
+        "towns": 12,
+        "familyMart": 428,
+        "sevenEleven": 857
+      },
+      "台中市": {
+        "towns": 29,
+        "familyMart": 628,
+        "sevenEleven": 933
+      },
+      "台南市": {
+        "towns": 31,
+        "familyMart": 264,
+        "sevenEleven": 598
+      },
+      "高雄市": {
+        "towns": 35,
+        "familyMart": 401,
+        "sevenEleven": 746
+      },
+      "基隆市": {
+        "towns": 7,
+        "familyMart": 72,
+        "sevenEleven": 100
+      },
+      "新竹市": {
+        "towns": 3,
+        "familyMart": 113,
+        "sevenEleven": 180
+      },
+      "嘉義市": {
+        "towns": 2,
+        "familyMart": 40,
+        "sevenEleven": 73
+      },
+      "新竹縣": {
+        "towns": 12,
+        "familyMart": 136,
+        "sevenEleven": 226
+      },
+      "苗栗縣": {
+        "towns": 15,
+        "familyMart": 114,
+        "sevenEleven": 171
+      },
+      "彰化縣": {
+        "towns": 25,
+        "familyMart": 144,
+        "sevenEleven": 265
+      },
+      "南投縣": {
+        "towns": 11,
+        "familyMart": 84,
+        "sevenEleven": 112
+      },
+      "雲林縣": {
+        "towns": 19,
+        "familyMart": 93,
+        "sevenEleven": 143
+      },
+      "嘉義縣": {
+        "towns": 14,
+        "familyMart": 60,
+        "sevenEleven": 110
+      },
+      "屏東縣": {
+        "towns": 28,
+        "familyMart": 108,
+        "sevenEleven": 202
+      },
+      "宜蘭縣": {
+        "towns": 12,
+        "familyMart": 82,
+        "sevenEleven": 139
+      },
+      "花蓮縣": {
+        "towns": 10,
+        "familyMart": 57,
+        "sevenEleven": 111
+      },
+      "台東縣": {
+        "towns": 11,
+        "familyMart": 41,
+        "sevenEleven": 70
+      },
+      "澎湖縣": {
+        "towns": 6,
+        "familyMart": 25,
+        "sevenEleven": 39
+      },
+      "金門縣": {
+        "towns": 5,
+        "familyMart": 14,
+        "sevenEleven": 27
+      },
+      "連江縣": {
+        "towns": 2,
+        "familyMart": 7,
+        "sevenEleven": 9
+      }
+    }
+  },
+  "byBrand": {
+    "7-Eleven": 8021,
+    "FamilyMart": 4993
+  },
+  "written": "src/data/taiwan-poi-index.json",
+  "packed": "src/data/taiwan-poi-index.json.gz",
+  "updatedAt": "2026-09-08T14:54:06.253Z"
+}
