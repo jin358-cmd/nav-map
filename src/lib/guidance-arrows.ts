@@ -15,7 +15,7 @@ export const GUIDANCE_LAYER_ID = "navpilot-turn-arrows-layer";
 export const TURN_LINE_SOURCE_ID = "navpilot-turn-line";
 export const TURN_LINE_GLOW_ID = "navpilot-turn-line-glow";
 export const TURN_LINE_LAYER_ID = "navpilot-turn-line-layer";
-const CHEVRON_IMAGE_ID = "navpilot-turn-chevron-v1";
+const CHEVRON_IMAGE_ID = "navpilot-ground-chevron-v2";
 
 let showing = false;
 
@@ -32,7 +32,7 @@ function emptyLine() {
 }
 
 function createChevronImage() {
-  const size = 160;
+  const size = 192;
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
@@ -41,49 +41,26 @@ function createChevronImage() {
   ctx.clearRect(0, 0, size, size);
   ctx.translate(size / 2, size / 2);
 
-  const chevron = () => {
+  const chevron = (outer: number, inner: number, depth: number) => {
     ctx.beginPath();
-    ctx.moveTo(0, -52);
-    ctx.lineTo(46, 14);
-    ctx.lineTo(22, 14);
-    ctx.lineTo(22, 48);
-    ctx.lineTo(-22, 48);
-    ctx.lineTo(-22, 14);
-    ctx.lineTo(-46, 14);
+    ctx.moveTo(0, -outer);
+    ctx.lineTo(depth, inner);
+    ctx.lineTo(depth * 0.58, inner);
+    ctx.lineTo(0, -outer + (inner + outer) * 0.42);
+    ctx.lineTo(-depth * 0.58, inner);
+    ctx.lineTo(-depth, inner);
     ctx.closePath();
   };
 
-  ctx.save();
-  ctx.fillStyle = "rgba(120, 53, 15, 0.35)";
-  ctx.beginPath();
-  ctx.ellipse(0, 50, 28, 8, 0, 0, Math.PI * 2);
+  chevron(62, 54, 78);
+  ctx.fillStyle = "#422006";
   ctx.fill();
-  ctx.restore();
-
-  chevron();
-  ctx.fillStyle = "#854d0e";
-  ctx.fill();
-  ctx.lineWidth = 7;
-  ctx.strokeStyle = "#713f12";
-  ctx.lineJoin = "round";
-  ctx.lineCap = "round";
-  ctx.stroke();
-
-  ctx.save();
-  ctx.translate(0, -3);
-  ctx.scale(0.86, 0.86);
-  chevron();
+  chevron(54, 44, 66);
   ctx.fillStyle = "#facc15";
   ctx.fill();
-  ctx.restore();
-
-  ctx.save();
-  ctx.translate(0, -10);
-  ctx.scale(0.42, 0.42);
-  chevron();
+  chevron(38, 32, 42);
   ctx.fillStyle = "#fef08a";
   ctx.fill();
-  ctx.restore();
 
   return ctx.getImageData(0, 0, size, size);
 }
@@ -136,13 +113,13 @@ function chevronSize(): ExpressionSpecification {
     ["linear"],
     ["zoom"],
     14.2,
-    ["*", ["get", "scale"], 0.72],
+    ["*", ["get", "scale"], 0.86],
     16.2,
-    ["*", ["get", "scale"], 1.05],
+    ["*", ["get", "scale"], 1.22],
     17.4,
-    ["*", ["get", "scale"], 1.28],
+    ["*", ["get", "scale"], 1.48],
     18.4,
-    ["*", ["get", "scale"], 1.42],
+    ["*", ["get", "scale"], 1.68],
   ];
 }
 
@@ -153,7 +130,7 @@ function ensureChevronLayer(map: MapLibreMap) {
     "icon-anchor": "center" as const,
     "icon-rotate": ["get", "bearing"] as ExpressionSpecification,
     "icon-rotation-alignment": "map" as const,
-    "icon-pitch-alignment": "viewport" as const,
+    "icon-pitch-alignment": "map" as const,
     "icon-allow-overlap": true,
     "icon-ignore-placement": true,
     "icon-padding": 0,
@@ -176,7 +153,7 @@ function ensureChevronLayer(map: MapLibreMap) {
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-size", chevronSize());
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-anchor", "center");
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-rotation-alignment", "map");
-  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-pitch-alignment", "viewport");
+  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-pitch-alignment", "map");
 }
 
 function stackGuidanceLayers(map: MapLibreMap) {

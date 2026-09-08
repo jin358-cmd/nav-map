@@ -303,9 +303,9 @@ export function turnGuidanceLine(
   return sliceRouteAhead(route, routeMeters + 3, ahead);
 }
 
-const TURN_MARQUEE_SPACING_M = 42;
+const TURN_MARQUEE_SPACING_M = 28;
 
-/** 大間隔箭頭沿黃線反向慢速跑馬燈。 */
+/** 黃色地面弓型箭頭：沿引導線順行慢速跑馬燈。 */
 export function turnMarqueeArrows(
   line: [number, number][],
   phase = 0,
@@ -314,8 +314,9 @@ export function turnMarqueeArrows(
   const spacing = TURN_MARQUEE_SPACING_M;
   const cycle = ((phase % 1) + 1) % 1;
   const shift = (1 - cycle) * spacing;
+  const total = lineLengthMeters(line);
   const placed: GuidanceArrow[] = [];
-  let leftover = spacing * 0.2 - shift;
+  let leftover = spacing * 0.28 - shift;
   let along = 0;
 
   for (let index = 1; index < line.length; index += 1) {
@@ -329,15 +330,17 @@ export function turnMarqueeArrows(
     const bearing = bearingDegrees(from, to);
     let cursor = leftover;
     while (cursor < length) {
-      if (cursor >= 0 && along + cursor >= 8) {
+      const at = along + cursor;
+      if (cursor >= 0 && at >= 8) {
         const ratio = cursor / length;
+        const t = total > 0 ? Math.min(1, Math.max(0, at / total)) : 0;
         placed.push({
           lng: from.lng + (to.lng - from.lng) * ratio,
           lat: from.lat + (to.lat - from.lat) * ratio,
           bearing,
-          opacity: 1,
+          opacity: 0.78 + t * 0.22,
           kind: "straight",
-          scale: 1.85,
+          scale: 1.35 + t * 0.7,
         });
       }
       cursor += spacing;
