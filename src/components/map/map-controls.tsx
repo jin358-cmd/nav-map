@@ -70,45 +70,26 @@ export function MapControls({
           strokeWidth={2.5}
         />
       </ControlButton>
-      <div
-        className={cn(
-          "flex overflow-hidden rounded-full border backdrop-blur-md shadow-lg",
-          tone === "dark"
-            ? "border-[#67e8f9]/80 bg-[#041016]/80"
-            : tone === "satellite"
-              ? "border-[#111827]/50 bg-white/80"
-              : "border-zinc-400/80 bg-white/80",
-        )}
-        role="group"
-        aria-label="2D 3D 視角"
+      <ControlButton
+        label={cameraMode === "3d" ? "目前 3D，點擊切換 2D" : "目前 2D，點擊切換 3D"}
+        onClick={onToggleCamera}
+        active={cameraMode === "3d"}
+        pressed={cameraMode === "3d"}
+        tone={tone}
+        className={
+          cameraMode === "2d"
+            ? tone === "dark"
+              ? "!border-[#67e8f9] !bg-[#155e75] !text-[#ecfeff]"
+              : tone === "satellite"
+                ? "border-[#111827] bg-zinc-800 text-white"
+                : "border-[#111827] bg-zinc-800 text-white"
+            : undefined
+        }
       >
-        {(["2d", "3d"] as const).map((mode) => {
-          const active = cameraMode === mode;
-          return (
-            <button
-              key={mode}
-              type="button"
-              aria-label={mode === "3d" ? "切換 3D" : "切換 2D"}
-              aria-pressed={active}
-              onClick={() => {
-                if (cameraMode !== mode) onToggleCamera();
-              }}
-              className={cn(
-                "flex h-12 w-12 items-center justify-center text-[1.05rem] font-black leading-none tracking-tight touch-manipulation",
-                active
-                  ? tone === "dark"
-                    ? "bg-[#22d3ee] text-[#042f2e]"
-                    : "bg-zinc-900 text-white"
-                  : tone === "dark"
-                    ? "bg-transparent text-[#ecfeff]/55"
-                    : "bg-transparent text-zinc-500",
-              )}
-            >
-              {mode.toUpperCase()}
-            </button>
-          );
-        })}
-      </div>
+        <span className="text-[1.05rem] font-black leading-none tracking-tight">
+          {cameraMode === "3d" ? "3D" : "2D"}
+        </span>
+      </ControlButton>
       <MapStyleMenu
         mode={mapDisplayMode}
         pendingMode={pendingMapDisplayMode}
@@ -138,17 +119,21 @@ function ControlButton({
   label,
   onClick,
   active,
+  pressed,
   expanded,
   controls,
   tone,
+  className,
 }: {
   children: ReactNode;
   label: string;
   onClick: () => void;
   active?: boolean;
+  pressed?: boolean;
   expanded?: boolean;
   controls?: string;
   tone: ReturnType<typeof mapControlTone>;
+  className?: string;
 }) {
   return (
     <Button
@@ -157,12 +142,14 @@ function ControlButton({
       size="icon-lg"
       aria-label={label}
       title={label}
+      aria-pressed={pressed}
       aria-expanded={expanded}
       aria-controls={controls}
       onClick={onClick}
       className={cn(
         "size-12 rounded-full backdrop-blur-md disabled:border-zinc-700 disabled:bg-zinc-900/80 disabled:text-zinc-500 touch-manipulation",
         mapControlButtonClass(tone, active),
+        className,
       )}
     >
       {children}
