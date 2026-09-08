@@ -1347,16 +1347,18 @@
 }
 
 .navigation-turn-icon--signal {
-  animation: turn-signal 0.7s steps(2, end) infinite;
+  animation: turn-signal 1s ease-in-out infinite;
 }
 
 @keyframes turn-signal {
   0%,
   100% {
     opacity: 1;
+    filter: brightness(1.16);
   }
   50% {
-    opacity: 0.18;
+    opacity: 0.38;
+    filter: brightness(0.82);
   }
 }
 

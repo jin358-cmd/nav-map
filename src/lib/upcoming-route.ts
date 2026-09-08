@@ -331,20 +331,66 @@ function bowSpacingMeters(distanceToNext: number) {
   return 28 - bowApproach(distanceToNext) * 13;
 }
 
-/** 藍色地面弓型箭頭：沿轉彎軌跡順行，近路口更大更亮更密。 */
+/** 藍色地面弓型箭頭：釘在轉彎軌跡上，不沿路跑動；phase 只驅動流水燈光。 */
+export function turnGroundArrows({
+  route,
+  routeMeters,
+  distanceToNext,
+  cueMeters,
+  phase = 0,
+  wasShowing = false,
+}: {
+  route: [number, number][];
+  routeMeters: number;
+  distanceToNext: number;
+  cueMeters?: number;
+  phase?: number;
+  wasShowing?: boolean;
+}): GuidanceArrow[] {
+  if (route.length < 2 || !shouldShowGroundBow(distanceToNext, wasShowing)) {
+    return [];
+  }
+  const turnAt = Number.isFinite(cueMeters)
+    ? Math.max(routeMeters, cueMeters as number)
+    : routeMeters + Math.max(0, distanceToNext);
+  const spacing = 18;
+  const start = routeMeters + 8;
+  const end = turnAt + 36;
+  const first = turnAt - Math.ceil((turnAt - start) / spacing) * spacing;
+  const span = Math.max(1, end - start);
+  const cycle = ((phase % 1) + 1) % 1;
+  const placed: GuidanceArrow[] = [];
+
+  for (let at = first; at <= end + 0.01; at += spacing) {
+    if (at < start) continue;
+    const point = pointAlongRoute(route, at);
+    if (!point) continue;
+    const t = (at - start) / span;
+    const delta = (t - cycle + 1) % 1;
+    const pulse = delta < 0.3 ? 1 - delta / 0.3 : 0;
+    placed.push({
+      lng: point.lng,
+      lat: point.lat,
+      bearing: point.bearing,
+      opacity: 0.22 + pulse * 0.78,
+      kind: "straight",
+      scale: 1,
+    });
+  }
+  return placed;
+}
+
+/** @deprecated 改用 turnGroundArrows；保留給舊呼叫。 */
 export function turnMarqueeArrows(
   line: [number, number][],
   phase = 0,
   distanceToNext = GROUND_BOW_APPROACH_METERS,
 ): GuidanceArrow[] {
   if (line.length < 2) return [];
-  const approach = bowApproach(distanceToNext);
   const spacing = bowSpacingMeters(distanceToNext);
-  const cycle = ((phase % 1) + 1) % 1;
-  const shift = (1 - cycle) * spacing;
   const total = lineLengthMeters(line);
   const placed: GuidanceArrow[] = [];
-  let leftover = spacing * 0.22 - shift;
+  let leftover = spacing * 0.22;
   let along = 0;
 
   for (let index = 1; index < line.length; index += 1) {
@@ -362,13 +408,16 @@ export function turnMarqueeArrows(
       if (cursor >= 0 && at >= 6) {
         const ratio = cursor / length;
         const t = total > 0 ? Math.min(1, Math.max(0, at / total)) : 0;
+        const cycle = ((phase % 1) + 1) % 1;
+        const delta = (t - cycle + 1) % 1;
+        const pulse = delta < 0.3 ? 1 - delta / 0.3 : 0;
         placed.push({
           lng: from.lng + (to.lng - from.lng) * ratio,
           lat: from.lat + (to.lat - from.lat) * ratio,
           bearing,
-          opacity: 0.62 + approach * 0.18 + t * 0.28,
+          opacity: 0.22 + pulse * 0.78,
           kind: "straight",
-          scale: 1.18 + approach * 0.42 + t * (0.7 + approach * 0.38),
+          scale: 1,
         });
       }
       cursor += spacing;

@@ -149,13 +149,12 @@ function SmoothBend({
   return (
     <ArrowFrame className={className}>
       <path
-        d={left ? "M34 58 C34 36 33 28 16 28" : "M30 58 C30 36 31 28 48 28"}
-        {...shaftProps()}
-        strokeWidth={9}
+        d={left ? "M40 56 V32 H20" : "M24 56 V32 H44"}
+        {...lineProps()}
       />
       <path
-        d={left ? "M4 28 L22 14 L22 42 Z" : "M60 28 L42 14 L42 42 Z"}
-        fill="currentColor"
+        d={left ? "M34 20 L16 32 L34 44" : "M30 20 L48 32 L30 44"}
+        {...lineProps()}
       />
     </ArrowFrame>
   );
@@ -172,13 +171,12 @@ function SmoothSlight({
   return (
     <ArrowFrame className={className}>
       <path
-        d={left ? "M32 58 C32 40 24 26 14 14" : "M32 58 C32 40 40 26 50 14"}
-        {...shaftProps()}
-        strokeWidth={9}
+        d={left ? "M36 56 C36 40 28 28 18 16" : "M28 56 C28 40 36 28 46 16"}
+        {...lineProps()}
       />
       <path
-        d={left ? "M4 20 L22 6 L26 28 Z" : "M60 20 L42 6 L38 28 Z"}
-        fill="currentColor"
+        d={left ? "M8 26 L18 10 L32 22" : "M56 26 L46 10 L32 22"}
+        {...lineProps()}
       />
     </ArrowFrame>
   );
@@ -195,17 +193,12 @@ function SmoothSharp({
   return (
     <ArrowFrame className={className}>
       <path
-        d={
-          left
-            ? "M36 58 C36 30 28 18 14 28 C8 34 10 44 14 50"
-            : "M28 58 C28 30 36 18 50 28 C56 34 54 44 50 50"
-        }
-        {...shaftProps()}
-        strokeWidth={9}
+        d={left ? "M40 56 V30 C40 16 26 16 16 28" : "M24 56 V30 C24 16 38 16 48 28"}
+        {...lineProps()}
       />
       <path
-        d={left ? "M14 58 L4 40 L26 42 Z" : "M50 58 L60 40 L38 42 Z"}
-        fill="currentColor"
+        d={left ? "M16 16 L6 32 L24 36" : "M48 16 L58 32 L40 36"}
+        {...lineProps()}
       />
     </ArrowFrame>
   );
@@ -221,15 +214,14 @@ function SmoothRamp({
   const left = kind === "left";
   return (
     <ArrowFrame className={className}>
-      <path d="M32 58 C32 40 32 22 32 16" {...shaftProps()} strokeWidth={7} />
+      <path d="M32 56 V16" {...lineProps()} opacity={0.3} />
       <path
-        d={left ? "M32 34 C24 26 16 18 10 12" : "M32 34 C40 26 48 18 54 12"}
-        {...shaftProps()}
-        strokeWidth={8}
+        d={left ? "M32 34 C24 26 16 18 12 12" : "M32 34 C40 26 48 18 52 12"}
+        {...lineProps()}
       />
       <path
-        d={left ? "M2 16 L18 4 L22 24 Z" : "M62 16 L46 4 L42 24 Z"}
-        fill="currentColor"
+        d={left ? "M4 22 L12 6 L26 16" : "M60 22 L52 6 L38 16"}
+        {...lineProps()}
       />
     </ArrowFrame>
   );
@@ -245,22 +237,20 @@ function SmoothFork({
   const left = kind === "left";
   return (
     <ArrowFrame className={className}>
-      <path d="M32 58 V36" {...shaftProps()} strokeWidth={8} />
+      <path d="M32 56 V36" {...lineProps()} />
       <path
         d="M32 36 C42 26 48 18 52 12"
-        {...shaftProps()}
-        strokeWidth={7}
+        {...lineProps()}
         opacity={left ? 0.28 : 1}
       />
       <path
         d="M32 36 C22 26 16 18 12 12"
-        {...shaftProps()}
-        strokeWidth={7}
+        {...lineProps()}
         opacity={left ? 1 : 0.28}
       />
       <path
-        d={left ? "M2 16 L18 4 L22 24 Z" : "M62 16 L46 4 L42 24 Z"}
-        fill="currentColor"
+        d={left ? "M4 22 L12 6 L26 16" : "M60 22 L52 6 L38 16"}
+        {...lineProps()}
       />
     </ArrowFrame>
   );
@@ -269,8 +259,8 @@ function SmoothFork({
 function SmoothStraight({ className }: { className?: string }) {
   return (
     <ArrowFrame className={className}>
-      <path d="M32 58 C32 40 32 24 32 18" {...shaftProps()} strokeWidth={9} />
-      <path d="M32 4 L16 24 L48 24 Z" fill="currentColor" />
+      <path d="M32 56 V22" {...lineProps()} />
+      <path d="M16 34 L32 14 L48 34" {...lineProps()} />
     </ArrowFrame>
   );
 }
@@ -278,8 +268,8 @@ function SmoothStraight({ className }: { className?: string }) {
 function SmoothUTurn({ className }: { className?: string }) {
   return (
     <ArrowFrame className={className}>
-      <path d="M20 58 V24 A12 12 0 0 1 44 24 V34" {...shaftProps()} strokeWidth={9} />
-      <path d="M44 50 L30 34 L56 34 Z" fill="currentColor" />
+      <path d="M20 56 V26 A12 12 0 0 1 44 26 V34" {...lineProps()} />
+      <path d="M30 24 L44 42 L58 24" {...lineProps()} />
     </ArrowFrame>
   );
 }
@@ -293,11 +283,10 @@ function SmoothRoundabout({ className }: { className?: string }) {
         r="12"
         fill="none"
         stroke="currentColor"
-        strokeWidth="7"
+        strokeWidth="8"
       />
-      <path d="M32 58 V48" {...shaftProps()} strokeWidth={7} />
-      <path d="M32 24 V16" {...shaftProps()} strokeWidth={7} />
-      <path d="M32 4 L18 20 L46 20 Z" fill="currentColor" />
+      <path d="M32 56 V48" {...lineProps()} />
+      <path d="M18 22 L32 8 L46 22" {...lineProps()} />
     </ArrowFrame>
   );
 }
@@ -317,6 +306,16 @@ function ArrowFrame({
 }
 
 function shaftProps() {
+  return {
+    fill: "none" as const,
+    stroke: "currentColor",
+    strokeWidth: 10,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+  };
+}
+
+function lineProps() {
   return {
     fill: "none" as const,
     stroke: "currentColor",

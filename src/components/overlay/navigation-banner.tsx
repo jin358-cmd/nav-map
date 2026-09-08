@@ -130,7 +130,7 @@ export const NextIntersectionHud = forwardRef<
   const displayMeters = useSmoothedMeters(distanceMeters);
   const headline = `${formatDistance(displayMeters)}後${turn}`;
   const turnAlert = isTurn && alertPhase !== "cruise";
-  const blinkTurn = turnAlert && isSignalTurn(side);
+  const blinkTurn = isSignalTurn(side);
 
   return (
     <div
@@ -154,11 +154,16 @@ export const NextIntersectionHud = forwardRef<
         </button>
       ) : null}
       <div className="navigation-instruction-content">
-        <div className="maneuverIconWrap navigation-turn-icon">
+        <div
+          className={cn(
+            "maneuverIconWrap navigation-turn-icon",
+            blinkTurn && "navigation-turn-icon--signal",
+          )}
+        >
           <div
             className={cn(
               "maneuverIconBadge",
-              blinkTurn && "maneuverIconBadge--alert navigation-turn-icon--signal",
+              blinkTurn && "maneuverIconBadge--alert",
             )}
           >
             <TurnArrowIcon

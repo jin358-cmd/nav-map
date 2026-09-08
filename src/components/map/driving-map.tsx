@@ -897,7 +897,7 @@ export function DrivingMap({
               routeMetersRef.current,
               distanceToNextRef.current,
               true,
-              (now / 1600) % 1,
+              (now / 1000) % 1,
               {
                 cameraMode: modeRef.current,
                 isTurn: isTurnRef.current,
