@@ -121,8 +121,8 @@ export function YellowPagesSearchStrip({
                         <span className="block truncate text-sm font-semibold text-white">
                           {title}
                         </span>
-                        <span className="mt-0.5 flex min-w-0 items-baseline gap-1.5 text-[12px] leading-snug text-zinc-200">
-                          <span className="shrink-0 tabular-nums text-cyan-100">
+                        <span className="mt-0.5 flex min-w-0 items-baseline gap-1.5 leading-snug text-zinc-200">
+                          <span className="shrink-0 text-[15px] font-semibold tabular-nums text-sky-400">
                             {distance}
                           </span>
                           {street ? (
@@ -130,7 +130,7 @@ export function YellowPagesSearchStrip({
                               <span className="shrink-0 text-zinc-500" aria-hidden>
                                 ·
                               </span>
-                              <span className="min-w-0 truncate">{street}</span>
+                              <span className="min-w-0 truncate text-[12px]">{street}</span>
                             </>
                           ) : null}
                         </span>
