@@ -67,7 +67,7 @@ Exact → Prefix → Alias → Brand → Strong fuzzy → Nearby → Category �
 
 ## K. 平均 Suggest latency
 
-本機 `npm run measure:suggest`（6 城 × 18 query）：**平均 HTTP 109ms**。熱門 query cache 命中約 16–20ms。首次冷載入 OSM gzip 索引會較慢（單次可到 400–700ms），之後 prefix 多在 20–100ms。詳見 `docs/poi-suggest-measure.json`。
+本機 `npm run measure:suggest`（6 城 × 19 query）：**平均 HTTP 26ms**（索引已載入）。熱門 query cache 命中約 15–25ms。冷啟動第一次（gzip 解壓＋建索引）約 1.3–1.6s，之後 prefix／品牌 1～2 字多在 **20–40ms**。詳見 `docs/poi-suggest-measure.json`。
 
 ## L. Android 真機 latency
 
@@ -75,11 +75,11 @@ Exact → Prefix → Alias → Brand → Strong fuzzy → Nearby → Category �
 
 ## M. 測試 Query
 
-`全／全家／全聯／7／711／7-ELEVEN／星／星巴克／麥／麥當勞／加／加油站／停／停車場／藥／藥局／醫／醫院`，城市：台北、新北、桃園、台中、台南、高雄。結果見 measure JSON。
+`全／全家／全聯／7／711／7-ELEVEN／星／星巴克／麥／麥當勞／加／加油站／停／停車場／藥／藥局／醫／醫院／海`，城市：台北、新北、桃園、台中、台南、高雄。1 字「全」回傳全家、全聯、全國電子；「海」在台南會出現海安路附近店家。結果見 measure JSON。
 
 ## N. Typecheck / Lint / Build
 
-以當次 `npm run lint && npm run typecheck && npm run build` 為準。
+`npm run lint`、`npm run typecheck`、`npm run build` 均通過。`npm run test` **NOT AVAILABLE**。
 
 ## O. Commit hash
 

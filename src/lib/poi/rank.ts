@@ -30,22 +30,54 @@ const TIER_SCORE: Record<MatchTier, number> = {
   none: 0,
 };
 
-export function matchTier(query: string, poi: TaiwanPoiRecord): MatchTier {
+export type PoiQueryContext = {
+  query: string;
+  needle: string;
+  variants: string[];
+  prefixBrands: ReturnType<typeof brandsForPrefix>;
+  brandHit: ReturnType<typeof matchedBrand>;
+  categoryHit: ReturnType<typeof matchedCategory>;
+  exactPlace: ReturnType<typeof matchedExactPlace>;
+  namedCity: string | null;
+  intent: ReturnType<typeof classifyPoiQuery>;
+};
+
+export function poiQueryContext(query: string): PoiQueryContext {
   const needle = normalizePoiKey(query);
+  return {
+    query,
+    needle,
+    variants: expandPoiQueries(query).map(normalizePoiKey),
+    prefixBrands: brandsForPrefix(query),
+    brandHit: matchedBrand(query),
+    categoryHit: matchedCategory(query),
+    exactPlace: matchedExactPlace(query),
+    namedCity: countyMentionedInQuery(query),
+    intent: classifyPoiQuery(query),
+  };
+}
+
+export function matchTier(query: string, poi: TaiwanPoiRecord): MatchTier {
+  return matchTierWith(poiQueryContext(query), poi);
+}
+
+export function matchTierWith(ctx: PoiQueryContext, poi: TaiwanPoiRecord): MatchTier {
+  const needle = ctx.needle;
   if (!needle || !poi.isActive) return "none";
   const name = poi.nameNormalized || normalizePoiKey(poi.name);
-  const brand = normalizePoiKey(poi.brand ?? "");
-  const branch = normalizePoiKey(poi.branchName ?? "");
-  const aliases = poi.aliases.map(normalizePoiKey).filter(Boolean);
-  const variants = expandPoiQueries(query).map(normalizePoiKey);
+  const brand = poi.brand ? normalizePoiKey(poi.brand) : "";
+  const branch = poi.branchName ? normalizePoiKey(poi.branchName) : "";
+  const aliases = poi.aliases;
+  const address = poi.addressNormalized || "";
 
   if (name === needle || brand === needle || branch === needle) return "exact";
-  if (aliases.includes(needle) || variants.includes(name)) return "exact";
+  if (aliases.includes(needle) || ctx.variants.includes(name)) return "exact";
 
   if (
     name.startsWith(needle) ||
     brand.startsWith(needle) ||
-    branch.startsWith(needle)
+    branch.startsWith(needle) ||
+    address.startsWith(needle)
   ) {
     return "prefix";
   }
@@ -62,11 +94,10 @@ export function matchTier(query: string, poi: TaiwanPoiRecord): MatchTier {
   }
 
   if (needle.length <= 2 && poi.brand) {
-    const prefixed = brandsForPrefix(query);
-    if (prefixed.some((item) => item.brand === poi.brand)) return "brand";
+    if (ctx.prefixBrands.some((item) => item.brand === poi.brand)) return "brand";
   }
 
-  const brandHit = matchedBrand(query);
+  const brandHit = ctx.brandHit;
   if (
     brandHit &&
     (poi.brand === brandHit.brand ||
@@ -76,12 +107,16 @@ export function matchTier(query: string, poi: TaiwanPoiRecord): MatchTier {
     return "brand";
   }
 
-  if (name.includes(needle) || brand.includes(needle) || aliases.some((alias) => alias.includes(needle))) {
+  if (
+    name.includes(needle) ||
+    brand.includes(needle) ||
+    address.includes(needle) ||
+    aliases.some((alias) => alias.includes(needle))
+  ) {
     return "fuzzy";
   }
 
-  const categoryHit = matchedCategory(query);
-  if (categoryHit && poi.category === categoryHit.category) return "category";
+  if (ctx.categoryHit && poi.category === ctx.categoryHit.category) return "category";
   return "none";
 }
 
@@ -90,26 +125,32 @@ export function rankScore(
   poi: TaiwanPoiRecord,
   origin?: { lat: number; lng: number },
 ) {
-  const tier = matchTier(query, poi);
+  return rankScoreWith(poiQueryContext(query), poi, origin);
+}
+
+export function rankScoreWith(
+  ctx: PoiQueryContext,
+  poi: TaiwanPoiRecord,
+  origin?: { lat: number; lng: number },
+) {
+  const tier = matchTierWith(ctx, poi);
   let score = TIER_SCORE[tier];
-  const exact = matchedExactPlace(query);
-  if (exact && exact.names.some((name) => poi.nameNormalized.includes(normalizePoiKey(name)))) {
+  if (
+    ctx.exactPlace &&
+    ctx.exactPlace.names.some((name) => poi.nameNormalized.includes(normalizePoiKey(name)))
+  ) {
     score = Math.max(score, 110);
   }
   score += Math.round((poi.confidence ?? 0.8) * 8);
-  const needle = normalizePoiKey(query);
-  if (needle.length <= 2 && poi.brand) {
-    const prefixed = brandsForPrefix(query);
-    if (prefixed.some((item) => item.brand === poi.brand)) score += 28;
+  if (ctx.needle.length <= 2 && poi.brand) {
+    if (ctx.prefixBrands.some((item) => item.brand === poi.brand)) score += 28;
   }
-  const categoryHit = matchedCategory(query);
-  if (needle.length <= 2 && categoryHit && poi.category === categoryHit.category) {
+  if (ctx.needle.length <= 2 && ctx.categoryHit && poi.category === ctx.categoryHit.category) {
     score += 28;
   }
-  const namedCity = countyMentionedInQuery(query);
-  if (namedCity && normalizePoiKey(poi.city ?? "") === normalizePoiKey(namedCity)) {
+  if (ctx.namedCity && normalizePoiKey(poi.city ?? "") === normalizePoiKey(ctx.namedCity)) {
     score += 14;
-  } else if (!namedCity && origin) {
+  } else if (!ctx.namedCity && origin) {
     const here = countyFromLngLat(origin.lat, origin.lng);
     if (here && normalizePoiKey(poi.city ?? "") === normalizePoiKey(here)) {
       score += 6;
@@ -123,24 +164,23 @@ export function rankPois(
   query: string,
   origin?: { lat: number; lng: number },
 ) {
-  const intent = classifyPoiQuery(query);
-  const nearby = Boolean(origin && prefersNearby(intent));
-  return [...rows].sort((a, b) => {
-    const sa = rankScore(query, a, origin);
-    const sb = rankScore(query, b, origin);
-    const delta = sb - sa;
+  const ctx = poiQueryContext(query);
+  const nearby = Boolean(origin && prefersNearby(ctx.intent));
+  const scored = rows.map((poi) => ({
+    poi,
+    score: rankScoreWith(ctx, poi, origin),
+    dist: origin
+      ? distanceKm(origin, { lat: poi.latitude, lng: poi.longitude })
+      : 0,
+  }));
+  scored.sort((a, b) => {
+    const delta = b.score - a.score;
     if (nearby && origin && Math.abs(delta) < 12) {
-      const da = distanceKm(origin, { lat: a.latitude, lng: a.longitude });
-      const db = distanceKm(origin, { lat: b.latitude, lng: b.longitude });
-      if (da !== db) return da - db;
+      if (a.dist !== b.dist) return a.dist - b.dist;
     }
     if (delta !== 0) return delta;
-    if (origin) {
-      return (
-        distanceKm(origin, { lat: a.latitude, lng: a.longitude }) -
-        distanceKm(origin, { lat: b.latitude, lng: b.longitude })
-      );
-    }
-    return a.name.localeCompare(b.name, "zh-Hant");
+    if (origin && a.dist !== b.dist) return a.dist - b.dist;
+    return a.poi.name.localeCompare(b.poi.name, "zh-Hant");
   });
+  return scored.map((row) => row.poi);
 }

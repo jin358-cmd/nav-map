@@ -23,6 +23,7 @@ const QUERIES = [
   "藥局",
   "醫",
   "醫院",
+  "海",
 ];
 const CITIES = [
   { name: "台北", lat: 25.0478, lng: 121.517 },
@@ -57,6 +58,13 @@ async function one(q, city) {
 }
 
 async function main() {
+  const warmupT0 = performance.now();
+  try {
+    await one("全", CITIES[4]);
+  } catch {
+    /* first hit may include gzip index load */
+  }
+  const warmupMs = Number((performance.now() - warmupT0).toFixed(1));
   const rows = [];
   for (const city of CITIES) {
     for (const q of QUERIES) {
@@ -77,6 +85,7 @@ async function main() {
     : null;
   const report = {
     base: BASE,
+    warmupHttpMs: warmupMs,
     averageHttpMs: avg ? Number(avg.toFixed(1)) : null,
     androidDevice: "NOT AVAILABLE in this environment",
     rows,

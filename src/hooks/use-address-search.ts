@@ -50,6 +50,7 @@ export function useAddressSearch(
     const timer = window.setTimeout(() => {
       setSuggesting(true);
       setSearchingMore(false);
+      setSuggestSettled(false);
       void searchAddresses(needle, origin, controller.signal, "suggest", regionArg)
         .then(async (rows) => {
           if (generation !== suggestGenerationRef.current) return;

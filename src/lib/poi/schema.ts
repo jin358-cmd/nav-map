@@ -109,8 +109,15 @@ export function hydratePoiRecord(row: Partial<TaiwanPoiRecord> & Record<string, 
     brand = null;
     keptAliases = [];
   }
-  const brandMeta = BRAND_ALIASES.find((item) => item.brand === brand);
+  const brandMeta =
+    BRAND_ALIASES.find((item) => item.brand === brand) ||
+    BRAND_ALIASES.find(
+      (item) =>
+        nameFitsBrand(name, item.brand) ||
+        (brand ? nameFitsBrand(brand, item.brand) : false),
+    );
   if (brandMeta) {
+    brand = brandMeta.brand;
     keptAliases = [
       ...new Set([
         ...keptAliases,

@@ -3,22 +3,30 @@ import "server-only";
 import { encodeGeohash } from "@/lib/poi/geohash";
 import type { GeocodeResult } from "@/lib/geocoding/types";
 
-export const SUGGEST_CACHE_VERSION = "poi-suggest-6";
+export const SUGGEST_CACHE_VERSION = "poi-suggest-9";
 const HOT_TTL_MS = 10 * 60 * 1000;
 const HOT_QUERIES = new Set(
   [
+    "全",
     "全家",
+    "全聯",
     "7",
     "7-11",
     "711",
     "7-eleven",
+    "星",
     "星巴克",
+    "麥",
     "麥當勞",
+    "加",
     "加油站",
+    "停",
     "停車場",
-    "全聯",
+    "藥",
     "藥局",
+    "醫",
     "醫院",
+    "海",
   ].map((item) => item.toLowerCase().replaceAll("臺", "台").replace(/[\s\-]/g, "")),
 );
 

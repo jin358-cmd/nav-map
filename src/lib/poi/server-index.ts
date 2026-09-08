@@ -133,6 +133,8 @@ export function searchMemoryPoiIndex(
 
 export type SuggestTimings = {
   prefixMs: number;
+  aliasMs: number;
+  fuzzyMs: number;
   localMs: number;
   remoteMs: number;
   totalMs: number;
@@ -140,7 +142,10 @@ export type SuggestTimings = {
 
 function toGeocode(query: string, poi: TaiwanPoiRecord, origin?: { lat: number; lng: number }): GeocodeResult {
   const score = rankScore(query, poi, origin);
-  const displayName = poi.branchName ? `${poi.name} ${poi.branchName}` : poi.name;
+  const displayName =
+    poi.branchName && !poi.name.includes(poi.branchName)
+      ? `${poi.name} ${poi.branchName}`
+      : poi.name;
   return {
     id: poi.id,
     label: displayName,
@@ -180,14 +185,13 @@ export async function searchTaiwanPoiIndexTimed(
   if (query.trim().length < 1) {
     return {
       results: [],
-      timings: { prefixMs: 0, localMs: 0, remoteMs: 0, totalMs: 0 },
+      timings: { prefixMs: 0, aliasMs: 0, fuzzyMs: 0, localMs: 0, remoteMs: 0, totalMs: 0 },
       localCount: 0,
     };
   }
   const prefixStarted = performance.now();
   const local = searchMemoryPoiIndex(query, origin, 24);
-  const prefixMs = performance.now() - prefixStarted;
-  const localMs = prefixMs;
+  const localMs = performance.now() - prefixStarted;
 
   const remoteStarted = performance.now();
   let remote: TaiwanPoiRecord[] = [];
@@ -212,7 +216,9 @@ export async function searchTaiwanPoiIndexTimed(
   return {
     results: ranked.map((poi) => toGeocode(query, poi, origin)),
     timings: {
-      prefixMs: Number(prefixMs.toFixed(2)),
+      prefixMs: Number(localMs.toFixed(2)),
+      aliasMs: Number(localMs.toFixed(2)),
+      fuzzyMs: 0,
       localMs: Number(localMs.toFixed(2)),
       remoteMs: Number(remoteMs.toFixed(2)),
       totalMs: Number((performance.now() - started).toFixed(2)),
