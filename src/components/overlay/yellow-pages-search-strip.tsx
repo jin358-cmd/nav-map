@@ -4,11 +4,31 @@ import { useEffect, useRef, useState } from "react";
 import { formatDistance } from "@/lib/format";
 import { formatDistanceRoadLabel } from "@/lib/geocoding/format-taiwan-display-address";
 import { poiFeatureToPlace } from "@/lib/map-place";
+import type { EnergyKind } from "@/lib/poi/energy-kind";
 import { formatLayerPoiTitle } from "@/lib/poi/display";
-import { SEARCH_SHORTCUTS, type SearchShortcutId } from "@/lib/search-shortcuts";
+import {
+  FUEL_ENERGY_SHORTCUTS,
+  SEARCH_SHORTCUTS,
+  type SearchShortcutId,
+} from "@/lib/search-shortcuts";
 import { useYellowPagesNearby } from "@/hooks/use-yellow-pages-nearby";
 import { cn } from "@/lib/utils";
 import type { GeocodeHit, LngLat } from "@/types/domain";
+
+function emptyCopy(shortcut: SearchShortcutId | null, energyKind: EnergyKind | null) {
+  if (shortcut === "fuel" && energyKind === "gogoro") return "附近暫無 Gogoro 充電站";
+  if (shortcut === "fuel" && energyKind === "ev") return "附近暫無電車充電站";
+  if (shortcut === "fuel") return "附近暫無加油站";
+  return "附近暫無此分類店家";
+}
+
+function previewHeading(shortcut: SearchShortcutId | null, energyKind: EnergyKind | null) {
+  if (shortcut === "fuel" && energyKind === "gogoro") return "Gogoro 充電站";
+  if (shortcut === "fuel" && energyKind === "ev") return "電車充電站";
+  if (shortcut === "fuel") return "加油站";
+  const selected = SEARCH_SHORTCUTS.find((item) => item.id === shortcut);
+  return selected?.label ?? "附近店家";
+}
 
 export function YellowPagesSearchStrip({
   origin,
@@ -18,9 +38,14 @@ export function YellowPagesSearchStrip({
   onSelect: (hit: GeocodeHit) => void;
 }) {
   const [shortcut, setShortcut] = useState<SearchShortcutId | null>(null);
+  const [energyKind, setEnergyKind] = useState<EnergyKind | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
-  const { pois, loading, error } = useYellowPagesNearby({ origin, shortcut });
-  const selected = SEARCH_SHORTCUTS.find((item) => item.id === shortcut) ?? null;
+  const resolvedEnergy = shortcut === "fuel" ? (energyKind ?? "petrol") : null;
+  const { pois, loading, error } = useYellowPagesNearby({
+    origin,
+    shortcut,
+    energyKind: resolvedEnergy,
+  });
 
   useEffect(() => {
     if (!shortcut) return;
@@ -29,6 +54,7 @@ export function YellowPagesSearchStrip({
       if (!target) return;
       if (rootRef.current?.contains(target)) return;
       setShortcut(null);
+      setEnergyKind(null);
     };
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
@@ -48,12 +74,29 @@ export function YellowPagesSearchStrip({
               aria-expanded={on}
               aria-controls={on ? "navpilot-shortcut-preview" : undefined}
               aria-label={
-                item.id === "fuel" ? "加油站，含汽機車充電站" : `${item.label}附近`
+                item.id === "fuel"
+                  ? "加油站，點入後可看 Gogoro 充電站與電車充電站"
+                  : `${item.label}附近`
               }
               title={item.hint}
-              onClick={() =>
-                setShortcut((current) => (current === item.id ? null : item.id))
-              }
+              onClick={() => {
+                if (item.id === "fuel") {
+                  if (shortcut !== "fuel") {
+                    setShortcut("fuel");
+                    setEnergyKind("petrol");
+                    return;
+                  }
+                  if (energyKind && energyKind !== "petrol") {
+                    setEnergyKind("petrol");
+                    return;
+                  }
+                  setShortcut(null);
+                  setEnergyKind(null);
+                  return;
+                }
+                setEnergyKind(null);
+                setShortcut((current) => (current === item.id ? null : item.id));
+              }}
               className={cn(
                 "flex min-w-0 flex-col items-center gap-0.5 rounded-xl px-1 py-1.5 text-center touch-manipulation",
                 on ? "text-[#042f2e]" : "bg-black/55 text-zinc-100",
@@ -72,15 +115,47 @@ export function YellowPagesSearchStrip({
           );
         })}
       </div>
+      {shortcut === "fuel" ? (
+        <div className="mt-1 grid grid-cols-2 gap-1">
+          {FUEL_ENERGY_SHORTCUTS.map((item) => {
+            const on = energyKind === item.id;
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                aria-pressed={on}
+                aria-label={`${item.label}附近`}
+                title={item.hint}
+                onClick={() =>
+                  setEnergyKind((current) => (current === item.id ? "petrol" : item.id))
+                }
+                className={cn(
+                  "flex min-w-0 items-center justify-center gap-1.5 rounded-xl px-2 py-1.5 text-center touch-manipulation",
+                  on ? "text-[#042f2e]" : "bg-black/55 text-zinc-100",
+                )}
+                style={
+                  on
+                    ? { background: item.color }
+                    : { border: "1px solid rgba(255,255,255,0.14)" }
+                }
+              >
+                <Icon className="size-4 shrink-0" strokeWidth={2.2} aria-hidden />
+                <span className="max-w-full truncate text-[10px] font-semibold leading-tight sm:text-[11px]">
+                  {item.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
       {shortcut ? (
         <div
           id="navpilot-shortcut-preview"
           className="mt-1 max-h-44 overflow-y-auto rounded-2xl border border-white/12 bg-black/72 px-2 py-1.5 shadow-[0_10px_28px_rgba(0,0,0,0.4)] backdrop-blur-xl"
         >
           <p className="px-1 pb-1 text-[10px] tracking-wide text-zinc-400">
-            {selected
-              ? `${selected.label}${selected.id === "fuel" ? " · 含汽機車充電站" : ""}`
-              : "附近店家"}
+            {previewHeading(shortcut, resolvedEnergy)}
           </p>
           {loading && pois.length === 0 ? (
             <p className="px-1 py-2 text-sm text-zinc-300">讀取中…</p>
@@ -88,7 +163,7 @@ export function YellowPagesSearchStrip({
             <p className="px-1 py-2 text-sm text-amber-200">{error}</p>
           ) : pois.length === 0 ? (
             <p className="px-1 py-2 text-sm text-zinc-300">
-              {origin ? "附近暫無此分類店家" : "開啟定位後即可列出附近店家"}
+              {origin ? emptyCopy(shortcut, resolvedEnergy) : "開啟定位後即可列出附近店家"}
             </p>
           ) : (
             <ul>

@@ -6,6 +6,7 @@ import {
   normalizePoiKey,
   resolveCanonicalBrand,
 } from "@/lib/poi/aliases";
+import { classifyEnergyKind } from "@/lib/poi/energy-kind";
 import type { PoiCategory } from "@/lib/poi/schema";
 
 const GENERIC_POI_NAME =
@@ -77,6 +78,8 @@ export function formatLayerPoiTitle(poi: {
   const brand = brandDisplayLabel(inferred);
 
   if (category === "fuel") {
+    const energyTitle = formatEnergyStationTitle(poi);
+    if (energyTitle) return energyTitle;
     const fuelBrand =
       brandDisplayLabel(inferFuelChainBrand(name, poi.brand) ?? inferred) ||
       (FUEL_TITLE_BRANDS.has(brand) ? brand : "");
@@ -112,4 +115,34 @@ export function formatLayerPoiTitle(poi: {
   }
 
   return formatChainStoreName(name, taggedBranch) || name;
+}
+
+export function formatEnergyStationTitle(poi: {
+  name?: string | null;
+  brand?: string | null;
+  branchName?: string | null;
+  category?: string | null;
+  subcategory?: string | null;
+}) {
+  const kind = classifyEnergyKind(poi);
+  const name = (poi.name ?? "").trim();
+  const brand = (poi.brand ?? "").trim();
+  const generic = !name || GENERIC_POI_NAME.test(name);
+
+  if (kind === "gogoro") {
+    if (!generic && /gogoro|換電|電池交換|go站/i.test(name)) return name;
+    if (brand && /gogoro|換電|交換/i.test(brand)) {
+      return /站/.test(brand) ? brand : `${brand} 換電站`;
+    }
+    if (!generic) return name;
+    return "Gogoro 換電站";
+  }
+
+  if (kind === "ev") {
+    if (!generic) return name;
+    if (brand && !GENERIC_POI_NAME.test(brand)) return brand;
+    return "電車充電站";
+  }
+
+  return "";
 }

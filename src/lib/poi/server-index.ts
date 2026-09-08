@@ -7,6 +7,7 @@ import { distanceKm } from "@/lib/geo";
 import type { GeocodeResult } from "@/lib/geocoding/types";
 import { buildPoiIndexes, diversifyByBrand, searchIndexedPois } from "@/lib/poi/prefix-index";
 import { CONVENIENCE_CHAIN_BRANDS, FUEL_CHAIN_BRANDS } from "@/lib/poi/aliases";
+import { matchesEnergyKind, type EnergyKind } from "@/lib/poi/energy-kind";
 import { POI_MAIN_LAYER_IDS, type PoiMainLayerId } from "@/lib/poi/main-layers";
 import { rankPois, rankScore } from "@/lib/poi/rank";
 import {
@@ -235,6 +236,7 @@ export function poisInBounds(
   limit = 80,
   layers?: PoiMainLayerId[],
   categories?: string[],
+  energyKind?: EnergyKind | null,
 ) {
   const west = Math.min(bounds.west, bounds.east);
   const east = Math.max(bounds.west, bounds.east);
@@ -243,17 +245,24 @@ export function poisInBounds(
   const wantedLayers = layers?.length ? layers : [...POI_MAIN_LAYER_IDS];
   const wanted = new Set(wantedLayers);
   const categorySet = categories?.length ? new Set(categories) : null;
-  const rows = poisInGridBounds({ west, south, east, north }).filter(
-    (poi) =>
-      poi.longitude >= west &&
-      poi.longitude <= east &&
-      poi.latitude >= south &&
-      poi.latitude <= north &&
-      (categorySet
-        ? categorySet.has(poi.category) ||
-          (categorySet.has("fuel") && poi.subcategory === "charging")
-        : wanted.has(poi.mainCategory)),
-  );
+  const rows = poisInGridBounds({ west, south, east, north }).filter((poi) => {
+    if (
+      poi.longitude < west ||
+      poi.longitude > east ||
+      poi.latitude < south ||
+      poi.latitude > north
+    ) {
+      return false;
+    }
+    if (energyKind) return matchesEnergyKind(poi, energyKind);
+    if (categorySet) {
+      return (
+        categorySet.has(poi.category) ||
+        (categorySet.has("fuel") && poi.subcategory === "charging")
+      );
+    }
+    return wanted.has(poi.mainCategory);
+  });
   const ranked = rows
     .map((poi) => ({
       poi,
@@ -304,8 +313,10 @@ export function poisNearby(
   limit = 16,
   preferPhone = false,
   categories?: string[],
+  energyKind?: EnergyKind | null,
 ) {
-  const span = Math.max(400, Math.min(8000, radiusMeters)) / 111000;
+  const cap = energyKind && energyKind !== "petrol" ? 12000 : 8000;
+  const span = Math.max(400, Math.min(cap, radiusMeters)) / 111000;
   const cos = Math.max(0.2, Math.cos((origin.lat * Math.PI) / 180));
   const rows = poisInBounds(
     {
@@ -318,6 +329,7 @@ export function poisNearby(
     Math.max(limit * 4, 80),
     categories?.length ? undefined : layers,
     categories,
+    energyKind,
   );
   const radiusKm = radiusMeters / 1000;
   const ranked = rows

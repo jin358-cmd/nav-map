@@ -1,3 +1,4 @@
+import { isEnergyKind } from "@/lib/poi/energy-kind";
 import { POI_MAIN_LAYER_IDS, type PoiMainLayerId } from "@/lib/poi/main-layers";
 import { poisInBounds, poisNearby } from "@/lib/poi/server-index";
 import { POI_CATEGORIES, type PoiCategory, type TaiwanPoiRecord } from "@/lib/poi/schema";
@@ -59,6 +60,8 @@ export async function GET(request: Request) {
   const categories = readCategories(url.searchParams.get("categories"));
   const layers = requested ?? [...POI_MAIN_LAYER_IDS];
   const preferPhone = url.searchParams.get("preferPhone") === "1";
+  const energyParam = url.searchParams.get("energyKind");
+  const energyKind = isEnergyKind(energyParam) ? energyParam : undefined;
   const origin =
     lng !== undefined && lat !== undefined ? { lng, lat } : undefined;
 
@@ -79,6 +82,7 @@ export async function GET(request: Request) {
       Math.min(limit, 24),
       preferPhone,
       categories,
+      energyKind,
     );
     return Response.json(
       { pois: rows.map(serializePoi) },

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MapPoiFeature } from "@/lib/map-place";
 import { distanceKm } from "@/lib/geo";
+import type { EnergyKind } from "@/lib/poi/energy-kind";
 import type { SearchShortcutId } from "@/lib/search-shortcuts";
 import { searchShortcutById } from "@/lib/search-shortcuts";
 import type { LngLat } from "@/types/domain";
@@ -18,17 +19,25 @@ function quantizeNearbyOrigin(origin: LngLat | null): LngLat | null {
   };
 }
 
+function nearbyRadiusMeters(shortcut: SearchShortcutId, energyKind: EnergyKind | null) {
+  if (shortcut !== "fuel") return 2800;
+  if (energyKind === "gogoro" || energyKind === "ev") return 8000;
+  return 4200;
+}
+
 export function useYellowPagesNearby({
   origin,
   shortcut,
+  energyKind = null,
 }: {
   origin: LngLat | null;
   shortcut: SearchShortcutId | null;
+  energyKind?: EnergyKind | null;
 }) {
   const [pois, setPois] = useState<NearbyShortcutPoi[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [fetchedFor, setFetchedFor] = useState<SearchShortcutId | null>(null);
+  const [fetchedFor, setFetchedFor] = useState<string | null>(null);
   const originLng = origin?.lng ?? null;
   const originLat = origin?.lat ?? null;
   const bucket = useMemo(
@@ -42,14 +51,16 @@ export function useYellowPagesNearby({
   const lat = bucket?.lat ?? null;
   const selected = searchShortcutById(shortcut);
   const selectedId = selected?.id ?? null;
+  const resolvedEnergy = selectedId === "fuel" ? (energyKind ?? "petrol") : null;
+  const fetchKey = selectedId ? `${selectedId}:${resolvedEnergy ?? ""}` : null;
   const ready = Boolean(selected && lng != null && lat != null);
-  const shortcutRef = useRef<SearchShortcutId | null>(null);
+  const fetchKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!selected || lng == null || lat == null) return;
+    if (!selected || lng == null || lat == null || !fetchKey) return;
 
-    const shortcutChanged = shortcutRef.current !== selected.id;
-    shortcutRef.current = selected.id;
+    const shortcutChanged = fetchKeyRef.current !== fetchKey;
+    fetchKeyRef.current = fetchKey;
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
       if (shortcutChanged) setLoading(true);
@@ -59,9 +70,10 @@ export function useYellowPagesNearby({
         categories: selected.categories.join(","),
         lng: String(lng),
         lat: String(lat),
-        radius: selected.id === "fuel" ? "4200" : "2800",
+        radius: String(nearbyRadiusMeters(selected.id, resolvedEnergy)),
         limit: "14",
       });
+      if (resolvedEnergy) params.set("energyKind", resolvedEnergy);
       void fetch(`/api/pois?${params}`, { signal: controller.signal })
         .then(async (response) => {
           if (!response.ok) throw new Error("nearby failed");
@@ -70,7 +82,7 @@ export function useYellowPagesNearby({
         .then((data) => {
           if (controller.signal.aborted) return;
           const originFix = { lng, lat };
-          setFetchedFor(selected.id);
+          setFetchedFor(fetchKey);
           setPois(
             (data.pois ?? []).map((poi) => ({
               ...poi,
@@ -81,7 +93,7 @@ export function useYellowPagesNearby({
         })
         .catch(() => {
           if (controller.signal.aborted) return;
-          setFetchedFor(selected.id);
+          setFetchedFor(fetchKey);
           setLoading(false);
           setError("附近店家讀取失敗");
         });
@@ -91,12 +103,12 @@ export function useYellowPagesNearby({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [lat, lng, selected]);
+  }, [fetchKey, lat, lng, resolvedEnergy, selected]);
 
-  if (!ready || !selectedId) {
+  if (!ready || !fetchKey) {
     return { pois: [] as NearbyShortcutPoi[], loading: false, error: null };
   }
-  const stale = fetchedFor !== selectedId;
+  const stale = fetchedFor !== fetchKey;
   return {
     pois: stale ? [] : pois,
     loading: stale || loading,
