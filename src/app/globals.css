@@ -129,6 +129,29 @@
   }
 }
 
+.parking-panel {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: #0b1018;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+
+.parking-panel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: calc(2 * 6.55rem + 0.5rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.parking-panel-item > div {
+  box-sizing: border-box;
+  min-height: 6.55rem;
+  height: 100%;
+}
+
 .hud-float-panel {
   border: 1px solid rgba(255, 255, 255, 0.16);
   background: rgba(8, 12, 18, 0.5);
@@ -152,10 +175,8 @@
   transform-origin: top center;
 }
 
-.parking-panel-shell--min .hud-float-panel {
-  background: rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+.parking-panel-shell--min .parking-panel {
+  background: #0b1018;
 }
 
 .poi-layer-drawer {

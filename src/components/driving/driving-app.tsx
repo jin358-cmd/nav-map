@@ -942,9 +942,15 @@ export function DrivingApp() {
     [],
   );
 
+  const closeParking = useCallback(() => {
+    setParkingOpen(false);
+    setParkingMinimized(false);
+    setSelectedParking(null);
+  }, []);
+
   const shrinkFunctionPanels = useCallback(() => {
     setToolsDrawerOpen(false);
-    if (parkingOpen) setParkingMinimized(true);
+    closeParking();
     setFavoritesOpen(false);
     setPoiMenuOpen(false);
     setEventListKind(null);
@@ -954,7 +960,7 @@ export function DrivingApp() {
     setStyleMenuOpen(false);
     setSelectedMapPlace(null);
     if (parkingArrivalOpen) setParkingArrivalMinimized(true);
-  }, [parkingArrivalOpen, parkingOpen]);
+  }, [closeParking, parkingArrivalOpen]);
 
   const handleEmptyMapClick = useCallback(() => {
     shrinkFunctionPanels();
@@ -2073,19 +2079,21 @@ export function DrivingApp() {
         <div
           className={
             navigating
-              ? "pointer-events-none absolute inset-x-0 top-[max(7.35rem,calc(env(safe-area-inset-top)+6.7rem))] z-[60] flex justify-center px-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))]"
+              ? "pointer-events-auto absolute inset-x-0 top-[max(7.35rem,calc(env(safe-area-inset-top)+6.7rem))] bottom-0 z-[60] flex justify-center px-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))]"
               : landscape
-                ? "pointer-events-none absolute inset-0 z-[60] flex items-start justify-center pt-[18vh] px-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))]"
+                ? "pointer-events-auto absolute inset-0 z-[60] flex items-start justify-center pt-[18vh] px-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))]"
                 : drawerOpen
-                  ? "pointer-events-none absolute inset-0 z-[60] flex items-end justify-center px-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] pb-[max(14.75rem,calc(env(safe-area-inset-bottom)+13.5rem))]"
-                  : "pointer-events-none absolute inset-0 z-[60] flex items-end justify-center px-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] pb-[max(1.25rem,calc(env(safe-area-inset-bottom)+0.75rem))]"
+                  ? "pointer-events-auto absolute inset-0 z-[60] flex items-end justify-center px-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] pb-[max(14.75rem,calc(env(safe-area-inset-bottom)+13.5rem))]"
+                  : "pointer-events-auto absolute inset-0 z-[60] flex items-end justify-center px-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] pb-[max(1.25rem,calc(env(safe-area-inset-bottom)+0.75rem))]"
           }
+          onClick={closeParking}
         >
           <div
             className={cn(
               "pointer-events-auto w-full max-w-xl",
               parkingMinimized && "max-h-[7.4rem] overflow-hidden",
             )}
+            onClick={(event) => event.stopPropagation()}
           >
             <div
               className={cn(
@@ -2110,8 +2118,7 @@ export function DrivingApp() {
                 focusEvent(lot.location);
               }}
               onNavigate={(lot) => {
-                setParkingOpen(false);
-                setParkingMinimized(false);
+                closeParking();
                 void applyRoute({
                   id: `parking-${lot.id}`,
                   name: lot.name,
@@ -2119,9 +2126,7 @@ export function DrivingApp() {
                   location: lot.location,
                 });
               }}
-              onClose={() => {
-                setParkingMinimized(true);
-              }}
+              onClose={closeParking}
               arrivalPromptEnabled={parkingArrivalEnabled}
               onToggleArrivalPrompt={(enabled) => {
                 setParkingArrivalPromptEnabled(enabled);

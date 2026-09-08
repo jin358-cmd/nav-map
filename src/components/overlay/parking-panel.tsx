@@ -142,7 +142,7 @@ export function ParkingPanel({
   return (
     <section
       className={cn(
-        "pointer-events-auto hud-float-panel w-full max-w-xl rounded-2xl p-3 text-white",
+        "pointer-events-auto parking-panel w-full max-w-xl rounded-2xl p-3 text-white",
         minimized && "cursor-pointer [&_*]:pointer-events-none",
       )}
       onClick={
@@ -219,7 +219,7 @@ export function ParkingPanel({
       </div>
       {loading && ranked.length === 0 ? (
         <div
-          className="flex min-h-[14.5rem] flex-col items-center justify-center gap-2 px-1 py-6 text-sm text-sky-100"
+          className="parking-panel-list items-center justify-center px-1 py-6 text-sm text-sky-100"
           role="status"
           aria-live="polite"
         >
@@ -231,11 +231,11 @@ export function ParkingPanel({
           {origin === "unavailable" ? "資料暫時無法取得" : "附近沒有停車場資料"}
         </p>
       ) : (
-        <ul className="max-h-[14.5rem] min-h-[14.5rem] space-y-2 overflow-y-auto">
+        <ul className="parking-panel-list">
           {ranked.map((lot) => {
             const copy = parkingLotCopy(lot, sort);
             return (
-            <li key={lot.id}>
+            <li key={lot.id} className="parking-panel-item">
               <div
                 className={cn(
                   "flex items-center gap-2 rounded-xl border px-2.5 py-2",
