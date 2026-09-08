@@ -77,6 +77,7 @@ export function YellowPagesSearchStrip({
               {pois.map((poi) => {
                 const title = formatLayerPoiTitle(poi);
                 const street = formatDistanceRoadLabel(poi.address);
+                const distance = formatDistance(poi.distanceMeters);
                 return (
                   <li key={poi.id}>
                     <button
@@ -86,7 +87,7 @@ export function YellowPagesSearchStrip({
                         onSelect({
                           id: place.id,
                           name: title,
-                          address: street || place.address,
+                          address: place.address,
                           location: place.location,
                           source: "index",
                           matchKind: "landmark",
@@ -102,9 +103,18 @@ export function YellowPagesSearchStrip({
                         <span className="block truncate text-sm font-semibold text-white">
                           {title}
                         </span>
-                        <span className="block truncate text-[12px] text-zinc-200">
-                          {formatDistance(poi.distanceMeters)}
-                          {street ? ` · ${street}` : ""}
+                        <span className="mt-0.5 flex min-w-0 items-baseline gap-1.5 text-[12px] leading-snug text-zinc-200">
+                          <span className="shrink-0 tabular-nums text-cyan-100">
+                            {distance}
+                          </span>
+                          {street ? (
+                            <>
+                              <span className="shrink-0 text-zinc-500" aria-hidden>
+                                ·
+                              </span>
+                              <span className="min-w-0 truncate">{street}</span>
+                            </>
+                          ) : null}
                         </span>
                       </span>
                     </button>

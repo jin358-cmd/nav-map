@@ -221,7 +221,7 @@ function formatDisplayAddressString(value: string) {
   const commaForm = formatCommaSeparated(address);
   if (commaForm) return stripAccuracyLabels(restoreNotes(commaForm, nearby));
 
-  const compact = compactTaiwanText(address);
+  const compact = compactTaiwanText(stripLeadingPostal(address));
   const parts = parseDisplayParts(compact);
   const rebuilt = rebuildFromParts(parts);
   if (parts.hadAdminUnit && rebuilt) {
@@ -232,6 +232,18 @@ function formatDisplayAddressString(value: string) {
       /[村里]|(?:\d+|[一二三四五六七八九十]+)鄰/u.test(compact) &&
       rebuilt !== compact;
     if (looksLikeAdmin) return stripAccuracyLabels(restoreNotes(rebuilt, nearby));
+    const compactKey = compact.replaceAll("臺", "台");
+    const rebuiltKey = rebuilt.replaceAll("臺", "台");
+    if (compactKey === rebuiltKey || compactKey.startsWith(rebuiltKey)) {
+      return stripAccuracyLabels(restoreNotes(rebuilt, nearby));
+    }
+    if (
+      (parts.city || parts.town) &&
+      rebuiltKey.length >= 8 &&
+      compactKey.includes(rebuiltKey)
+    ) {
+      return stripAccuracyLabels(restoreNotes(rebuilt, nearby));
+    }
   }
   return stripAccuracyLabels(restoreNotes(address, nearby));
 }
@@ -450,18 +462,50 @@ export function formatTaiwanStreetName(
 }
 
 const COUNTY_CITY_ONLY = /^(?:[\u4e00-\u9fff]{1,3}[縣市])$/u;
+const ADMIN_ONLY =
+  /^(?:[\u4e00-\u9fff]{1,3}[縣市](?:[\u4e00-\u9fff]{1,4}[區市鎮鄉])?)$/u;
+
+function isAdminOnlyLabel(value: string) {
+  const compact = compactTaiwanText(value).replaceAll("臺", "台");
+  return (
+    !compact ||
+    compact === "台灣" ||
+    compact === "台湾" ||
+    COUNTY_CITY_ONLY.test(compact) ||
+    ADMIN_ONLY.test(compact)
+  );
+}
 
 /** 距離列：路名＋段，不含縣市、行政區、巷弄門牌。 */
 export function formatDistanceRoadLabel(
   input: string | TaiwanDisplayAddressInput | null | undefined,
 ): string {
   const street = formatTaiwanStreetName(input);
-  if (!street) return "";
-  const compact = compactTaiwanText(street).replaceAll("臺", "台");
-  if (COUNTY_CITY_ONLY.test(compact) || compact === "台灣" || compact === "台湾") {
-    return "";
-  }
+  if (!street || isAdminOnlyLabel(street)) return "";
   return street;
+}
+
+/** 開始導航卡第二列：完整地址；沒有門牌時改顯示路名＋段。 */
+export function formatConfirmLocationLine(
+  address?: string | null,
+  title?: string | null,
+): string {
+  const full = formatTaiwanDisplayAddress(address);
+  const road = formatTaiwanRoadName(address);
+  const street = formatDistanceRoadLabel(address);
+  const usable = (value: string) =>
+    Boolean(value) &&
+    !isAdminOnlyLabel(value) &&
+    !sameTaiwanDisplayTitle(title, value);
+
+  if (usable(full) && /(?:路|街|大道|道|段|巷|弄|號)/u.test(full)) {
+    return full;
+  }
+  if (usable(road) && /[巷弄號樓室]/u.test(road)) return road;
+  if (usable(street)) return street;
+  if (usable(road)) return road;
+  if (usable(full)) return full;
+  return "";
 }
 
 /** 路口：中華路 至 民生路 → 中華路 × 民生路 */

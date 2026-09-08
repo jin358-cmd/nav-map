@@ -6,17 +6,11 @@ import { HudCloseButton } from "@/components/overlay/hud-close-button";
 import { formatDistance } from "@/lib/format";
 import {
   formatChainStoreName,
-  formatConfirmDistrictAddress,
-  sameTaiwanDisplayTitle,
+  formatConfirmLocationLine,
 } from "@/lib/geocoding/format-taiwan-display-address";
 import { formatEtaClock, travelModeLabel } from "@/lib/travel-mode";
 import { cn } from "@/lib/utils";
 import type { NavigationManeuver, RouteDestination, TravelMode } from "@/types/domain";
-
-function formatPhone(phone?: string | null) {
-  const text = phone?.trim();
-  return text || "未提供";
-}
 
 function formatCoords(location: RouteDestination["location"]) {
   if (!Number.isFinite(location.lat) || !Number.isFinite(location.lng)) {
@@ -58,13 +52,10 @@ export function RouteConfirmBar({
     destination.label,
     destination.branchName,
   );
-  const address = formatConfirmDistrictAddress(destination.address);
-  const addressLine = [
-    address && !sameTaiwanDisplayTitle(storeName, address) ? address : null,
-    formatPhone(destination.phone),
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  const addressLine = formatConfirmLocationLine(
+    destination.address,
+    storeName,
+  );
   const remainingMeters =
     distanceMeters ??
     (maneuver?.remainingKm != null ? maneuver.remainingKm * 1000 : null);
@@ -90,9 +81,11 @@ export function RouteConfirmBar({
             <p className="truncate text-lg leading-tight font-bold tracking-tight text-white">
               {storeName}
             </p>
-            <p className="mt-0.5 truncate text-[14px] leading-snug text-zinc-200">
-              {addressLine}
-            </p>
+            {addressLine ? (
+              <p className="mt-0.5 truncate text-[14px] leading-snug text-zinc-200">
+                {addressLine}
+              </p>
+            ) : null}
             <p className="mt-0.5 truncate text-[14px] leading-snug tabular-nums text-cyan-100/90">
               {coordLine}
             </p>
