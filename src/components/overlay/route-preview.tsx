@@ -65,7 +65,6 @@ export function RouteConfirmBar({
       : rerouting
         ? "計算距離中"
         : "距離未提供";
-  const coordLine = `${distanceLabel} · ${formatCoords(destination.location)}`;
   const etaMinutes =
     durationSeconds != null
       ? Math.max(1, Math.round(durationSeconds / 60))
@@ -86,8 +85,11 @@ export function RouteConfirmBar({
                 {addressLine}
               </p>
             ) : null}
-            <p className="mt-0.5 truncate text-[14px] leading-snug tabular-nums text-cyan-100/90">
-              {coordLine}
+            <p className="mt-0.5 truncate text-[14px] leading-snug tabular-nums text-zinc-300">
+              <span className="text-base font-semibold text-sky-400">
+                {distanceLabel}
+              </span>
+              {` · ${formatCoords(destination.location)}`}
             </p>
           </div>
           <HudCloseButton label="取消路線，重新搜尋" onClick={onClear} />
@@ -112,8 +114,12 @@ export function RouteConfirmBar({
         <div className="flex w-full items-center gap-1.5">
           <p
             className={cn(
-              "min-w-0 flex-1 truncate text-sm font-medium",
-              error ? "text-amber-200" : "text-cyan-200",
+              "min-w-0 flex-1 truncate text-base font-medium",
+              error
+                ? "text-amber-200"
+                : rerouting || (motorcycleUnsupported && travelMode === "motorcycle")
+                  ? "text-cyan-200"
+                  : "text-yellow-300",
             )}
           >
             {error
@@ -122,9 +128,15 @@ export function RouteConfirmBar({
                 ? "正在規劃路線…"
                 : motorcycleUnsupported && travelMode === "motorcycle"
                   ? "機車模式尚未設定（NOT CONFIGURED）"
-                  : `${travelModeLabel(travelMode)}${
-                      etaMinutes != null ? ` · 約 ${etaMinutes} 分鐘` : ""
-                    }${etaClock ? ` · 預計 ${etaClock} 抵達` : ""}`}
+                  : (
+                      <>
+                        <span className="text-zinc-100">
+                          {travelModeLabel(travelMode)}
+                        </span>
+                        {etaMinutes != null ? ` · 約 ${etaMinutes} 分鐘` : ""}
+                        {etaClock ? ` · 預計 ${etaClock} 抵達` : ""}
+                      </>
+                    )}
           </p>
           {onToggleFavorite ? (
             <button
@@ -133,10 +145,10 @@ export function RouteConfirmBar({
               aria-pressed={favorite}
               aria-label={favorite ? "移出最愛" : "加入最愛"}
               title={favorite ? "移出最愛" : "加入最愛"}
-              className="flex size-9 shrink-0 items-center justify-center rounded-full text-rose-300 hover:bg-white/10 hover:text-rose-100 touch-manipulation"
+              className="flex size-11 shrink-0 items-center justify-center rounded-full text-rose-300 hover:bg-white/10 hover:text-rose-100 touch-manipulation"
             >
               <Heart
-                className={cn("size-5", favorite && "fill-rose-500 text-rose-400")}
+                className={cn("size-7", favorite && "fill-rose-500 text-rose-400")}
                 strokeWidth={2.1}
               />
             </button>

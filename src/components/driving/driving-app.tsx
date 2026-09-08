@@ -1233,7 +1233,7 @@ export function DrivingApp() {
         },
         controller.signal,
         travelMode,
-        LIVE_REROUTE_TIMEOUT_MS,
+        travelMode === "motorcycle" ? 12_000 : LIVE_REROUTE_TIMEOUT_MS,
       );
       const responseMs = performance.now() - requestStarted;
       if (generation !== rerouteGenerationRef.current) return;
