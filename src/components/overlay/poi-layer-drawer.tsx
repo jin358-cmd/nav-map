@@ -55,7 +55,7 @@ export function PoiLayerDrawer({
       aria-busy={loading || undefined}
     >
       {drilled ? (
-        <div className="mb-1.5 flex items-center gap-1">
+        <div className="mb-1.5 flex shrink-0 items-center gap-1">
           <button
             type="button"
             onClick={() => setDrillLayer(null)}
@@ -69,7 +69,7 @@ export function PoiLayerDrawer({
           </p>
         </div>
       ) : (
-        <div className="mb-1.5 px-1">
+        <div className="mb-1.5 shrink-0 px-1">
           <p className="text-[11px] tracking-wide text-zinc-300">
             {LIFE_CIRCLE_LAYER_LABEL}
           </p>
@@ -80,8 +80,8 @@ export function PoiLayerDrawer({
       )}
       {loading ? <PoiLayerReadBanner progress={progress} label={loadingLabel} /> : null}
       {drilled ? (
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-1 px-0.5">
+        <div className="poi-layer-drawer__panel">
+          <div className="flex shrink-0 items-center gap-1 px-0.5">
             <button
               type="button"
               onClick={() => onSetAllSubs(drilled.id, true)}

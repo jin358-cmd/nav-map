@@ -211,6 +211,8 @@
   flex-direction: column;
   width: min(15.75rem, calc(100vw - 5.5rem));
   max-height: min(32rem, calc(100dvh - 7.5rem));
+  min-height: 0;
+  overflow: hidden;
   transform: translateX(0);
   opacity: 1;
   transition:
@@ -218,10 +220,21 @@
     opacity 180ms ease;
 }
 
+.poi-layer-drawer__panel {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
 .poi-layer-drawer__list {
+  min-height: 0;
+  flex: 1 1 auto;
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
 }
 
 .poi-layer-drawer--closed {
