@@ -43,10 +43,10 @@ export function PoiLayerDrawer({
               type="button"
               role="switch"
               aria-checked={on}
-              aria-label={`${layer.label}圖層 ${on ? "開" : "關"}`}
+              aria-label={`${layer.short} ${layer.yp}圖層 ${on ? "開" : "關"}`}
               onClick={() => onToggle(layer.id)}
               className={cn(
-                "flex min-h-10 w-full items-center gap-2 rounded-xl px-2 py-1 text-left touch-manipulation",
+                "flex min-h-11 w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left touch-manipulation",
                 on ? "bg-white/16 text-white" : "bg-white/6 text-zinc-300",
               )}
             >
@@ -55,8 +55,18 @@ export function PoiLayerDrawer({
                 style={{ background: POI_LAYER_COLORS[layer.id] }}
                 aria-hidden
               />
-              <span className="min-w-0 flex-1 text-sm font-semibold leading-tight">
-                {layer.short}
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold leading-tight">
+                  {layer.short}
+                </span>
+                <span
+                  className={cn(
+                    "block text-[11px] font-medium leading-tight",
+                    on ? "text-zinc-200" : "text-zinc-400",
+                  )}
+                >
+                  {layer.yp}
+                </span>
               </span>
               <span
                 className={cn(
