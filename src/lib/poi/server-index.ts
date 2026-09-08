@@ -275,6 +275,43 @@ export function poisInBounds(
   return picked;
 }
 
+export function poisNearby(
+  origin: { lat: number; lng: number },
+  radiusMeters: number,
+  layers?: PoiMainLayerId[],
+  limit = 16,
+  preferPhone = false,
+) {
+  const span = Math.max(400, Math.min(8000, radiusMeters)) / 111000;
+  const cos = Math.max(0.2, Math.cos((origin.lat * Math.PI) / 180));
+  const rows = poisInBounds(
+    {
+      west: origin.lng - span / cos,
+      east: origin.lng + span / cos,
+      south: origin.lat - span,
+      north: origin.lat + span,
+    },
+    origin,
+    Math.max(limit * 4, 80),
+    layers,
+  );
+  const radiusKm = radiusMeters / 1000;
+  const ranked = rows
+    .map((poi) => ({
+      poi,
+      km: distanceKm(origin, { lat: poi.latitude, lng: poi.longitude }),
+      phone: Boolean(poi.phone),
+    }))
+    .filter((row) => row.km <= radiusKm)
+    .sort((a, b) => {
+      if (preferPhone && a.phone !== b.phone) return a.phone ? -1 : 1;
+      return a.km - b.km;
+    })
+    .slice(0, limit)
+    .map((row) => row.poi);
+  return ranked;
+}
+
 export function poiIndexStats() {
   const bySource = new Map<string, number>();
   const byCategory = new Map<string, number>();

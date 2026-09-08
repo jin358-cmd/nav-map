@@ -76,6 +76,26 @@ function shortRoadName(step: RouteStep | null) {
   return road?.[0] ?? cleaned.slice(0, 22);
 }
 
+function useLatchedStep(step: RouteStep | null) {
+  const [shown, setShown] = useState(step);
+  const shownIdRef = useRef(step?.id ?? "");
+
+  useEffect(() => {
+    const nextId = step?.id ?? "";
+    if (nextId === shownIdRef.current) {
+      setShown(step);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      shownIdRef.current = nextId;
+      setShown(step);
+    }, 480);
+    return () => window.clearTimeout(timer);
+  }, [step]);
+
+  return shown;
+}
+
 export const NextIntersectionHud = forwardRef<
   HTMLDivElement,
   {
@@ -105,9 +125,10 @@ export const NextIntersectionHud = forwardRef<
   },
   ref,
 ) {
-  const turn = shortTurn(step);
-  const side = turnSideFromStep(step);
-  const road = shortRoadName(step);
+  const latched = useLatchedStep(step);
+  const turn = shortTurn(latched);
+  const side = turnSideFromStep(latched);
+  const road = shortRoadName(latched);
   const displayMeters = useSmoothedMeters(distanceMeters);
   const headline = `${formatDistance(displayMeters)}後${turn}`;
   const turnAlert = isTurn && alertPhase !== "cruise";
@@ -140,7 +161,7 @@ export const NextIntersectionHud = forwardRef<
           <div
             className={cn(
               "maneuverIconBadge",
-              blinkTurn && "maneuverIconBadge--blink",
+              blinkTurn && "maneuverIconBadge--alert",
             )}
           >
             <TurnArrowIcon

@@ -1042,32 +1042,11 @@
   color: #fff;
 }
 
-.maneuverIconBadge--blink {
-  animation: maneuver-turn-signal 0.7s ease-in-out infinite;
-}
-
-@keyframes maneuver-turn-signal {
-  0%,
-  100% {
-    opacity: 1;
-    filter: brightness(1.15);
-    box-shadow:
-      0 0 12px 3px rgba(74, 222, 128, 0.72),
-      0 0 0 1px rgba(255, 255, 255, 0.3);
-  }
-  50% {
-    opacity: 0.4;
-    filter: brightness(0.85);
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .maneuverIconBadge--blink {
-    animation: none;
-    opacity: 1;
-    filter: none;
-  }
+.maneuverIconBadge--alert {
+  background: #15803d;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.28),
+    0 0 10px 2px rgba(74, 222, 128, 0.45);
 }
 
 .navigation-instruction-content {

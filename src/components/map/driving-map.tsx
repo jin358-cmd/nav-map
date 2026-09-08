@@ -90,7 +90,7 @@ import {
   isStaleStyleError,
   waitForBasemapStyle,
 } from "@/lib/map-style-switch";
-import { damp, distanceKm, lerp, lerpAngle } from "@/lib/geo";
+import { damp, distanceKm, headingDelta, lerp, lerpAngle } from "@/lib/geo";
 import {
   ensureHeadingConeLayers,
   shouldShowHeadingCone,
@@ -889,14 +889,19 @@ export function DrivingMap({
         const followTau = presentationFollowTau(raw.speedMps ?? 0, wanted.blend);
         const posT = damp(dt, followTau.posTau);
         const zoomT = pinchingRef.current ? 0 : damp(dt, followTau.zoomTau);
-        const bearingT = damp(dt, followTau.bearingTau);
+        const currentBearing = mapNow.getBearing();
+        const bearingGap = headingDelta(currentBearing, wanted.bearing);
+        const nextBearing =
+          bearingGap < followTau.bearingHoldDeg
+            ? currentBearing
+            : lerpAngle(currentBearing, wanted.bearing, damp(dt, followTau.bearingTau));
         try {
           mapNow.jumpTo({
             center: [
               lerp(center.lng, wanted.center[0], posT),
               lerp(center.lat, wanted.center[1], posT),
             ],
-            bearing: lerpAngle(mapNow.getBearing(), wanted.bearing, bearingT),
+            bearing: nextBearing,
             pitch: lerp(mapNow.getPitch(), wanted.pitch, damp(dt, 0.08)),
             zoom: lerp(mapNow.getZoom(), zoomTarget, zoomT),
             padding: wanted.padding,
@@ -911,11 +916,15 @@ export function DrivingMap({
         headingUp && followVehicleRef.current
           ? mapNow.getBearing()
           : display.heading;
-      markerRotationRef.current = lerpAngle(
-        markerRotationRef.current,
-        rotationTarget,
-        damp(dt, 0.1),
-      );
+      const markerGap = headingDelta(markerRotationRef.current, rotationTarget);
+      markerRotationRef.current =
+        markerGap < 2.2
+          ? markerRotationRef.current
+          : lerpAngle(
+              markerRotationRef.current,
+              rotationTarget,
+              damp(dt, 0.24),
+            );
       marker.setRotation(markerRotationRef.current);
       setVehicleMarkerHeading(marker.getElement(), markerRotationRef.current);
 

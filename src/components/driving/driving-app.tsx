@@ -11,6 +11,7 @@ import {
 } from "react";
 import { MapControls } from "@/components/map/map-controls";
 import { AddressSearch } from "@/components/overlay/address-search";
+import { YellowPagesSearchStrip } from "@/components/overlay/yellow-pages-search-strip";
 import { PlaceEditor } from "@/components/overlay/place-editor";
 import { SavedPlaceBar } from "@/components/overlay/saved-place-bar";
 import { CctvDetailCard } from "@/components/overlay/cctv-detail-card";
@@ -1770,6 +1771,19 @@ export function DrivingApp() {
             />
           ) : (
             <>
+              <YellowPagesSearchStrip
+                origin={searchBias}
+                onSelect={(hit) => {
+                  setParkingOpen(false);
+                  setFavoritesOpen(false);
+                  setEventListKind(null);
+                  setSelectedEvent(null);
+                  setSelectedCctv(null);
+                  setSelectedParking(null);
+                  setSelectedMapPlace(geocodeHitToPlace(hit));
+                  focusEvent(hit.location);
+                }}
+              />
               <AddressSearch
                 bias={searchBias}
                 region={locatedRegion}

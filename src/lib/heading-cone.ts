@@ -9,8 +9,8 @@ export const HEADING_CONE_EDGE = "np-heading-cone-edge";
 const HALF_ANGLE_DEG = 60;
 const RADIUS_M = 92;
 const ARC_STEPS = 22;
-const CONE_HEADING_HOLD_DEG = 0.4;
-const CONE_HEADING_TAU = 0.055;
+const CONE_HEADING_HOLD_DEG = 2.4;
+const CONE_HEADING_TAU = 0.18;
 
 export function stepConeHeading(
   current: number,
@@ -19,7 +19,7 @@ export function stepConeHeading(
 ) {
   const jump = headingDelta(current, target);
   if (jump < CONE_HEADING_HOLD_DEG) return current;
-  const tau = jump > 28 ? 0.03 : CONE_HEADING_TAU;
+  const tau = jump > 28 ? 0.08 : CONE_HEADING_TAU;
   return lerpAngle(current, target, damp(dtSeconds, tau));
 }
 

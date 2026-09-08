@@ -19,7 +19,7 @@ const REPORT = "docs/poi-chain-ingest-report.json";
 const CHECKPOINT = "src/data/poi-chain-ingest-checkpoint.json";
 const FAMILMART_KEY = "6F30E8BF706D653965BDE302661D1241F8BE9EBC";
 const DELAY_MS = Number(process.env.CHAIN_INGEST_DELAY_MS || 180);
-const MATCH_METERS = 50;
+const MATCH_METERS = 80;
 
 const ALL_CITIES = [
   "台北市",

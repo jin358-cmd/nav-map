@@ -1,5 +1,6 @@
 import { POI_MAIN_LAYER_IDS, type PoiMainLayerId } from "@/lib/poi/main-layers";
-import { poisInBounds } from "@/lib/poi/server-index";
+import { poisInBounds, poisNearby } from "@/lib/poi/server-index";
+import type { TaiwanPoiRecord } from "@/lib/poi/schema";
 
 function readNumber(value: string | null) {
   if (!value) return undefined;
@@ -17,6 +18,23 @@ function readLayers(value: string | null): PoiMainLayerId[] | undefined {
   return layers.length ? layers : undefined;
 }
 
+function serializePoi(poi: TaiwanPoiRecord) {
+  return {
+    id: poi.id,
+    name: poi.name,
+    category: poi.category,
+    mainLayer: poi.mainCategory,
+    subcategory: poi.subcategory,
+    brand: poi.brand,
+    branchName: poi.branchName,
+    address: poi.address,
+    location: { lng: poi.longitude, lat: poi.latitude },
+    source: poi.source,
+    updatedAt: poi.updatedAt,
+    phone: poi.phone || null,
+  };
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const west = readNumber(url.searchParams.get("west"));
@@ -25,9 +43,34 @@ export async function GET(request: Request) {
   const north = readNumber(url.searchParams.get("north"));
   const lng = readNumber(url.searchParams.get("lng"));
   const lat = readNumber(url.searchParams.get("lat"));
+  const radius = readNumber(url.searchParams.get("radius")) ?? 2600;
   const limit = readNumber(url.searchParams.get("limit")) ?? 80;
   const requested = readLayers(url.searchParams.get("layers"));
   const layers = requested ?? [...POI_MAIN_LAYER_IDS];
+  const preferPhone = url.searchParams.get("preferPhone") === "1";
+  const origin =
+    lng !== undefined && lat !== undefined ? { lng, lat } : undefined;
+
+  if (url.searchParams.get("nearby") === "1") {
+    if (
+      !origin ||
+      origin.lng < 118 ||
+      origin.lng > 123 ||
+      origin.lat < 20 ||
+      origin.lat > 27
+    ) {
+      return Response.json({ error: "請提供臺灣範圍內的定位點" }, { status: 400 });
+    }
+    const rows = poisNearby(origin, radius, layers, Math.min(limit, 24), preferPhone);
+    return Response.json(
+      { pois: rows.map(serializePoi) },
+      {
+        headers: {
+          "Cache-Control": "public, max-age=15, s-maxage=15, stale-while-revalidate=60",
+        },
+      },
+    );
+  }
 
   if (
     west === undefined ||
@@ -42,25 +85,10 @@ export async function GET(request: Request) {
     return Response.json({ error: "請提供臺灣範圍內的地圖視野" }, { status: 400 });
   }
 
-  const origin =
-    lng !== undefined && lat !== undefined ? { lng, lat } : undefined;
   const rows = poisInBounds({ west, south, east, north }, origin, limit, layers);
   return Response.json(
     {
-      pois: rows.map((poi) => ({
-        id: poi.id,
-        name: poi.name,
-        category: poi.category,
-        mainLayer: poi.mainCategory,
-        subcategory: poi.subcategory,
-        brand: poi.brand,
-        branchName: poi.branchName,
-        address: poi.address,
-        location: { lng: poi.longitude, lat: poi.latitude },
-        source: poi.source,
-        updatedAt: poi.updatedAt,
-        phone: poi.phone || null,
-      })),
+      pois: rows.map(serializePoi),
     },
     {
       headers: {

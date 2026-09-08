@@ -12,9 +12,10 @@ export type VehicleDisplayState = {
 };
 
 const MAX_PREDICT_METERS = 5;
-const STATIONARY_SPEED_MPS = 0.7;
-const STATIONARY_HOLD_METERS = 5.5;
-const HEADING_HOLD_DEG = 4;
+const STATIONARY_SPEED_MPS = 0.85;
+const STATIONARY_HOLD_METERS = 6.5;
+const HEADING_HOLD_DEG = 8;
+const HEADING_HOLD_SLOW_DEG = 14;
 
 export function createVehicleDisplayState(
   pose: Pick<VehiclePose, "lng" | "lat" | "heading">,
@@ -41,7 +42,8 @@ export function presentationFollowTau(speedMps: number, approachBlend: number) {
   return {
     posTau,
     zoomTau: approachBlend > 0.02 ? 0.07 : posTau,
-    bearingTau: kmh < 6 ? 0.12 : Math.min(posTau, 0.07),
+    bearingTau: kmh < 8 ? 0.52 : kmh < 25 ? 0.28 : Math.min(posTau, 0.14),
+    bearingHoldDeg: kmh < 8 ? 4.2 : kmh < 25 ? 2.4 : 1.4,
   };
 }
 
@@ -56,10 +58,10 @@ function positionTau(speedMps: number, jumpMeters: number) {
 }
 
 function headingTau(speedMps: number, headingJump: number) {
-  if (headingJump > 50) return 0.18;
-  if (speedMps < 0.8) return 0.42;
-  if (speedMps < 4) return 0.3;
-  return 0.22;
+  if (headingJump > 50) return 0.22;
+  if (speedMps < 0.8) return 0.72;
+  if (speedMps < 4) return 0.48;
+  return 0.32;
 }
 
 function isNoisyFix(accuracy: number | undefined, jumpMeters: number, speedMps: number) {
@@ -102,10 +104,11 @@ export function stepVehicleDisplay({
     speedMps < STATIONARY_SPEED_MPS && jumpMeters < STATIONARY_HOLD_METERS;
 
   if (stationary) {
+    const holdLimit = speedMps < 0.35 ? HEADING_HOLD_SLOW_DEG : HEADING_HOLD_DEG;
     const holdHeading =
-      headingDelta(current.heading, target.heading) < HEADING_HOLD_DEG
+      headingDelta(current.heading, target.heading) < holdLimit
         ? current.heading
-        : lerpAngle(current.heading, target.heading, damp(dtSeconds, 0.32));
+        : lerpAngle(current.heading, target.heading, damp(dtSeconds, 0.55));
     return {
       ...current,
       heading: holdHeading,
@@ -162,8 +165,9 @@ export function stepVehicleDisplay({
   }
 
   const headingJump = headingDelta(current.heading, desiredHeading);
+  const holdLimit = speedMps < 2 ? HEADING_HOLD_SLOW_DEG : HEADING_HOLD_DEG;
   const nextHeading =
-    speedMps < 1.2 && headingJump < HEADING_HOLD_DEG
+    headingJump < holdLimit
       ? current.heading
       : lerpAngle(
           current.heading,
