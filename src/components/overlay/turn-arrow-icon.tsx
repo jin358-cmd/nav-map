@@ -494,15 +494,15 @@ function RoundaboutArrow({ className }: { className?: string }) {
 
 function ArriveMark({ className }: { className?: string }) {
   return (
-    <ArrowFrame className={className}>
+    <ArrowFrame className={cn(className, "maneuverArriveMark")}>
       <path
         d="M32 8 C20 8 12 18 12 28 C12 42 32 56 32 56 C32 56 52 42 52 28 C52 18 44 8 32 8 Z"
         fill="none"
-        stroke="currentColor"
+        stroke="#dc2626"
         strokeWidth="7"
         strokeLinejoin="round"
       />
-      <circle cx="32" cy="28" r="6" fill="currentColor" />
+      <circle cx="32" cy="28" r="6" fill="#dc2626" />
     </ArrowFrame>
   );
 }

@@ -1319,6 +1319,10 @@
   color: #fff;
 }
 
+.maneuverArriveMark {
+  color: #dc2626;
+}
+
 .maneuverIconBadge--alert {
   background: #15803d;
   box-shadow:
