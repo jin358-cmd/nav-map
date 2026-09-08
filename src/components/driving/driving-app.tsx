@@ -991,6 +991,7 @@ export function DrivingApp() {
       setParkingMinimized(false);
       return true;
     });
+    setToolsDrawerOpen(false);
     setFavoritesOpen(false);
     setPoiMenuOpen(false);
     setEventListKind(null);
@@ -1949,6 +1950,9 @@ export function DrivingApp() {
           onToggleToolsDrawer={() => {
             setStyleMenuOpen(false);
             setPoiMenuOpen(false);
+            setParkingOpen(false);
+            setParkingMinimized(false);
+            setSelectedParking(null);
             setToolsDrawerOpen((open) => {
               const next = !open;
               if (!next && routeAlert) {
@@ -2085,15 +2089,7 @@ export function DrivingApp() {
 
       {parkingOpen ? (
         <div
-          className={
-            navigating
-              ? "pointer-events-auto absolute inset-x-0 top-[max(7.35rem,calc(env(safe-area-inset-top)+6.7rem))] bottom-0 z-[60] flex justify-center px-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))]"
-              : landscape
-                ? "pointer-events-auto absolute inset-0 z-[60] flex items-start justify-center pt-[18vh] px-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))]"
-                : drawerOpen
-                  ? "pointer-events-auto absolute inset-0 z-[60] flex items-end justify-center px-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] pb-[max(14.75rem,calc(env(safe-area-inset-bottom)+13.5rem))]"
-                  : "pointer-events-auto absolute inset-0 z-[60] flex items-end justify-center px-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] pb-[max(1.25rem,calc(env(safe-area-inset-bottom)+0.75rem))]"
-          }
+          className="pointer-events-auto absolute inset-0 z-[60] flex items-end justify-center px-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] pb-[max(1.25rem,calc(env(safe-area-inset-bottom)+0.75rem))]"
           onClick={closeParking}
         >
           <div
@@ -2168,6 +2164,7 @@ export function DrivingApp() {
               setParkingArrivalMinimized(false);
               parkingArrivalDismissedRef.current = true;
               setParkingSort("distance");
+              setToolsDrawerOpen(false);
               setParkingOpen(true);
               setParkingMinimized(false);
               setFavoritesOpen(false);

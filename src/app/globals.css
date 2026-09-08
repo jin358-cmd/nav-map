@@ -139,7 +139,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  max-height: calc(2 * 6.55rem + 0.5rem);
+  max-height: calc(2 * 6.7rem + 0.5rem);
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
@@ -148,8 +148,35 @@
 
 .parking-panel-item > div {
   box-sizing: border-box;
-  min-height: 6.55rem;
+  min-height: 6.7rem;
   height: 100%;
+}
+
+.parking-spaces-count {
+  font-size: 0.98rem;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.parking-lot-highlight {
+  color: #facc15;
+  font-size: 0.98rem;
+  font-weight: 800;
+}
+
+.parking-lot-rest {
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.parking-lot-address {
+  margin-top: 0.12rem;
+  color: #fff;
+  font-size: 0.86rem;
+  font-weight: 500;
 }
 
 .hud-float-panel {

@@ -86,21 +86,27 @@ function parkingLotCopy(lot: ParkingLot, sort: ParkingSort) {
   const distance =
     lot.distanceMeters != null ? formatDistance(lot.distanceMeters) : "距離未提供";
   const road = parkingRoad(lot);
+  const rate = formatParkingRate(lot);
+  const spaces = occupancyLabel(lot) ?? "格數未提供";
+  const name = parkingNameLine(lot);
   if (sort === "price") {
     return {
-      primary: [distance, formatParkingRate(lot)].filter(Boolean).join("・"),
-      secondary: road,
+      highlight: rate,
+      rest: distance,
+      address: road,
     };
   }
   if (sort === "remaining") {
     return {
-      primary: [occupancyLabel(lot), distance].filter(Boolean).join("・"),
-      secondary: road,
+      highlight: spaces,
+      rest: distance,
+      address: road,
     };
   }
   return {
-    primary: [distance, parkingNameLine(lot)].filter(Boolean).join("・"),
-    secondary: road,
+    highlight: distance,
+    rest: name,
+    address: road,
   };
 }
 
@@ -154,17 +160,14 @@ export function ParkingPanel({
           : undefined
       }
     >
-      <div className="mb-2 flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-sm font-semibold leading-tight tracking-wide text-zinc-100">
-            {header.title}
-          </p>
-          <p className="mt-0.5 text-[11px] leading-tight text-zinc-400">
-            {header.updated}
-          </p>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <p className="min-w-0 truncate text-sm font-semibold leading-tight tracking-wide text-zinc-100">
+          {header.title}
+        </p>
+        <div className="flex shrink-0 items-center gap-1.5">
           {onToggleArrivalPrompt ? (
-            <div className="mt-1.5 flex items-center gap-1.5">
-              <p className="text-[11px] text-zinc-200">到達前提醒</p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-[11px] leading-none text-zinc-200">到達前提醒</p>
               <button
                 type="button"
                 role="switch"
@@ -193,15 +196,16 @@ export function ParkingPanel({
               </span>
             </div>
           ) : null}
+          <HudCloseButton
+            label="關閉停車場"
+            onClick={(event) => {
+              event.stopPropagation();
+              onClose();
+            }}
+          />
         </div>
-        <HudCloseButton
-          label="關閉停車場"
-          onClick={(event) => {
-            event.stopPropagation();
-            onClose();
-          }}
-        />
       </div>
+      <p className="mb-2 text-[11px] leading-tight text-zinc-400">{header.updated}</p>
       <div className="mb-2 flex gap-1.5">
         {SORT_BUTTONS.map((item) => (
           <button
@@ -246,7 +250,7 @@ export function ParkingPanel({
               >
                 <span
                   className={cn(
-                    "flex size-11 shrink-0 items-center justify-center rounded-full px-0.5 text-center text-[10px] font-semibold leading-tight text-[#041016]",
+                    "parking-spaces-count flex size-12 shrink-0 items-center justify-center rounded-full px-0.5 text-center text-[#041016]",
                     markerClass(lot),
                   )}
                 >
@@ -256,12 +260,17 @@ export function ParkingPanel({
                   <button
                     type="button"
                     onClick={() => onSelect(lot)}
-                    className="w-full text-left text-[13px] font-semibold text-yellow-300 touch-manipulation"
+                    className="w-full text-left touch-manipulation"
                   >
-                    <span className="flex flex-col leading-snug">
-                      <span className="truncate">{copy.primary}</span>
-                      <span className="truncate text-[12px] font-medium text-yellow-200/90">
-                        {copy.secondary}
+                    <span className="flex min-w-0 flex-col leading-snug">
+                      <span className="block truncate">
+                        <span className="parking-lot-highlight">{copy.highlight}</span>
+                        {copy.rest ? (
+                          <span className="parking-lot-rest"> {copy.rest}</span>
+                        ) : null}
+                      </span>
+                      <span className="parking-lot-address block truncate">
+                        {copy.address}
                       </span>
                     </span>
                   </button>
