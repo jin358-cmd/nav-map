@@ -118,7 +118,7 @@ export function PlaceInfoCard({
             aria-label={favorite ? "移出最愛" : "加入最愛"}
             onClick={onToggleFavorite}
             className={cn(
-              "flex size-11 shrink-0 items-center justify-center rounded-full border-[1.5px] border-white/55 bg-black/40 text-rose-200 shadow-[0_0_0_1px_rgba(0,0,0,0.18)] hover:bg-white/14 hover:text-rose-100 touch-manipulation",
+              "hud-window-close hud-window-close--lg touch-manipulation text-rose-200 hover:text-rose-100",
               favorite && "text-rose-100",
             )}
           >
