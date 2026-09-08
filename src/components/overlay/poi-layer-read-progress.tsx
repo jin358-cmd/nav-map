@@ -4,10 +4,10 @@ import type { CSSProperties } from "react";
 import { cn } from "@/lib/utils";
 
 function readCopy(label: string) {
-  const trimmed = label.trim() || "生活圖層";
+  const trimmed = label.trim() || "全國生活圖層";
   if (trimmed.endsWith("讀取中")) {
     return {
-      name: trimmed.slice(0, -3).trim() || "生活圖層",
+      name: trimmed.slice(0, -3).trim() || "全國生活圖層",
       status: "讀取中",
     };
   }
@@ -17,7 +17,7 @@ function readCopy(label: string) {
 export function PoiLayerReadProgress({
   progress,
   compact = false,
-  label = "生活圖層",
+  label = "全國生活圖層",
 }: {
   progress: number;
   compact?: boolean;
@@ -60,7 +60,7 @@ export function PoiLayerReadProgress({
 
 export function PoiLayerReadBanner({
   progress,
-  label = "生活圖層",
+  label = "全國生活圖層",
   className,
 }: {
   progress: number;

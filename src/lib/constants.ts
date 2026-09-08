@@ -13,15 +13,15 @@ export const DEMO_VEHICLE: VehiclePose = {
   source: "demo",
 };
 
-export const DRIVING_PITCH = 60;
+export const DRIVING_PITCH = 50;
 /**
- * 3D 駕駛視角：pitch 60°（相機在車後上方往前看）。
+ * 3D 駕駛視角：pitch 50°（相機在車後上方往前看）。
  * 建物可見頂面與立面，地面光圈清楚，消失點約在畫面中上。
  */
-export const NAVIGATION_PITCH = 60;
+export const NAVIGATION_PITCH = 50;
 /** 直式導航與橫式同一 3D 仰角。 */
-export const NAVIGATION_PITCH_PORTRAIT = 60;
-export const INTERSECTION_PITCH_PORTRAIT = 62;
+export const NAVIGATION_PITCH_PORTRAIT = 50;
+export const INTERSECTION_PITCH_PORTRAIT = 52;
 export const DRIVING_ZOOM_PORTRAIT = 17.98;
 export const OVERVIEW_PITCH = 0;
 export const DRIVING_ZOOM = 17.72;
@@ -37,7 +37,7 @@ export const OVERHEAD_TURN_ZOOM_PORTRAIT = 18.08;
 /** 路口近距離上限，避免無限放大。 */
 export const INTERSECTION_ZOOM = 18.28;
 export const INTERSECTION_ZOOM_MOBILE = 18.05;
-export const INTERSECTION_PITCH = 62;
+export const INTERSECTION_PITCH = 52;
 export const INTERSECTION_APPROACH_METERS = 95;
 export const CRUISE_ZOOM_START_METERS = 500;
 export const PREPARE_ZOOM_METERS = 200;
@@ -55,8 +55,11 @@ export const MANEUVER_APPROACH_EXIT_METERS = 118;
 export const MANEUVER_IMMINENT_METERS = 30;
 export const MANEUVER_AFTER_TURN_METERS = 48;
 export const MANEUVER_RECOVER_MS = 1800;
-/** 懸空橘色箭頭：200 公尺開始出現 */
-export const GUIDANCE_ARROW_APPROACH_METERS = 200;
+/** 立體弓型導覽標示：轉彎前 150 公尺出現 */
+export const GUIDANCE_SIGN_APPROACH_METERS = 150;
+export const GUIDANCE_SIGN_EXIT_METERS = 168;
+/** @deprecated 改用 GUIDANCE_SIGN_APPROACH_METERS */
+export const GUIDANCE_ARROW_APPROACH_METERS = GUIDANCE_SIGN_APPROACH_METERS;
 
 /** 瀏覽 3D：車輛約在畫面下三分之一；導航 3D 略再偏低，前方視野拉長。 */
 export const BROWSE_VEHICLE_Y = 0.68;

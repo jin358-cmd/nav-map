@@ -74,7 +74,7 @@ export function poiReadLabel(visibility: PoiLayerVisibility, focus?: PoiMainLaye
   const on = POI_MAIN_LAYERS.filter((layer) => visibility[layer.id]);
   if (on.length === 1) return on[0].yp;
   if (on.length > 1) return on.map((layer) => layer.yp).join("、");
-  return "生活圖層";
+  return "全國生活圖層";
 }
 
 /** 中華黃頁水平分類：食品餐飲／衣著配件／住屋居家／行車運輸／教育文化／休閒育樂／醫療保健。 */

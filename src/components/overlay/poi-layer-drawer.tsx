@@ -14,7 +14,7 @@ export function PoiLayerDrawer({
   visibility,
   loading = false,
   progress = 0,
-  loadingLabel = "生活圖層",
+  loadingLabel = "全國生活圖層",
   onToggle,
 }: {
   open: boolean;
@@ -34,7 +34,7 @@ export function PoiLayerDrawer({
       )}
       aria-busy={loading || undefined}
     >
-      <p className="mb-1.5 px-1 text-[11px] tracking-wide text-zinc-300">生活圖層</p>
+      <p className="mb-1.5 px-1 text-[11px] tracking-wide text-zinc-300">全國生活圖層</p>
       {loading ? <PoiLayerReadBanner progress={progress} label={loadingLabel} /> : null}
       <div className="flex flex-col gap-1">
         {POI_MAIN_LAYERS.map((layer) => {

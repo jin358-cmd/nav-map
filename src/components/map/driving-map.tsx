@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, type MutableRefObject } from "react";
-import { LngLatBounds, Map as MapLibreMap, Marker } from "maplibre-gl";
+import { Map as MapLibreMap, Marker } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import {
   createVehicleMarkerElement,
@@ -32,7 +32,6 @@ import {
   OVERHEAD_TURN_ZOOM_MOBILE,
   OVERHEAD_TURN_ZOOM_PORTRAIT,
   OVERHEAD_ZOOM,
-  OVERVIEW_PITCH,
   TAINAN_CENTER,
 } from "@/lib/constants";
 import { type ManeuverAlertPhase } from "@/lib/maneuver-guidance";
@@ -91,12 +90,15 @@ import {
   waitForBasemapStyle,
 } from "@/lib/map-style-switch";
 import { damp, distanceKm, headingDelta, lerp, lerpAngle } from "@/lib/geo";
+import { subscribeDeviceCompass } from "@/lib/device-compass";
 import {
+  coneHeadingTarget,
   ensureHeadingConeLayers,
   shouldShowHeadingCone,
   stepConeHeading,
   upsertHeadingCone,
 } from "@/lib/heading-cone";
+import { easeToRouteOverview } from "@/lib/route-overview";
 import { createRouteProgressModel } from "@/lib/route-progress";
 import {
   createVehicleDisplayState,
@@ -535,6 +537,7 @@ export function DrivingMap({
   const lastConeAtRef = useRef(0);
   const lastConeKeyRef = useRef("");
   const coneHeadingRef = useRef<number | null>(null);
+  const deviceCompassRef = useRef<number | null>(null);
   const lastIntelAtRef = useRef(0);
   const lastIntelKeyRef = useRef("");
   const userZoomRef = useRef<number | null>(null);
@@ -546,6 +549,14 @@ export function DrivingMap({
   const lastViewportEmitRef = useRef(0);
   const lastEmittedZoomRef = useRef(0);
   const rafRef = useRef(0);
+
+  useEffect(
+    () =>
+      subscribeDeviceCompass((heading) => {
+        deviceCompassRef.current = heading;
+      }),
+    [],
+  );
 
   useEffect(() => {
     onCctvSelectRef.current = onCctvSelect;
@@ -775,15 +786,23 @@ export function DrivingMap({
           rerouting: reroutingRef.current,
           source: raw.source,
           headingAvailable: raw.headingAvailable,
+          compassAvailable: deviceCompassRef.current != null,
         });
-        const coneTarget = raw.headingAvailable ? raw.heading : display.heading;
+        const coneTarget = coneHeadingTarget({
+          gpsHeading: raw.heading,
+          headingAvailable: raw.headingAvailable,
+          compassHeading: deviceCompassRef.current,
+          speedMps: raw.speedMps,
+          fallbackHeading: display.heading,
+        });
         coneHeadingRef.current =
           coneHeadingRef.current == null
             ? coneTarget
             : stepConeHeading(coneHeadingRef.current, coneTarget, dt);
         const coneHeading = coneHeadingRef.current;
+        const coneZoom = mapNow.getZoom();
         const coneKey = showCone
-          ? `${display.lng.toFixed(5)},${display.lat.toFixed(5)},${coneHeading.toFixed(2)}`
+          ? `${display.lng.toFixed(5)},${display.lat.toFixed(5)},${coneHeading.toFixed(2)},${coneZoom.toFixed(2)}`
           : "off";
         if (
           !gestureBusy &&
@@ -798,6 +817,7 @@ export function DrivingMap({
             showCone ? { lng: display.lng, lat: display.lat } : null,
             coneHeading,
             showCone,
+            coneZoom,
           );
         }
       } catch {
@@ -821,7 +841,24 @@ export function DrivingMap({
         if (!gestureBusy && now - lastArrowUpdateRef.current > 80) {
           lastArrowUpdateRef.current = now;
           try {
-            upsertGuidanceArrows(mapNow);
+            upsertGuidanceArrows(
+              mapNow,
+              routeRef.current,
+              routeMetersRef.current,
+              distanceToNextRef.current,
+              true,
+              (now / 900) % 1,
+              {
+                cameraMode: modeRef.current,
+                isTurn: isTurnRef.current,
+                cueMeters: cueMetersRef.current,
+                fade: recoverBlendAt(
+                  now,
+                  recoverUntilRef.current,
+                  recoverFromRef.current,
+                ),
+              },
+            );
           } catch {
             /* style may still be swapping */
           }
@@ -829,6 +866,14 @@ export function DrivingMap({
       } else {
         lastStepIdRef.current = stepIdRef.current;
         recoverUntilRef.current = 0;
+        if (lastArrowUpdateRef.current !== 0) {
+          lastArrowUpdateRef.current = 0;
+          try {
+            upsertGuidanceArrows(mapNow, [], 0, 0, false, 0);
+          } catch {
+            /* style may still be swapping */
+          }
+        }
       }
 
       const intelKey = `${routeSigRef.current}:${Math.round((navigatingRef.current ? routeMetersRef.current : 0) / 40)}:${trafficRef.current.length}:${layerVisibilityRef.current.congestion}`;
@@ -968,7 +1013,19 @@ export function DrivingMap({
         bindParkingLayerClicks(map, (id) => onParkingSelectRef.current?.(id));
         upsertPoiLayer(map, mapPoisRef.current);
         bindPoiLayerClicks(map, (id) => onPoiSelectRef.current?.(id));
-        upsertGuidanceArrows(map);
+        upsertGuidanceArrows(
+          map,
+          routeRef.current,
+          routeMetersRef.current,
+          distanceToNextRef.current,
+          navigatingRef.current,
+          0,
+          {
+            cameraMode: modeRef.current,
+            isTurn: isTurnRef.current,
+            cueMeters: cueMetersRef.current,
+          },
+        );
       } catch (error) {
         console.error("Event layer skipped", error);
       }
@@ -1353,7 +1410,19 @@ export function DrivingMap({
         bindParkingLayerClicks(map, (id) => onParkingSelectRef.current?.(id));
         upsertPoiLayer(map, mapPoisRef.current);
         bindPoiLayerClicks(map, (id) => onPoiSelectRef.current?.(id));
-        upsertGuidanceArrows(map);
+        upsertGuidanceArrows(
+          map,
+          routeRef.current,
+          routeMetersRef.current,
+          distanceToNextRef.current,
+          navigatingRef.current,
+          0,
+          {
+            cameraMode: modeRef.current,
+            isTurn: isTurnRef.current,
+            cueMeters: cueMetersRef.current,
+          },
+        );
       } catch (error) {
         console.error("Navigation overlays remount skipped", error);
       }
@@ -1490,25 +1559,14 @@ export function DrivingMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !readyRef.current || !fitRouteKey || route.length < 2) return;
-    const bounds = route.reduce(
-      (box, coord) => box.extend(coord),
-      new LngLatBounds(route[0], route[0]),
-    );
     const compact = isCompactViewport(map.getContainer().clientWidth);
-    map.fitBounds(bounds, {
-      padding: {
-        top: compact ? 168 : 150,
-        bottom: compact ? 120 : 110,
-        left: compact ? 48 : 44,
-        right: compact ? 48 : 44,
-      },
-      duration: 520,
-      pitch: OVERVIEW_PITCH,
-      bearing: 0,
-      maxZoom: 16.2,
-      essential: true,
+    easeToRouteOverview(map, route, cameraMode, {
+      top: compact ? 168 : 150,
+      bottom: compact ? 120 : 110,
+      left: compact ? 48 : 44,
+      right: compact ? 48 : 44,
     });
-  }, [fitRouteKey, route]);
+  }, [fitRouteKey, route, cameraMode]);
 
   useEffect(() => {
     const map = mapRef.current;

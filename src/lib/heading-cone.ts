@@ -6,11 +6,12 @@ export const HEADING_CONE_SOURCE = "np-heading-cone";
 export const HEADING_CONE_FILL = "np-heading-cone-fill";
 export const HEADING_CONE_EDGE = "np-heading-cone-edge";
 
-const HALF_ANGLE_DEG = 60;
-const RADIUS_M = 92;
+/** Google Maps–like fan: ~66° total, not a 120° sweep. */
+const HALF_ANGLE_DEG = 33;
 const ARC_STEPS = 22;
-const CONE_HEADING_HOLD_DEG = 2.4;
-const CONE_HEADING_TAU = 0.18;
+const CONE_HEADING_HOLD_DEG = 0.42;
+const CONE_HEADING_TAU = 0.04;
+const COMPASS_SPEED_MPS = 2.2;
 
 export function stepConeHeading(
   current: number,
@@ -19,8 +20,33 @@ export function stepConeHeading(
 ) {
   const jump = headingDelta(current, target);
   if (jump < CONE_HEADING_HOLD_DEG) return current;
-  const tau = jump > 28 ? 0.08 : CONE_HEADING_TAU;
+  const tau = jump > 28 ? 0.028 : CONE_HEADING_TAU;
   return lerpAngle(current, target, damp(dtSeconds, tau));
+}
+
+export function coneRadiusMeters(zoom: number) {
+  const t = (Math.max(13, Math.min(17, zoom)) - 14) / 3;
+  return 70 + t * 50;
+}
+
+export function coneHeadingTarget({
+  gpsHeading,
+  headingAvailable,
+  compassHeading,
+  speedMps,
+  fallbackHeading,
+}: {
+  gpsHeading: number;
+  headingAvailable?: boolean;
+  compassHeading: number | null;
+  speedMps?: number;
+  fallbackHeading: number;
+}) {
+  const moving = (speedMps ?? 0) >= COMPASS_SPEED_MPS;
+  if (!moving && compassHeading != null) return compassHeading;
+  if (headingAvailable) return gpsHeading;
+  if (compassHeading != null) return compassHeading;
+  return fallbackHeading;
 }
 
 function firstLabelLayerId(map: MapLibreMap): string | undefined {
@@ -33,26 +59,32 @@ export function shouldShowHeadingCone({
   rerouting,
   source,
   headingAvailable,
+  compassAvailable,
 }: {
   navigating: boolean;
   rerouting: boolean;
   source: VehiclePose["source"];
   headingAvailable?: boolean;
+  compassAvailable?: boolean;
 }) {
   return (
     !navigating &&
     !rerouting &&
     source === "gps" &&
-    headingAvailable === true
+    (headingAvailable === true || compassAvailable === true)
   );
 }
 
-export function headingConePolygon(center: LngLat, headingDeg: number) {
+export function headingConePolygon(
+  center: LngLat,
+  headingDeg: number,
+  radiusMeters = 92,
+) {
   const start = headingDeg - HALF_ANGLE_DEG;
   const ring: [number, number][] = [[center.lng, center.lat]];
   for (let i = 0; i <= ARC_STEPS; i += 1) {
     const bearing = start + (i / ARC_STEPS) * HALF_ANGLE_DEG * 2;
-    const tip = destinationPoint(center, RADIUS_M, bearing);
+    const tip = destinationPoint(center, radiusMeters, bearing);
     ring.push([tip.lng, tip.lat]);
   }
   ring.push([center.lng, center.lat]);
@@ -112,6 +144,7 @@ export function upsertHeadingCone(
   center: LngLat | null,
   headingDeg: number,
   visible: boolean,
+  zoom = 16,
 ): void {
   const source = map.getSource(HEADING_CONE_SOURCE);
   if (!source || source.type !== "geojson") return;
@@ -122,6 +155,6 @@ export function upsertHeadingCone(
   }
   geo.setData({
     type: "FeatureCollection",
-    features: [headingConePolygon(center, headingDeg)],
+    features: [headingConePolygon(center, headingDeg, coneRadiusMeters(zoom))],
   });
 }

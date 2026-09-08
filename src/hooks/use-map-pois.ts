@@ -2,7 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { MapPoiFeature } from "@/lib/map-place";
+import type { PoiMainLayerId } from "@/lib/poi/main-layers";
 import type { LngLat, MapViewport } from "@/types/domain";
+
+const MIN_POI_ZOOM = 10;
 
 function quantize(value: number, step: number) {
   return Math.round(value / step) * step;
@@ -12,10 +15,12 @@ export function useMapPois({
   viewport,
   origin,
   enabled = true,
+  layers,
 }: {
   viewport: MapViewport | null;
   origin?: LngLat | null;
   enabled?: boolean;
+  layers?: PoiMainLayerId[];
 }) {
   const [pois, setPois] = useState<MapPoiFeature[]>([]);
   const [loading, setLoading] = useState(false);
@@ -31,20 +36,35 @@ export function useMapPois({
 
   const zoom = viewport?.zoom ?? 0;
   const bounds = viewport?.bounds;
+  const layerKey = layers?.length ? [...layers].sort().join(",") : "";
   const key =
-    !enabled || !bounds || zoom < 11.5
+    !enabled || !bounds || zoom < MIN_POI_ZOOM || !layerKey
       ? null
       : [
           quantize(bounds.west, 0.012).toFixed(3),
           quantize(bounds.south, 0.012).toFixed(3),
           quantize(bounds.east, 0.012).toFixed(3),
           quantize(bounds.north, 0.012).toFixed(3),
-          Math.round(zoom),
+          (Math.round(zoom * 2) / 2).toFixed(1),
+          layerKey,
         ].join(":");
 
   useEffect(() => {
-    if (!key || !bounds) {
+    if (!enabled) {
       readGenRef.current += 1;
+      fetchedKeyRef.current = null;
+      if (hideTimerRef.current) {
+        window.clearTimeout(hideTimerRef.current);
+        hideTimerRef.current = null;
+      }
+      const reset = window.setTimeout(() => {
+        setPois([]);
+        setLoading(false);
+        setProgress(0);
+      }, 0);
+      return () => window.clearTimeout(reset);
+    }
+    if (!key || !bounds) {
       if (hideTimerRef.current) {
         window.clearTimeout(hideTimerRef.current);
         hideTimerRef.current = null;
@@ -65,6 +85,7 @@ export function useMapPois({
       south: String(bounds.south),
       east: String(bounds.east),
       north: String(bounds.north),
+      layers: layerKey,
       limit: zoom >= 15.5 ? "980" : zoom >= 13.5 ? "840" : "700",
     });
     const here = originRef.current;
@@ -111,10 +132,10 @@ export function useMapPois({
         setLoading(false);
         setProgress(0);
         hideTimerRef.current = null;
-      }, 320);
+      }, 80);
     };
 
-    const delay = fetchedKeyRef.current ? 80 : 0;
+    const delay = fetchedKeyRef.current ? 40 : 0;
     const timer = window.setTimeout(() => {
       beginRead();
       void fetch(`/api/pois?${params}`, { signal: controller.signal })
@@ -130,7 +151,6 @@ export function useMapPois({
         })
         .catch(() => {
           if (!controller.signal.aborted) {
-            setPois([]);
             finishRead(false);
           }
         });
@@ -140,7 +160,7 @@ export function useMapPois({
       clearTick();
       controller.abort();
     };
-  }, [bounds, key, zoom]);
+  }, [bounds, enabled, key, layerKey, zoom]);
 
   useEffect(() => {
     return () => {
@@ -150,7 +170,7 @@ export function useMapPois({
 
   const reading = Boolean(key) && loading;
   return {
-    pois: key ? pois : [],
+    pois,
     loading: reading,
     progress: reading ? progress : 0,
   };

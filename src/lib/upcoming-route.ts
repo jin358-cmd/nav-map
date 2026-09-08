@@ -1,5 +1,6 @@
 import {
-  GUIDANCE_ARROW_APPROACH_METERS,
+  GUIDANCE_SIGN_APPROACH_METERS,
+  GUIDANCE_SIGN_EXIT_METERS,
   INTERSECTION_APPROACH_METERS,
   MANEUVER_AFTER_TURN_METERS,
   MANEUVER_APPROACH_METERS,
@@ -140,7 +141,7 @@ export function chevronCount(
 export function marqueeSpacingMeters(
   pathLength: number,
   zoom: number,
-  distanceToNext = GUIDANCE_ARROW_APPROACH_METERS,
+  distanceToNext = GUIDANCE_SIGN_APPROACH_METERS,
 ) {
   if (pathLength <= 0) return 13;
   const desired = chevronCount(pathLength, distanceToNext, zoom);
@@ -258,10 +259,115 @@ export function junctionZoomProgress(distanceToNext: number) {
 }
 
 export function shouldShowGuidanceArrows(distanceToNext: number) {
-  return (
-    Number.isFinite(distanceToNext) &&
-    distanceToNext <= GUIDANCE_ARROW_APPROACH_METERS
+  return shouldShowGuidanceSigns(distanceToNext);
+}
+
+export function shouldShowGuidanceSigns(
+  distanceToNext: number,
+  wasShowing = false,
+) {
+  if (!Number.isFinite(distanceToNext)) return false;
+  if (wasShowing) return distanceToNext <= GUIDANCE_SIGN_EXIT_METERS;
+  return distanceToNext <= GUIDANCE_SIGN_APPROACH_METERS;
+}
+
+export function pointAlongRoute(
+  coordinates: [number, number][],
+  meters: number,
+): { lng: number; lat: number; bearing: number } | null {
+  if (coordinates.length < 2) return null;
+  const segments = segmentsFromRoute(coordinates);
+  if (!segments.length) return null;
+  let remaining = Math.max(0, meters);
+  for (let index = 0; index < segments.length; index += 1) {
+    const segment = segments[index];
+    const last = index === segments.length - 1;
+    if (remaining <= segment.lengthMeters || last) {
+      const at = pointAt(
+        segment,
+        segment.startMeters + Math.min(remaining, segment.lengthMeters),
+      );
+      return {
+        lng: at[0],
+        lat: at[1],
+        bearing: bearingDegrees(
+          { lng: segment.from[0], lat: segment.from[1] },
+          { lng: segment.to[0], lat: segment.to[1] },
+        ),
+      };
+    }
+    remaining -= segment.lengthMeters;
+  }
+  return null;
+}
+
+export type GuidanceBowSign = {
+  lng: number;
+  lat: number;
+  bearing: number;
+  kind: GuidanceArrowKind;
+  scale: number;
+  opacity: number;
+  role: "hero" | "approach";
+};
+
+export function guidanceBowSigns({
+  route,
+  routeMeters,
+  distanceToNext,
+  cueMeters,
+}: {
+  route: [number, number][];
+  routeMeters: number;
+  distanceToNext: number;
+  cueMeters?: number;
+}): GuidanceBowSign[] {
+  if (route.length < 2 || !Number.isFinite(distanceToNext)) return [];
+  const turnAt = Number.isFinite(cueMeters)
+    ? Math.max(routeMeters, cueMeters as number)
+    : routeMeters + Math.max(0, distanceToNext);
+  const ahead = sliceRouteAhead(
+    route,
+    routeMeters,
+    Math.max(36, turnAt - routeMeters + 28),
   );
+  const turn = findManeuverTurn(ahead);
+  const kind: GuidanceArrowKind =
+    turn && Math.abs(turn.signed) >= TURN_THRESHOLD_DEG
+      ? turn.signed < 0
+        ? "left"
+        : "right"
+      : "straight";
+  const hero = pointAlongRoute(route, turnAt);
+  if (!hero) return [];
+
+  const heroScale =
+    distanceToNext <= 50 ? 2.72 : distanceToNext <= 100 ? 2.46 : 2.22;
+  const signs: GuidanceBowSign[] = [
+    {
+      ...hero,
+      kind,
+      scale: heroScale,
+      opacity: distanceToNext <= 80 ? 1 : 0.94,
+      role: "hero",
+    },
+  ];
+
+  const first = routeMeters + 22;
+  const last = turnAt - 18;
+  for (let along = first, index = 0; along < last; along += 42, index += 1) {
+    const point = pointAlongRoute(route, along);
+    if (!point) continue;
+    const t = last <= first ? 1 : (along - first) / (last - first);
+    signs.push({
+      ...point,
+      kind: "straight",
+      scale: 1.08 + t * 0.22,
+      opacity: 0.72 + t * 0.18,
+      role: "approach",
+    });
+  }
+  return signs;
 }
 
 export function asLngLat(coord: [number, number]): LngLat {

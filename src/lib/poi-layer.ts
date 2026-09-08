@@ -79,10 +79,10 @@ export function upsertPoiLayer(map: MapLibreMap, pois: MapPoiFeature[]) {
         id: circleId,
         type: "circle",
         source: POI_SOURCE_ID,
-        minzoom: 11.6,
+        minzoom: 10,
         filter: ["==", ["get", "mainLayer"], layer],
         paint: {
-          "circle-radius": ["interpolate", ["linear"], ["zoom"], 12, 5.4, 16.5, 8.8],
+          "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 4.8, 16.5, 8.8],
           "circle-color": POI_LAYER_COLORS[layer],
           "circle-stroke-color": "#f8fafc",
           "circle-stroke-width": 1.35,
@@ -117,7 +117,7 @@ export function upsertPoiLayer(map: MapLibreMap, pois: MapPoiFeature[]) {
         id: hitId,
         type: "circle",
         source: POI_SOURCE_ID,
-        minzoom: 11.6,
+        minzoom: 10,
         filter: ["==", ["get", "mainLayer"], layer],
         paint: {
           "circle-radius": 18,
@@ -125,6 +125,8 @@ export function upsertPoiLayer(map: MapLibreMap, pois: MapPoiFeature[]) {
         },
       });
     }
+    if (map.getLayer(circleId)) map.setLayerZoomRange(circleId, 10, 24);
+    if (map.getLayer(hitId)) map.setLayerZoomRange(hitId, 10, 24);
   }
 }
 

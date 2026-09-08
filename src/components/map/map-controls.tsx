@@ -73,10 +73,10 @@ export function MapControls({
         <ControlButton
           label={
             poiLayersLoading
-              ? "生活圖層讀取中"
+              ? "全國生活圖層讀取中"
               : poiMenuOpen
-                ? "收合生活圖層"
-                : "開啟生活圖層"
+                ? "收合全國生活圖層"
+                : "開啟全國生活圖層"
           }
           onClick={onTogglePoiMenu}
           active={poiMenuOpen || poiLayersLoading}
