@@ -1,11 +1,29 @@
 "use client";
 
-import { Heart, X } from "lucide-react";
+import { Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { unifiedConfirmAddress } from "@/lib/geocoding/format-taiwan-display-address";
+import { HudCloseButton } from "@/components/overlay/hud-close-button";
+import { formatDistance } from "@/lib/format";
+import {
+  formatChainStoreName,
+  formatConfirmDistrictAddress,
+  sameTaiwanDisplayTitle,
+} from "@/lib/geocoding/format-taiwan-display-address";
 import { formatEtaClock, travelModeLabel } from "@/lib/travel-mode";
 import { cn } from "@/lib/utils";
 import type { NavigationManeuver, RouteDestination, TravelMode } from "@/types/domain";
+
+function formatPhone(phone?: string | null) {
+  const text = phone?.trim();
+  return text || "未提供";
+}
+
+function formatCoords(location: RouteDestination["location"]) {
+  if (!Number.isFinite(location.lat) || !Number.isFinite(location.lng)) {
+    return "座標未提供";
+  }
+  return `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`;
+}
 
 export function RouteConfirmBar({
   destination,
@@ -36,16 +54,27 @@ export function RouteConfirmBar({
   favorite?: boolean;
   onToggleFavorite?: () => void;
 }) {
-  const remainingKm =
-    distanceMeters != null
-      ? distanceMeters / 1000
-      : maneuver?.remainingKm;
-  const remaining =
-    remainingKm != null
-      ? remainingKm >= 10
-        ? `${remainingKm.toFixed(0)} 公里`
-        : `${remainingKm.toFixed(1)} 公里`
-      : null;
+  const storeName = formatChainStoreName(
+    destination.label,
+    destination.branchName,
+  );
+  const address = formatConfirmDistrictAddress(destination.address);
+  const addressLine = [
+    address && !sameTaiwanDisplayTitle(storeName, address) ? address : null,
+    formatPhone(destination.phone),
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const remainingMeters =
+    distanceMeters ??
+    (maneuver?.remainingKm != null ? maneuver.remainingKm * 1000 : null);
+  const distanceLabel =
+    remainingMeters != null
+      ? formatDistance(remainingMeters)
+      : rerouting
+        ? "計算距離中"
+        : "距離未提供";
+  const coordLine = `${distanceLabel} · ${formatCoords(destination.location)}`;
   const etaMinutes =
     durationSeconds != null
       ? Math.max(1, Math.round(durationSeconds / 60))
@@ -54,13 +83,21 @@ export function RouteConfirmBar({
     durationSeconds != null ? formatEtaClock(durationSeconds) : null;
 
   return (
-    <div className="pointer-events-auto w-full rounded-2xl border border-cyan-300/20 bg-black/74 shadow-[0_10px_40px_rgba(0,0,0,0.5)] backdrop-blur-xl">
-      <div className="flex w-full flex-col gap-3 px-3.5 py-3 sm:px-4 sm:py-3.5">
-        <div className="w-full min-w-0">
-          <div className="flex items-start gap-2">
-            <p className="min-w-0 flex-1 text-lg leading-tight font-bold tracking-tight text-white sm:text-2xl">
-              {unifiedConfirmAddress(destination.label, destination.address)}
+    <div className="pointer-events-auto mx-auto w-[min(100%,20rem)] rounded-2xl border border-cyan-300/20 bg-black/78 shadow-[0_10px_40px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+      <div className="flex w-full flex-col gap-2 px-3 py-2.5">
+        <div className="flex items-start gap-1.5">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-base leading-tight font-bold tracking-tight text-white">
+              {storeName}
             </p>
+            <p className="mt-0.5 truncate text-[12px] leading-snug text-zinc-200">
+              {addressLine}
+            </p>
+            <p className="mt-0.5 truncate text-[12px] leading-snug tabular-nums text-cyan-100/90">
+              {coordLine}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-1">
             {onToggleFavorite ? (
               <button
                 type="button"
@@ -68,76 +105,63 @@ export function RouteConfirmBar({
                 aria-pressed={favorite}
                 aria-label={favorite ? "移出最愛" : "加入最愛"}
                 title={favorite ? "移出最愛" : "加入最愛"}
-                className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-full text-rose-300 hover:bg-white/10 hover:text-rose-100 touch-manipulation"
+                className="flex size-8 items-center justify-center rounded-full text-rose-300 hover:bg-white/10 hover:text-rose-100 touch-manipulation"
               >
                 <Heart
-                  className={cn(
-                    "size-6",
-                    favorite && "fill-rose-500 text-rose-400",
-                  )}
+                  className={cn("size-4", favorite && "fill-rose-500 text-rose-400")}
                   strokeWidth={2.1}
                 />
               </button>
             ) : null}
+            <HudCloseButton label="取消路線，重新搜尋" onClick={onClear} />
           </div>
-          <div className="mt-2 flex gap-1.5">
-            {(["car", "motorcycle"] as const).map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => onTravelMode(mode)}
-                className={cn(
-                  "h-9 rounded-full px-3 text-sm",
-                  travelMode === mode
-                    ? "bg-cyan-400 text-[#041016]"
-                    : "bg-white/8 text-zinc-200",
-                )}
-              >
-                {travelModeLabel(mode)}
-              </button>
-            ))}
-          </div>
-          <p
-            className={cn(
-              "mt-1.5 w-full text-sm font-medium sm:text-base",
-              error ? "text-amber-200" : "text-cyan-200",
-            )}
-          >
-            {error
-              ? error
-              : rerouting
+        </div>
+        <div className="flex gap-1.5">
+          {(["car", "motorcycle"] as const).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => onTravelMode(mode)}
+              className={cn(
+                "h-8 rounded-full px-2.5 text-xs",
+                travelMode === mode
+                  ? "bg-cyan-400 text-[#041016]"
+                  : "bg-white/8 text-zinc-200",
+              )}
+            >
+              {travelModeLabel(mode)}
+            </button>
+          ))}
+        </div>
+        <p
+          className={cn(
+            "w-full text-[11px] font-medium",
+            error ? "text-amber-200" : "text-cyan-200",
+          )}
+        >
+          {error
+            ? error
+            : rerouting
               ? "正在規劃路線…"
               : motorcycleUnsupported && travelMode === "motorcycle"
                 ? "機車模式尚未設定（NOT CONFIGURED）"
-                : `${travelModeLabel(travelMode)} · ${remaining ?? "計算距離中"}${
+                : `${travelModeLabel(travelMode)}${
                     etaMinutes != null ? ` · 約 ${etaMinutes} 分鐘` : ""
                   }${etaClock ? ` · 預計 ${etaClock} 抵達` : ""}`}
-          </p>
-        </div>
-        <div className="flex w-full items-center gap-2">
-          <Button
-            type="button"
-            onClick={onStartNav}
-            disabled={
-              rerouting ||
-              Boolean(error) ||
-              distanceMeters == null ||
-              (motorcycleUnsupported && travelMode === "motorcycle")
-            }
-            className="h-12 min-h-12 min-w-0 flex-1 rounded-xl bg-cyan-400 text-base font-semibold text-[#041016] hover:bg-cyan-300 sm:text-lg"
-          >
-            開始導航
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            aria-label="取消路線，重新搜尋"
-            onClick={onClear}
-            className="size-12 shrink-0 text-zinc-300 hover:bg-white/10 hover:text-white"
-          >
-            <X className="size-6" />
-          </Button>
-        </div>
+        </p>
+        <Button
+          type="button"
+          onClick={onStartNav}
+          disabled={
+            rerouting ||
+            Boolean(error) ||
+            distanceMeters == null ||
+            (motorcycleUnsupported && travelMode === "motorcycle")
+          }
+          className="h-11 min-h-11 w-full rounded-xl bg-cyan-400 text-sm font-semibold text-[#041016] hover:bg-cyan-300"
+        >
+          開始導航
+        </Button>
       </div>
     </div>
   );

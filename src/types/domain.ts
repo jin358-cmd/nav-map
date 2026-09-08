@@ -323,6 +323,8 @@ export type RouteDestination = {
   label: string;
   address: string;
   location: LngLat;
+  phone?: string;
+  branchName?: string;
 };
 
 export type ParkingFill = "plenty" | "limited" | "full" | "unknown";

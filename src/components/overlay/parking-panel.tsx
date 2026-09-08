@@ -1,7 +1,8 @@
 "use client";
 
-import { Navigation, X } from "lucide-react";
+import { Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { HudCloseButton } from "@/components/overlay/hud-close-button";
 import {
   formatDistance,
   formatParkingRate,
@@ -193,17 +194,13 @@ export function ParkingPanel({
             </div>
           ) : null}
         </div>
-        <button
-          type="button"
-          aria-label="關閉停車場"
+        <HudCloseButton
+          label="關閉停車場"
           onClick={(event) => {
             event.stopPropagation();
             onClose();
           }}
-          className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-white/25 bg-white/12 text-white hover:bg-white/18 touch-manipulation"
-        >
-          <X className="size-5" strokeWidth={2.5} />
-        </button>
+        />
       </div>
       <div className="mb-2 flex gap-1.5">
         {SORT_BUTTONS.map((item) => (

@@ -187,6 +187,41 @@
   pointer-events: none;
 }
 
+.hud-window-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.85rem;
+  height: 1.85rem;
+  flex-shrink: 0;
+  padding: 0;
+  border-radius: 999px;
+  border: 1.5px solid rgba(255, 255, 255, 0.55);
+  background: rgba(9, 9, 11, 0.38);
+  color: #f4f4f5;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.18);
+}
+
+.hud-window-close svg {
+  width: 0.82rem;
+  height: 0.82rem;
+}
+
+.hud-window-close:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
+.hud-window-close--sm {
+  width: 1.55rem;
+  height: 1.55rem;
+}
+
+.hud-window-close--sm svg {
+  width: 0.72rem;
+  height: 0.72rem;
+}
+
 .poi-layer-read-hud {
   display: flex;
   flex-direction: column;
@@ -239,7 +274,7 @@
 .poi-layer-read-bar {
   display: block;
   width: 100%;
-  height: 0.28rem;
+  height: 0.42rem;
   overflow: hidden;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.12);
@@ -252,9 +287,11 @@
 .poi-layer-read-bar__fill {
   display: block;
   height: 100%;
+  min-width: 0;
   border-radius: inherit;
   background: #67e8f9;
-  transition: width 90ms linear;
+  transform-origin: left center;
+  transition: width 80ms linear;
 }
 
 .poi-layer-read-pie {
@@ -1007,7 +1044,7 @@
   width: 100%;
   min-height: 6.35rem;
   max-height: min(280px, 38vh);
-  padding: 0.85rem 2.2rem 0.85rem 0.75rem;
+  padding: 0.85rem 2.2rem 0.85rem 1.05rem;
   border-radius: 1.25rem;
   overflow: hidden;
   color: #0f172a;
@@ -1037,7 +1074,7 @@
   height: 1.75rem;
   padding: 0;
   border-radius: 999px;
-  border: 1px solid rgba(15, 23, 42, 0.18);
+  border: 1.5px solid rgba(15, 23, 42, 0.42);
   background: rgba(15, 23, 42, 0.16);
   color: #0f172a;
 }
@@ -1059,51 +1096,9 @@
   bottom: 0.36rem;
 }
 
-.maneuverIconWrap {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.maneuverIconBadge {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  border-radius: 0.9rem;
-  background: #16a34a;
-  color: #fff;
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.2),
-    0 2px 8px rgba(0, 0, 0, 0.22);
-  transform: translateZ(0);
-}
-
-.maneuverIconArrow {
-  width: 78%;
-  height: 78%;
-  color: #fff;
-}
-
-.maneuverIconBadge--alert {
-  background: #15803d;
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.28),
-    0 0 10px 2px rgba(74, 222, 128, 0.45);
-}
-
 .navigation-instruction-content {
-  display: grid;
-  grid-template-columns: 5.15rem minmax(0, 1fr);
-  align-items: center;
-  gap: 0.7rem;
-}
-
-.navigation-turn-icon {
-  width: 5.15rem;
-  height: 5.15rem;
+  display: block;
+  min-width: 0;
 }
 
 .navigation-guidance {
@@ -1222,18 +1217,8 @@
     max-width: 100%;
     min-height: 6.1rem;
     max-height: 210px;
-    padding: 0.78rem 2.05rem 0.78rem 0.65rem;
+    padding: 0.78rem 2.05rem 0.78rem 1rem;
     border-radius: 1.15rem;
-  }
-
-  .navigation-instruction-content {
-    grid-template-columns: 4.85rem minmax(0, 1fr);
-    gap: 0.6rem;
-  }
-
-  .navigation-turn-icon {
-    width: 4.85rem;
-    height: 4.85rem;
   }
 
   .navigation-guidance {
@@ -1248,16 +1233,7 @@
 @media (orientation: landscape) {
   .navigation-instruction-card {
     min-height: 6.5rem;
-    padding: 0.8rem 2.15rem 0.8rem 0.75rem;
-  }
-
-  .navigation-instruction-content {
-    grid-template-columns: 5.4rem minmax(0, 1fr);
-  }
-
-  .navigation-turn-icon {
-    width: 5.4rem;
-    height: 5.4rem;
+    padding: 0.8rem 2.15rem 0.8rem 1.1rem;
   }
 
   .navigation-guidance {
@@ -1271,6 +1247,6 @@
 
 @media (max-width: 390px) {
   .navigation-instruction-card {
-    padding: 0.7rem 1.95rem 0.7rem 0.55rem;
+    padding: 0.7rem 1.95rem 0.7rem 0.9rem;
   }
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { Navigation, X } from "lucide-react";
+import { Navigation } from "lucide-react";
+import { HudCloseButton } from "@/components/overlay/hud-close-button";
 import {
   AccidentTriangleIcon,
   CongestionCarsIcon,
@@ -149,14 +150,7 @@ export function EventDetailCard({
             {freshnessLabel(event.freshness)} · {eventOriginLabel(event.origin)}
           </p>
         </div>
-        <button
-          type="button"
-          aria-label="關閉事件資訊"
-          onClick={onClose}
-          className="flex size-11 shrink-0 items-center justify-center rounded-lg text-zinc-400 hover:bg-white/10 hover:text-white touch-manipulation"
-        >
-          <X className="size-4" />
-        </button>
+        <HudCloseButton label="關閉事件資訊" onClick={onClose} />
       </div>
       <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
         <InfoCell label="道路名稱" value={providedText(event.roadName)} />

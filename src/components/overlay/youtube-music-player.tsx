@@ -8,9 +8,9 @@ import {
   Play,
   SkipBack,
   SkipForward,
-  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { HudCloseButton } from "@/components/overlay/hud-close-button";
 import {
   YOUTUBE_MUSIC_URL,
   YOUTUBE_PLAYLISTS,
@@ -282,16 +282,11 @@ export function YouTubeMusicPlayer({
                 <ExternalLink className="size-3.5" />
               </a>
             ) : (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                aria-label="關閉播放器"
+              <HudCloseButton
+                label="關閉播放器"
+                size="sm"
                 onClick={onClose}
-                className="size-8 text-zinc-300 hover:bg-white/10 hover:text-white"
-              >
-                <X className="size-4" />
-              </Button>
+              />
             )}
           </div>
           {compact ? null : (

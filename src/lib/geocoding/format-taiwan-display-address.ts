@@ -278,11 +278,59 @@ function compactAddressKey(value?: string | null) {
     .replaceAll(/\s+/g, "");
 }
 
+/** 連鎖品牌分店名稱：店名＋分店，避免重複接上同一分店名。 */
+export function formatChainStoreName(
+  name?: string | null,
+  branchName?: string | null,
+): string {
+  const title = (name ?? "").trim();
+  const branch = (branchName ?? "").trim();
+  if (!title) return branch;
+  if (branch && !title.includes(branch)) return `${title} ${branch}`;
+  return title;
+}
+
+/** 確認欄地址：行政區（區／鄉／鎮）＋完整路名，不含郵遞區號。 */
+export function formatConfirmDistrictAddress(
+  input?: string | TaiwanDisplayAddressInput | null,
+): string {
+  if (input == null) return "";
+  if (typeof input === "object") {
+    const rebuilt = joinStructured(input);
+    if (rebuilt) return formatConfirmDistrictAddress(rebuilt);
+    return input.fullAddress
+      ? formatConfirmDistrictAddress(input.fullAddress)
+      : "";
+  }
+
+  const trimmed = stripLeadingPostal(input.trim());
+  if (!trimmed) return "";
+  const { address, nearby } = peelNotes(trimmed);
+  const compact = compactTaiwanText(stripLeadingPostal(address));
+  const parts = parseDisplayParts(compact);
+  const road = rebuildRoadFromParts(parts);
+  const district = parts.town || "";
+  const combined =
+    district && road
+      ? road.startsWith(district)
+        ? road
+        : `${district}${road}`
+      : road || district;
+  if (combined) return stripAccuracyLabels(restoreNotes(combined, nearby));
+  return stripAccuracyLabels(
+    formatTaiwanRoadName(input) || formatTaiwanDisplayAddress(input),
+  );
+}
+
 /** 確認欄只顯示路名之後的完整地址，不含郵遞區號、縣市與行政區。 */
 export function unifiedConfirmAddress(
   label?: string | null,
   address?: string | null,
 ): string {
+  const district =
+    formatConfirmDistrictAddress(address) ||
+    formatConfirmDistrictAddress(label);
+  if (district) return district;
   const road =
     formatTaiwanRoadName(address) || formatTaiwanRoadName(label);
   if (road) return stripAccuracyLabels(road);

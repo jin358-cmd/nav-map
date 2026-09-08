@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Camera, Radio, X } from "lucide-react";
+import { Camera, Radio } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { HudCloseButton } from "@/components/overlay/hud-close-button";
 import { isCameraUrlUsable } from "@/lib/cctv-normalize";
 import {
   cctvOriginLabel,
@@ -60,15 +61,7 @@ export function CctvDetailCard({
             {camera.directionLabel ? ` · ${camera.directionLabel}` : ""}
           </p>
         </div>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label="關閉"
-          onClick={onClose}
-          className="size-11 text-zinc-300 hover:bg-white/10 hover:text-white touch-manipulation"
-        >
-          <X />
-        </Button>
+        <HudCloseButton label="關閉" onClick={onClose} />
       </div>
 
       <dl className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">

@@ -108,14 +108,14 @@ export function useMapPois({
         hideTimerRef.current = null;
       }
       setLoading(true);
-      setProgress(8);
+      setProgress(0);
       tick = window.setInterval(() => {
         if (readGenRef.current !== readGen) return;
         setProgress((current) => {
-          if (current >= 88) return current;
-          return Math.min(88, current + Math.max(0.7, (88 - current) * 0.07));
+          if (current >= 95) return current;
+          return Math.min(95, current + Math.max(1.4, (95 - current) * 0.1));
         });
-      }, 120);
+      }, 80);
     };
     const finishRead = (ok: boolean) => {
       if (readGenRef.current !== readGen) return;
@@ -132,7 +132,7 @@ export function useMapPois({
         setLoading(false);
         setProgress(0);
         hideTimerRef.current = null;
-      }, 80);
+      }, 420);
     };
 
     const delay = fetchedKeyRef.current ? 40 : 0;

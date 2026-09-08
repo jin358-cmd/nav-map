@@ -786,6 +786,8 @@ export function DrivingApp() {
         label: hit.name,
         address: hit.address || hit.name,
         location: hit.location,
+        phone: hit.phone,
+        branchName: hit.branchName,
       });
       focusEvent(hit.location, immediate);
     },
@@ -879,7 +881,13 @@ export function DrivingApp() {
         mode,
       );
       setRoute(plan.coordinates);
-      setDestination(plan.destination);
+      setDestination({
+        label: hit.name || plan.destination.label,
+        address: hit.address || plan.destination.address,
+        location: plan.destination.location,
+        phone: hit.phone,
+        branchName: hit.branchName,
+      });
       setManeuver(plan.maneuver);
       setRouteSteps(plan.steps ?? []);
       setRouteEpoch((value) => value + 1);
@@ -1231,7 +1239,13 @@ export function DrivingApp() {
       const steps = plan.steps ?? [];
       const model = createRouteProgressModel(plan.coordinates, steps);
       setRoute(plan.coordinates);
-      setDestination(plan.destination);
+      setDestination({
+        ...plan.destination,
+        label: dest.label,
+        address: dest.address,
+        phone: dest.phone,
+        branchName: dest.branchName,
+      });
       setManeuver(plan.maneuver);
       setRouteSteps(steps);
       setRouteEpoch((value) => value + 1);
@@ -1775,7 +1789,8 @@ export function DrivingApp() {
       ) : (
         <div className="hud-anchor-interactive pointer-events-auto absolute top-[max(0.45rem,env(safe-area-inset-top))] left-[max(0.5rem,env(safe-area-inset-left))] right-[max(0.5rem,env(safe-area-inset-right))] z-50 min-w-0 max-w-full sm:right-[max(5.5rem,calc(env(safe-area-inset-right)+4.75rem))]">
           {destination ? (
-            <RouteConfirmBar
+            <div className="flex w-full justify-center">
+              <RouteConfirmBar
               destination={destination}
               maneuver={maneuver}
               travelMode={travelMode}
@@ -1797,7 +1812,8 @@ export function DrivingApp() {
               }}
               onStartNav={startNavigation}
               onClear={clearRoute}
-            />
+              />
+            </div>
           ) : (
             <>
               <YellowPagesSearchStrip

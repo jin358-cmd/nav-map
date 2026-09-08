@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Heart, Navigation, Pencil, X } from "lucide-react";
+import { Check, Heart, Navigation, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { HudCloseButton } from "@/components/overlay/hud-close-button";
 import { formatDistance, formatParkingRate, formatUpdatedAgo } from "@/lib/format";
 import { formatTaiwanRoadName } from "@/lib/geocoding/format-taiwan-display-address";
 import type { MapPlace } from "@/lib/map-place";
@@ -105,14 +106,7 @@ export function PlaceInfoCard({
             <h2 className="truncate text-lg font-bold leading-tight">{place.name}</h2>
           )}
         </div>
-        <button
-          type="button"
-          aria-label="關閉地點資訊"
-          onClick={onClose}
-          className="flex size-11 shrink-0 items-center justify-center rounded-lg text-zinc-400 hover:bg-white/10 hover:text-white touch-manipulation"
-        >
-          <X className="size-4" />
-        </button>
+        <HudCloseButton label="關閉地點資訊" onClick={onClose} />
       </div>
       <dl className="grid gap-1.5 text-[13px] text-zinc-200">
         {address ? (

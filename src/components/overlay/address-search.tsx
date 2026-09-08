@@ -430,7 +430,10 @@ export function AddressSearch({
                       <span className="font-medium">
                         {formatTaiwanDisplayAddress(hit.name)}
                       </span>
-                      {hit.branchName ? (
+                      {hit.branchName &&
+                      !formatTaiwanDisplayAddress(hit.name).includes(
+                        hit.branchName,
+                      ) ? (
                         <span className="text-zinc-200"> {hit.branchName}</span>
                       ) : null}
                       {hit.address &&

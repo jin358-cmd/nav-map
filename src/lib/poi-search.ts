@@ -129,12 +129,16 @@ export function destinationToHit(destination: {
   label: string;
   address: string;
   location: LngLat;
+  phone?: string;
+  branchName?: string;
 }): GeocodeHit {
   return {
     id: `place-${destination.location.lng.toFixed(5)}-${destination.location.lat.toFixed(5)}`,
     name: formatTaiwanDisplayAddress(destination.label),
     address: formatTaiwanDisplayAddress(destination.address),
     location: destination.location,
+    phone: destination.phone,
+    branchName: destination.branchName,
   };
 }
 

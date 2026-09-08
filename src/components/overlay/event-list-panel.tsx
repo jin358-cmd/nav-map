@@ -1,6 +1,6 @@
 "use client";
 
-import { X } from "lucide-react";
+import { HudCloseButton } from "@/components/overlay/hud-close-button";
 import { formatDistance } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { RoadIntelItem, RoadIntelKind } from "@/types/domain";
@@ -32,14 +32,7 @@ export function EventListPanel({
         <p className="text-[11px] tracking-wide text-zinc-400">
           {KIND_LABEL[kind]} · 依距離排序
         </p>
-        <button
-          type="button"
-          aria-label="關閉事件列表"
-          onClick={onClose}
-          className="flex size-11 shrink-0 items-center justify-center rounded-lg text-zinc-400 hover:bg-white/10 hover:text-white touch-manipulation"
-        >
-          <X className="size-4" />
-        </button>
+        <HudCloseButton label="關閉事件列表" onClick={onClose} />
       </div>
       {items.length === 0 ? (
         <p className="px-2 py-3 text-sm text-zinc-300">

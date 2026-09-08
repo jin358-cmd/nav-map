@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Heart, MapPin, Pencil, Trash2, X } from "lucide-react";
+import { Check, Heart, MapPin, Pencil, Trash2 } from "lucide-react";
+import { HudCloseButton } from "@/components/overlay/hud-close-button";
 import { formatTaiwanDisplayAddress } from "@/lib/geocoding/format-taiwan-display-address";
 import type { GeocodeHit } from "@/types/domain";
 
@@ -38,14 +39,7 @@ export function FavoritesPanel({
     <div className="w-full rounded-2xl border border-rose-300/25 bg-black/82 px-2.5 py-2 shadow-[0_12px_40px_rgba(0,0,0,0.55)] backdrop-blur-xl">
       <div className="mb-1 flex items-center justify-between gap-2">
         <p className="text-[11px] tracking-wide text-rose-200/90">最愛書籤</p>
-        <button
-          type="button"
-          aria-label="收合最愛"
-          onClick={onClose}
-          className="flex size-7 shrink-0 items-center justify-center rounded-lg text-zinc-400 hover:bg-white/10 hover:text-white touch-manipulation"
-        >
-          <X className="size-3.5" />
-        </button>
+        <HudCloseButton label="收合最愛" size="sm" onClick={onClose} />
       </div>
       {canFavorite && !isCurrentFavorite ? (
         <button
@@ -91,17 +85,14 @@ export function FavoritesPanel({
                     >
                       <Check className="size-3.5" />
                     </button>
-                    <button
-                      type="button"
-                      aria-label="取消編輯"
+                    <HudCloseButton
+                      label="取消編輯"
+                      size="sm"
                       onClick={() => {
                         setEditingId(null);
                         setDraft("");
                       }}
-                      className="flex size-7 shrink-0 items-center justify-center rounded-lg text-zinc-400 hover:bg-white/10 hover:text-white touch-manipulation"
-                    >
-                      <X className="size-3.5" />
-                    </button>
+                    />
                   </div>
                 ) : (
                   <>

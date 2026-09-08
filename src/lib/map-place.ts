@@ -55,7 +55,10 @@ export function geocodeHitToPlace(hit: GeocodeHit): MapPlace {
   return {
     id: hit.id,
     kind: "poi",
-    name: hit.name,
+    name:
+      hit.branchName && !hit.name.includes(hit.branchName)
+        ? `${hit.name} ${hit.branchName}`
+        : hit.name,
     category: hit.category,
     categoryLabel: poiCategoryLabel(hit.category),
     address: hit.address,
@@ -89,7 +92,10 @@ export function poiFeatureToPlace(
   return {
     id: feature.id,
     kind: "poi",
-    name: feature.name,
+    name:
+      feature.branchName && !feature.name.includes(feature.branchName)
+        ? `${feature.name} ${feature.branchName}`
+        : feature.name,
     brand: feature.brand,
     category: feature.category,
     categoryLabel: poiCategoryLabel(feature.category),

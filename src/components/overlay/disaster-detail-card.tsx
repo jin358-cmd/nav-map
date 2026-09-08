@@ -1,6 +1,7 @@
 "use client";
 
-import { AlertTriangle, X } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
+import { HudCloseButton } from "@/components/overlay/hud-close-button";
 import type { DisasterAlert, DisasterDataOrigin } from "@/types/domain";
 
 export function DisasterDetailCard({ alert, origin, onClose }: { alert: DisasterAlert; origin: DisasterDataOrigin; onClose: () => void }) {
@@ -14,7 +15,7 @@ export function DisasterDetailCard({ alert, origin, onClose }: { alert: Disaster
           <p className="mt-1 line-clamp-3 text-xs leading-5 text-zinc-300">{alert.description}</p>
           {alert.area ? <p className="mt-1 text-xs text-zinc-400">影響區域：{alert.area}</p> : null}
         </div>
-        <button type="button" aria-label="關閉災害資訊" onClick={onClose} className="flex size-9 shrink-0 items-center justify-center rounded-lg text-zinc-400 hover:bg-white/10"><X className="size-4" /></button>
+        <HudCloseButton label="關閉災害資訊" onClick={onClose} />
       </div>
     </article>
   );

@@ -87,6 +87,7 @@ export function YellowPagesSearchStrip({
                           distanceMeters: place.distanceMeters,
                           category: place.category,
                           phone: place.phone,
+                          branchName: poi.branchName || undefined,
                         });
                       }}
                       className="flex w-full min-w-0 items-start gap-2 rounded-xl px-1 py-1.5 text-left hover:bg-white/8 touch-manipulation"
