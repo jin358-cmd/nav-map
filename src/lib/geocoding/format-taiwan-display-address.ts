@@ -46,6 +46,12 @@ function houseToken(number: string, subNumber = "") {
 function peelNotes(value: string) {
   let address = value.trim();
   const notes: string[] = [];
+  address = address
+    .replace(
+      /[（(]\s*[．.·・•]?\s*(?:精確門牌|推估門牌位置|約略位置|巷弄位置|道路位置|地標位置)\s*[)）]/g,
+      "",
+    )
+    .trim();
   for (const label of ACCURACY_SUFFIXES) {
     const suffix = ` · ${label}`;
     if (address.endsWith(suffix)) {
@@ -61,19 +67,26 @@ function peelNotes(value: string) {
   return { address, nearby, notes };
 }
 
-function restoreNotes(address: string, nearby: string, notes: string[]) {
-  return `${address}${nearby}${notes.join("")}`;
+function restoreNotes(address: string, nearby: string) {
+  return `${address}${nearby}`;
 }
 
 function stripAccuracyLabels(value: string) {
   let next = value.trim();
+  next = next
+    .replace(
+      /[（(]\s*[．.·・•]?\s*(?:精確門牌|推估門牌位置|約略位置|巷弄位置|道路位置|地標位置)\s*[)）]/g,
+      "",
+    )
+    .trim();
   for (const label of ACCURACY_SUFFIXES) {
     const suffix = ` · ${label}`;
     if (next.endsWith(suffix)) next = next.slice(0, -suffix.length).trim();
     next = next.replaceAll(suffix, "").trim();
     if (next.endsWith(label)) next = next.slice(0, -label.length).trim();
+    next = next.replaceAll(label, "").trim();
   }
-  return next.replace(/\s*[·・•]\s*$/g, "").trim();
+  return next.replace(/\s*[·・•．.]\s*$/g, "").trim();
 }
 
 function parseDisplayParts(compact: string) {
@@ -204,23 +217,23 @@ function formatCommaSeparated(value: string) {
 function formatDisplayAddressString(value: string) {
   const trimmed = value.trim();
   if (!trimmed) return "";
-  const { address, nearby, notes } = peelNotes(trimmed);
+  const { address, nearby } = peelNotes(trimmed);
   const commaForm = formatCommaSeparated(address);
-  if (commaForm) return restoreNotes(commaForm, nearby, []);
+  if (commaForm) return stripAccuracyLabels(restoreNotes(commaForm, nearby));
 
   const compact = compactTaiwanText(address);
   const parts = parseDisplayParts(compact);
   const rebuilt = rebuildFromParts(parts);
   if (parts.hadAdminUnit && rebuilt) {
-    return restoreNotes(rebuilt, nearby, notes);
+    return stripAccuracyLabels(restoreNotes(rebuilt, nearby));
   }
   if (rebuilt && parts.road && compact.includes(parts.road)) {
     const looksLikeAdmin =
       /[村里]|(?:\d+|[一二三四五六七八九十]+)鄰/u.test(compact) &&
       rebuilt !== compact;
-    if (looksLikeAdmin) return restoreNotes(rebuilt, nearby, notes);
+    if (looksLikeAdmin) return stripAccuracyLabels(restoreNotes(rebuilt, nearby));
   }
-  return restoreNotes(address, nearby, notes);
+  return stripAccuracyLabels(restoreNotes(address, nearby));
 }
 
 function joinStructured(input: TaiwanDisplayAddressInput) {

@@ -22,8 +22,9 @@ import {
   disasterToCard,
 } from "@/components/overlay/event-detail-card";
 import { EventListPanel } from "@/components/overlay/event-list-panel";
+import { FavoritesPanel } from "@/components/overlay/favorites-panel";
 import { ParkingArrivalCard } from "@/components/overlay/parking-arrival-card";
-import { PoiLayerBar } from "@/components/overlay/poi-layer-bar";
+import { PoiLayerDrawer } from "@/components/overlay/poi-layer-drawer";
 import { ParkingPanel } from "@/components/overlay/parking-panel";
 import { PlaceInfoCard } from "@/components/overlay/place-info-card";
 import { NextIntersectionHud } from "@/components/overlay/navigation-banner";
@@ -53,11 +54,14 @@ import { rememberAddress } from "@/lib/address-history";
 import { segmentAnchor } from "@/lib/traffic-query";
 import {
   DEFAULT_POI_LAYER_VISIBILITY,
+  activePoiLayerIds,
+  anyPoiLayerOn,
   isPoiLayerVisible,
   type PoiLayerVisibility,
 } from "@/lib/poi/main-layers";
 import { isDemoLandmarkPreset } from "@/data/landmarks";
 import { formatTaiwanRoadName } from "@/lib/geocoding/format-taiwan-display-address";
+import { cn } from "@/lib/utils";
 import {
   addFavorite,
   getFavoritesSnapshot,
@@ -271,8 +275,10 @@ export function DrivingApp() {
   );
   const [poiLayerVisibility, setPoiLayerVisibility] =
     useState<PoiLayerVisibility>(DEFAULT_POI_LAYER_VISIBILITY);
+  const [poiMenuOpen, setPoiMenuOpen] = useState(false);
   const [focusTarget, setFocusTarget] = useState<MapFocusTarget | null>(null);
   const [parkingOpen, setParkingOpen] = useState(false);
+  const [parkingMinimized, setParkingMinimized] = useState(false);
   const [parkingSort, setParkingSort] = useState<ParkingSort>("distance");
   const [selectedParking, setSelectedParking] = useState<ParkingLot | null>(null);
   const [selectedMapPlace, setSelectedMapPlace] = useState<MapPlace | null>(null);
@@ -535,12 +541,19 @@ export function DrivingApp() {
   const mapPois = useMapPois({
     viewport,
     origin: searchOrigin,
-    enabled: true,
+    enabled: anyPoiLayerOn(poiLayerVisibility),
+    layers: activePoiLayerIds(poiLayerVisibility),
   });
   const visibleMapPois = useMemo(
     () =>
       mapPois.filter((poi) =>
-        isPoiLayerVisible(poiLayerVisibility, poi.category),
+        poi.mainLayer
+          ? poiLayerVisibility[poi.mainLayer]
+          : isPoiLayerVisible(
+              poiLayerVisibility,
+              poi.category,
+              poi.subcategory,
+            ),
       ),
     [mapPois, poiLayerVisibility],
   );
@@ -889,9 +902,9 @@ export function DrivingApp() {
 
   const shrinkFunctionPanels = useCallback(() => {
     setToolsDrawerOpen(false);
-    setParkingOpen(false);
-    setSelectedParking(null);
+    if (parkingOpen) setParkingMinimized(true);
     setFavoritesOpen(false);
+    setPoiMenuOpen(false);
     setEventListKind(null);
     setSelectedEvent(null);
     setSelectedCctv(null);
@@ -899,7 +912,7 @@ export function DrivingApp() {
     setStyleMenuOpen(false);
     setSelectedMapPlace(null);
     if (parkingArrivalOpen) setParkingArrivalMinimized(true);
-  }, [parkingArrivalOpen]);
+  }, [parkingArrivalOpen, parkingOpen]);
 
   const handleEmptyMapClick = useCallback(() => {
     shrinkFunctionPanels();
@@ -921,11 +934,14 @@ export function DrivingApp() {
     setParkingOpen((open) => {
       if (open) {
         setSelectedParking(null);
+        setParkingMinimized(false);
         return false;
       }
+      setParkingMinimized(false);
       return true;
     });
     setFavoritesOpen(false);
+    setPoiMenuOpen(false);
     setEventListKind(null);
     setSelectedEvent(null);
     setSelectedCctv(null);
@@ -940,7 +956,9 @@ export function DrivingApp() {
   const handleHeartClick = useCallback(() => {
     setFavoritesOpen((open) => !open);
     setParkingOpen(false);
+    setParkingMinimized(false);
     setSelectedParking(null);
+    setPoiMenuOpen(false);
     setSelectedCctv(null);
     setSelectedEvent(null);
     setEventListKind(null);
@@ -1506,6 +1524,7 @@ export function DrivingApp() {
           setSelectedParking(found);
           setParkingSort("distance");
           setParkingOpen(true);
+          setParkingMinimized(false);
           setFavoritesOpen(false);
           setEventListKind(null);
           setSelectedEvent(null);
@@ -1694,6 +1713,25 @@ export function DrivingApp() {
             voiceEnabled={voiceEnabled}
             onToggleVoice={() => setVoiceEnabled((value) => !value)}
           />
+          {favoritesOpen ? (
+            <div className="pointer-events-auto mt-2 w-full max-w-xl">
+              <FavoritesPanel
+                favorites={userFavorites}
+                canFavorite={Boolean(currentPlace)}
+                isCurrentFavorite={isCurrentFavorite}
+                onAddCurrent={() => {
+                  if (currentPlace) addFavorite(currentPlace);
+                }}
+                onSelect={(hit) => {
+                  setFavoritesOpen(false);
+                  void applyRoute(hit);
+                }}
+                onRemove={removeFavorite}
+                onRename={renameFavorite}
+                onClose={() => setFavoritesOpen(false)}
+              />
+            </div>
+          ) : null}
         </div>
       ) : (
         <div className="hud-anchor-interactive pointer-events-auto absolute top-[max(0.45rem,env(safe-area-inset-top))] left-[max(0.5rem,env(safe-area-inset-left))] right-[max(0.5rem,env(safe-area-inset-right))] z-50 min-w-0 max-w-full sm:right-[max(5.5rem,calc(env(safe-area-inset-right)+4.75rem))]">
@@ -1752,10 +1790,52 @@ export function DrivingApp() {
               />
             </>
           )}
+          {favoritesOpen ? (
+            <div className="pointer-events-auto mt-2 w-full max-w-xl">
+              <FavoritesPanel
+                favorites={userFavorites}
+                canFavorite={Boolean(currentPlace)}
+                isCurrentFavorite={isCurrentFavorite}
+                onAddCurrent={() => {
+                  if (currentPlace) addFavorite(currentPlace);
+                }}
+                onSelect={(hit) => {
+                  setFavoritesOpen(false);
+                  void applyRoute(hit);
+                }}
+                onRemove={removeFavorite}
+                onRename={renameFavorite}
+                onClose={() => setFavoritesOpen(false)}
+              />
+            </div>
+          ) : null}
         </div>
       )}
 
-      <div className={styleMenuOpen ? "hud-anchor-rail hud-anchor-interactive" : "hud-anchor-rail"}>
+      <div
+        className={
+          styleMenuOpen || poiMenuOpen
+            ? "hud-anchor-rail hud-anchor-interactive"
+            : "hud-anchor-rail"
+        }
+      >
+        <div
+          className={cn(
+            "absolute right-full top-0 z-30 mr-2",
+            !poiMenuOpen && "pointer-events-none",
+          )}
+        >
+          <PoiLayerDrawer
+            open={poiMenuOpen}
+            visibility={poiLayerVisibility}
+            onToggle={(id) =>
+              setPoiLayerVisibility((current) => ({
+                ...current,
+                [id]: !current[id],
+              }))
+            }
+          />
+        </div>
         <MapControls
           cameraMode={cameraMode}
           followOrientation={followOrientation}
@@ -1766,11 +1846,17 @@ export function DrivingApp() {
           pendingMapDisplayMode={pendingMapDisplayMode}
           styleMenuOpen={styleMenuOpen}
           toolsDrawerOpen={drawerOpen}
+          poiMenuOpen={poiMenuOpen}
           navigating={navigating}
           onLocate={() => void locate()}
           onToggleCamera={() =>
             setCameraMode((mode) => (mode === "3d" ? "2d" : "3d"))
           }
+          onTogglePoiMenu={() => {
+            setPoiMenuOpen((open) => !open);
+            setStyleMenuOpen(false);
+            setFavoritesOpen(false);
+          }}
           onToggleToolsDrawer={() =>
             setToolsDrawerOpen((open) => {
               const next = !open;
@@ -1860,7 +1946,18 @@ export function DrivingApp() {
                   : "pointer-events-none absolute inset-0 z-[60] flex items-end justify-center px-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] pb-[max(1.25rem,calc(env(safe-area-inset-bottom)+0.75rem))]"
           }
         >
-          <div className="pointer-events-auto w-full max-w-xl">
+          <div
+            className={cn(
+              "pointer-events-auto w-full max-w-xl",
+              parkingMinimized && "max-h-[7.4rem] overflow-hidden",
+            )}
+          >
+            <div
+              className={cn(
+                "parking-panel-shell",
+                parkingMinimized && "parking-panel-shell--min",
+              )}
+            >
             <ParkingPanel
               lots={parkingLots}
               origin={parkingOrigin}
@@ -1869,13 +1966,17 @@ export function DrivingApp() {
               loading={parkingLoading}
               selected={selectedParking}
               sort={parkingSort}
+              minimized={parkingMinimized}
+              onExpand={() => setParkingMinimized(false)}
               onSort={setParkingSort}
               onSelect={(lot) => {
                 setSelectedParking(lot);
+                setParkingMinimized(false);
                 focusEvent(lot.location);
               }}
               onNavigate={(lot) => {
                 setParkingOpen(false);
+                setParkingMinimized(false);
                 void applyRoute({
                   id: `parking-${lot.id}`,
                   name: lot.name,
@@ -1884,14 +1985,14 @@ export function DrivingApp() {
                 });
               }}
               onClose={() => {
-                setParkingOpen(false);
-                setSelectedParking(null);
+                setParkingMinimized(true);
               }}
               arrivalPromptEnabled={parkingArrivalEnabled}
               onToggleArrivalPrompt={(enabled) => {
                 setParkingArrivalPromptEnabled(enabled);
               }}
             />
+            </div>
           </div>
         </div>
       ) : null}
@@ -1920,6 +2021,7 @@ export function DrivingApp() {
               parkingArrivalDismissedRef.current = true;
               setParkingSort("distance");
               setParkingOpen(true);
+              setParkingMinimized(false);
               setFavoritesOpen(false);
               setEventListKind(null);
               setSelectedEvent(null);
@@ -2042,15 +2144,6 @@ export function DrivingApp() {
               : "function-drawer function-drawer--closed"
           }
         >
-        <PoiLayerBar
-          visibility={poiLayerVisibility}
-          onToggle={(id) =>
-            setPoiLayerVisibility((current) => ({
-              ...current,
-              [id]: !current[id],
-            }))
-          }
-        />
         <RoadInformationCard
           items={intel}
           origin={origin}
@@ -2063,21 +2156,10 @@ export function DrivingApp() {
           musicOpen={musicMode !== "off"}
           favorites={userFavorites}
           favoritesOpen={favoritesOpen}
-          canFavorite={Boolean(currentPlace)}
           isCurrentFavorite={isCurrentFavorite}
           routeAlert={routeAlert}
           compact
           onHeartClick={handleHeartClick}
-          onAddFavorite={() => {
-            if (currentPlace) addFavorite(currentPlace);
-          }}
-          onCloseFavorites={() => setFavoritesOpen(false)}
-          onSelectFavorite={(hit) => {
-            setFavoritesOpen(false);
-            void applyRoute(hit);
-          }}
-          onRemoveFavorite={removeFavorite}
-          onRenameFavorite={renameFavorite}
           account={googleAccount.account}
           accountBusy={googleAccount.busy}
           accountHint={googleAccount.hint}

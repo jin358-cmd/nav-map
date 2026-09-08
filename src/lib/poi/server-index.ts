@@ -6,6 +6,7 @@ import { gunzipSync } from "node:zlib";
 import { distanceKm } from "@/lib/geo";
 import type { GeocodeResult } from "@/lib/geocoding/types";
 import { buildPoiIndexes, diversifyByBrand, searchIndexedPois } from "@/lib/poi/prefix-index";
+import type { PoiMainLayerId } from "@/lib/poi/main-layers";
 import { rankPois, rankScore } from "@/lib/poi/rank";
 import {
   hydratePoiRecord,
@@ -183,17 +184,20 @@ export function poisInBounds(
   bounds: { west: number; south: number; east: number; north: number },
   origin?: { lat: number; lng: number },
   limit = 80,
+  layers?: PoiMainLayerId[],
 ) {
   const west = Math.min(bounds.west, bounds.east);
   const east = Math.max(bounds.west, bounds.east);
   const south = Math.min(bounds.south, bounds.north);
   const north = Math.max(bounds.south, bounds.north);
+  const wanted = layers?.length ? new Set(layers) : null;
   const rows = MEMORY_INDEX.filter(
     (poi) =>
       poi.longitude >= west &&
       poi.longitude <= east &&
       poi.latitude >= south &&
-      poi.latitude <= north,
+      poi.latitude <= north &&
+      (!wanted || wanted.has(poi.mainCategory)),
   );
   const ranked = origin
     ? rows
@@ -204,7 +208,24 @@ export function poisInBounds(
         .sort((a, b) => a.km - b.km)
         .map((row) => row.poi)
     : rows;
-  return ranked.slice(0, Math.max(8, Math.min(limit, 160)));
+  if (!wanted) {
+    return ranked.slice(0, Math.max(8, Math.min(limit, 160)));
+  }
+  const perLayer = Math.max(
+    40,
+    Math.min(400, Math.ceil(Math.min(limit, 800) / wanted.size)),
+  );
+  const picked: TaiwanPoiRecord[] = [];
+  for (const layer of wanted) {
+    let count = 0;
+    for (const poi of ranked) {
+      if (poi.mainCategory !== layer) continue;
+      picked.push(poi);
+      count += 1;
+      if (count >= perLayer) break;
+    }
+  }
+  return picked;
 }
 
 export function poiIndexStats() {

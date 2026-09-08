@@ -19,6 +19,10 @@ export const DRIVING_PITCH = 58;
  * pitch≈64 約等於視線低於水平 26°，畫面更接近駕駛視角。
  */
 export const NAVIGATION_PITCH = 66;
+/** 直式導航：鏡頭再仰高、更貼近定位圖示。 */
+export const NAVIGATION_PITCH_PORTRAIT = 71;
+export const INTERSECTION_PITCH_PORTRAIT = 68;
+export const DRIVING_ZOOM_PORTRAIT = 17.98;
 export const OVERVIEW_PITCH = 0;
 export const DRIVING_ZOOM = 17.72;
 export const DRIVING_ZOOM_MOBILE = 17.46;

@@ -58,11 +58,17 @@ function spacesBadge(lot: ParkingLot) {
   return `${Math.max(0, lot.carAvailable)}格`;
 }
 
+function parkingNameLine(lot: ParkingLot) {
+  const tag = parkingOwnershipLabel(lot.publicLot);
+  const name = lot.name.replace(/^(公有|民營|公營)\s*/u, "").trim() || lot.name;
+  return `${tag} ${name}`;
+}
+
 function parkingRoad(lot: ParkingLot) {
   return (
-    formatTaiwanStreetName(lot.address) ||
-    formatTaiwanStreetName(lot.name) ||
     formatTaiwanRoadName(lot.address) ||
+    formatTaiwanRoadName(lot.name) ||
+    formatTaiwanStreetName(lot.address) ||
     lot.name
   );
 }
@@ -78,13 +84,14 @@ function yellowLotLine(lot: ParkingLot, sort: ParkingSort) {
   const distance =
     lot.distanceMeters != null ? formatDistance(lot.distanceMeters) : null;
   const road = parkingRoad(lot);
+  const name = parkingNameLine(lot);
   if (sort === "remaining") {
     return [occupancyLabel(lot), distance, road].filter(Boolean).join("・");
   }
   if (sort === "price") {
     return [distance, formatParkingRate(lot), road].filter(Boolean).join("・");
   }
-  return [distance, road].filter(Boolean).join("・") || parkingOwnershipLabel(lot.publicLot);
+  return [distance, name, road].filter(Boolean).join("・");
 }
 
 export function ParkingPanel({
@@ -99,6 +106,8 @@ export function ParkingPanel({
   onSelect,
   onNavigate,
   onClose,
+  minimized = false,
+  onExpand,
   arrivalPromptEnabled = true,
   onToggleArrivalPrompt,
 }: {
@@ -113,12 +122,27 @@ export function ParkingPanel({
   onSelect: (lot: ParkingLot) => void;
   onNavigate: (lot: ParkingLot) => void;
   onClose: () => void;
+  minimized?: boolean;
+  onExpand?: () => void;
   arrivalPromptEnabled?: boolean;
   onToggleArrivalPrompt?: (enabled: boolean) => void;
 }) {
   const ranked = sortParkingLots(lots, sort);
   return (
-    <section className="pointer-events-auto hud-float-panel w-full max-w-xl rounded-2xl p-3 text-white">
+    <section
+      className={cn(
+        "pointer-events-auto hud-float-panel w-full max-w-xl rounded-2xl p-3 text-white",
+        minimized && "cursor-pointer [&_*]:pointer-events-none",
+      )}
+      onClick={
+        minimized
+          ? (event) => {
+              event.stopPropagation();
+              onExpand?.();
+            }
+          : undefined
+      }
+    >
       <div className="mb-2 flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold tracking-wide text-zinc-100">
@@ -159,7 +183,10 @@ export function ParkingPanel({
         <button
           type="button"
           aria-label="關閉"
-          onClick={onClose}
+          onClick={(event) => {
+            event.stopPropagation();
+            onClose();
+          }}
           className="flex h-12 min-w-[4.75rem] shrink-0 items-center justify-center rounded-xl bg-white/12 px-3 text-sm font-semibold text-white hover:bg-white/18 touch-manipulation"
         >
           關閉
@@ -229,6 +256,16 @@ export function ParkingPanel({
                             ? formatDistance(lot.distanceMeters)
                             : "距離未提供"}
                         </span>
+                        <span className="truncate">{parkingRoad(lot)}</span>
+                      </span>
+                    ) : sort === "distance" ? (
+                      <span className="flex flex-col leading-snug">
+                        <span>
+                          {lot.distanceMeters != null
+                            ? formatDistance(lot.distanceMeters)
+                            : "距離未提供"}
+                        </span>
+                        <span className="truncate">{parkingNameLine(lot)}</span>
                         <span className="truncate">{parkingRoad(lot)}</span>
                       </span>
                     ) : (

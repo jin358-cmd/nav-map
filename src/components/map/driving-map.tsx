@@ -14,15 +14,18 @@ import {
   DRIVING_PITCH,
   DRIVING_ZOOM,
   DRIVING_ZOOM_MOBILE,
+  DRIVING_ZOOM_PORTRAIT,
   NAV_VEHICLE_Y,
   NAV_2D_PORTRAIT_VEHICLE_Y,
   NAV_LANDSCAPE_VEHICLE_X,
   NAV_LANDSCAPE_VEHICLE_Y,
   INTERSECTION_PITCH,
+  INTERSECTION_PITCH_PORTRAIT,
   INTERSECTION_ZOOM,
   INTERSECTION_ZOOM_MOBILE,
   MANEUVER_RECOVER_MS,
   NAVIGATION_PITCH,
+  NAVIGATION_PITCH_PORTRAIT,
   OVERHEAD_NAV_ZOOM,
   OVERHEAD_NAV_ZOOM_MOBILE,
   OVERHEAD_TURN_ZOOM,
@@ -292,9 +295,13 @@ function cameraOptions(
   const blend = Math.max(approachBlend, recoverBlend);
   const cruiseZoom =
     mode === "3d"
-      ? compact
-        ? DRIVING_ZOOM_MOBILE
-        : DRIVING_ZOOM
+      ? portrait
+        ? navigating
+          ? DRIVING_ZOOM_PORTRAIT
+          : DRIVING_ZOOM_MOBILE
+        : compact
+          ? DRIVING_ZOOM_MOBILE
+          : DRIVING_ZOOM
       : compact
         ? OVERHEAD_NAV_ZOOM_MOBILE
         : OVERHEAD_NAV_ZOOM;
@@ -309,7 +316,12 @@ function cameraOptions(
           ? OVERHEAD_TURN_ZOOM_MOBILE
           : OVERHEAD_TURN_ZOOM;
   const navZoom = lerp(cruiseZoom, focusZoom, blend);
-  const cruisePitch = navigating ? NAVIGATION_PITCH : DRIVING_PITCH;
+  const cruisePitch = navigating
+    ? portrait
+      ? NAVIGATION_PITCH_PORTRAIT
+      : NAVIGATION_PITCH
+    : DRIVING_PITCH;
+  const focusPitch = portrait ? INTERSECTION_PITCH_PORTRAIT : INTERSECTION_PITCH;
   const towardCue =
     approaching && junctionCue && blend > (portrait2dNav ? 0.18 : 0.35)
       ? blend * (portrait2dNav ? 0.46 : 0.28)
@@ -320,7 +332,7 @@ function cameraOptions(
       lerp(vehicle.lat, junctionCue?.lat ?? vehicle.lat, towardCue),
     ] as [number, number],
     bearing: followOrientation === "heading-up" ? vehicle.heading : 0,
-    pitch: mode === "3d" ? lerp(cruisePitch, INTERSECTION_PITCH, blend) : 0,
+    pitch: mode === "3d" ? lerp(cruisePitch, focusPitch, blend) : 0,
     zoom: navigating || mode === "3d" ? navZoom : OVERHEAD_ZOOM,
     padding: drivingPadding(height, width, mode, navigating, overlay),
     blend,
@@ -1478,19 +1490,29 @@ export function DrivingMap({
     if (!map || !readyRef.current) return;
     if (followVehicleRef.current) return;
     const compact = isCompactViewport(map.getContainer().clientWidth);
+    const portrait =
+      map.getContainer().clientHeight > map.getContainer().clientWidth;
     const center = map.getCenter();
     const zoom =
       cameraMode === "3d"
-        ? compact
-          ? DRIVING_ZOOM_MOBILE
-          : DRIVING_ZOOM
+        ? portrait && navigating
+          ? DRIVING_ZOOM_PORTRAIT
+          : compact
+            ? DRIVING_ZOOM_MOBILE
+            : DRIVING_ZOOM
         : navigating
           ? compact
             ? OVERHEAD_NAV_ZOOM_MOBILE
             : OVERHEAD_NAV_ZOOM
           : OVERHEAD_ZOOM;
     const pitch =
-      cameraMode === "3d" ? (navigating ? NAVIGATION_PITCH : DRIVING_PITCH) : 0;
+      cameraMode === "3d"
+        ? navigating
+          ? portrait
+            ? NAVIGATION_PITCH_PORTRAIT
+            : NAVIGATION_PITCH
+          : DRIVING_PITCH
+        : 0;
     try {
       map.jumpTo({
         center: [center.lng, center.lat],

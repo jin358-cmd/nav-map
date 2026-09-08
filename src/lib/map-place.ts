@@ -1,4 +1,5 @@
 import { poiCategoryLabel } from "@/lib/poi/category-label";
+import type { PoiMainLayerId } from "@/lib/poi/main-layers";
 import type { PoiCategory } from "@/lib/poi/schema";
 import type {
   GeocodeHit,
@@ -39,6 +40,8 @@ export type MapPoiFeature = {
   id: string;
   name: string;
   category: PoiCategory;
+  mainLayer?: PoiMainLayerId;
+  subcategory?: string | null;
   brand: string | null;
   branchName?: string | null;
   address: string;

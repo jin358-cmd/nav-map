@@ -1,37 +1,36 @@
 import type {
-  ExpressionSpecification,
   GeoJSONSource,
   Map as MapLibreMap,
   MapLayerMouseEvent,
 } from "maplibre-gl";
 import type { MapPoiFeature } from "@/lib/map-place";
+import {
+  POI_LAYER_COLORS,
+  POI_MAIN_LAYER_IDS,
+  poiMainLayerFromCategory,
+  type PoiMainLayerId,
+} from "@/lib/poi/main-layers";
 
 export const POI_SOURCE_ID = "navpilot-poi-source";
 export const POI_LAYER_ID = "navpilot-poi-layer";
 export const POI_LABEL_LAYER_ID = "navpilot-poi-label";
 export const POI_HIT_LAYER_ID = "navpilot-poi-hit";
 
-const CATEGORY_COLOR: ExpressionSpecification = [
-  "match",
-  ["get", "category"],
-  "convenience",
-  "#22c55e",
-  "cafe",
-  "#fb7185",
-  "restaurant",
-  "#f97316",
-  "fuel",
-  "#38bdf8",
-  "parking",
-  "#14b8a6",
-  "hospital",
-  "#ef4444",
-  "pharmacy",
-  "#a78bfa",
-  "landmark",
-  "#facc15",
-  "#94a3b8",
-];
+function circleLayerId(id: PoiMainLayerId) {
+  return `${POI_LAYER_ID}-${id}`;
+}
+
+function labelLayerId(id: PoiMainLayerId) {
+  return `${POI_LABEL_LAYER_ID}-${id}`;
+}
+
+function hitLayerId(id: PoiMainLayerId) {
+  return `${POI_HIT_LAYER_ID}-${id}`;
+}
+
+function featureMainLayer(poi: MapPoiFeature): PoiMainLayerId {
+  return poi.mainLayer ?? poiMainLayerFromCategory(poi.category, poi.subcategory);
+}
 
 function collection(pois: MapPoiFeature[]) {
   return {
@@ -43,6 +42,7 @@ function collection(pois: MapPoiFeature[]) {
         id: poi.id,
         name: poi.name,
         category: poi.category,
+        mainLayer: featureMainLayer(poi),
         address: poi.address,
       },
       geometry: {
@@ -51,6 +51,12 @@ function collection(pois: MapPoiFeature[]) {
       },
     })),
   };
+}
+
+function removeLegacyLayers(map: MapLibreMap) {
+  for (const id of [POI_HIT_LAYER_ID, POI_LABEL_LAYER_ID, POI_LAYER_ID]) {
+    if (map.getLayer(id)) map.removeLayer(id);
+  }
 }
 
 export function upsertPoiLayer(map: MapLibreMap, pois: MapPoiFeature[]) {
@@ -62,53 +68,63 @@ export function upsertPoiLayer(map: MapLibreMap, pois: MapPoiFeature[]) {
     map.addSource(POI_SOURCE_ID, { type: "geojson", data });
   }
 
-  if (!map.getLayer(POI_LAYER_ID)) {
-    map.addLayer({
-      id: POI_LAYER_ID,
-      type: "circle",
-      source: POI_SOURCE_ID,
-      minzoom: 13.4,
-      paint: {
-        "circle-radius": ["interpolate", ["linear"], ["zoom"], 14, 4.2, 17, 6.4],
-        "circle-color": CATEGORY_COLOR,
-        "circle-stroke-color": "#f8fafc",
-        "circle-stroke-width": 1.2,
-        "circle-opacity": 0.92,
-      },
-    });
-  }
-  if (!map.getLayer(POI_LABEL_LAYER_ID)) {
-    map.addLayer({
-      id: POI_LABEL_LAYER_ID,
-      type: "symbol",
-      source: POI_SOURCE_ID,
-      minzoom: 15.6,
-      layout: {
-        "text-field": ["get", "name"],
-        "text-size": 11,
-        "text-offset": [0, 1.05],
-        "text-anchor": "top",
-        "text-max-width": 8,
-        "text-optional": true,
-      },
-      paint: {
-        "text-color": "#f8fafc",
-        "text-halo-color": "rgba(15,23,42,0.78)",
-        "text-halo-width": 1.1,
-      },
-    });
-  }
-  if (!map.getLayer(POI_HIT_LAYER_ID)) {
-    map.addLayer({
-      id: POI_HIT_LAYER_ID,
-      type: "circle",
-      source: POI_SOURCE_ID,
-      minzoom: 13.4,
-      paint: {
-        "circle-radius": 18,
-        "circle-opacity": 0,
-      },
-    });
+  removeLegacyLayers(map);
+
+  for (const layer of POI_MAIN_LAYER_IDS) {
+    const circleId = circleLayerId(layer);
+    const labelId = labelLayerId(layer);
+    const hitId = hitLayerId(layer);
+    if (!map.getLayer(circleId)) {
+      map.addLayer({
+        id: circleId,
+        type: "circle",
+        source: POI_SOURCE_ID,
+        minzoom: 11.6,
+        filter: ["==", ["get", "mainLayer"], layer],
+        paint: {
+          "circle-radius": ["interpolate", ["linear"], ["zoom"], 12, 5.4, 16.5, 8.8],
+          "circle-color": POI_LAYER_COLORS[layer],
+          "circle-stroke-color": "#f8fafc",
+          "circle-stroke-width": 1.35,
+          "circle-opacity": 0.96,
+        },
+      });
+    }
+    if (!map.getLayer(labelId)) {
+      map.addLayer({
+        id: labelId,
+        type: "symbol",
+        source: POI_SOURCE_ID,
+        minzoom: 15.2,
+        filter: ["==", ["get", "mainLayer"], layer],
+        layout: {
+          "text-field": ["get", "name"],
+          "text-size": 11,
+          "text-offset": [0, 1.05],
+          "text-anchor": "top",
+          "text-max-width": 8,
+          "text-optional": true,
+        },
+        paint: {
+          "text-color": "#f8fafc",
+          "text-halo-color": "rgba(15,23,42,0.78)",
+          "text-halo-width": 1.1,
+        },
+      });
+    }
+    if (!map.getLayer(hitId)) {
+      map.addLayer({
+        id: hitId,
+        type: "circle",
+        source: POI_SOURCE_ID,
+        minzoom: 11.6,
+        filter: ["==", ["get", "mainLayer"], layer],
+        paint: {
+          "circle-radius": 18,
+          "circle-opacity": 0,
+        },
+      });
+    }
   }
 }
 
@@ -124,12 +140,14 @@ export function bindPoiLayerClicks(
     const id = event.features?.[0]?.properties?.id;
     if (typeof id === "string") onSelect(id);
   };
-  map.on("click", POI_LAYER_ID, handle);
-  map.on("click", POI_HIT_LAYER_ID, handle);
-  map.on("mouseenter", POI_HIT_LAYER_ID, () => {
-    map.getCanvas().style.cursor = "pointer";
-  });
-  map.on("mouseleave", POI_HIT_LAYER_ID, () => {
-    map.getCanvas().style.cursor = "";
-  });
+  for (const layer of POI_MAIN_LAYER_IDS) {
+    map.on("click", circleLayerId(layer), handle);
+    map.on("click", hitLayerId(layer), handle);
+    map.on("mouseenter", hitLayerId(layer), () => {
+      map.getCanvas().style.cursor = "pointer";
+    });
+    map.on("mouseleave", hitLayerId(layer), () => {
+      map.getCanvas().style.cursor = "";
+    });
+  }
 }

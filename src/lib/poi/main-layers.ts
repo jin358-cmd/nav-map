@@ -26,14 +26,32 @@ export const POI_MAIN_LAYERS: Array<{
 export type PoiLayerVisibility = Record<PoiMainLayerId, boolean>;
 
 export const DEFAULT_POI_LAYER_VISIBILITY: PoiLayerVisibility = {
-  food: true,
-  clothing: true,
-  housing: true,
-  transport: true,
-  education: true,
-  leisure: true,
-  medical: true,
+  food: false,
+  clothing: false,
+  housing: false,
+  transport: false,
+  education: false,
+  leisure: false,
+  medical: false,
 };
+
+export const POI_LAYER_COLORS: Record<PoiMainLayerId, string> = {
+  food: "#f97316",
+  clothing: "#fb7185",
+  housing: "#f59e0b",
+  transport: "#22d3ee",
+  education: "#a78bfa",
+  leisure: "#facc15",
+  medical: "#ef4444",
+};
+
+export function activePoiLayerIds(visibility: PoiLayerVisibility): PoiMainLayerId[] {
+  return POI_MAIN_LAYER_IDS.filter((id) => visibility[id]);
+}
+
+export function anyPoiLayerOn(visibility: PoiLayerVisibility) {
+  return POI_MAIN_LAYER_IDS.some((id) => visibility[id]);
+}
 
 const CATEGORY_TO_MAIN: Record<string, PoiMainLayerId> = {
   restaurant: "food",

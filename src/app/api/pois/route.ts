@@ -1,9 +1,20 @@
+import { POI_MAIN_LAYER_IDS, type PoiMainLayerId } from "@/lib/poi/main-layers";
 import { poisInBounds } from "@/lib/poi/server-index";
 
 function readNumber(value: string | null) {
   if (!value) return undefined;
   const number = Number(value);
   return Number.isFinite(number) ? number : undefined;
+}
+
+function readLayers(value: string | null): PoiMainLayerId[] | undefined {
+  if (!value) return undefined;
+  const wanted = new Set(POI_MAIN_LAYER_IDS);
+  const layers = value
+    .split(",")
+    .map((item) => item.trim())
+    .filter((item): item is PoiMainLayerId => wanted.has(item as PoiMainLayerId));
+  return layers.length ? layers : undefined;
 }
 
 export async function GET(request: Request) {
@@ -15,6 +26,7 @@ export async function GET(request: Request) {
   const lng = readNumber(url.searchParams.get("lng"));
   const lat = readNumber(url.searchParams.get("lat"));
   const limit = readNumber(url.searchParams.get("limit")) ?? 80;
+  const layers = readLayers(url.searchParams.get("layers"));
 
   if (
     west === undefined ||
@@ -31,13 +43,15 @@ export async function GET(request: Request) {
 
   const origin =
     lng !== undefined && lat !== undefined ? { lng, lat } : undefined;
-  const rows = poisInBounds({ west, south, east, north }, origin, limit);
+  const rows = poisInBounds({ west, south, east, north }, origin, limit, layers);
   return Response.json(
     {
       pois: rows.map((poi) => ({
         id: poi.id,
         name: poi.name,
         category: poi.category,
+        mainLayer: poi.mainCategory,
+        subcategory: poi.subcategory,
         brand: poi.brand,
         branchName: poi.branchName,
         address: poi.address,

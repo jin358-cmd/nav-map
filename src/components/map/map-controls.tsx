@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { LayoutGrid, LocateFixed } from "lucide-react";
+import { Layers, LayoutGrid, LocateFixed } from "lucide-react";
 import { MapStyleMenu } from "@/components/overlay/map-style-menu";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,12 +26,14 @@ type MapControlsProps = {
   pendingMapDisplayMode?: MapDisplayMode | null;
   styleMenuOpen: boolean;
   toolsDrawerOpen?: boolean;
+  poiMenuOpen?: boolean;
   navigating?: boolean;
   onLocate: () => void;
   onToggleCamera: () => void;
   onMapDisplayMode: (mode: MapDisplayMode) => void;
   onToggleStyleMenu: () => void;
   onToggleToolsDrawer?: () => void;
+  onTogglePoiMenu?: () => void;
 };
 
 export function MapControls({
@@ -43,11 +45,13 @@ export function MapControls({
   pendingMapDisplayMode = null,
   styleMenuOpen,
   toolsDrawerOpen = false,
+  poiMenuOpen = false,
   onLocate,
   onToggleCamera,
   onMapDisplayMode,
   onToggleStyleMenu,
   onToggleToolsDrawer,
+  onTogglePoiMenu,
 }: MapControlsProps) {
   const locating = gpsStatus === "locating";
   const locateLabel = !followVehicle
@@ -59,6 +63,18 @@ export function MapControls({
 
   return (
     <div className="pointer-events-auto flex flex-col items-end gap-2.5">
+      {onTogglePoiMenu ? (
+        <ControlButton
+          label={poiMenuOpen ? "收合生活圖層" : "開啟生活圖層"}
+          onClick={onTogglePoiMenu}
+          active={poiMenuOpen}
+          expanded={poiMenuOpen}
+          controls="navpilot-poi-layers"
+          tone={tone}
+        >
+          <Layers className="size-6" strokeWidth={2.5} />
+        </ControlButton>
+      ) : null}
       <ControlButton
         label={locateLabel}
         onClick={onLocate}
