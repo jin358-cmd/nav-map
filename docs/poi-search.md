@@ -83,7 +83,7 @@ Exact → Prefix → Alias → Brand → Strong fuzzy → Nearby → Category �
 
 ## O. Commit hash
 
-`569badd` 之後以 `feat/phase-5-2-navigation-experience` 最新 commit 為準。
+`feat/phase-5-2-navigation-experience` 最新 commit（此次 Suggest 加速之後）。
 
 ## P. Vercel Preview URL
 
