@@ -287,6 +287,7 @@ function cameraOptions(
   junctionCue: LngLat | null = null,
   followOrientation: FollowOrientation = "heading-up",
   recoverBlend = 0,
+  compassHeading: number | null = null,
 ) {
   const height = map.getContainer().clientHeight;
   const width = map.getContainer().clientWidth;
@@ -333,7 +334,10 @@ function cameraOptions(
       lerp(vehicle.lng, junctionCue?.lng ?? vehicle.lng, towardCue),
       lerp(vehicle.lat, junctionCue?.lat ?? vehicle.lat, towardCue),
     ] as [number, number],
-    bearing: followOrientation === "heading-up" ? vehicle.heading : 0,
+    bearing:
+      followOrientation === "heading-up"
+        ? vehicle.heading
+        : compassHeading ?? 0,
     pitch: mode === "3d" ? lerp(cruisePitch, focusPitch, blend) : 0,
     zoom: navigating || mode === "3d" ? navZoom : OVERHEAD_ZOOM,
     padding: drivingPadding(height, width, mode, navigating, overlay),
@@ -546,6 +550,7 @@ export function DrivingMap({
   const readyRef = useRef(false);
   const lastFrameRef = useRef(0);
   const markerRotationRef = useRef(vehicle.heading);
+  const cameraCompassRef = useRef<number | null>(null);
   const lastViewportEmitRef = useRef(0);
   const lastEmittedZoomRef = useRef(0);
   const rafRef = useRef(0);
@@ -914,6 +919,16 @@ export function DrivingMap({
           recoverUntilRef.current,
           recoverFromRef.current,
         );
+        const northUp = !headingUp;
+        if (northUp) {
+          const compassRaw = deviceCompassRef.current;
+          cameraCompassRef.current =
+            compassRaw == null
+              ? cameraCompassRef.current
+              : cameraCompassRef.current == null
+                ? compassRaw
+                : stepConeHeading(cameraCompassRef.current, compassRaw, dt);
+        }
         const wanted = cameraOptions(
           mapNow,
           displayPose,
@@ -925,6 +940,7 @@ export function DrivingMap({
           junctionCueRef.current,
           followOrientationRef.current,
           recoverBlend,
+          northUp ? cameraCompassRef.current : null,
         );
         lastBlendRef.current = wanted.blend;
         const center = mapNow.getCenter();
@@ -935,11 +951,17 @@ export function DrivingMap({
         const posT = damp(dt, followTau.posTau);
         const zoomT = pinchingRef.current ? 0 : damp(dt, followTau.zoomTau);
         const currentBearing = mapNow.getBearing();
+        const bearingTau = northUp ? 0.055 : followTau.bearingTau;
+        const bearingHoldDeg = northUp ? 0.5 : followTau.bearingHoldDeg;
         const bearingGap = headingDelta(currentBearing, wanted.bearing);
         const nextBearing =
-          bearingGap < followTau.bearingHoldDeg
+          bearingGap < bearingHoldDeg
             ? currentBearing
-            : lerpAngle(currentBearing, wanted.bearing, damp(dt, followTau.bearingTau));
+            : lerpAngle(
+                currentBearing,
+                wanted.bearing,
+                damp(dt, bearingTau),
+              );
         try {
           mapNow.jumpTo({
             center: [
@@ -1351,6 +1373,10 @@ export function DrivingMap({
           distanceToNextRef.current,
           junctionCueRef.current,
           followOrientationRef.current,
+          0,
+          followOrientationRef.current === "north-up"
+            ? cameraCompassRef.current
+            : null,
         );
         map.jumpTo({
           center: wanted.center,

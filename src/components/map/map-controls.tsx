@@ -64,8 +64,8 @@ export function MapControls({
   const locateLabel = !followVehicle
     ? "回到定位並車頭向上"
     : northUp
-      ? "目前北方朝上，點擊切換車頭向上"
-      : "目前車頭向上，點擊切換北方朝上";
+      ? "目前北方朝上，地圖隨設備羅盤旋轉。點擊切換車頭向上"
+      : "目前車頭向上，點擊切換北方朝上（羅盤旋轉）";
   const tone = mapControlTone(pendingMapDisplayMode ?? mapDisplayMode);
 
   return (

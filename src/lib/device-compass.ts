@@ -12,6 +12,19 @@ export function readDeviceCompassHeading(event: DeviceOrientationEvent): number 
   return null;
 }
 
+export async function requestDeviceCompassPermission() {
+  if (typeof window === "undefined") return;
+  const DOE = window.DeviceOrientationEvent as unknown as {
+    requestPermission?: () => Promise<string>;
+  };
+  if (typeof DOE.requestPermission !== "function") return;
+  try {
+    await DOE.requestPermission();
+  } catch {
+    /* permission prompt is best-effort */
+  }
+}
+
 export function subscribeDeviceCompass(onHeading: (heading: number) => void): () => void {
   if (typeof window === "undefined") return () => undefined;
 
@@ -26,20 +39,8 @@ export function subscribeDeviceCompass(onHeading: (heading: number) => void): ()
     window.addEventListener("deviceorientation", onOrient, true);
   };
 
-  const DOE = window.DeviceOrientationEvent as unknown as {
-    requestPermission?: () => Promise<string>;
-  };
-  if (typeof DOE.requestPermission === "function") {
-    void DOE.requestPermission()
-      .then((state) => {
-        if (state === "granted") listen();
-      })
-      .catch(() => {
-        listen();
-      });
-  } else {
-    listen();
-  }
+  listen();
+  void requestDeviceCompassPermission();
 
   return () => {
     window.removeEventListener("deviceorientationabsolute", onOrient, true);

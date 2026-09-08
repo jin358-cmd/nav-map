@@ -107,6 +107,7 @@ import {
   YOUTUBE_PLAYLISTS,
 } from "@/lib/constants";
 import { distanceKm } from "@/lib/geo";
+import { requestDeviceCompassPermission } from "@/lib/device-compass";
 import { nextIntersectionStep } from "@/lib/osrm-maneuver";
 import {
   createRouteProgressModel,
@@ -1033,16 +1034,21 @@ export function DrivingApp() {
   }, []);
 
   const locate = useCallback(async () => {
+    void requestDeviceCompassPermission();
+    const wasFollowing = followVehicle;
+    if (wasFollowing) {
+      setFollowOrientation((current) =>
+        current === "heading-up" ? "north-up" : "heading-up",
+      );
+      setFollowVehicle(true);
+      setUserAdjustedMap(false);
+      panIntentRef.current = false;
+    }
     setGpsStatus("locating");
     try {
-      const pose = await readDevicePosition();
-      if (!followVehicle) {
+      await readDevicePosition();
+      if (!wasFollowing) {
         setFollowOrientation("heading-up");
-        setFollowVehicle(true);
-      } else if (pose.source === "gps") {
-        setFollowOrientation((current) =>
-          current === "heading-up" ? "north-up" : "heading-up",
-        );
         setFollowVehicle(true);
       }
       setUserAdjustedMap(false);

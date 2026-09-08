@@ -8,6 +8,7 @@ import {
   turnGuidanceLine,
   turnMarqueeArrows,
 } from "@/lib/upcoming-route";
+import type { CameraMode } from "@/types/domain";
 
 export const GUIDANCE_SOURCE_ID = "navpilot-turn-arrows";
 export const GUIDANCE_LAYER_ID = "navpilot-turn-arrows-layer";
