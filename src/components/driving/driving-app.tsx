@@ -23,6 +23,7 @@ import {
 } from "@/components/overlay/event-detail-card";
 import { EventListPanel } from "@/components/overlay/event-list-panel";
 import { ParkingArrivalCard } from "@/components/overlay/parking-arrival-card";
+import { PoiLayerBar } from "@/components/overlay/poi-layer-bar";
 import { ParkingPanel } from "@/components/overlay/parking-panel";
 import { PlaceInfoCard } from "@/components/overlay/place-info-card";
 import { NextIntersectionHud } from "@/components/overlay/navigation-banner";
@@ -48,10 +49,15 @@ import {
 import { deriveDisasterIntel } from "@/lib/disaster-intel";
 import { mapVisibleDisasters } from "@/lib/disaster-query";
 import { isDemoDataEnabled } from "@/lib/runtime-demo";
-import { segmentAnchor } from "@/lib/traffic-query";
 import { rememberAddress } from "@/lib/address-history";
+import { segmentAnchor } from "@/lib/traffic-query";
+import {
+  DEFAULT_POI_LAYER_VISIBILITY,
+  isPoiLayerVisible,
+  type PoiLayerVisibility,
+} from "@/lib/poi/main-layers";
 import { isDemoLandmarkPreset } from "@/data/landmarks";
-import { formatTaiwanDisplayAddress } from "@/lib/geocoding/format-taiwan-display-address";
+import { formatTaiwanRoadName } from "@/lib/geocoding/format-taiwan-display-address";
 import {
   addFavorite,
   getFavoritesSnapshot,
@@ -73,7 +79,6 @@ import {
   customPlaceFromLngLat,
   geocodeHitToPlace,
   mapPlaceToHit,
-  parkingLotToPlace,
   poiFeatureToPlace,
   type MapPlace,
 } from "@/lib/map-place";
@@ -84,6 +89,7 @@ import {
 } from "@/lib/parking/constants";
 import {
   parkingArrivalPromptEnabled,
+  getServerParkingArrivalSnapshot,
   setParkingArrivalPromptEnabled,
   subscribeParkingArrivalPrompt,
 } from "@/lib/parking-arrival-setting";
@@ -176,6 +182,12 @@ const DEFAULT_LAYER_VISIBILITY: LayerKindVisibility = {
   disaster: true,
 };
 
+const SOFT_RESTART_COOLDOWN_MS = 4200;
+const SOFT_RESTART_ATTEMPT_GAP_MS = 900;
+const PARKING_REMINDER_METERS = 800;
+const PARKING_REMINDER_MIN_METERS = 40;
+const PARKING_REMINDER_SHRINK_MS = 15_000;
+
 function MapChunkError() {
   return (
     <div className="absolute inset-0 bg-[#0b0d11]">
@@ -257,18 +269,24 @@ export function DrivingApp() {
   const [layerVisibility, setLayerVisibility] = useState<LayerKindVisibility>(
     DEFAULT_LAYER_VISIBILITY,
   );
+  const [poiLayerVisibility, setPoiLayerVisibility] =
+    useState<PoiLayerVisibility>(DEFAULT_POI_LAYER_VISIBILITY);
   const [focusTarget, setFocusTarget] = useState<MapFocusTarget | null>(null);
   const [parkingOpen, setParkingOpen] = useState(false);
   const [parkingSort, setParkingSort] = useState<ParkingSort>("distance");
   const [selectedParking, setSelectedParking] = useState<ParkingLot | null>(null);
   const [selectedMapPlace, setSelectedMapPlace] = useState<MapPlace | null>(null);
   const [parkingArrivalOpen, setParkingArrivalOpen] = useState(false);
+  const [parkingArrivalMinimized, setParkingArrivalMinimized] = useState(false);
+  const [arrivalNotice, setArrivalNotice] = useState<string | null>(null);
   const parkingArrivalEnabled = useSyncExternalStore(
     subscribeParkingArrivalPrompt,
     parkingArrivalPromptEnabled,
-    () => true,
+    getServerParkingArrivalSnapshot,
   );
   const parkingArrivalDismissedRef = useRef(false);
+  const arrivalFiredRef = useRef(false);
+  const restartLockRef = useRef(false);
   const [route, setRoute] = useState<[number, number][]>([]);
   const [maneuver, setManeuver] = useState<NavigationManeuver | null>(null);
   const [destination, setDestination] = useState<RouteDestination | null>(null);
@@ -519,6 +537,13 @@ export function DrivingApp() {
     origin: searchOrigin,
     enabled: true,
   });
+  const visibleMapPois = useMemo(
+    () =>
+      mapPois.filter((poi) =>
+        isPoiLayerVisible(poiLayerVisibility, poi.category),
+      ),
+    [mapPois, poiLayerVisibility],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -833,37 +858,18 @@ export function DrivingApp() {
 
   const handleLongPress = useCallback(
     async (location: { lng: number; lat: number }) => {
-      const hit = await reversePlace(location);
-      await applyRoute(hit);
-    },
-    [applyRoute],
-  );
-
-  const handlePoiSelect = useCallback(
-    (poiId: string) => {
-      const feature = mapPois.find((item) => item.id === poiId);
-      if (!feature) return;
+      const saved = findSavedCustomPlace(location);
+      const place = customPlaceFromLngLat(location);
+      if (saved) {
+        place.id = saved.id;
+        place.name = saved.displayName;
+        place.address = saved.originalAddress || place.address;
+      }
       setSelectedCctv(null);
       setSelectedEvent(null);
       setSelectedParking(null);
-      setSelectedMapPlace(poiFeatureToPlace(feature, searchOrigin));
-    },
-    [mapPois, searchOrigin],
-  );
-
-  const handleEmptyMapClick = useCallback((location: { lng: number; lat: number }) => {
-    const saved = findSavedCustomPlace(location);
-    const place = customPlaceFromLngLat(location);
-    if (saved) {
-      place.id = saved.id;
-      place.name = saved.displayName;
-      place.address = saved.originalAddress || place.address;
-    }
-    setSelectedCctv(null);
-    setSelectedEvent(null);
-    setSelectedParking(null);
-    setSelectedMapPlace(place);
-    void reversePlace(location).then((hit) => {
+      setSelectedMapPlace(place);
+      const hit = await reversePlace(location);
       setSelectedMapPlace((current) => {
         if (current?.id !== place.id) return current;
         const named = findSavedCustomPlace(location);
@@ -877,8 +883,39 @@ export function DrivingApp() {
           address: hit.address || current.address,
         };
       });
-    });
-  }, []);
+    },
+    [],
+  );
+
+  const shrinkFunctionPanels = useCallback(() => {
+    setToolsDrawerOpen(false);
+    setParkingOpen(false);
+    setSelectedParking(null);
+    setFavoritesOpen(false);
+    setEventListKind(null);
+    setSelectedEvent(null);
+    setSelectedCctv(null);
+    setMusicMode("off");
+    setStyleMenuOpen(false);
+    setSelectedMapPlace(null);
+    if (parkingArrivalOpen) setParkingArrivalMinimized(true);
+  }, [parkingArrivalOpen]);
+
+  const handleEmptyMapClick = useCallback(() => {
+    shrinkFunctionPanels();
+  }, [shrinkFunctionPanels]);
+
+  const handlePoiSelect = useCallback(
+    (poiId: string) => {
+      const feature = mapPois.find((item) => item.id === poiId);
+      if (!feature) return;
+      setSelectedCctv(null);
+      setSelectedEvent(null);
+      setSelectedParking(null);
+      setSelectedMapPlace(poiFeatureToPlace(feature, searchOrigin));
+    },
+    [mapPois, searchOrigin],
+  );
 
   const handleToggleParking = useCallback(() => {
     setParkingOpen((open) => {
@@ -995,8 +1032,11 @@ export function DrivingApp() {
     displayVehicleLiveRef.current = snapped;
     setDisplayVehicle(snapped);
     setNavigating(true);
+    arrivalFiredRef.current = false;
     parkingArrivalDismissedRef.current = false;
     setParkingArrivalOpen(false);
+    setParkingArrivalMinimized(false);
+    setArrivalNotice(null);
     setToolsDrawerOpen(false);
     setCameraMode("3d");
     setFollowVehicle(true);
@@ -1009,6 +1049,10 @@ export function DrivingApp() {
 
   const exitNavigation = useCallback(() => {
     rerouteAbortRef.current?.abort();
+    restartLockRef.current = false;
+    reroutingRef.current = false;
+    setRerouting(false);
+    setReroutePending(false);
     setNavigating(false);
     dismissedRouteAlertIdRef.current = null;
     setToolsDrawerOpen(false);
@@ -1018,7 +1062,32 @@ export function DrivingApp() {
     setDisplayVehicle(null);
     setFollowVehicle(false);
     setFitRouteKey((value) => value + 1);
+    setParkingArrivalOpen(false);
+    setParkingArrivalMinimized(false);
   }, []);
+
+  const completeArrival = useCallback(() => {
+    if (arrivalFiredRef.current) return;
+    arrivalFiredRef.current = true;
+    parkingArrivalDismissedRef.current = true;
+    setArrivalNotice("已抵達目的地");
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance("已抵達目的地");
+      utterance.lang = "zh-TW";
+      utterance.rate = 1.05;
+      window.speechSynthesis.speak(utterance);
+    }
+    exitNavigation();
+    setRoute([]);
+    setManeuver(null);
+    setRouteSteps([]);
+    setRouteDurationSeconds(null);
+    setRouteDistanceMeters(null);
+    setDestination(null);
+    setRouteError(null);
+    window.setTimeout(() => setArrivalNotice(null), 3200);
+  }, [exitNavigation]);
 
   const refreshIntel = useCallback(() => {
     setRefreshNonce((value) => value + 1);
@@ -1036,21 +1105,38 @@ export function DrivingApp() {
 
   const rerouteFromHere = useCallback(async () => {
     const dest = destinationRef.current;
-    const here = vehicleRef.current;
+    const raw = vehicleLiveRef.current ?? vehicleRef.current;
+    const snapped = displayVehicleLiveRef.current;
+    const here = {
+      lng: raw.lng,
+      lat: raw.lat,
+    };
     if (!dest) return;
+    if (arrivalFiredRef.current) return;
+    const tracker = navigationTrackerRef.current;
+    if (tracker?.arrived) {
+      completeArrival();
+      return;
+    }
     const now = Date.now();
-    if (reroutingRef.current && now - lastRerouteAtRef.current < 600) return;
-    if (now - lastRerouteSuccessAtRef.current < 1800) return;
-    if (now - lastRerouteAtRef.current < 600) return;
+    if (restartLockRef.current) return;
+    if (now - lastRerouteSuccessAtRef.current < SOFT_RESTART_COOLDOWN_MS) return;
+    if (now - lastRerouteAtRef.current < SOFT_RESTART_ATTEMPT_GAP_MS) return;
     rerouteAbortRef.current?.abort();
     const controller = new AbortController();
     rerouteAbortRef.current = controller;
     const generation = rerouteGenerationRef.current + 1;
     rerouteGenerationRef.current = generation;
+    restartLockRef.current = true;
     reroutingRef.current = true;
     lastRerouteAtRef.current = now;
     setRerouting(true);
     setReroutePending(false);
+    setNavigating(false);
+    navigationTrackerRef.current = null;
+    setNavigationProgress(null);
+    setManeuver(null);
+    setRouteDurationSeconds(null);
     const detectMs = lastOffRouteAtRef.current
       ? now - lastOffRouteAtRef.current
       : null;
@@ -1063,9 +1149,13 @@ export function DrivingApp() {
         setReroutePending(true);
       }
     }, 2500);
+    const origin = {
+      lng: snapped?.lng ?? here.lng,
+      lat: snapped?.lat ?? here.lat,
+    };
     const requestOnce = () =>
       planDrivingRoute(
-        { lng: here.lng, lat: here.lat },
+        origin,
         {
           id: "reroute",
           name: dest.label,
@@ -1087,15 +1177,39 @@ export function DrivingApp() {
       const responseMs = performance.now() - requestStarted;
       if (generation !== rerouteGenerationRef.current) return;
       const parseStarted = performance.now();
+      const steps = plan.steps ?? [];
+      const model = createRouteProgressModel(plan.coordinates, steps);
       setRoute(plan.coordinates);
       setDestination(plan.destination);
       setManeuver(plan.maneuver);
-      setRouteSteps(plan.steps ?? []);
+      setRouteSteps(steps);
       setRouteEpoch((value) => value + 1);
       setRouteDurationSeconds(plan.durationSeconds);
       setRouteDistanceMeters(plan.distanceMeters);
-      navigationTrackerRef.current = null;
-      setNavigationProgress(null);
+      const pose = vehicleLiveRef.current ?? vehicleRef.current;
+      const next = model
+        ? updateNavigationProgress({
+            model,
+            steps,
+            vehicle: pose,
+            previous: null,
+          })
+        : null;
+      navigationTrackerRef.current = next;
+      setNavigationProgress(next);
+      const snappedPose = model
+        ? snapVehicleToRoute({
+            raw: pose,
+            model,
+            previousRouteMeters: next?.routeMeters,
+          })
+        : null;
+      displayVehicleLiveRef.current = snappedPose;
+      setDisplayVehicle(snappedPose);
+      setNavigating(true);
+      setFollowVehicle(true);
+      setUserAdjustedMap(false);
+      panIntentRef.current = false;
       lastRerouteSuccessAtRef.current = Date.now();
       const parseMs = performance.now() - parseStarted;
       const totalMs = performance.now() - requestStarted;
@@ -1121,18 +1235,31 @@ export function DrivingApp() {
     } finally {
       window.clearTimeout(staleTimer);
       if (generation === rerouteGenerationRef.current) {
+        restartLockRef.current = false;
         reroutingRef.current = false;
         setRerouting(false);
         setReroutePending(false);
       }
     }
-  }, [travelMode]);
+  }, [completeArrival, travelMode]);
+
+  useEffect(() => {
+    if (navigating && navigationProgress?.arrived) {
+      completeArrival();
+    }
+  }, [completeArrival, navigating, navigationProgress?.arrived]);
 
   useEffect(() => {
     if (!navigating || !navigationProgress?.offRoute) return;
+    if (navigationProgress.arrived || arrivalFiredRef.current) return;
     if (!lastOffRouteAtRef.current) lastOffRouteAtRef.current = Date.now();
     void rerouteFromHere();
-  }, [navigating, navigationProgress?.offRoute, rerouteFromHere]);
+  }, [
+    navigating,
+    navigationProgress?.arrived,
+    navigationProgress?.offRoute,
+    rerouteFromHere,
+  ]);
 
   useEffect(() => {
     if (!navigationProgress?.offRoute) lastOffRouteAtRef.current = 0;
@@ -1147,11 +1274,18 @@ export function DrivingApp() {
     if (!navigating || !parkingArrivalEnabled) return;
     if (parkingArrivalDismissedRef.current) return;
     if (remainingToDestination == null) return;
-    if (remainingToDestination > 1000 || remainingToDestination < 40) return;
+    if (
+      remainingToDestination > PARKING_REMINDER_METERS + 20 ||
+      remainingToDestination < PARKING_REMINDER_MIN_METERS
+    ) {
+      return;
+    }
+    if (remainingToDestination > PARKING_REMINDER_METERS) return;
     parkingArrivalDismissedRef.current = true;
-    const text = "是否搜尋目的地附近停車場？";
+    const text = "即將抵達目的地，需要幫您尋找附近停車場嗎？";
     const timer = window.setTimeout(() => {
       setParkingArrivalOpen(true);
+      setParkingArrivalMinimized(false);
       if (window.speechSynthesis && !window.speechSynthesis.speaking) {
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = "zh-TW";
@@ -1161,6 +1295,14 @@ export function DrivingApp() {
     }, 0);
     return () => window.clearTimeout(timer);
   }, [navigating, parkingArrivalEnabled, remainingToDestination]);
+
+  useEffect(() => {
+    if (!parkingArrivalOpen || parkingArrivalMinimized) return;
+    const timer = window.setTimeout(() => {
+      setParkingArrivalMinimized(true);
+    }, PARKING_REMINDER_SHRINK_MS);
+    return () => window.clearTimeout(timer);
+  }, [parkingArrivalMinimized, parkingArrivalOpen]);
 
   const routeAlert = useMemo(
     () =>
@@ -1357,7 +1499,7 @@ export function DrivingApp() {
         parkingLots={parkingLots}
         selectedParkingId={selectedParking?.id ?? null}
         parkingVisible={parkingOpen}
-        mapPois={mapPois}
+        mapPois={visibleMapPois}
         selectedPoiId={selectedMapPlace?.kind === "poi" ? selectedMapPlace.id : null}
         onParkingSelect={(id) => {
           const found = parkingLots.find((lot) => lot.id === id) ?? null;
@@ -1436,7 +1578,7 @@ export function DrivingApp() {
           setPickAddress(null);
           void reversePlace(location).then((hit) => {
             setPickAddress(
-              formatTaiwanDisplayAddress(hit.address || hit.name || "") || null,
+              formatTaiwanRoadName(hit.address || hit.name || "") || null,
             );
           });
         }}
@@ -1709,11 +1851,13 @@ export function DrivingApp() {
       {parkingOpen ? (
         <div
           className={
-            landscape
-              ? "pointer-events-none absolute inset-0 z-[60] flex items-center justify-center px-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))]"
-              : drawerOpen
-                ? "pointer-events-none absolute inset-0 z-[60] flex items-end justify-center px-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] pb-[max(14.75rem,calc(env(safe-area-inset-bottom)+13.5rem))]"
-                : "pointer-events-none absolute inset-0 z-[60] flex items-end justify-center px-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] pb-[max(1.25rem,calc(env(safe-area-inset-bottom)+0.75rem))]"
+            navigating
+              ? "pointer-events-none absolute inset-x-0 top-[max(7.35rem,calc(env(safe-area-inset-top)+6.7rem))] z-[60] flex justify-center px-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))]"
+              : landscape
+                ? "pointer-events-none absolute inset-0 z-[60] flex items-start justify-center pt-[18vh] px-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))]"
+                : drawerOpen
+                  ? "pointer-events-none absolute inset-0 z-[60] flex items-end justify-center px-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] pb-[max(14.75rem,calc(env(safe-area-inset-bottom)+13.5rem))]"
+                  : "pointer-events-none absolute inset-0 z-[60] flex items-end justify-center px-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] pb-[max(1.25rem,calc(env(safe-area-inset-bottom)+0.75rem))]"
           }
         >
           <div className="pointer-events-auto w-full max-w-xl">
@@ -1735,7 +1879,7 @@ export function DrivingApp() {
                 void applyRoute({
                   id: `parking-${lot.id}`,
                   name: lot.name,
-                  address: formatTaiwanDisplayAddress(lot.address || lot.name),
+                  address: formatTaiwanRoadName(lot.address || lot.name),
                   location: lot.location,
                 });
               }}
@@ -1752,11 +1896,27 @@ export function DrivingApp() {
         </div>
       ) : null}
 
+      {arrivalNotice ? (
+        <div className="pointer-events-none absolute left-1/2 top-[max(1.1rem,calc(env(safe-area-inset-top)+0.6rem))] z-[70] -translate-x-1/2 rounded-full border border-emerald-300/35 bg-black/55 px-4 py-2 text-sm font-semibold text-emerald-100 shadow-lg backdrop-blur-md">
+          {arrivalNotice}
+        </div>
+      ) : null}
+
       <footer className="hud-anchor-interactive absolute inset-x-0 bottom-0 z-50 flex max-w-[100vw] flex-col items-center gap-1.5 overflow-visible px-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))] pb-[max(0.45rem,env(safe-area-inset-bottom))] sm:p-4 sm:pt-0">
+        <div
+          className={
+            navigating
+              ? "pointer-events-none fixed inset-x-0 top-[max(7.35rem,calc(env(safe-area-inset-top)+6.7rem))] z-50 flex max-w-[100vw] flex-col items-center gap-1.5 px-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))]"
+              : "contents"
+          }
+        >
         {parkingArrivalOpen ? (
           <ParkingArrivalCard
+            minimized={parkingArrivalMinimized}
+            onExpand={() => setParkingArrivalMinimized(false)}
             onFind={() => {
               setParkingArrivalOpen(false);
+              setParkingArrivalMinimized(false);
               parkingArrivalDismissedRef.current = true;
               setParkingSort("distance");
               setParkingOpen(true);
@@ -1769,6 +1929,7 @@ export function DrivingApp() {
             }}
             onSkip={() => {
               setParkingArrivalOpen(false);
+              setParkingArrivalMinimized(false);
               parkingArrivalDismissedRef.current = true;
             }}
           />
@@ -1843,7 +2004,7 @@ export function DrivingApp() {
                     void applyRoute({
                       id: `event-${selectedEvent?.id ?? "point"}`,
                       name: selectedEventCard.title,
-                      address: formatTaiwanDisplayAddress(
+                      address: formatTaiwanRoadName(
                         selectedEventCard.roadName || selectedEventCard.title,
                       ),
                       location: selectedEventLocation,
@@ -1872,6 +2033,7 @@ export function DrivingApp() {
             }}
           />
         ) : null}
+        </div>
         <div
           id="navpilot-function-drawer"
           className={
@@ -1880,6 +2042,15 @@ export function DrivingApp() {
               : "function-drawer function-drawer--closed"
           }
         >
+        <PoiLayerBar
+          visibility={poiLayerVisibility}
+          onToggle={(id) =>
+            setPoiLayerVisibility((current) => ({
+              ...current,
+              [id]: !current[id],
+            }))
+          }
+        />
         <RoadInformationCard
           items={intel}
           origin={origin}

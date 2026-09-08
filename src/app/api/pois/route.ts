@@ -39,6 +39,7 @@ export async function GET(request: Request) {
         name: poi.name,
         category: poi.category,
         brand: poi.brand,
+        branchName: poi.branchName,
         address: poi.address,
         location: { lng: poi.longitude, lat: poi.latitude },
         source: poi.source,

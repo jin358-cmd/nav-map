@@ -1,4 +1,9 @@
 import { BRAND_ALIASES, nameFitsBrand, normalizePoiKey } from "@/lib/poi/aliases";
+import {
+  poiMainLayerFromCategory,
+  poiSubcategoryFromCategory,
+  type PoiMainLayerId,
+} from "@/lib/poi/main-layers";
 
 export const POI_CATEGORIES = [
   "convenience",
@@ -30,6 +35,8 @@ export type TaiwanPoiRecord = {
   nameNormalized: string;
   aliases: string[];
   category: PoiCategory;
+  mainCategory: PoiMainLayerId;
+  subcategory: string;
   brand: string | null;
   branchName: string | null;
   address: string;
@@ -55,6 +62,8 @@ export type TaiwanPoiRow = {
   name_normalized: string;
   aliases: string[];
   category: PoiCategory;
+  main_category?: string | null;
+  subcategory?: string | null;
   brand: string | null;
   branch_name: string | null;
   address: string;
@@ -110,14 +119,24 @@ export function hydratePoiRecord(row: Partial<TaiwanPoiRecord> & Record<string, 
       ]),
     ];
   }
+  const category = (row.category as PoiCategory) || "other";
+  const subcategory =
+    String(row.subcategory ?? row.sub_category ?? "").trim() ||
+    poiSubcategoryFromCategory(category);
+  const mainCategory =
+    (row.mainCategory as PoiMainLayerId | undefined) ||
+    (row.main_category as PoiMainLayerId | undefined) ||
+    poiMainLayerFromCategory(category, subcategory);
   return {
     id: String(row.id ?? `${row.source ?? "osm"}-${row.sourceId ?? row.source_id ?? ""}`),
     name,
     nameNormalized,
     aliases: keptAliases,
-    category: (row.category as PoiCategory) || "other",
+    category,
+    mainCategory,
+    subcategory,
     brand,
-    branchName: (row.branchName as string | null) ?? null,
+    branchName: (row.branchName as string | null) ?? (row.branch_name as string | null) ?? null,
     address,
     addressNormalized: String(row.addressNormalized ?? compactKey(address)),
     city: (row.city as string | null) ?? county,
@@ -144,6 +163,7 @@ export function rowToRecord(row: TaiwanPoiRow): TaiwanPoiRecord {
       nameNormalized: row.name_normalized,
       aliases: row.aliases,
       category: row.category,
+      subcategory: row.subcategory ?? undefined,
       brand: row.brand,
       branchName: row.branch_name,
       address: row.address,
@@ -157,19 +177,21 @@ export function rowToRecord(row: TaiwanPoiRow): TaiwanPoiRecord {
       sourceId: row.source_id,
       updatedAt: row.updated_at,
       license: row.license,
-    confidence: row.confidence ?? undefined,
+      confidence: row.confidence ?? undefined,
       isActive: row.is_active ?? undefined,
     }) ?? {
       id: row.id,
       name: row.name,
       nameNormalized: row.name_normalized,
-      aliases: row.aliases ?? [],
+      aliases: row.aliases,
       category: row.category,
+      mainCategory: poiMainLayerFromCategory(row.category, row.subcategory),
+      subcategory: row.subcategory || poiSubcategoryFromCategory(row.category),
       brand: row.brand,
       branchName: row.branch_name,
       address: row.address,
-      addressNormalized: row.address_normalized || compactKey(row.address),
-      city: row.city ?? row.county,
+      addressNormalized: row.address_normalized,
+      city: row.city,
       county: row.county,
       district: row.district,
       latitude: row.latitude,

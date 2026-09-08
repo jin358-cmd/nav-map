@@ -87,14 +87,17 @@ export function turnSideFromStep(step: RouteStep | null): TurnSide {
 export function TurnArrowIcon({
   side,
   className,
-  variant = "curve",
+  variant = "b",
 }: {
   side: TurnSide;
   className?: string;
-  variant?: "curve" | "sign";
+  variant?: "curve" | "sign" | "b";
 }) {
   if (variant === "sign") {
     return <SignTurnArrow side={side} className={className} />;
+  }
+  if (variant === "b") {
+    return <VersionBArrow side={side} className={className} />;
   }
   if (side === "left") return <BendArrow kind="left" className={className} />;
   if (side === "right") return <BendArrow kind="right" className={className} />;
@@ -110,6 +113,193 @@ export function TurnArrowIcon({
   if (side === "roundabout") return <RoundaboutArrow className={className} />;
   if (side === "arrive") return <ArriveMark className={className} />;
   return <StraightArrow className={className} />;
+}
+
+function VersionBArrow({
+  side,
+  className,
+}: {
+  side: TurnSide;
+  className?: string;
+}) {
+  if (side === "left") return <SmoothBend kind="left" className={className} />;
+  if (side === "right") return <SmoothBend kind="right" className={className} />;
+  if (side === "slight-left") return <SmoothSlight kind="left" className={className} />;
+  if (side === "slight-right") return <SmoothSlight kind="right" className={className} />;
+  if (side === "sharp-left") return <SmoothSharp kind="left" className={className} />;
+  if (side === "sharp-right") return <SmoothSharp kind="right" className={className} />;
+  if (side === "ramp-left") return <SmoothRamp kind="left" className={className} />;
+  if (side === "ramp-right") return <SmoothRamp kind="right" className={className} />;
+  if (side === "fork-left") return <SmoothFork kind="left" className={className} />;
+  if (side === "fork-right") return <SmoothFork kind="right" className={className} />;
+  if (side === "uturn") return <SmoothUTurn className={className} />;
+  if (side === "roundabout") return <SmoothRoundabout className={className} />;
+  if (side === "arrive") return <ArriveMark className={className} />;
+  return <SmoothStraight className={className} />;
+}
+
+function SmoothBend({
+  kind,
+  className,
+}: {
+  kind: "left" | "right";
+  className?: string;
+}) {
+  const left = kind === "left";
+  return (
+    <ArrowFrame className={className}>
+      <path
+        d={left ? "M34 58 C34 36 33 28 16 28" : "M30 58 C30 36 31 28 48 28"}
+        {...shaftProps()}
+        strokeWidth={9}
+      />
+      <path
+        d={left ? "M4 28 L22 14 L22 42 Z" : "M60 28 L42 14 L42 42 Z"}
+        fill="currentColor"
+      />
+    </ArrowFrame>
+  );
+}
+
+function SmoothSlight({
+  kind,
+  className,
+}: {
+  kind: "left" | "right";
+  className?: string;
+}) {
+  const left = kind === "left";
+  return (
+    <ArrowFrame className={className}>
+      <path
+        d={left ? "M32 58 C32 40 24 26 14 14" : "M32 58 C32 40 40 26 50 14"}
+        {...shaftProps()}
+        strokeWidth={9}
+      />
+      <path
+        d={left ? "M4 20 L22 6 L26 28 Z" : "M60 20 L42 6 L38 28 Z"}
+        fill="currentColor"
+      />
+    </ArrowFrame>
+  );
+}
+
+function SmoothSharp({
+  kind,
+  className,
+}: {
+  kind: "left" | "right";
+  className?: string;
+}) {
+  const left = kind === "left";
+  return (
+    <ArrowFrame className={className}>
+      <path
+        d={
+          left
+            ? "M36 58 C36 30 28 18 14 28 C8 34 10 44 14 50"
+            : "M28 58 C28 30 36 18 50 28 C56 34 54 44 50 50"
+        }
+        {...shaftProps()}
+        strokeWidth={9}
+      />
+      <path
+        d={left ? "M14 58 L4 40 L26 42 Z" : "M50 58 L60 40 L38 42 Z"}
+        fill="currentColor"
+      />
+    </ArrowFrame>
+  );
+}
+
+function SmoothRamp({
+  kind,
+  className,
+}: {
+  kind: "left" | "right";
+  className?: string;
+}) {
+  const left = kind === "left";
+  return (
+    <ArrowFrame className={className}>
+      <path d="M32 58 C32 40 32 22 32 16" {...shaftProps()} strokeWidth={7} />
+      <path
+        d={left ? "M32 34 C24 26 16 18 10 12" : "M32 34 C40 26 48 18 54 12"}
+        {...shaftProps()}
+        strokeWidth={8}
+      />
+      <path
+        d={left ? "M2 16 L18 4 L22 24 Z" : "M62 16 L46 4 L42 24 Z"}
+        fill="currentColor"
+      />
+    </ArrowFrame>
+  );
+}
+
+function SmoothFork({
+  kind,
+  className,
+}: {
+  kind: "left" | "right";
+  className?: string;
+}) {
+  const left = kind === "left";
+  return (
+    <ArrowFrame className={className}>
+      <path d="M32 58 V36" {...shaftProps()} strokeWidth={8} />
+      <path
+        d="M32 36 C42 26 48 18 52 12"
+        {...shaftProps()}
+        strokeWidth={7}
+        opacity={left ? 0.28 : 1}
+      />
+      <path
+        d="M32 36 C22 26 16 18 12 12"
+        {...shaftProps()}
+        strokeWidth={7}
+        opacity={left ? 1 : 0.28}
+      />
+      <path
+        d={left ? "M2 16 L18 4 L22 24 Z" : "M62 16 L46 4 L42 24 Z"}
+        fill="currentColor"
+      />
+    </ArrowFrame>
+  );
+}
+
+function SmoothStraight({ className }: { className?: string }) {
+  return (
+    <ArrowFrame className={className}>
+      <path d="M32 58 C32 40 32 24 32 18" {...shaftProps()} strokeWidth={9} />
+      <path d="M32 4 L16 24 L48 24 Z" fill="currentColor" />
+    </ArrowFrame>
+  );
+}
+
+function SmoothUTurn({ className }: { className?: string }) {
+  return (
+    <ArrowFrame className={className}>
+      <path d="M20 58 V24 A12 12 0 0 1 44 24 V34" {...shaftProps()} strokeWidth={9} />
+      <path d="M44 50 L30 34 L56 34 Z" fill="currentColor" />
+    </ArrowFrame>
+  );
+}
+
+function SmoothRoundabout({ className }: { className?: string }) {
+  return (
+    <ArrowFrame className={className}>
+      <circle
+        cx="32"
+        cy="36"
+        r="12"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="7"
+      />
+      <path d="M32 58 V48" {...shaftProps()} strokeWidth={7} />
+      <path d="M32 24 V16" {...shaftProps()} strokeWidth={7} />
+      <path d="M32 4 L18 20 L46 20 Z" fill="currentColor" />
+    </ArrowFrame>
+  );
 }
 
 function ArrowFrame({

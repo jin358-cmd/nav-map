@@ -19,11 +19,14 @@ export type NavigationProgress = {
   distanceToNextMeters: number;
   offRoute: boolean;
   routeMeters: number;
+  arrived: boolean;
 };
 
 export type NavigationTrackerState = NavigationProgress & {
   offRouteSamples: number;
   onRouteSamples: number;
+  arrivedSamples: number;
+  arrivedSince: number;
   lastVehicle: VehiclePose;
   updatedAt: number;
 };
@@ -162,6 +165,42 @@ function arrivalThreshold(speedMps: number | undefined) {
   return Math.min(35, Math.max(20, 20 + speedAdjustment));
 }
 
+/** Stable arrival: radius + near-end progress + optional low speed + short dwell. */
+export function evaluateArrival({
+  remainingMeters,
+  progressRatio,
+  speedMps,
+  accuracy,
+  previousSamples,
+  previousSince,
+  now,
+}: {
+  remainingMeters: number;
+  progressRatio: number;
+  speedMps: number;
+  accuracy?: number;
+  previousSamples: number;
+  previousSince: number;
+  now: number;
+}) {
+  const radius = Math.min(
+    46,
+    Math.max(24, 22 + Math.min(accuracy ?? 12, 28) * 0.45),
+  );
+  const nearEnd = remainingMeters <= radius && progressRatio >= 0.9;
+  const veryClose = remainingMeters <= Math.min(16, radius * 0.55);
+  const slow = speedMps < 6.5;
+  const candidate = nearEnd && (slow || veryClose);
+  const arrivedSamples = candidate ? previousSamples + 1 : 0;
+  const arrivedSince = candidate ? previousSince || now : 0;
+  const dwellMs = arrivedSince ? now - arrivedSince : 0;
+  const arrived =
+    candidate &&
+    ((arrivedSamples >= 3 && dwellMs >= 900) ||
+      (veryClose && slow && arrivedSamples >= 2 && dwellMs >= 700));
+  return { arrived, arrivedSamples, arrivedSince, radius };
+}
+
 function firstNavigationStep(steps: RouteStep[]) {
   const index = steps.findIndex((step) => step.type !== "depart");
   return index >= 0 ? index : 0;
@@ -254,13 +293,28 @@ export function updateNavigationProgress({
   }
 
   const cueMeters = model.stepMeters[stepIndex] ?? model.totalMeters;
+  const remainingMeters = Math.max(0, model.totalMeters - routeMeters);
+  const progressRatio =
+    model.totalMeters > 0 ? routeMeters / model.totalMeters : 0;
+  const arrival = evaluateArrival({
+    remainingMeters,
+    progressRatio,
+    speedMps: vehicle.speedMps ?? 0,
+    accuracy: vehicle.accuracy,
+    previousSamples: previous?.arrivedSamples ?? 0,
+    previousSince: previous?.arrivedSince ?? 0,
+    now,
+  });
   return {
     stepIndex,
     distanceToNextMeters: Math.max(0, Math.round(cueMeters - routeMeters)),
-    offRoute,
+    offRoute: arrival.arrived ? false : offRoute,
     routeMeters,
+    arrived: arrival.arrived,
     offRouteSamples,
     onRouteSamples,
+    arrivedSamples: arrival.arrivedSamples,
+    arrivedSince: arrival.arrivedSince,
     lastVehicle: vehicle,
     updatedAt: now,
   };

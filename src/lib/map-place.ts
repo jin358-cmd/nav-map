@@ -40,6 +40,7 @@ export type MapPoiFeature = {
   name: string;
   category: PoiCategory;
   brand: string | null;
+  branchName?: string | null;
   address: string;
   location: LngLat;
   source: string;
@@ -85,6 +86,7 @@ export function poiFeatureToPlace(
     id: feature.id,
     kind: "poi",
     name: feature.name,
+    brand: feature.brand,
     category: feature.category,
     categoryLabel: poiCategoryLabel(feature.category),
     address: feature.address,

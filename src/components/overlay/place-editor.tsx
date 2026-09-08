@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Home, Briefcase, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,11 +53,6 @@ export function PlaceEditor({
     address: string;
     location: LngLat;
   }>>([]);
-
-  const pickLabel = useMemo(() => {
-    if (!pickLocation) return null;
-    return `${pickLocation.lat.toFixed(6)}, ${pickLocation.lng.toFixed(6)}`;
-  }, [pickLocation]);
 
   async function runSearch() {
     const needle = query.trim();

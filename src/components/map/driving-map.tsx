@@ -16,6 +16,8 @@ import {
   DRIVING_ZOOM_MOBILE,
   NAV_VEHICLE_Y,
   NAV_2D_PORTRAIT_VEHICLE_Y,
+  NAV_LANDSCAPE_VEHICLE_X,
+  NAV_LANDSCAPE_VEHICLE_Y,
   INTERSECTION_PITCH,
   INTERSECTION_ZOOM,
   INTERSECTION_ZOOM_MOBILE,
@@ -218,7 +220,9 @@ function drivingPadding(
 ) {
   const compact = isCompactViewport(width);
   const portrait = height > width;
+  const landscape = !portrait;
   const portrait2dNav = navigating && mode === "2d" && portrait;
+  const landscapeNav = navigating && landscape;
   const bottomPad = navigating
     ? Math.max(
         portrait2dNav ? 132 : compact ? 72 : 84,
@@ -227,15 +231,23 @@ function drivingPadding(
     : compact
       ? 96
       : 118;
-  /** 左右必須對稱，否則車輛／路線會偏離畫面水平中線。 */
-  const sidePad = 12;
-  const vehicleY = navigating && mode === "3d"
-    ? NAV_VEHICLE_Y
-    : portrait2dNav
-      ? NAV_2D_PORTRAIT_VEHICLE_Y
-      : BROWSE_VEHICLE_Y;
+  /** 預設左右對稱 12。Landscape 導航才用 padding 把車頭移到約 70% x。 */
+  let leftPad = 12;
+  let rightPad = 12;
+  if (landscapeNav) {
+    rightPad = 12;
+    leftPad = Math.round(12 + width * (2 * NAV_LANDSCAPE_VEHICLE_X - 1));
+    leftPad = Math.max(12, Math.min(leftPad, Math.round(width * 0.42)));
+  }
+  const vehicleY = landscapeNav
+    ? NAV_LANDSCAPE_VEHICLE_Y
+    : navigating && mode === "3d"
+      ? NAV_VEHICLE_Y
+      : portrait2dNav
+        ? NAV_2D_PORTRAIT_VEHICLE_Y
+        : BROWSE_VEHICLE_Y;
   const topPad =
-    mode !== "3d" && !portrait2dNav
+    mode !== "3d" && !portrait2dNav && !landscapeNav
       ? compact
         ? 108
         : 96
@@ -247,15 +259,15 @@ function drivingPadding(
     return {
       top: topPad,
       bottom: bottomPad,
-      left: sidePad,
-      right: sidePad,
+      left: leftPad,
+      right: rightPad,
     };
   }
   return {
     top: Math.max(topPad, overlay.top),
     bottom: Math.max(bottomPad, overlay.bottom),
-    left: sidePad,
-    right: sidePad,
+    left: leftPad,
+    right: rightPad,
   };
 }
 
@@ -515,6 +527,7 @@ export function DrivingMap({
   const lastArrowUpdateRef = useRef(0);
   const readyRef = useRef(false);
   const lastFrameRef = useRef(0);
+  const markerRotationRef = useRef(vehicle.heading);
   const lastViewportEmitRef = useRef(0);
   const lastEmittedZoomRef = useRef(0);
   const rafRef = useRef(0);
@@ -869,12 +882,17 @@ export function DrivingMap({
         emitViewport();
       }
 
-      const rotation =
+      const rotationTarget =
         headingUp && followVehicleRef.current
           ? mapNow.getBearing()
           : display.heading;
-      marker.setRotation(rotation);
-      setVehicleMarkerHeading(marker.getElement(), rotation);
+      markerRotationRef.current = lerpAngle(
+        markerRotationRef.current,
+        rotationTarget,
+        damp(dt, 0.1),
+      );
+      marker.setRotation(markerRotationRef.current);
+      setVehicleMarkerHeading(marker.getElement(), markerRotationRef.current);
 
       rafRef.current = requestAnimationFrame(tick);
     };
@@ -994,7 +1012,6 @@ export function DrivingMap({
         }
         return;
       }
-      if (navigatingRef.current) return;
       onEmptyMapClickRef.current?.(event.lngLat);
     };
     map.on("style.load", markReady);
@@ -1041,7 +1058,7 @@ export function DrivingMap({
       pressTimer = window.setTimeout(() => {
         pressTimer = 0;
         fireLongPress(point.lng, point.lat);
-      }, 560);
+      }, 620);
     };
     const onTouchStart = (event: TouchEvent) => {
       beginGesture();

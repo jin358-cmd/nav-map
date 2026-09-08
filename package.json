@@ -14,6 +14,7 @@
     "ingest:pois:photon": "node scripts/ingest-taiwan-pois.mjs",
     "ingest:company-registry": "node scripts/import-company-registry.mjs",
     "measure:suggest": "node scripts/measure-suggest.mjs",
+    "verify:pois": "node scripts/verify-poi-index.mjs",
     "sync:parking": "node scripts/sync-tainan-parking.mjs"
   },
   "dependencies": {

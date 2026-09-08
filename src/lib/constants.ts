@@ -18,10 +18,10 @@ export const DRIVING_PITCH = 58;
  * 導航第一人稱前視。MapLibre pitch 不是駕駛「仰角」。
  * pitch≈64 約等於視線低於水平 26°，畫面更接近駕駛視角。
  */
-export const NAVIGATION_PITCH = 64;
+export const NAVIGATION_PITCH = 66;
 export const OVERVIEW_PITCH = 0;
-export const DRIVING_ZOOM = 17.38;
-export const DRIVING_ZOOM_MOBILE = 17.12;
+export const DRIVING_ZOOM = 17.72;
+export const DRIVING_ZOOM_MOBILE = 17.46;
 export const OVERHEAD_ZOOM = 15.4;
 /** 2D 導航 cruise：再近一級，仍留出路口預判距離。 */
 export const OVERHEAD_NAV_ZOOM = 16.95;
@@ -54,11 +54,14 @@ export const MANEUVER_RECOVER_MS = 1800;
 /** 懸空橘色箭頭：200 公尺開始出現 */
 export const GUIDANCE_ARROW_APPROACH_METERS = 200;
 
-/** 瀏覽時車輛約在畫面 65%；導航 3D 時約 72%（70～75）。 */
+/** 瀏覽時車輛約在畫面 65%；導航 3D 直立約 72%。 */
 export const BROWSE_VEHICLE_Y = 0.65;
 export const NAV_VEHICLE_Y = 0.72;
 /** 直立 2D 導航：車輛偏下，前方路口／路標在畫面中下。 */
 export const NAV_2D_PORTRAIT_VEHICLE_Y = 0.78;
+/** Landscape 導航：車頭約在畫面 70% x、79～80% y（中央偏右下，不貼邊）。 */
+export const NAV_LANDSCAPE_VEHICLE_X = 0.7;
+export const NAV_LANDSCAPE_VEHICLE_Y = 0.795;
 /** 羅盤方向參考扇形半角（視覺輔助，非 GPS 誤差）。 */
 export const HEADING_REFERENCE_HALF_DEG = 24;
 

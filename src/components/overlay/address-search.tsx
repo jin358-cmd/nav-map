@@ -30,6 +30,7 @@ import {
 } from "@/lib/favorites";
 import {
   formatTaiwanDisplayAddress,
+  formatTaiwanRoadName,
   sameTaiwanDisplayTitle,
 } from "@/lib/geocoding/format-taiwan-display-address";
 import { formatDistance } from "@/lib/format";
@@ -102,7 +103,7 @@ export function AddressSearch({
       const displayHit = {
         ...hit,
         name: formatTaiwanDisplayAddress(hit.name),
-        address: formatTaiwanDisplayAddress(hit.address),
+        address: formatTaiwanRoadName(hit.address) || formatTaiwanDisplayAddress(hit.address),
       };
       speechStopRef.current();
       setQuery(displayHit.name);
@@ -336,7 +337,7 @@ export function AddressSearch({
               <ul className="max-h-52 overflow-y-auto py-0.5">
                 {history.map((hit) => {
                   const title = formatTaiwanDisplayAddress(hit.name);
-                  const subtitle = formatTaiwanDisplayAddress(hit.address);
+                  const subtitle = formatTaiwanRoadName(hit.address);
                   return (
                     <li
                       key={`${hit.id}-${hit.location.lng}-${hit.location.lat}`}
@@ -436,7 +437,7 @@ export function AddressSearch({
                       !sameTaiwanDisplayTitle(hit.name, hit.address) ? (
                         <span className="text-zinc-400">
                           {" "}
-                          · {formatTaiwanDisplayAddress(hit.address)}
+                          · {formatTaiwanRoadName(hit.address)}
                         </span>
                       ) : null}
                       {meters != null ? (

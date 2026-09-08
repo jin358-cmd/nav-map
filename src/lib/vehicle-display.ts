@@ -56,10 +56,10 @@ function positionTau(speedMps: number, jumpMeters: number) {
 }
 
 function headingTau(speedMps: number, headingJump: number) {
-  if (headingJump > 50) return 0.14;
-  if (speedMps < 0.8) return 0.3;
-  if (speedMps < 4) return 0.22;
-  return 0.16;
+  if (headingJump > 50) return 0.18;
+  if (speedMps < 0.8) return 0.42;
+  if (speedMps < 4) return 0.3;
+  return 0.22;
 }
 
 function isNoisyFix(accuracy: number | undefined, jumpMeters: number, speedMps: number) {
@@ -150,7 +150,11 @@ export function stepVehicleDisplay({
     return {
       lng: desired.lng,
       lat: desired.lat,
-      heading: desiredHeading,
+      heading: lerpAngle(
+        current.heading,
+        desiredHeading,
+        damp(dtSeconds, 0.12),
+      ),
       predictedMeters: 0,
       holdLng,
       holdLat,

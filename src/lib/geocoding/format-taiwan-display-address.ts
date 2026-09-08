@@ -370,11 +370,46 @@ export function formatTaiwanRoadName(
     }
   }
   if (rebuilt) return rebuilt;
-  if (rebuilt) return rebuilt;
 
   let rest = compact;
   if (parts.city && rest.startsWith(parts.city)) rest = rest.slice(parts.city.length);
   if (parts.town && rest.startsWith(parts.town)) rest = rest.slice(parts.town.length);
   rest = rest.replace(VILLAGE_RE, "").replace(NEIGHBORHOOD_RE, "");
   return stripLeadingPostal(rest);
+}
+
+function rebuildStreetFromParts(parts: ReturnType<typeof parseDisplayParts>) {
+  return joinParts([parts.road, parts.section]);
+}
+
+/** 停車場列表：只顯示路名＋段，不含縣市區與巷弄門牌。 */
+export function formatTaiwanStreetName(
+  input: string | TaiwanDisplayAddressInput | null | undefined,
+): string {
+  if (input == null) return "";
+  if (typeof input === "object") {
+    const street = joinParts([input.road, input.section]);
+    if (street) return street;
+    return input.fullAddress ? formatTaiwanStreetName(input.fullAddress) : "";
+  }
+  const roadForm = formatTaiwanRoadName(input);
+  if (!roadForm) return "";
+  const compact = compactTaiwanText(roadForm);
+  const parts = parseDisplayParts(compact);
+  const street = rebuildStreetFromParts(parts);
+  if (street) return street;
+  return compact
+    .replace(/(\d+巷.*)$/u, "")
+    .replace(/(\d+弄.*)$/u, "")
+    .replace(/(\d+(?:之\d+)?號.*)$/u, "")
+    .trim();
+}
+
+/** 路口：中華路 至 民生路 → 中華路 × 民生路 */
+export function formatIntersectionLabel(value: string) {
+  return value
+    .replace(/\s*至\s*/g, " × ")
+    .replace(/\s+到\s+(?=[\u4e00-\u9fff0-9].*(?:路|街|道|巷|線))/u, " × ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
 }

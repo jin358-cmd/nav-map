@@ -23,6 +23,7 @@ export function setParkingArrivalPromptEnabled(enabled: boolean) {
 }
 
 export function subscribeParkingArrivalPrompt(onChange: () => void) {
+  if (typeof window === "undefined") return () => undefined;
   const handler = () => onChange();
   window.addEventListener(CHANGE_EVENT, handler);
   window.addEventListener("storage", handler);
@@ -30,4 +31,8 @@ export function subscribeParkingArrivalPrompt(onChange: () => void) {
     window.removeEventListener(CHANGE_EVENT, handler);
     window.removeEventListener("storage", handler);
   };
+}
+
+export function getServerParkingArrivalSnapshot() {
+  return true;
 }

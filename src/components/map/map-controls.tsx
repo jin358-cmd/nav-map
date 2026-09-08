@@ -70,20 +70,45 @@ export function MapControls({
           strokeWidth={2.5}
         />
       </ControlButton>
-      <ControlButton
-        label={cameraMode === "3d" ? "切換 2D" : "切換 3D"}
-        onClick={onToggleCamera}
-        active={cameraMode === "3d"}
-        tone={tone}
-      >
-        {cameraMode === "3d" ? (
-          <span className="text-[1.4rem] font-black leading-none tracking-tight">
-            3D
-          </span>
-        ) : (
-          <FlatPlanIcon />
+      <div
+        className={cn(
+          "flex overflow-hidden rounded-full border backdrop-blur-md shadow-lg",
+          tone === "dark"
+            ? "border-[#67e8f9]/80 bg-[#041016]/80"
+            : tone === "satellite"
+              ? "border-[#111827]/50 bg-white/80"
+              : "border-zinc-400/80 bg-white/80",
         )}
-      </ControlButton>
+        role="group"
+        aria-label="2D 3D 視角"
+      >
+        {(["2d", "3d"] as const).map((mode) => {
+          const active = cameraMode === mode;
+          return (
+            <button
+              key={mode}
+              type="button"
+              aria-label={mode === "3d" ? "切換 3D" : "切換 2D"}
+              aria-pressed={active}
+              onClick={() => {
+                if (cameraMode !== mode) onToggleCamera();
+              }}
+              className={cn(
+                "flex h-12 w-12 items-center justify-center text-[1.05rem] font-black leading-none tracking-tight touch-manipulation",
+                active
+                  ? tone === "dark"
+                    ? "bg-[#22d3ee] text-[#042f2e]"
+                    : "bg-zinc-900 text-white"
+                  : tone === "dark"
+                    ? "bg-transparent text-[#ecfeff]/55"
+                    : "bg-transparent text-zinc-500",
+              )}
+            >
+              {mode.toUpperCase()}
+            </button>
+          );
+        })}
+      </div>
       <MapStyleMenu
         mode={mapDisplayMode}
         pendingMode={pendingMapDisplayMode}
@@ -105,25 +130,6 @@ export function MapControls({
         </ControlButton>
       ) : null}
     </div>
-  );
-}
-
-function FlatPlanIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="size-6"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinejoin="round"
-      strokeLinecap="round"
-      aria-hidden
-    >
-      <path d="M3.5 8.5 L20.5 8.5 L18 18.5 H6 Z" />
-      <path d="M12 8.5 V18.5" />
-      <path d="M6.2 13.2 H17.8" />
-    </svg>
   );
 }
 

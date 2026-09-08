@@ -129,6 +129,18 @@
   }
 }
 
+.hud-float-panel {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(8, 12, 18, 0.5);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.hud-float-panel--nav {
+  margin-top: 0;
+}
+
 .function-drawer {
   position: relative;
   align-self: flex-end;
@@ -484,9 +496,9 @@
 
 .hud-anchor-maneuver {
   position: absolute;
-  top: max(0.45rem, env(safe-area-inset-top));
-  left: max(0.4rem, env(safe-area-inset-left));
-  right: max(0.4rem, env(safe-area-inset-right));
+  top: max(0.85rem, calc(env(safe-area-inset-top) + 0.4rem));
+  left: max(1.15rem, calc(env(safe-area-inset-left) + 0.75rem));
+  right: max(1.15rem, calc(env(safe-area-inset-right) + 0.75rem));
   z-index: 30;
   width: auto;
   max-width: none;
@@ -559,7 +571,7 @@
 .hud-speed-gps {
   box-sizing: border-box;
   width: 100%;
-  min-height: 3.35rem;
+  min-height: 6.7rem;
   padding: 0.4rem 0.2rem 0.35rem;
   border-radius: 0.85rem;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -659,6 +671,8 @@
   }
 
   .hud-anchor-maneuver {
+    top: max(0.45rem, env(safe-area-inset-top));
+    left: max(0.4rem, env(safe-area-inset-left));
     right: auto;
     width: min(50vw, 28rem);
     max-width: calc(100vw - 6.75rem - env(safe-area-inset-right));
@@ -946,7 +960,7 @@
   }
 
   .hud-speed-gps {
-    min-height: 2.95rem;
+    min-height: 5.9rem;
     padding: 0.32rem 0.16rem 0.28rem;
   }
 

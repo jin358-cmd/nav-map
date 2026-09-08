@@ -8,7 +8,10 @@ import {
   type TurnSide,
 } from "@/components/overlay/turn-arrow-icon";
 import { formatDistance } from "@/lib/format";
-import { formatTaiwanDisplayAddress } from "@/lib/geocoding/format-taiwan-display-address";
+import {
+  formatIntersectionLabel,
+  formatTaiwanRoadName,
+} from "@/lib/geocoding/format-taiwan-display-address";
 import type { ManeuverAlertPhase } from "@/lib/maneuver-guidance";
 import { cn } from "@/lib/utils";
 import type { RouteStep } from "@/types/domain";
@@ -65,7 +68,7 @@ function shortTurn(step: RouteStep | null) {
 function shortRoadName(step: RouteStep | null) {
   const raw = step?.roadName?.trim() ?? "";
   if (!raw) return step?.type === "arrive" ? "目的地" : "";
-  const cleaned = formatTaiwanDisplayAddress(raw);
+  const cleaned = formatIntersectionLabel(formatTaiwanRoadName(raw) || raw);
   if (cleaned.length <= 22) return cleaned;
   const road = cleaned.match(
     /[\u4e00-\u9fff0-9]+(?:路|街|道|巷|段|線|橋|大道)[^\s]{0,8}/,
@@ -142,7 +145,7 @@ export const NextIntersectionHud = forwardRef<
           >
             <TurnArrowIcon
               side={side}
-              variant="curve"
+              variant="b"
               className="maneuverIconArrow"
             />
           </div>

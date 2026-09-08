@@ -203,7 +203,7 @@ export function RoadInformationCard({
         </div>
       ) : null}
 
-      <div className="inline-flex flex-col items-end gap-1.5 rounded-2xl border border-zinc-500/40 bg-zinc-900/88 px-1.5 py-1.5 shadow-[0_10px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl">
+      <div className="inline-flex flex-col items-end gap-1.5 rounded-2xl border border-zinc-500/40 bg-zinc-900/50 px-1.5 py-1.5 shadow-[0_10px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl">
         <div className="flex flex-row-reverse items-end justify-end gap-1.5">
           <YouTubeMusicButton
             pressed={musicOpen}

@@ -1,6 +1,6 @@
 "use client";
 
-import { Navigation, X } from "lucide-react";
+import { Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   formatDistance,
@@ -9,8 +9,8 @@ import {
 } from "@/lib/format";
 import { parkingOwnershipLabel } from "@/lib/parking/brands";
 import {
-  formatTaiwanDisplayAddress,
   formatTaiwanRoadName,
+  formatTaiwanStreetName,
 } from "@/lib/geocoding/format-taiwan-display-address";
 import { sortParkingLots } from "@/lib/parking-sort";
 import { cn } from "@/lib/utils";
@@ -58,24 +58,33 @@ function spacesBadge(lot: ParkingLot) {
   return `${Math.max(0, lot.carAvailable)}格`;
 }
 
+function parkingRoad(lot: ParkingLot) {
+  return (
+    formatTaiwanStreetName(lot.address) ||
+    formatTaiwanStreetName(lot.name) ||
+    formatTaiwanRoadName(lot.address) ||
+    lot.name
+  );
+}
+
+function occupancyLabel(lot: ParkingLot) {
+  if (lot.carAvailable == null || lot.availabilityStatus === "unknown") {
+    return null;
+  }
+  return `${Math.max(0, lot.carAvailable)} 格`;
+}
+
 function yellowLotLine(lot: ParkingLot, sort: ParkingSort) {
   const distance =
-    lot.distanceMeters != null ? formatDistance(lot.distanceMeters) : "距離未提供";
-  if (sort === "price") {
-    const road =
-      formatTaiwanRoadName(lot.address) ||
-      formatTaiwanRoadName(lot.name) ||
-      lot.name;
-    return `${distance}・${formatParkingRate(lot)}・${road}`;
+    lot.distanceMeters != null ? formatDistance(lot.distanceMeters) : null;
+  const road = parkingRoad(lot);
+  if (sort === "remaining") {
+    return [occupancyLabel(lot), distance, road].filter(Boolean).join("・");
   }
-  const place =
-    formatTaiwanDisplayAddress(lot.address) ||
-    `${parkingOwnershipLabel(lot.publicLot)} ${lot.name}`;
-  const spaces =
-    lot.carAvailable == null || lot.availabilityStatus === "unknown"
-      ? "(約—格)"
-      : `(約${lot.carAvailable}格)`;
-  return `${distance}・${place}・${spaces}`;
+  if (sort === "price") {
+    return [distance, formatParkingRate(lot), road].filter(Boolean).join("・");
+  }
+  return [distance, road].filter(Boolean).join("・") || parkingOwnershipLabel(lot.publicLot);
 }
 
 export function ParkingPanel({
@@ -109,7 +118,7 @@ export function ParkingPanel({
 }) {
   const ranked = sortParkingLots(lots, sort);
   return (
-    <section className="pointer-events-auto w-full max-w-xl rounded-2xl border border-white/15 bg-black/80 p-3 text-white shadow-[0_12px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+    <section className="pointer-events-auto hud-float-panel w-full max-w-xl rounded-2xl p-3 text-white">
       <div className="mb-2 flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold tracking-wide text-zinc-100">
@@ -149,11 +158,11 @@ export function ParkingPanel({
         </div>
         <button
           type="button"
-          aria-label="關閉停車場"
+          aria-label="關閉"
           onClick={onClose}
-          className="flex size-11 shrink-0 items-center justify-center rounded-lg text-zinc-400 hover:bg-white/10 touch-manipulation"
+          className="flex h-12 min-w-[4.75rem] shrink-0 items-center justify-center rounded-xl bg-white/12 px-3 text-sm font-semibold text-white hover:bg-white/18 touch-manipulation"
         >
-          <X className="size-4" />
+          關閉
         </button>
       </div>
       <div className="mb-2 flex gap-1.5">
@@ -173,7 +182,7 @@ export function ParkingPanel({
       </div>
       {loading && ranked.length === 0 ? (
         <div
-          className="flex min-h-[min(19.5rem,48vh)] flex-col items-center justify-center gap-2 px-1 py-6 text-sm text-sky-100"
+          className="flex min-h-[14.5rem] flex-col items-center justify-center gap-2 px-1 py-6 text-sm text-sky-100"
           role="status"
           aria-live="polite"
         >
@@ -185,7 +194,7 @@ export function ParkingPanel({
           {origin === "unavailable" ? "資料暫時無法取得" : "附近沒有停車場資料"}
         </p>
       ) : (
-        <ul className="max-h-[min(24rem,56vh)] min-h-[min(19.5rem,48vh)] space-y-2 overflow-y-auto">
+        <ul className="max-h-[14.5rem] min-h-[14.5rem] space-y-2 overflow-y-auto">
           {ranked.map((lot) => (
             <li key={lot.id}>
               <div
@@ -208,9 +217,23 @@ export function ParkingPanel({
                   <button
                     type="button"
                     onClick={() => onSelect(lot)}
-                    className="w-full truncate text-left text-[13px] font-semibold text-yellow-300 touch-manipulation"
+                    className="w-full text-left text-[13px] font-semibold text-yellow-300 touch-manipulation"
                   >
-                    {yellowLotLine(lot, sort)}
+                    {sort === "remaining" ? (
+                      <span className="flex flex-col leading-snug">
+                        {occupancyLabel(lot) ? (
+                          <span>{occupancyLabel(lot)}</span>
+                        ) : null}
+                        <span>
+                          {lot.distanceMeters != null
+                            ? formatDistance(lot.distanceMeters)
+                            : "距離未提供"}
+                        </span>
+                        <span className="truncate">{parkingRoad(lot)}</span>
+                      </span>
+                    ) : (
+                      <span className="block truncate">{yellowLotLine(lot, sort)}</span>
+                    )}
                   </button>
                   <Button
                     type="button"

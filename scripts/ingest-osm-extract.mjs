@@ -18,8 +18,8 @@ const OUT = "src/data/taiwan-poi-index.json";
 const REJECTS = "docs/poi-import-rejects.json";
 const REPORT = "docs/poi-ingest-report.json";
 const MANIFEST = "src/data/poi-ingest-manifest.json";
-const BATCH_SIZE = Number(process.env.POI_INGEST_BATCH || 1000);
-const DEDUP_METERS = 30;
+const CHECKPOINT = "src/data/poi-ingest-checkpoint.json";
+const ACCEPTED_CACHE = `${CACHE_DIR}/accepted-rows.json`;
 
 const COUNTIES = [
   "臺北市",
@@ -229,6 +229,9 @@ function classifyTags(tags) {
   if (leisure === "park" || leisure === "playground" || leisure === "garden") return "park";
   if (railway === "station" || publicTransport === "station" || amenity === "bus_station") return "station";
   if (shop === "bakery" || shop === "coffee") return "cafe";
+  if (shop === "clothes" || shop === "fashion_accessories" || shop === "boutique") return "other";
+  if (shop === "shoes") return "other";
+  if (shop === "furniture" || shop === "doityourself" || shop === "hardware") return "other";
   if (shop) return "other";
   if (amenity || tourism) return "other";
   return null;
@@ -340,6 +343,8 @@ function featureToPoi(feature, now) {
     nameNormalized: compact(split.name),
     aliases: [...new Set(aliases.map(compact).filter(Boolean))],
     category: brandHit?.category || category,
+    subcategory: subcategoryFromTags(tags, brandHit?.category || category),
+    mainCategory: null,
     brand: brandHit?.brand ?? (tags.brand ? String(tags.brand) : null),
     branchName: split.branchName,
     address,
@@ -359,7 +364,77 @@ function featureToPoi(feature, now) {
     isActive: true,
   };
   row.confidence = confidenceFor(row);
+  row.mainCategory = mainLayerFrom(row.category, row.subcategory);
   return { row };
+}
+
+function subcategoryFromTags(tags, category) {
+  const shop = String(tags.shop ?? "");
+  const amenity = String(tags.amenity ?? "");
+  const tourism = String(tags.tourism ?? "");
+  if (amenity === "fast_food") return "fast-food";
+  if (amenity === "cafe" || shop === "coffee") return "cafe";
+  if (amenity === "charging_station") return "charging";
+  if (amenity === "fuel") return "fuel";
+  if (shop === "clothes" || shop === "boutique") return "clothing";
+  if (shop === "shoes") return "shoes";
+  if (shop === "sports") return "sportswear";
+  if (shop === "furniture") return "furniture";
+  if (shop === "doityourself" || shop === "hardware") return "building-materials";
+  if (tourism === "hostel") return "hostel";
+  if (tourism === "guest_house") return "homestay";
+  if (amenity === "library") return "library";
+  if (tourism === "museum") return "museum";
+  if (amenity === "cinema") return "cinema";
+  if (amenity === "bank") return "bank";
+  if (amenity === "atm") return "atm";
+  if (amenity === "post_office") return "post-office";
+  if (amenity === "police") return "police";
+  if (amenity === "fire_station") return "fire-station";
+  return category;
+}
+
+function mainLayerFrom(category, subcategory) {
+  const key = String(subcategory || category || "");
+  const food = new Set(["restaurant", "cafe", "breakfast", "fast-food", "drink", "convenience", "supermarket", "food-shop"]);
+  const clothing = new Set(["clothing", "shoes", "sportswear", "accessories"]);
+  const housing = new Set(["hotel", "hostel", "homestay", "furniture", "home", "building-materials"]);
+  const transport = new Set(["parking", "fuel", "charging", "railway", "mrt", "bus", "car-rental", "auto-repair", "station"]);
+  const education = new Set(["school", "tutoring", "library", "museum", "education"]);
+  const leisure = new Set(["attraction", "park", "cinema", "mall", "entertainment", "sports", "landmark"]);
+  const medical = new Set(["hospital", "clinic", "pharmacy", "bank", "atm", "post-office", "police", "fire-station", "government", "public-facility"]);
+  if (food.has(key) || food.has(category)) return "food";
+  if (clothing.has(key)) return "clothing";
+  if (housing.has(key) || housing.has(category)) return "housing";
+  if (transport.has(key) || transport.has(category)) return "transport";
+  if (education.has(key) || education.has(category)) return "education";
+  if (medical.has(key) || medical.has(category)) return "medical";
+  if (leisure.has(key) || leisure.has(category)) return "leisure";
+  return "leisure";
+}
+
+function keepNavigable(row) {
+  if (!row?.name || compact(row.name).length < 2) return false;
+  return true;
+}
+
+function slimRow(row) {
+  const subcategory = row.subcategory || row.category;
+  return {
+    ...row,
+    subcategory,
+    mainCategory: row.mainCategory || mainLayerFrom(row.category, subcategory),
+  };
+}
+
+function loadCheckpoint() {
+  if (process.env.POI_INGEST_RESET === "1") return null;
+  if (!existsSync(CHECKPOINT)) return null;
+  try {
+    return JSON.parse(readFileSync(CHECKPOINT, "utf8"));
+  } catch {
+    return null;
+  }
 }
 
 function latSafe(loc) {
@@ -420,33 +495,108 @@ async function main() {
   const features = readGeojsonl();
   console.log(`features ${features.length}`);
   const now = new Date().toISOString();
+  const jobId = process.env.POI_INGEST_JOB || `poi-${now.slice(0, 10)}`;
+  const checkpoint = loadCheckpoint();
+  const resume =
+    checkpoint &&
+    checkpoint.status === "in_progress" &&
+    checkpoint.jobId === jobId
+      ? checkpoint
+      : null;
+  let startOffset = resume?.resumeOffset ?? 0;
+  if (startOffset > features.length) startOffset = 0;
   const countyStats = Object.fromEntries(
     COUNTIES.map((name) => [name, { fetched: 0, imported: 0, rejected: 0, dedup: 0 }]),
   );
   countyStats["未知"] = { fetched: 0, imported: 0, rejected: 0, dedup: 0 };
   const rejects = [];
-  const accepted = [];
-  let fetched = 0;
-  let rejected = 0;
-  for (let i = 0; i < features.length; i += BATCH_SIZE) {
+  let accepted = [];
+  if (resume && existsSync(ACCEPTED_CACHE)) {
+    try {
+      accepted = JSON.parse(readFileSync(ACCEPTED_CACHE, "utf8"));
+      console.log(`resume job ${jobId} from offset ${startOffset}, kept ${accepted.length}`);
+    } catch {
+      accepted = [];
+      startOffset = 0;
+    }
+  }
+  let fetched = resume?.fetched ?? 0;
+  let rejected = resume?.rejected ?? 0;
+  const batches = [];
+  for (let i = startOffset; i < features.length; i += BATCH_SIZE) {
+    const batchId = Math.floor(i / BATCH_SIZE) + 1;
+    const batchStarted = Date.now();
     const batch = features.slice(i, i + BATCH_SIZE);
-    for (const feature of batch) {
-      fetched += 1;
-      const result = featureToPoi(feature, now);
-      const city = result.row?.city || "未知";
-      if (countyStats[city]) countyStats[city].fetched += 1;
-      if (result.reject) {
-        rejected += 1;
-        if (countyStats[city]) countyStats[city].rejected += 1;
-        if (rejects.length < 800) reject(rejects, result.row ?? {}, result.reject);
-        continue;
+    let batchFetched = 0;
+    let batchInserted = 0;
+    let batchRejected = 0;
+    try {
+      for (const feature of batch) {
+        fetched += 1;
+        batchFetched += 1;
+        const result = featureToPoi(feature, now);
+        const city = result.row?.city || "未知";
+        if (countyStats[city]) countyStats[city].fetched += 1;
+        if (result.reject) {
+          rejected += 1;
+          batchRejected += 1;
+          if (countyStats[city]) countyStats[city].rejected += 1;
+          if (rejects.length < 800) reject(rejects, result.row ?? {}, result.reject);
+          continue;
+        }
+        if (!keepNavigable(result.row)) {
+          rejected += 1;
+          batchRejected += 1;
+          if (rejects.length < 800) reject(rejects, result.row, "low_value_other");
+          continue;
+        }
+        accepted.push(slimRow(result.row));
+        batchInserted += 1;
       }
-      if (!keepNavigable(result.row)) {
-        rejected += 1;
-        if (rejects.length < 800) reject(rejects, result.row, "low_value_other");
-        continue;
-      }
-      accepted.push(slimRow(result.row));
+      writeFileSync(ACCEPTED_CACHE, JSON.stringify(accepted));
+      const nextOffset = i + BATCH_SIZE;
+      const record = {
+        jobId,
+        status: "in_progress",
+        batchId,
+        lastSuccessfulBatch: batchId,
+        resumeOffset: nextOffset,
+        fetched,
+        rejected,
+        accepted: accepted.length,
+        batch: {
+          id: String(batchId).padStart(3, "0"),
+          start: i,
+          end: Math.min(nextOffset, features.length),
+          fetched: batchFetched,
+          inserted: batchInserted,
+          updated: 0,
+          deduplicated: 0,
+          rejected: batchRejected,
+          failed: 0,
+          durationMs: Date.now() - batchStarted,
+        },
+      };
+      batches.push(record.batch);
+      writeFileSync(CHECKPOINT, `${JSON.stringify(record, null, 2)}\n`);
+    } catch (error) {
+      writeFileSync(
+        CHECKPOINT,
+        `${JSON.stringify(
+          {
+            jobId,
+            status: "failed",
+            lastSuccessfulBatch: Math.max(0, batchId - 1),
+            resumeOffset: i,
+            fetched,
+            rejected,
+            failureReason: error instanceof Error ? error.message : String(error),
+          },
+          null,
+          2,
+        )}\n`,
+      );
+      throw error;
     }
   }
 
@@ -500,6 +650,9 @@ async function main() {
     durationMs,
     errorCount: 0,
     batchSize: BATCH_SIZE,
+    resume: Boolean(resume),
+    lastSuccessfulBatch: batches.at(-1)?.id ?? null,
+    batches,
     bySource,
     byCategory,
     byCity,
@@ -523,11 +676,35 @@ async function main() {
         active: active.length,
         total: all.length,
         incremental: true,
+        resume: true,
       },
       null,
       2,
     )}\n`,
   );
+  writeFileSync(
+    CHECKPOINT,
+    `${JSON.stringify(
+      {
+        jobId,
+        status: "complete",
+        lastSuccessfulBatch: batches.at(-1)?.id ?? null,
+        resumeOffset: features.length,
+        fetched,
+        rejected,
+        accepted: active.length,
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  if (existsSync(ACCEPTED_CACHE)) {
+    try {
+      writeFileSync(ACCEPTED_CACHE, "[]");
+    } catch {
+      /* ignore */
+    }
+  }
   console.log(JSON.stringify({ active: active.length, fetched, rejected, dedup: report.deduplicated, durationMs }, null, 2));
 }
 
