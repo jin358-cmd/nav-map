@@ -14,7 +14,7 @@ export function PoiLayerDrawer({
   visibility,
   loading = false,
   progress = 0,
-  loadingLabel = "生活圖層讀取中",
+  loadingLabel = "生活圖層",
   onToggle,
 }: {
   open: boolean;

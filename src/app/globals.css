@@ -189,6 +189,10 @@
 }
 
 .poi-layer-read-hud__label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.18rem;
   margin: 0;
   max-width: 12rem;
   text-align: center;
@@ -196,6 +200,26 @@
   font-weight: 700;
   letter-spacing: 0.02em;
   color: #ecfeff;
+}
+
+.poi-layer-read-hud__label--banner {
+  align-items: flex-start;
+  max-width: none;
+  font-size: 0.72rem;
+  text-align: left;
+}
+
+.poi-layer-read-hud__name {
+  display: block;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.poi-layer-read-hud__status {
+  display: block;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  opacity: 0.92;
 }
 
 .poi-layer-read-bar {
@@ -655,9 +679,9 @@
 
 .hud-anchor-maneuver {
   position: absolute;
-  top: max(0.85rem, calc(env(safe-area-inset-top) + 0.4rem));
-  left: max(1.15rem, calc(env(safe-area-inset-left) + 0.75rem));
-  right: max(1.15rem, calc(env(safe-area-inset-right) + 0.75rem));
+  top: max(1.2rem, calc(env(safe-area-inset-top) + 0.75rem));
+  left: max(calc(1.15rem + 0.2cm), calc(env(safe-area-inset-left) + 0.75rem + 0.2cm));
+  right: max(calc(1.15rem + 0.2cm), calc(env(safe-area-inset-right) + 0.75rem + 0.2cm));
   z-index: 30;
   width: auto;
   max-width: none;
@@ -897,11 +921,11 @@
   }
 
   .hud-anchor-maneuver {
-    top: max(0.45rem, env(safe-area-inset-top));
-    left: max(0.4rem, env(safe-area-inset-left));
+    top: max(0.8rem, calc(env(safe-area-inset-top) + 0.35rem));
+    left: max(calc(0.4rem + 0.2cm), calc(env(safe-area-inset-left) + 0.2cm));
     right: auto;
     width: min(50vw, 28rem);
-    max-width: calc(100vw - 6.75rem - env(safe-area-inset-right));
+    max-width: calc(100vw - 6.75rem - 0.2cm - env(safe-area-inset-right));
   }
 
   .hud-anchor-trip {
@@ -1204,8 +1228,8 @@
   }
 
   .hud-anchor-maneuver {
-    left: max(0.4rem, env(safe-area-inset-left));
-    right: max(0.4rem, env(safe-area-inset-right));
+    left: max(calc(0.4rem + 0.2cm), calc(env(safe-area-inset-left) + 0.2cm));
+    right: max(calc(0.4rem + 0.2cm), calc(env(safe-area-inset-right) + 0.2cm));
     width: auto;
     max-width: none;
   }
