@@ -317,7 +317,8 @@
   place-items: center;
   width: 100%;
   height: 100%;
-  transform-origin: 50% 50%;
+  transform-origin: 50% 70%;
+  transform: perspective(140px) rotateX(15deg);
   filter: drop-shadow(0 2px 3px rgba(15, 23, 42, 0.4));
 }
 
@@ -327,8 +328,8 @@
 
 @media (orientation: portrait) {
   .vehicle-marker--nav .vehicle-marker__body {
-    transform: scale(1.5);
-    transform-origin: 50% 50%;
+    transform: perspective(140px) rotateX(15deg) scale(1.5);
+    transform-origin: 50% 70%;
     filter: drop-shadow(0 0 8px rgba(250, 204, 21, 0.45));
   }
 }

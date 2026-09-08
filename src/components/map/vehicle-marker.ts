@@ -1,7 +1,7 @@
 /**
  * 立體三角車頭：與安裝圖示同語言。
  * 旋轉走 Marker.setRotation；根節點不做 CSS rotate。
- * viewBox 正方形、三角形重心在中心，anchor=center 時旋轉不偏軸。
+ * 圖標本身以 rotateX(15deg) 呈現 15° 仰角；viewBox 正方形、重心在中心。
  */
 export function createVehicleMarkerElement(): HTMLDivElement {
   const root = document.createElement("div");

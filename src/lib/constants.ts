@@ -15,13 +15,13 @@ export const DEMO_VEHICLE: VehiclePose = {
 
 export const DRIVING_PITCH = 58;
 /**
- * 導航第一人稱前視。MapLibre pitch 不是駕駛「仰角」。
- * pitch≈64 約等於視線低於水平 26°，畫面更接近駕駛視角。
+ * 導航 3D：駕駛仰角 15°（視線低於水平 15°）。
+ * MapLibre pitch = 90 − 仰角 = 75。
  */
-export const NAVIGATION_PITCH = 69;
-/** 直式導航：鏡頭再仰高、更貼近定位圖示。 */
+export const NAVIGATION_PITCH = 75;
+/** 直式導航同樣維持仰角 15°。 */
 export const NAVIGATION_PITCH_PORTRAIT = 75;
-export const INTERSECTION_PITCH_PORTRAIT = 72;
+export const INTERSECTION_PITCH_PORTRAIT = 75;
 export const DRIVING_ZOOM_PORTRAIT = 17.98;
 export const OVERVIEW_PITCH = 0;
 export const DRIVING_ZOOM = 17.72;
@@ -37,7 +37,7 @@ export const OVERHEAD_TURN_ZOOM_PORTRAIT = 18.08;
 /** 路口近距離上限，避免無限放大。 */
 export const INTERSECTION_ZOOM = 18.28;
 export const INTERSECTION_ZOOM_MOBILE = 18.05;
-export const INTERSECTION_PITCH = 60;
+export const INTERSECTION_PITCH = 75;
 export const INTERSECTION_APPROACH_METERS = 95;
 export const CRUISE_ZOOM_START_METERS = 500;
 export const PREPARE_ZOOM_METERS = 200;

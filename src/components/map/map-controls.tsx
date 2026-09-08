@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Layers, LayoutGrid, LocateFixed } from "lucide-react";
+import { LayoutGrid, LocateFixed, ShoppingBag } from "lucide-react";
 import { MapStyleMenu } from "@/components/overlay/map-style-menu";
 import { Button } from "@/components/ui/button";
 import {
@@ -72,7 +72,7 @@ export function MapControls({
           controls="navpilot-poi-layers"
           tone={tone}
         >
-          <Layers className="size-6" strokeWidth={2.5} />
+          <ShoppingBag className="size-6" strokeWidth={2.5} />
         </ControlButton>
       ) : null}
       <ControlButton
