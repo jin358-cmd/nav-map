@@ -278,33 +278,16 @@ function compactAddressKey(value?: string | null) {
     .replaceAll(/\s+/g, "");
 }
 
-/** 確認欄只顯示一條地址，去掉標題／完整地址重複。 */
+/** 確認欄只顯示路名之後的完整地址，不含郵遞區號、縣市與行政區。 */
 export function unifiedConfirmAddress(
   label?: string | null,
   address?: string | null,
 ): string {
-  const title = formatTaiwanDisplayAddress(label);
-  const line = formatTaiwanDisplayAddress(address);
-  if (!title) return stripAccuracyLabels(line);
-  if (!line) return stripAccuracyLabels(title);
-  if (sameTaiwanDisplayTitle(title, line)) return stripAccuracyLabels(title);
-
-  const titleKey = compactAddressKey(title);
-  const lineKey = compactAddressKey(line);
-  if (titleKey === lineKey) {
-    return stripAccuracyLabels(title.length >= line.length ? title : line);
-  }
-  if (lineKey.includes(titleKey)) return stripAccuracyLabels(line);
-  if (titleKey.includes(lineKey)) return stripAccuracyLabels(title);
-
-  const titleCore = title.replace(/[（(][^）)]+[）)]/g, "").trim();
-  const coreKey = compactAddressKey(titleCore);
-  if (coreKey && lineKey.includes(coreKey)) return stripAccuracyLabels(line);
-  if (coreKey && titleKey.includes(lineKey)) return stripAccuracyLabels(title);
-  if (coreKey && titleCore !== title && !lineKey.includes(coreKey)) {
-    return stripAccuracyLabels(`${titleCore} · ${line}`);
-  }
-  return stripAccuracyLabels(title.length >= line.length ? title : line);
+  const road =
+    formatTaiwanRoadName(address) || formatTaiwanRoadName(label);
+  if (road) return stripAccuracyLabels(road);
+  const fallback = formatTaiwanDisplayAddress(address || label);
+  return stripAccuracyLabels(formatTaiwanRoadName(fallback) || fallback);
 }
 
 function formatCommaSeparatedRoad(value: string) {

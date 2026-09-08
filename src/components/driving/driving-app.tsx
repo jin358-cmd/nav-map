@@ -1056,7 +1056,6 @@ export function DrivingApp() {
     setParkingArrivalMinimized(false);
     setArrivalNotice(null);
     setToolsDrawerOpen(false);
-    setCameraMode("3d");
     setFollowVehicle(true);
     setUserAdjustedMap(false);
     panIntentRef.current = false;

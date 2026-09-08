@@ -327,9 +327,9 @@
 
 @media (orientation: portrait) {
   .vehicle-marker--nav .vehicle-marker__body {
-    transform: scale(3);
+    transform: scale(1.5);
     transform-origin: 50% 50%;
-    filter: drop-shadow(0 0 10px rgba(250, 204, 21, 0.48));
+    filter: drop-shadow(0 0 8px rgba(250, 204, 21, 0.45));
   }
 }
 

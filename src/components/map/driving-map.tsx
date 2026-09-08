@@ -78,7 +78,7 @@ import {
 } from "@/lib/guidance-arrows";
 import { upsertIntelligenceLayers } from "@/lib/map-layers";
 import { configureMapLibreWorker } from "@/lib/maplibre-worker";
-import { formatTaiwanDisplayAddress } from "@/lib/geocoding/format-taiwan-display-address";
+import { formatTaiwanRoadName } from "@/lib/geocoding/format-taiwan-display-address";
 import {
   applyResolvedTheme,
   basemapStyle,
@@ -513,6 +513,9 @@ export function DrivingMap({
   const layerVisibilityRef = useRef(layerVisibility);
   const followVehicleRef = useRef(followVehicle);
   const navigatingRef = useRef(navigating);
+  const routePreviewRef = useRef(
+    Boolean(destination && !navigating && route.length >= 2),
+  );
   const reroutingRef = useRef(rerouting);
   const approachingRef = useRef(approachingIntersection);
   const junctionCueRef = useRef(junctionCue);
@@ -600,6 +603,10 @@ export function DrivingMap({
     selectedConstructionRef.current = selectedConstructionId;
     layerVisibilityRef.current = layerVisibility;
     navigatingRef.current = navigating;
+    followVehicleRef.current = followVehicle;
+    routePreviewRef.current = Boolean(
+      destination && !navigating && route.length >= 2,
+    );
     reroutingRef.current = rerouting;
     approachingRef.current = approachingIntersection;
     junctionCueRef.current = junctionCue;
@@ -658,6 +665,8 @@ export function DrivingMap({
     routeMeters,
     distanceToNextMeters,
     overlayPadding,
+    destination,
+    followVehicle,
   ]);
 
   useEffect(() => {
@@ -844,7 +853,11 @@ export function DrivingMap({
         }
       }
 
-      if (followVehicleRef.current && !gestureBusy) {
+      if (
+        !routePreviewRef.current &&
+        followVehicleRef.current &&
+        !gestureBusy
+      ) {
         const displayPose = {
           ...raw,
           lng: display.lng,
@@ -1455,7 +1468,10 @@ export function DrivingMap({
     destMarkerRef.current = null;
     if (!destination) return;
     destMarkerRef.current = new Marker({
-        element: createDestinationPin(formatTaiwanDisplayAddress(destination.label)),
+        element: createDestinationPin(
+          formatTaiwanRoadName(destination.address || destination.label) ||
+            destination.label,
+        ),
       anchor: "bottom",
     })
       .setLngLat([destination.location.lng, destination.location.lat])
@@ -1472,8 +1488,8 @@ export function DrivingMap({
     const compact = isCompactViewport(map.getContainer().clientWidth);
     map.fitBounds(bounds, {
       padding: {
-        top: compact ? 120 : 110,
-        bottom: compact ? 140 : 130,
+        top: compact ? 168 : 150,
+        bottom: compact ? 120 : 110,
         left: compact ? 48 : 44,
         right: compact ? 48 : 44,
       },
@@ -1489,6 +1505,7 @@ export function DrivingMap({
     const map = mapRef.current;
     if (!map || !readyRef.current) return;
     if (followVehicleRef.current) return;
+    if (destination && !navigating && route.length >= 2) return;
     const compact = isCompactViewport(map.getContainer().clientWidth);
     const portrait =
       map.getContainer().clientHeight > map.getContainer().clientWidth;
@@ -1523,7 +1540,7 @@ export function DrivingMap({
     } catch {
       /* keep the current frame if the style is swapping */
     }
-  }, [cameraMode, navigating]);
+  }, [cameraMode, navigating, destination, route]);
 
   return <div ref={containerRef} className="absolute inset-0 h-full w-full touch-none" />;
 }
