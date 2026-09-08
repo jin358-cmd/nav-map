@@ -47,3 +47,7 @@ export function setVehicleMarkerHeading(element: HTMLElement, heading: number) {
   if (!body) return;
   body.dataset.heading = String(heading);
 }
+
+export function setVehicleMarkerVisible(element: HTMLElement, visible: boolean) {
+  element.style.visibility = visible ? "visible" : "hidden";
+}

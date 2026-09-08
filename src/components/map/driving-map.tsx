@@ -7,6 +7,7 @@ import {
   createVehicleMarkerElement,
   setVehicleMarkerHeading,
   setVehicleMarkerNavigating,
+  setVehicleMarkerVisible,
 } from "@/components/map/vehicle-marker";
 import {
   BROWSE_VEHICLE_Y,
@@ -32,7 +33,8 @@ import {
   OVERHEAD_TURN_ZOOM_MOBILE,
   OVERHEAD_TURN_ZOOM_PORTRAIT,
   OVERHEAD_ZOOM,
-  TAINAN_CENTER,
+  TAIWAN_OVERVIEW,
+  TAIWAN_OVERVIEW_ZOOM,
 } from "@/lib/constants";
 import { type ManeuverAlertPhase } from "@/lib/maneuver-guidance";
 import { approachCameraProgress } from "@/lib/upcoming-route";
@@ -107,6 +109,7 @@ import {
   type VehicleDisplayState,
 } from "@/lib/vehicle-display";
 import { upsertSpeedEnforcementLayer } from "@/lib/speed-enforcement-layer";
+import { peekLastGpsFix } from "@/services/geolocation";
 import type {
   AccidentReport,
   CameraMode,
@@ -465,6 +468,7 @@ export function DrivingMap({
   onStyleApplied,
   onStyleFallback,
 }: DrivingMapProps) {
+  const bootGps = peekLastGpsFix();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const vehicleMarkerRef = useRef<Marker | null>(null);
@@ -494,9 +498,11 @@ export function DrivingMap({
   const vehicleRef = useRef(vehicle);
   const displayVehicleRef = useRef(displayVehicle);
   const displayStateRef = useRef<VehicleDisplayState>(
-    createVehicleDisplayState(displayVehicle ?? vehicle),
+    createVehicleDisplayState(bootGps ?? displayVehicle ?? vehicle),
   );
-  const lastFixKeyRef = useRef(`${vehicle.lng},${vehicle.lat}`);
+  const lastFixKeyRef = useRef(
+    `${(bootGps ?? vehicle).lng},${(bootGps ?? vehicle).lat}`,
+  );
   const lastFixAtRef = useRef(0);
   const routeModelRef = useRef(createRouteProgressModel(route, []));
   const routeRef = useRef(route);
@@ -549,8 +555,9 @@ export function DrivingMap({
   const lastArrowUpdateRef = useRef(0);
   const readyRef = useRef(false);
   const lastFrameRef = useRef(0);
-  const markerRotationRef = useRef(vehicle.heading);
+  const markerRotationRef = useRef((bootGps ?? vehicle).heading);
   const cameraCompassRef = useRef<number | null>(null);
+  const acquiredGpsRef = useRef(bootGps != null);
   const lastViewportEmitRef = useRef(0);
   const lastEmittedZoomRef = useRef(0);
   const rafRef = useRef(0);
@@ -589,13 +596,20 @@ export function DrivingMap({
       lastFixKeyRef.current = fixKey;
       lastFixAtRef.current = performance.now();
     }
+    const nextPose = displayVehicle ?? vehicle;
+    if (vehicle.source === "gps") {
+      const jumpMeters =
+        distanceKm(displayStateRef.current, nextPose) * 1000;
+      if (!acquiredGpsRef.current || jumpMeters > 250) {
+        displayStateRef.current = createVehicleDisplayState(nextPose);
+      }
+    }
     routeRef.current = route;
     const routeSig = routeGeometrySignature(route);
     if (routeSig !== routeSigRef.current) {
       routeSigRef.current = routeSig;
       resetGuidanceArrowCache();
       recoverUntilRef.current = 0;
-      const nextPose = displayVehicle ?? vehicle;
       const jumpMeters =
         distanceKm(displayStateRef.current, nextPose) * 1000;
       if (jumpMeters > 35) {
@@ -690,13 +704,17 @@ export function DrivingMap({
 
     configureMapLibreWorker();
 
+    const startPose = peekLastGpsFix();
+    acquiredGpsRef.current = startPose != null;
     const map = new MapLibreMap({
       container: containerRef.current,
       style: basemapStyle(resolveMapBasemap(mapDisplayMode)),
-      center: [TAINAN_CENTER.lng, TAINAN_CENTER.lat],
-      zoom: DRIVING_ZOOM,
-      pitch: DRIVING_PITCH,
-      bearing: vehicle.heading,
+      center: startPose
+        ? [startPose.lng, startPose.lat]
+        : [TAIWAN_OVERVIEW.lng, TAIWAN_OVERVIEW.lat],
+      zoom: startPose ? DRIVING_ZOOM : TAIWAN_OVERVIEW_ZOOM,
+      pitch: startPose ? DRIVING_PITCH : 0,
+      bearing: startPose ? startPose.heading : 0,
       maxPitch: 80,
       attributionControl: false,
       fadeDuration: 0,
@@ -714,6 +732,7 @@ export function DrivingMap({
     mapRef.current = map;
 
     const vehicleEl = createVehicleMarkerElement();
+    setVehicleMarkerVisible(vehicleEl, startPose != null);
     vehicleMarkerRef.current = new Marker({
       element: vehicleEl,
       anchor: "center",
@@ -721,7 +740,11 @@ export function DrivingMap({
       pitchAlignment: "map",
       rotationAlignment: "map",
     })
-      .setLngLat([vehicle.lng, vehicle.lat])
+      .setLngLat(
+        startPose
+          ? [startPose.lng, startPose.lat]
+          : [TAIWAN_OVERVIEW.lng, TAIWAN_OVERVIEW.lat],
+      )
       .addTo(map);
 
     const emitViewport = (force = false) => {
@@ -765,16 +788,25 @@ export function DrivingMap({
         lastFixKeyRef.current = fixKey;
         lastFixAtRef.current = now;
       }
-      displayStateRef.current = stepVehicleDisplay({
-        current: displayStateRef.current,
-        target,
-        raw,
-        model: routeModelRef.current,
-        navigating: navigatingRef.current,
-        dtSeconds: dt,
-        elapsedSinceFixSeconds: Math.max(0, (now - lastFixAtRef.current) / 1000),
-      });
+      let snapToFix = false;
+      if (raw.source === "gps" && !acquiredGpsRef.current) {
+        acquiredGpsRef.current = true;
+        displayStateRef.current = createVehicleDisplayState(target);
+        snapToFix = true;
+      } else {
+        displayStateRef.current = stepVehicleDisplay({
+          current: displayStateRef.current,
+          target,
+          raw,
+          model: routeModelRef.current,
+          navigating: navigatingRef.current,
+          dtSeconds: dt,
+          elapsedSinceFixSeconds: Math.max(0, (now - lastFixAtRef.current) / 1000),
+        });
+      }
       const display = displayStateRef.current;
+      const showVehicle = raw.source === "gps";
+      setVehicleMarkerVisible(marker.getElement(), showVehicle);
       marker.setLngLat([display.lng, display.lat]);
 
       const headingUp = followOrientationRef.current === "heading-up";
@@ -785,6 +817,7 @@ export function DrivingMap({
       }
 
       const gestureBusy = interactingRef.current || pinchingRef.current;
+      let coneHeadingForMarker: number | null = null;
       try {
         const showCone = shouldShowHeadingCone({
           navigating: navigatingRef.current,
@@ -801,10 +834,11 @@ export function DrivingMap({
           fallbackHeading: display.heading,
         });
         coneHeadingRef.current =
-          coneHeadingRef.current == null
+          coneHeadingRef.current == null || snapToFix
             ? coneTarget
             : stepConeHeading(coneHeadingRef.current, coneTarget, dt);
         const coneHeading = coneHeadingRef.current;
+        if (showCone) coneHeadingForMarker = coneHeading;
         const coneZoom = mapNow.getZoom();
         const coneKey = showCone
           ? `${display.lng.toFixed(5)},${display.lat.toFixed(5)},${coneHeading.toFixed(2)},${coneZoom.toFixed(2)}`
@@ -905,7 +939,8 @@ export function DrivingMap({
 
       if (
         !routePreviewRef.current &&
-        followVehicleRef.current &&
+        showVehicle &&
+        (followVehicleRef.current || snapToFix) &&
         !gestureBusy
       ) {
         const displayPose = {
@@ -925,7 +960,7 @@ export function DrivingMap({
           cameraCompassRef.current =
             compassRaw == null
               ? cameraCompassRef.current
-              : cameraCompassRef.current == null
+              : cameraCompassRef.current == null || snapToFix
                 ? compassRaw
                 : stepConeHeading(cameraCompassRef.current, compassRaw, dt);
         }
@@ -948,29 +983,35 @@ export function DrivingMap({
           ? mapNow.getZoom()
           : (userZoomRef.current ?? wanted.zoom);
         const followTau = presentationFollowTau(raw.speedMps ?? 0, wanted.blend);
-        const posT = damp(dt, followTau.posTau);
-        const zoomT = pinchingRef.current ? 0 : damp(dt, followTau.zoomTau);
+        const posT = snapToFix ? 1 : damp(dt, followTau.posTau);
+        const zoomT = pinchingRef.current ? 0 : snapToFix ? 1 : damp(dt, followTau.zoomTau);
         const currentBearing = mapNow.getBearing();
         const bearingTau = northUp ? 0.055 : followTau.bearingTau;
         const bearingHoldDeg = northUp ? 0.5 : followTau.bearingHoldDeg;
         const bearingGap = headingDelta(currentBearing, wanted.bearing);
         const nextBearing =
-          bearingGap < bearingHoldDeg
-            ? currentBearing
-            : lerpAngle(
-                currentBearing,
-                wanted.bearing,
-                damp(dt, bearingTau),
-              );
+          snapToFix
+            ? wanted.bearing
+            : bearingGap < bearingHoldDeg
+              ? currentBearing
+              : lerpAngle(
+                  currentBearing,
+                  wanted.bearing,
+                  damp(dt, bearingTau),
+                );
         try {
           mapNow.jumpTo({
-            center: [
-              lerp(center.lng, wanted.center[0], posT),
-              lerp(center.lat, wanted.center[1], posT),
-            ],
+            center: snapToFix
+              ? wanted.center
+              : [
+                  lerp(center.lng, wanted.center[0], posT),
+                  lerp(center.lat, wanted.center[1], posT),
+                ],
             bearing: nextBearing,
-            pitch: lerp(mapNow.getPitch(), wanted.pitch, damp(dt, 0.08)),
-            zoom: lerp(mapNow.getZoom(), zoomTarget, zoomT),
+            pitch: snapToFix
+              ? wanted.pitch
+              : lerp(mapNow.getPitch(), wanted.pitch, damp(dt, 0.08)),
+            zoom: snapToFix ? zoomTarget : lerp(mapNow.getZoom(), zoomTarget, zoomT),
             padding: wanted.padding,
           });
         } catch {
@@ -979,19 +1020,23 @@ export function DrivingMap({
         emitViewport();
       }
 
-      const rotationTarget =
-        headingUp && followVehicleRef.current
-          ? mapNow.getBearing()
-          : display.heading;
-      const markerGap = headingDelta(markerRotationRef.current, rotationTarget);
-      markerRotationRef.current =
-        markerGap < 2.2
-          ? markerRotationRef.current
-          : lerpAngle(
-              markerRotationRef.current,
-              rotationTarget,
-              damp(dt, 0.24),
-            );
+      if (coneHeadingForMarker != null) {
+        markerRotationRef.current = coneHeadingForMarker;
+      } else {
+        const rotationTarget =
+          headingUp && followVehicleRef.current
+            ? mapNow.getBearing()
+            : display.heading;
+        const markerGap = headingDelta(markerRotationRef.current, rotationTarget);
+        markerRotationRef.current =
+          markerGap < 2.2
+            ? markerRotationRef.current
+            : lerpAngle(
+                markerRotationRef.current,
+                rotationTarget,
+                damp(dt, 0.24),
+              );
+      }
       marker.setRotation(markerRotationRef.current);
       setVehicleMarkerHeading(marker.getElement(), markerRotationRef.current);
 
@@ -1058,16 +1103,26 @@ export function DrivingMap({
       if (readyRef.current) return;
       readyRef.current = true;
       try {
-        map.jumpTo(
-          cameraOptions(
-            map,
-            vehicleRef.current,
-            modeRef.current,
-            navigatingRef.current,
-            approachingRef.current,
-            overlayPaddingRef.current,
-          ),
-        );
+        if (vehicleRef.current.source === "gps") {
+          acquiredGpsRef.current = true;
+          map.jumpTo(
+            cameraOptions(
+              map,
+              vehicleRef.current,
+              modeRef.current,
+              navigatingRef.current,
+              approachingRef.current,
+              overlayPaddingRef.current,
+              distanceToNextRef.current,
+              junctionCueRef.current,
+              followOrientationRef.current,
+              0,
+              followOrientationRef.current === "north-up"
+                ? cameraCompassRef.current
+                : null,
+            ),
+          );
+        }
       } catch {
         /* camera restore is optional until the next frame */
       }
@@ -1357,34 +1412,38 @@ export function DrivingMap({
 
     const restoreCameraAndMarkers = () => {
       try {
-        const display = displayStateRef.current;
-        const wanted = cameraOptions(
-          map,
-          {
-            ...vehicleRef.current,
-            lng: display.lng,
-            lat: display.lat,
-            heading: display.heading,
-          },
-          modeRef.current,
-          navigatingRef.current,
-          approachingRef.current,
-          overlayPaddingRef.current,
-          distanceToNextRef.current,
-          junctionCueRef.current,
-          followOrientationRef.current,
-          0,
-          followOrientationRef.current === "north-up"
-            ? cameraCompassRef.current
-            : null,
-        );
-        map.jumpTo({
-          center: wanted.center,
-          bearing: wanted.bearing,
-          pitch: wanted.pitch,
-          zoom: wanted.zoom,
-          padding: wanted.padding,
-        });
+        if (vehicleRef.current.source !== "gps") {
+          map.jumpTo(camera);
+        } else {
+          const display = displayStateRef.current;
+          const wanted = cameraOptions(
+            map,
+            {
+              ...vehicleRef.current,
+              lng: display.lng,
+              lat: display.lat,
+              heading: display.heading,
+            },
+            modeRef.current,
+            navigatingRef.current,
+            approachingRef.current,
+            overlayPaddingRef.current,
+            distanceToNextRef.current,
+            junctionCueRef.current,
+            followOrientationRef.current,
+            0,
+            followOrientationRef.current === "north-up"
+              ? cameraCompassRef.current
+              : null,
+          );
+          map.jumpTo({
+            center: wanted.center,
+            bearing: wanted.bearing,
+            pitch: wanted.pitch,
+            zoom: wanted.zoom,
+            padding: wanted.padding,
+          });
+        }
       } catch {
         try {
           map.jumpTo(camera);

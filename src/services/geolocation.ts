@@ -76,6 +76,11 @@ function emitFix(pose: VehiclePose) {
   for (const subscriber of subscribers) subscriber.onFix(pose);
 }
 
+/** Read-only: last GPS pose in this page session. Does not start a watch. */
+export function peekLastGpsFix(): VehiclePose | null {
+  return lastFix?.source === "gps" ? lastFix : null;
+}
+
 function applyPosition(position: GeolocationPosition) {
   const lng = position.coords.longitude;
   const lat = position.coords.latitude;

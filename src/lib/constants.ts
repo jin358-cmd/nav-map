@@ -1,10 +1,17 @@
 import type { VehiclePose } from "@/types/domain";
 
-/** 臺南中西區／中正路示範駕駛起點 */
+/** 臺南中西區／中正路示範駕駛起點（不得再當開機定位） */
 export const TAINAN_CENTER = {
   lng: 120.2049,
   lat: 22.9878,
 } as const;
+
+/** 尚未取得 GPS 時的全島總覽，避免先落到臺南預設街景。 */
+export const TAIWAN_OVERVIEW = {
+  lng: 120.96,
+  lat: 23.7,
+} as const;
+export const TAIWAN_OVERVIEW_ZOOM = 7.15;
 
 export const DEMO_VEHICLE: VehiclePose = {
   lng: 120.2049,

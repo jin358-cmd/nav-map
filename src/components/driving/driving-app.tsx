@@ -517,10 +517,12 @@ export function DrivingApp() {
   } = useDisasterView(refreshNonce);
 
   const parkingCenter = navigating
-    ? destination?.location ?? (vehicle.source === "gps" ? vehicle : viewport?.center ?? vehicle)
+    ? destination?.location ?? (vehicle.source === "gps" ? vehicle : null)
     : vehicle.source === "gps"
       ? vehicle
-      : viewport?.center ?? vehicle;
+      : userAdjustedMap
+        ? viewport?.center ?? null
+        : null;
   const parkingRadiusMeters = navigating
     ? PARKING_DESTINATION_RADIUS_M
     : PARKING_CURRENT_LOCATION_RADIUS_M;
