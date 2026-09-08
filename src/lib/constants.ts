@@ -44,6 +44,8 @@ export const OVERHEAD_TURN_ZOOM_PORTRAIT = 18.08;
 /** 路口近距離上限，避免無限放大。 */
 export const INTERSECTION_ZOOM = 18.28;
 export const INTERSECTION_ZOOM_MOBILE = 18.05;
+/** 直式 3D 路口鏡頭上限：接近黃線時放大到此即停止。 */
+export const INTERSECTION_ZOOM_PORTRAIT = 18.52;
 export const INTERSECTION_PITCH = 52;
 export const INTERSECTION_APPROACH_METERS = 95;
 export const CRUISE_ZOOM_START_METERS = 500;
@@ -67,6 +69,9 @@ export const GUIDANCE_SIGN_APPROACH_METERS = 150;
 export const GUIDANCE_SIGN_EXIT_METERS = 168;
 /** @deprecated 改用 GUIDANCE_SIGN_APPROACH_METERS */
 export const GUIDANCE_ARROW_APPROACH_METERS = GUIDANCE_SIGN_APPROACH_METERS;
+/** 直式：黃線出現後開始拉近，到此距離達上限並維持。 */
+export const PORTRAIT_APPROACH_ZOOM_START_METERS = GUIDANCE_SIGN_APPROACH_METERS;
+export const PORTRAIT_APPROACH_ZOOM_FULL_METERS = 45;
 
 /** 瀏覽 3D：車輛約在畫面下三分之一；導航 3D 略再偏低，前方視野拉長。 */
 export const BROWSE_VEHICLE_Y = 0.68;

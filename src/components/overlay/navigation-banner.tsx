@@ -2,6 +2,11 @@
 
 import { forwardRef, useEffect, useRef, useState } from "react";
 import { Volume2, VolumeX, X } from "lucide-react";
+import {
+  TurnArrowIcon,
+  turnSideFromStep,
+  type TurnSide,
+} from "@/components/overlay/turn-arrow-icon";
 import { formatDistance } from "@/lib/format";
 import {
   formatIntersectionLabel,
@@ -10,6 +15,10 @@ import {
 import type { ManeuverAlertPhase } from "@/lib/maneuver-guidance";
 import { cn } from "@/lib/utils";
 import type { RouteStep } from "@/types/domain";
+
+function isSignalTurn(side: TurnSide) {
+  return side !== "straight" && side !== "arrive";
+}
 
 function useSmoothedMeters(target: number) {
   const [shown, setShown] = useState(target);
@@ -116,10 +125,12 @@ export const NextIntersectionHud = forwardRef<
 ) {
   const latched = useLatchedStep(step);
   const turn = shortTurn(latched);
+  const side = turnSideFromStep(latched);
   const road = shortRoadName(latched);
   const displayMeters = useSmoothedMeters(distanceMeters);
   const headline = `${formatDistance(displayMeters)}後${turn}`;
   const turnAlert = isTurn && alertPhase !== "cruise";
+  const blinkTurn = turnAlert && isSignalTurn(side);
 
   return (
     <div
@@ -143,6 +154,20 @@ export const NextIntersectionHud = forwardRef<
         </button>
       ) : null}
       <div className="navigation-instruction-content">
+        <div className="maneuverIconWrap navigation-turn-icon">
+          <div
+            className={cn(
+              "maneuverIconBadge",
+              blinkTurn && "maneuverIconBadge--alert navigation-turn-icon--signal",
+            )}
+          >
+            <TurnArrowIcon
+              side={side}
+              variant="b"
+              className="maneuverIconArrow"
+            />
+          </div>
+        </div>
         <div className="navigation-copy min-w-0 text-left">
           <p className="navigation-guidance truncate tabular-nums tracking-tight">
             {headline}

@@ -5,6 +5,8 @@ import {
   MANEUVER_AFTER_TURN_METERS,
   MANEUVER_APPROACH_METERS,
   MANEUVER_IMMINENT_METERS,
+  PORTRAIT_APPROACH_ZOOM_FULL_METERS,
+  PORTRAIT_APPROACH_ZOOM_START_METERS,
   PREPARE_ZOOM_METERS,
   TURN_VIEW_METERS,
 } from "@/lib/constants";
@@ -232,10 +234,22 @@ export function isApproachingIntersection(distanceToNext: number) {
 }
 
 /**
- * >200m=cruise，200→100 開始拉近，100=Approach，30=Turn View。
+ * 橫式／一般：>200m cruise，200→100 拉近，100 Approach，30 Turn View。
+ * 直式：黃線（150m）起逐漸放大，45m 達上限後不再放大。
  */
-export function approachCameraProgress(distanceToNext: number) {
+export function approachCameraProgress(
+  distanceToNext: number,
+  portrait = false,
+) {
   if (!Number.isFinite(distanceToNext)) return 0;
+  if (portrait) {
+    if (distanceToNext > PORTRAIT_APPROACH_ZOOM_START_METERS) return 0;
+    if (distanceToNext <= PORTRAIT_APPROACH_ZOOM_FULL_METERS) return 1;
+    return (
+      (PORTRAIT_APPROACH_ZOOM_START_METERS - distanceToNext) /
+      (PORTRAIT_APPROACH_ZOOM_START_METERS - PORTRAIT_APPROACH_ZOOM_FULL_METERS)
+    );
+  }
   if (distanceToNext > PREPARE_ZOOM_METERS) return 0;
   if (distanceToNext <= MANEUVER_IMMINENT_METERS) return 1;
   if (distanceToNext <= MANEUVER_APPROACH_METERS) {
@@ -291,14 +305,15 @@ export function turnGuidanceLine(
 
 const TURN_MARQUEE_SPACING_M = 42;
 
-/** 大間隔箭頭沿黃線朝路徑方向跑馬燈。 */
+/** 大間隔箭頭沿黃線反向慢速跑馬燈。 */
 export function turnMarqueeArrows(
   line: [number, number][],
   phase = 0,
 ): GuidanceArrow[] {
   if (line.length < 2) return [];
   const spacing = TURN_MARQUEE_SPACING_M;
-  const shift = (((phase % 1) + 1) % 1) * spacing;
+  const cycle = ((phase % 1) + 1) % 1;
+  const shift = (1 - cycle) * spacing;
   const placed: GuidanceArrow[] = [];
   let leftover = spacing * 0.2 - shift;
   let along = 0;

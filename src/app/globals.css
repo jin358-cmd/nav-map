@@ -1175,9 +1175,72 @@
   bottom: 0.36rem;
 }
 
+.maneuverIconWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.maneuverIconBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 0.9rem;
+  background: #16a34a;
+  color: #fff;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.2),
+    0 2px 8px rgba(0, 0, 0, 0.22);
+  transform: translateZ(0);
+}
+
+.maneuverIconArrow {
+  width: 78%;
+  height: 78%;
+  color: #fff;
+}
+
+.maneuverIconBadge--alert {
+  background: #15803d;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.28),
+    0 0 10px 2px rgba(74, 222, 128, 0.45);
+}
+
+.navigation-turn-icon--signal {
+  animation: turn-signal 0.7s steps(2, end) infinite;
+}
+
+@keyframes turn-signal {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.18;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navigation-turn-icon--signal {
+    animation: none;
+  }
+}
+
 .navigation-instruction-content {
-  display: block;
+  display: grid;
+  grid-template-columns: 5.15rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.7rem;
   min-width: 0;
+}
+
+.navigation-turn-icon {
+  width: 5.15rem;
+  height: 5.15rem;
 }
 
 .navigation-guidance {
@@ -1296,8 +1359,18 @@
     max-width: 100%;
     min-height: 6.1rem;
     max-height: 210px;
-    padding: 0.78rem 2.05rem 0.78rem 1rem;
+    padding: 0.78rem 2.05rem 0.78rem 0.85rem;
     border-radius: 1.15rem;
+  }
+
+  .navigation-instruction-content {
+    grid-template-columns: 4.85rem minmax(0, 1fr);
+    gap: 0.6rem;
+  }
+
+  .navigation-turn-icon {
+    width: 4.85rem;
+    height: 4.85rem;
   }
 
   .navigation-guidance {
@@ -1312,7 +1385,16 @@
 @media (orientation: landscape) {
   .navigation-instruction-card {
     min-height: 6.5rem;
-    padding: 0.8rem 2.15rem 0.8rem 1.1rem;
+    padding: 0.8rem 2.15rem 0.8rem 0.75rem;
+  }
+
+  .navigation-instruction-content {
+    grid-template-columns: 5.4rem minmax(0, 1fr);
+  }
+
+  .navigation-turn-icon {
+    width: 5.4rem;
+    height: 5.4rem;
   }
 
   .navigation-guidance {
@@ -1326,6 +1408,6 @@
 
 @media (max-width: 390px) {
   .navigation-instruction-card {
-    padding: 0.7rem 1.95rem 0.7rem 0.9rem;
+    padding: 0.7rem 1.95rem 0.7rem 0.55rem;
   }
 }

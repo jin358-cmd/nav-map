@@ -24,6 +24,7 @@ import {
   INTERSECTION_PITCH_PORTRAIT,
   INTERSECTION_ZOOM,
   INTERSECTION_ZOOM_MOBILE,
+  INTERSECTION_ZOOM_PORTRAIT,
   MANEUVER_RECOVER_MS,
   NAVIGATION_PITCH,
   NAVIGATION_PITCH_PORTRAIT,
@@ -297,7 +298,9 @@ function cameraOptions(
   const compact = isCompactViewport(width);
   const portrait = height > width;
   const portrait2dNav = navigating && mode === "2d" && portrait;
-  const approachBlend = navigating ? approachCameraProgress(distanceToNext) : 0;
+  const approachBlend = navigating
+    ? approachCameraProgress(distanceToNext, portrait)
+    : 0;
   const blend = Math.max(approachBlend, recoverBlend);
   const cruiseZoom =
     mode === "3d"
@@ -313,9 +316,11 @@ function cameraOptions(
         : OVERHEAD_NAV_ZOOM;
   const focusZoom =
     mode === "3d"
-      ? compact
-        ? INTERSECTION_ZOOM_MOBILE
-        : INTERSECTION_ZOOM
+      ? portrait
+        ? INTERSECTION_ZOOM_PORTRAIT
+        : compact
+          ? INTERSECTION_ZOOM_MOBILE
+          : INTERSECTION_ZOOM
       : portrait2dNav
         ? OVERHEAD_TURN_ZOOM_PORTRAIT
         : compact
@@ -892,7 +897,7 @@ export function DrivingMap({
               routeMetersRef.current,
               distanceToNextRef.current,
               true,
-              (now / 620) % 1,
+              (now / 1600) % 1,
               {
                 cameraMode: modeRef.current,
                 isTurn: isTurnRef.current,
