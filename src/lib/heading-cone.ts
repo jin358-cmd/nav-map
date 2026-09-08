@@ -9,18 +9,27 @@ export const HEADING_CONE_EDGE = "np-heading-cone-edge";
 /** Google Maps–like fan: ~66° total, not a 120° sweep. */
 const HALF_ANGLE_DEG = 33;
 const ARC_STEPS = 22;
-const CONE_HEADING_HOLD_DEG = 0.42;
-const CONE_HEADING_TAU = 0.04;
+const STILL_HEADING_HOLD_DEG = 22;
+const STILL_HEADING_TAU = 0.55;
+const MOVE_HEADING_HOLD_DEG = 1.4;
+const MOVE_HEADING_TAU = 0.08;
 const COMPASS_SPEED_MPS = 2.2;
 
 export function stepConeHeading(
   current: number,
   target: number,
   dtSeconds: number,
+  speedMps = 0,
 ) {
+  const moving = speedMps >= COMPASS_SPEED_MPS;
   const jump = headingDelta(current, target);
-  if (jump < CONE_HEADING_HOLD_DEG) return current;
-  const tau = jump > 28 ? 0.028 : CONE_HEADING_TAU;
+  if (moving) {
+    if (jump < MOVE_HEADING_HOLD_DEG) return current;
+    const tau = jump > 28 ? 0.04 : MOVE_HEADING_TAU;
+    return lerpAngle(current, target, damp(dtSeconds, tau));
+  }
+  if (jump < STILL_HEADING_HOLD_DEG) return current;
+  const tau = jump > 50 ? 0.12 : STILL_HEADING_TAU;
   return lerpAngle(current, target, damp(dtSeconds, tau));
 }
 

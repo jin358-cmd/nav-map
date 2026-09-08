@@ -1,5 +1,7 @@
 /** Presentation-only compass heading. Does not write GPS / watchPosition. */
 
+import { damp, headingDelta, lerpAngle } from "@/lib/geo";
+
 export function readDeviceCompassHeading(event: DeviceOrientationEvent): number | null {
   const webkit = (event as DeviceOrientationEvent & { webkitCompassHeading?: number })
     .webkitCompassHeading;
@@ -28,22 +30,43 @@ export async function requestDeviceCompassPermission() {
 export function subscribeDeviceCompass(onHeading: (heading: number) => void): () => void {
   if (typeof window === "undefined") return () => undefined;
 
-  const onOrient = (event: Event) => {
-    const heading = readDeviceCompassHeading(event as DeviceOrientationEvent);
+  let sawAbsolute = false;
+  let smoothed: number | null = null;
+  let lastAt = 0;
+
+  const emit = (event: DeviceOrientationEvent, fromAbsolute: boolean) => {
+    if (fromAbsolute) sawAbsolute = true;
+    else if (sawAbsolute) return;
+    const heading = readDeviceCompassHeading(event);
     if (heading == null) return;
-    onHeading(heading);
+    const now = performance.now();
+    const dt = lastAt === 0 ? 0.05 : Math.min(0.25, (now - lastAt) / 1000);
+    lastAt = now;
+    if (smoothed == null) {
+      smoothed = heading;
+      onHeading(smoothed);
+      return;
+    }
+    const jump = headingDelta(smoothed, heading);
+    if (jump > 75) return;
+    smoothed = lerpAngle(smoothed, heading, damp(dt, 0.55));
+    onHeading(smoothed);
   };
 
-  const listen = () => {
-    window.addEventListener("deviceorientationabsolute", onOrient, true);
-    window.addEventListener("deviceorientation", onOrient, true);
+  const onAbsolute = (event: Event) => {
+    emit(event as DeviceOrientationEvent, true);
+  };
+  const onRelative = (event: Event) => {
+    const next = event as DeviceOrientationEvent;
+    emit(next, next.absolute === true);
   };
 
-  listen();
+  window.addEventListener("deviceorientationabsolute", onAbsolute, true);
+  window.addEventListener("deviceorientation", onRelative, true);
   void requestDeviceCompassPermission();
 
   return () => {
-    window.removeEventListener("deviceorientationabsolute", onOrient, true);
-    window.removeEventListener("deviceorientation", onOrient, true);
+    window.removeEventListener("deviceorientationabsolute", onAbsolute, true);
+    window.removeEventListener("deviceorientation", onRelative, true);
   };
 }

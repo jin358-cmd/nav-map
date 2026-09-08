@@ -836,12 +836,18 @@ export function DrivingMap({
         coneHeadingRef.current =
           coneHeadingRef.current == null || snapToFix
             ? coneTarget
-            : stepConeHeading(coneHeadingRef.current, coneTarget, dt);
+            : stepConeHeading(
+                coneHeadingRef.current,
+                coneTarget,
+                dt,
+                raw.speedMps ?? 0,
+              );
         const coneHeading = coneHeadingRef.current;
         if (showCone) coneHeadingForMarker = coneHeading;
         const coneZoom = mapNow.getZoom();
+        const coneRenderHeading = Math.round(coneHeading);
         const coneKey = showCone
-          ? `${display.lng.toFixed(5)},${display.lat.toFixed(5)},${coneHeading.toFixed(2)},${coneZoom.toFixed(2)}`
+          ? `${display.lng.toFixed(5)},${display.lat.toFixed(5)},${coneRenderHeading},${coneZoom.toFixed(2)}`
           : "off";
         if (
           !gestureBusy &&
@@ -854,7 +860,7 @@ export function DrivingMap({
           upsertHeadingCone(
             mapNow,
             showCone ? { lng: display.lng, lat: display.lat } : null,
-            coneHeading,
+            coneRenderHeading,
             showCone,
             coneZoom,
           );
@@ -962,7 +968,12 @@ export function DrivingMap({
               ? cameraCompassRef.current
               : cameraCompassRef.current == null || snapToFix
                 ? compassRaw
-                : stepConeHeading(cameraCompassRef.current, compassRaw, dt);
+                : stepConeHeading(
+                    cameraCompassRef.current,
+                    compassRaw,
+                    dt,
+                    raw.speedMps ?? 0,
+                  );
         }
         const wanted = cameraOptions(
           mapNow,
@@ -986,8 +997,8 @@ export function DrivingMap({
         const posT = snapToFix ? 1 : damp(dt, followTau.posTau);
         const zoomT = pinchingRef.current ? 0 : snapToFix ? 1 : damp(dt, followTau.zoomTau);
         const currentBearing = mapNow.getBearing();
-        const bearingTau = northUp ? 0.055 : followTau.bearingTau;
-        const bearingHoldDeg = northUp ? 0.5 : followTau.bearingHoldDeg;
+        const bearingTau = northUp ? 0.22 : followTau.bearingTau;
+        const bearingHoldDeg = northUp ? 8 : followTau.bearingHoldDeg;
         const bearingGap = headingDelta(currentBearing, wanted.bearing);
         const nextBearing =
           snapToFix
@@ -1021,7 +1032,12 @@ export function DrivingMap({
       }
 
       if (coneHeadingForMarker != null) {
-        markerRotationRef.current = coneHeadingForMarker;
+        const markerHeading = Math.round(coneHeadingForMarker);
+        const markerGap = headingDelta(markerRotationRef.current, markerHeading);
+        markerRotationRef.current =
+          markerGap < 2
+            ? markerRotationRef.current
+            : markerHeading;
       } else {
         const rotationTarget =
           headingUp && followVehicleRef.current
