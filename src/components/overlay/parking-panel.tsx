@@ -61,10 +61,9 @@ function spacesBadge(lot: ParkingLot) {
 }
 
 function parkingFacilityName(lot: ParkingLot) {
-  const tag = parkingOwnershipLabel(lot.publicLot);
   let name = lot.name.replace(/^(公有|民營|公營)\s*/u, "").trim() || lot.name;
   if (!/停車/.test(name)) name = `${name}停車場`;
-  return `${tag} ${name}`;
+  return name;
 }
 
 function parkingRoad(lot: ParkingLot) {
@@ -89,24 +88,26 @@ function parkingLotCopy(lot: ParkingLot, sort: ParkingSort) {
   const road = parkingRoad(lot);
   const rate = formatParkingRate(lot);
   const spaces = occupancyLabel(lot) ?? "格數未提供";
+  const ownership = parkingOwnershipLabel(lot.publicLot);
   const name = parkingFacilityName(lot);
+  const rest = `/ ${ownership} / ${name}`;
   if (sort === "price") {
     return {
       highlight: rate,
-      rest: `${distance} ${name}`,
+      rest,
       address: road,
     };
   }
   if (sort === "remaining") {
     return {
       highlight: spaces,
-      rest: `${distance} ${name}`,
+      rest,
       address: road,
     };
   }
   return {
     highlight: distance,
-    rest: name,
+    rest,
     address: road,
   };
 }
@@ -162,7 +163,7 @@ export function ParkingPanel({
       }
     >
       <div className="mb-2 flex items-center justify-between gap-2">
-        <p className="min-w-0 truncate text-sm font-semibold leading-tight tracking-wide text-zinc-100">
+        <p className="min-w-0 truncate text-base font-semibold leading-tight tracking-wide text-zinc-100">
           {header.title}
         </p>
         <HudCloseButton
@@ -173,7 +174,7 @@ export function ParkingPanel({
           }}
         />
       </div>
-      <p className="mb-2 text-[11px] leading-tight text-zinc-400">{header.updated}</p>
+      <p className="mb-2 text-xs leading-tight text-zinc-400">{header.updated}</p>
       <div className="mb-2 flex items-center gap-1.5">
         {SORT_BUTTONS.map((item) => (
           <button
