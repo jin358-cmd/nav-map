@@ -81,7 +81,7 @@ export function FavoritesPanel({
                         }
                       }}
                       aria-label="書籤名稱"
-                      className="h-8 min-w-0 flex-1 rounded-lg border border-rose-300/30 bg-white/8 px-2 text-sm text-white outline-none"
+                      className="h-8 min-w-0 flex-1 rounded-lg border border-rose-300/30 bg-white/8 px-2 text-lg text-white outline-none"
                     />
                     <button
                       type="button"
@@ -112,7 +112,7 @@ export function FavoritesPanel({
                     >
                       <MapPin className="mt-0.5 size-3.5 shrink-0 text-rose-300" />
                       <span className="min-w-0">
-                        <span className="block truncate text-sm">
+                        <span className="block truncate text-lg font-semibold leading-tight">
                           {formatTaiwanDisplayAddress(hit.name)}
                         </span>
                         <span className="block truncate text-[11px] text-zinc-500">

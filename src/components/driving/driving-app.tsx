@@ -57,7 +57,9 @@ import {
   DEFAULT_POI_LAYER_VISIBILITY,
   anyPoiLayerOn,
   isPoiLayerVisible,
+  poiReadLabel,
   type PoiLayerVisibility,
+  type PoiMainLayerId,
 } from "@/lib/poi/main-layers";
 import { isDemoLandmarkPreset } from "@/data/landmarks";
 import { formatTaiwanRoadName } from "@/lib/geocoding/format-taiwan-display-address";
@@ -133,6 +135,7 @@ import {
 import { GpsFixChip } from "@/components/overlay/gps-fix-chip";
 import { MapAttribution } from "@/components/overlay/map-attribution";
 import { SpeedHud, SpeedLimitBadge } from "@/components/overlay/speed-hud";
+import { SpeedCameraCaution } from "@/components/overlay/speed-camera-caution";
 import { TripStatusCluster } from "@/components/overlay/trip-status-cluster";
 import { approachingSpeedCameraLimit } from "@/lib/speed-camera-alert";
 import {
@@ -276,6 +279,7 @@ export function DrivingApp() {
   const [poiLayerVisibility, setPoiLayerVisibility] =
     useState<PoiLayerVisibility>(DEFAULT_POI_LAYER_VISIBILITY);
   const [poiMenuOpen, setPoiMenuOpen] = useState(false);
+  const [poiReadFocus, setPoiReadFocus] = useState<PoiMainLayerId | null>(null);
   const [focusTarget, setFocusTarget] = useState<MapFocusTarget | null>(null);
   const [parkingOpen, setParkingOpen] = useState(false);
   const [parkingMinimized, setParkingMinimized] = useState(false);
@@ -544,6 +548,7 @@ export function DrivingApp() {
       origin: searchOrigin,
       enabled: anyPoiLayerOn(poiLayerVisibility) || poiMenuOpen,
     });
+  const poiLayersReadLabel = poiReadLabel(poiLayerVisibility, poiReadFocus);
   const visibleMapPois = useMemo(
     () =>
       mapPois.filter((poi) =>
@@ -1615,7 +1620,7 @@ export function DrivingApp() {
 
       {poiLayersLoading ? (
         <div className="poi-layer-read-anchor">
-          <PoiLayerReadProgress progress={poiLayersProgress} />
+          <PoiLayerReadProgress progress={poiLayersProgress} label={poiLayersReadLabel} />
         </div>
       ) : null}
 
@@ -1835,11 +1840,14 @@ export function DrivingApp() {
             visibility={poiLayerVisibility}
             loading={poiLayersLoading}
             progress={poiLayersProgress}
+            loadingLabel={poiLayersReadLabel}
             onToggle={(id) =>
-              setPoiLayerVisibility((current) => ({
-                ...current,
-                [id]: !current[id],
-              }))
+              setPoiLayerVisibility((current) => {
+                const next = { ...current, [id]: !current[id] };
+                if (next[id]) setPoiReadFocus(id);
+                else setPoiReadFocus((focus) => (focus === id ? null : focus));
+                return next;
+              })
             }
           />
         </div>
@@ -1913,6 +1921,11 @@ export function DrivingApp() {
             drawerOpen ? "hud-anchor-trip hud-anchor-trip--drawer" : "hud-anchor-trip"
           }
         >
+          {cameraSpeedLimit ? (
+            <div className="speed-camera-caution-float">
+              <SpeedCameraCaution alert={cameraSpeedLimit} />
+            </div>
+          ) : null}
           <div className="hud-trip-stack">
             <div className="hud-speed-row">
               <div className="hud-speed-column">
@@ -1940,6 +1953,10 @@ export function DrivingApp() {
               }
             />
           </div>
+        </div>
+      ) : cameraSpeedLimit ? (
+        <div className="speed-camera-caution-anchor">
+          <SpeedCameraCaution alert={cameraSpeedLimit} />
         </div>
       ) : null}
 

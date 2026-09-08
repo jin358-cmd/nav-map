@@ -161,6 +161,7 @@ function toGeocode(query: string, poi: TaiwanPoiRecord, origin?: { lat: number; 
       : undefined,
     category: poi.category,
     branchName: poi.branchName,
+    phone: poi.phone || undefined,
   };
 }
 

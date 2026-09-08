@@ -54,6 +54,7 @@ export type TaiwanPoiRecord = {
   isActive: boolean;
   lastSeenAt?: string;
   sourceUpdatedAt?: string;
+  phone?: string | null;
 };
 
 export type TaiwanPoiRow = {
@@ -79,6 +80,7 @@ export type TaiwanPoiRow = {
   license: string;
   confidence: number | null;
   is_active: boolean | null;
+  phone?: string | null;
 };
 
 function compactKey(value: string) {
@@ -156,6 +158,8 @@ export function hydratePoiRecord(row: Partial<TaiwanPoiRecord> & Record<string, 
     isActive: row.isActive !== false && row.is_active !== false,
     lastSeenAt: String(row.lastSeenAt ?? row.last_seen_at ?? "") || undefined,
     sourceUpdatedAt: String(row.sourceUpdatedAt ?? row.source_updated_at ?? "") || undefined,
+    phone:
+      String(row.phone ?? row.tel ?? row.Telephone ?? "").trim() || null,
   };
 }
 
@@ -183,6 +187,7 @@ export function rowToRecord(row: TaiwanPoiRow): TaiwanPoiRecord {
       license: row.license,
       confidence: row.confidence ?? undefined,
       isActive: row.is_active ?? undefined,
+      phone: (row as { phone?: string | null }).phone ?? undefined,
     }) ?? {
       id: row.id,
       name: row.name,
@@ -206,6 +211,7 @@ export function rowToRecord(row: TaiwanPoiRow): TaiwanPoiRecord {
       license: row.license,
       confidence: row.confidence ?? 0.8,
       isActive: row.is_active !== false,
+      phone: null,
     }
   );
 }

@@ -363,6 +363,9 @@ function featureToPoi(feature, now) {
     license: "ODbL",
     confidence: 0,
     isActive: true,
+    phone:
+      String(tags.phone || tags["contact:phone"] || tags["contact:mobile"] || "").trim() ||
+      null,
   };
   row.confidence = confidenceFor(row);
   row.mainCategory = mainLayerFrom(row.category, row.subcategory);

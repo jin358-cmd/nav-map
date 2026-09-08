@@ -387,7 +387,7 @@ export function AddressSearch({
                     <button
                       type="button"
                       onClick={() => selectHit(hit)}
-                      className="rounded-full border border-rose-300/25 bg-rose-500/15 px-2.5 py-1 text-[11px] text-rose-100 hover:bg-rose-500/25 touch-manipulation"
+                      className="rounded-full border border-rose-300/25 bg-rose-500/15 px-2.5 py-1 text-base text-rose-100 hover:bg-rose-500/25 touch-manipulation"
                     >
                       {formatTaiwanDisplayAddress(hit.name)}
                     </button>

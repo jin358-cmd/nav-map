@@ -92,9 +92,6 @@ export function PlaceInfoCard({
     <article className="pointer-events-auto w-full max-w-xl rounded-2xl border border-white/16 bg-black/80 p-3 text-white shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl">
       <div className="mb-2 flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] tracking-wide text-cyan-200">
-            {place.categoryLabel ?? (place.kind === "custom" ? "自訂位置" : "地點")}
-          </p>
           {place.brand ? (
             <p className="truncate text-[12px] text-cyan-100/80">{place.brand}</p>
           ) : null}
@@ -118,18 +115,27 @@ export function PlaceInfoCard({
         </button>
       </div>
       <dl className="grid gap-1.5 text-[13px] text-zinc-200">
-        {place.categoryLabel ? (
-          <div>
-            <dt className="text-[11px] text-zinc-500">分類</dt>
-            <dd>{place.categoryLabel}</dd>
-          </div>
-        ) : null}
         {address ? (
           <div>
             <dt className="text-[11px] text-zinc-500">地址</dt>
             <dd>{address}</dd>
           </div>
         ) : null}
+        <div>
+          <dt className="text-[11px] text-zinc-500">電話</dt>
+          <dd>
+            {place.phone ? (
+              <a
+                href={`tel:${place.phone.replace(/[^\d+]/g, "")}`}
+                className="text-cyan-200 underline-offset-2 hover:underline"
+              >
+                {place.phone}
+              </a>
+            ) : (
+              "未提供"
+            )}
+          </dd>
+        </div>
         {place.distanceMeters != null ? (
           <div>
             <dt className="text-[11px] text-zinc-500">距離</dt>
@@ -142,12 +148,6 @@ export function PlaceInfoCard({
             {place.location.lat.toFixed(6)}, {place.location.lng.toFixed(6)}
           </dd>
         </div>
-        {place.phone ? (
-          <div>
-            <dt className="text-[11px] text-zinc-500">電話</dt>
-            <dd>{place.phone}</dd>
-          </div>
-        ) : null}
         {place.hours ? (
           <div>
             <dt className="text-[11px] text-zinc-500">營業</dt>

@@ -59,6 +59,7 @@ export async function GET(request: Request) {
         location: { lng: poi.longitude, lat: poi.latitude },
         source: poi.source,
         updatedAt: poi.updatedAt,
+        phone: poi.phone || null,
       })),
     },
     {

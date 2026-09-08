@@ -348,6 +348,7 @@ function toRecord(store, now) {
     license: "官方門市地圖",
     confidence: 0.96,
     isActive: true,
+    phone: store.phone || null,
   };
 }
 
@@ -521,6 +522,7 @@ function mergeStores(rows, stores, now) {
         lastSeenAt: now,
         sourceUpdatedAt: now,
         license: prev.source === "gov" ? "官方門市地圖" : prev.license,
+        phone: store.phone || prev.phone || null,
       };
       updated += 1;
       continue;

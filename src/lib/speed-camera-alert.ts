@@ -2,12 +2,26 @@ import { bearingDegrees, distanceKm, headingDelta } from "@/lib/geo";
 import type { LngLat, SpeedEnforcementPoint } from "@/types/domain";
 
 export const SPEED_CAMERA_ALERT_METERS = 300;
+export const SPEED_CAMERA_WARN_METERS = 150;
+export const SPEED_CAMERA_URGENT_METERS = 50;
+
+export type SpeedCameraCautionPhase = 300 | 150 | 50;
 
 export type SpeedCameraAlert = {
   id: string;
   speedLimitKph: number;
   distanceMeters: number;
+  phase: SpeedCameraCautionPhase;
 };
+
+export function speedCameraCautionPhase(
+  meters: number,
+): SpeedCameraCautionPhase | null {
+  if (!Number.isFinite(meters) || meters > SPEED_CAMERA_ALERT_METERS) return null;
+  if (meters > SPEED_CAMERA_WARN_METERS) return 300;
+  if (meters > SPEED_CAMERA_URGENT_METERS) return 150;
+  return 50;
+}
 
 export function approachingSpeedCameraLimit(
   origin: LngLat & { heading?: number },
@@ -26,10 +40,13 @@ export function approachingSpeedCameraLimit(
       if (headingDelta(heading, bearing) > 95) continue;
     }
     if (!best || meters < best.distanceMeters) {
+      const phase = speedCameraCautionPhase(meters);
+      if (!phase) continue;
       best = {
         id: point.id,
         speedLimitKph: Math.round(kph),
         distanceMeters: meters,
+        phase,
       };
     }
   }

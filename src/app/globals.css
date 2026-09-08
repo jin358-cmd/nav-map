@@ -190,10 +190,33 @@
 
 .poi-layer-read-hud__label {
   margin: 0;
+  max-width: 12rem;
+  text-align: center;
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   color: #ecfeff;
+}
+
+.poi-layer-read-bar {
+  display: block;
+  width: 100%;
+  height: 0.28rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.poi-layer-read-hud .poi-layer-read-bar {
+  align-self: stretch;
+}
+
+.poi-layer-read-bar__fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #67e8f9;
+  transition: width 90ms linear;
 }
 
 .poi-layer-read-pie {
@@ -674,6 +697,73 @@
 
 .hud-anchor-trip--drawer {
   bottom: max(5.75rem, calc(env(safe-area-inset-bottom) + 5.1rem));
+}
+
+.speed-camera-caution-anchor {
+  position: absolute;
+  left: max(0.5rem, env(safe-area-inset-left));
+  bottom: max(6.25rem, calc(env(safe-area-inset-bottom) + 5.6rem));
+  z-index: 32;
+  width: min(11.5rem, calc(100vw - 7rem));
+  pointer-events: none;
+}
+
+/* Sit above the trip HUD without stretching it or shifting camera padding. */
+.speed-camera-caution-float {
+  position: absolute;
+  left: 0;
+  bottom: 100%;
+  margin-bottom: 0.4rem;
+  width: min(11.5rem, 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.speed-camera-caution {
+  min-width: 8.75rem;
+  max-width: 11.5rem;
+  padding: 0.45rem 0.6rem 0.5rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.speed-camera-caution__title {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.speed-camera-caution__copy {
+  margin: 0.12rem 0 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.speed-camera-caution__meta {
+  margin: 0.15rem 0 0;
+  font-size: 0.68rem;
+  font-weight: 600;
+  opacity: 0.92;
+}
+
+.speed-camera-caution--watch {
+  background: rgba(30, 58, 95, 0.88);
+  color: #e0f2fe;
+}
+
+.speed-camera-caution--warn {
+  background: rgba(120, 53, 15, 0.9);
+  color: #ffedd5;
+}
+
+.speed-camera-caution--urgent {
+  background: rgba(127, 29, 29, 0.92);
+  color: #fee2e2;
 }
 
 .hud-trip-stack {

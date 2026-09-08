@@ -48,6 +48,7 @@ export type MapPoiFeature = {
   location: LngLat;
   source: string;
   updatedAt: string;
+  phone?: string | null;
 };
 
 export function geocodeHitToPlace(hit: GeocodeHit): MapPlace {
@@ -95,6 +96,7 @@ export function poiFeatureToPlace(
     address: feature.address,
     location: feature.location,
     source: feature.source,
+    phone: feature.phone || undefined,
     distanceMeters: origin
       ? Math.round(
           Math.hypot(

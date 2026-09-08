@@ -14,12 +14,14 @@ export function PoiLayerDrawer({
   visibility,
   loading = false,
   progress = 0,
+  loadingLabel = "生活圖層讀取中",
   onToggle,
 }: {
   open: boolean;
   visibility: PoiLayerVisibility;
   loading?: boolean;
   progress?: number;
+  loadingLabel?: string;
   onToggle: (id: PoiMainLayerId) => void;
 }) {
   return (
@@ -33,7 +35,7 @@ export function PoiLayerDrawer({
       aria-busy={loading || undefined}
     >
       <p className="mb-1.5 px-1 text-[11px] tracking-wide text-zinc-300">生活圖層</p>
-      {loading ? <PoiLayerReadBanner progress={progress} /> : null}
+      {loading ? <PoiLayerReadBanner progress={progress} label={loadingLabel} /> : null}
       <div className="flex flex-col gap-1">
         {POI_MAIN_LAYERS.map((layer) => {
           const on = visibility[layer.id];

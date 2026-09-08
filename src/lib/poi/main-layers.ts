@@ -66,6 +66,17 @@ export function anyPoiLayerOn(visibility: PoiLayerVisibility) {
   return POI_MAIN_LAYER_IDS.some((id) => visibility[id]);
 }
 
+export function poiReadLabel(visibility: PoiLayerVisibility, focus?: PoiMainLayerId | null) {
+  if (focus && visibility[focus]) {
+    const focused = POI_MAIN_LAYERS.find((layer) => layer.id === focus);
+    if (focused) return `${focused.yp}讀取中`;
+  }
+  const on = POI_MAIN_LAYERS.filter((layer) => visibility[layer.id]);
+  if (on.length === 1) return `${on[0].yp}讀取中`;
+  if (on.length > 1) return `${on.map((layer) => layer.yp).join("、")}讀取中`;
+  return "生活圖層讀取中";
+}
+
 /** 中華黃頁水平分類：食品餐飲／衣著配件／住屋居家／行車運輸／教育文化／休閒育樂／醫療保健。 */
 export function poiMainLayerFromCategory(
   category?: string | null,
