@@ -89,7 +89,7 @@ export function PlaceInfoCard({
   const address = formatTaiwanRoadName(place.address);
 
   return (
-    <article className="pointer-events-auto hud-float-panel w-full max-w-xl rounded-2xl p-3 text-white">
+    <article className="pointer-events-auto w-full max-w-xl rounded-2xl border border-white/16 bg-black/80 p-3 text-white shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl">
       <div className="mb-2 flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <p className="text-[11px] tracking-wide text-cyan-200">
