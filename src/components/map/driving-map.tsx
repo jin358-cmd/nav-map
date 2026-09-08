@@ -1531,11 +1531,18 @@ export function DrivingMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !readyRef.current || !focusTarget) return;
-    map.easeTo({
-      center: [focusTarget.lng, focusTarget.lat],
+    const camera = {
+      center: [focusTarget.lng, focusTarget.lat] as [number, number],
       zoom: Math.max(map.getZoom(), 16.2),
+      essential: true as const,
+    };
+    if (focusTarget.immediate) {
+      map.jumpTo(camera);
+      return;
+    }
+    map.easeTo({
+      ...camera,
       duration: 480,
-      essential: true,
     });
   }, [focusTarget]);
 
@@ -1572,7 +1579,7 @@ export function DrivingMap({
     const map = mapRef.current;
     if (!map || !readyRef.current) return;
     if (followVehicleRef.current) return;
-    if (destination && !navigating && route.length >= 2) return;
+    if (destination && !navigating) return;
     const compact = isCompactViewport(map.getContainer().clientWidth);
     const portrait =
       map.getContainer().clientHeight > map.getContainer().clientWidth;

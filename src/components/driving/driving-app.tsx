@@ -85,7 +85,6 @@ import {
 import { pickActiveRouteAlert } from "@/lib/route-events";
 import {
   customPlaceFromLngLat,
-  geocodeHitToPlace,
   mapPlaceToHit,
   poiFeatureToPlace,
   type MapPlace,
@@ -762,14 +761,36 @@ export function DrivingApp() {
     setEventListKind(null);
   }, []);
 
-  const focusEvent = useCallback((location: { lng: number; lat: number }) => {
-    setFollowVehicle(false);
-    setFocusTarget({
-      lng: location.lng,
-      lat: location.lat,
-      key: Date.now(),
-    });
-  }, []);
+  const focusEvent = useCallback(
+    (location: { lng: number; lat: number }, immediate = false) => {
+      setFollowVehicle(false);
+      setFocusTarget({
+        lng: location.lng,
+        lat: location.lat,
+        key: Date.now(),
+        immediate,
+      });
+    },
+    [],
+  );
+
+  const dropSearchDestination = useCallback(
+    (hit: GeocodeHit, immediate = true) => {
+      lastRouteHitRef.current = hit;
+      setSelectedMapPlace(null);
+      setFollowVehicle(false);
+      setNavigating(false);
+      navigationTrackerRef.current = null;
+      setNavigationProgress(null);
+      setDestination({
+        label: hit.name,
+        address: hit.address || hit.name,
+        location: hit.location,
+      });
+      focusEvent(hit.location, immediate);
+    },
+    [focusEvent],
+  );
 
   const readDevicePosition = useCallback(async () => {
     const pose = await requestCurrentPosition();
@@ -814,14 +835,19 @@ export function DrivingApp() {
     }
     rememberAddress(hit);
     lastRouteHitRef.current = hit;
-    setSelectedMapPlace(null);
     parkingArrivalDismissedRef.current = false;
     setParkingArrivalOpen(false);
-    setRouting(true);
     setRouteError(null);
     setSelectedCctv(null);
     setSelectedEvent(null);
     setEventListKind(null);
+    dropSearchDestination(hit);
+    setRoute([]);
+    setManeuver(null);
+    setRouteSteps([]);
+    setRouteDurationSeconds(null);
+    setRouteDistanceMeters(null);
+    setRouting(true);
     try {
       let origin = vehicleRef.current.source === "gps" ? vehicleRef.current : null;
       try {
@@ -875,7 +901,7 @@ export function DrivingApp() {
     } finally {
       setRouting(false);
     }
-  }, [readDevicePosition, travelMode]);
+  }, [dropSearchDestination, readDevicePosition, travelMode]);
 
   const handleLongPress = useCallback(
     async (location: { lng: number; lat: number }) => {
@@ -1757,6 +1783,7 @@ export function DrivingApp() {
               distanceMeters={routeDistanceMeters}
               rerouting={routing || rerouting}
               motorcycleUnsupported={motorcycleUnsupported}
+              error={routeError}
               favorite={isCurrentFavorite}
               onToggleFavorite={() => {
                 if (!currentPlace) return;
@@ -1782,8 +1809,7 @@ export function DrivingApp() {
                   setSelectedEvent(null);
                   setSelectedCctv(null);
                   setSelectedParking(null);
-                  setSelectedMapPlace(geocodeHitToPlace(hit));
-                  focusEvent(hit.location);
+                  void applyRoute(hit);
                 }}
               />
               <AddressSearch
@@ -1798,8 +1824,7 @@ export function DrivingApp() {
                   setSelectedEvent(null);
                   setSelectedCctv(null);
                   setSelectedParking(null);
-                  setSelectedMapPlace(geocodeHitToPlace(hit));
-                  focusEvent(hit.location);
+                  void applyRoute(hit);
                 }}
               />
               <SavedPlaceBar

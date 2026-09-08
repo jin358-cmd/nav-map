@@ -242,6 +242,7 @@ export type MapFocusTarget = {
   lng: number;
   lat: number;
   key: number;
+  immediate?: boolean;
 };
 
 export type SelectedMapEvent = {

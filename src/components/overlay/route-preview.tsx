@@ -15,6 +15,7 @@ export function RouteConfirmBar({
   distanceMeters,
   rerouting = false,
   motorcycleUnsupported = false,
+  error = null,
   onTravelMode,
   onStartNav,
   onClear,
@@ -28,6 +29,7 @@ export function RouteConfirmBar({
   distanceMeters: number | null;
   rerouting?: boolean;
   motorcycleUnsupported?: boolean;
+  error?: string | null;
   onTravelMode: (mode: TravelMode) => void;
   onStartNav: () => void;
   onClear: () => void;
@@ -95,9 +97,16 @@ export function RouteConfirmBar({
               </button>
             ))}
           </div>
-          <p className="mt-1.5 w-full text-sm font-medium text-cyan-200 sm:text-base">
-            {rerouting
-              ? "正在重新規劃路線…"
+          <p
+            className={cn(
+              "mt-1.5 w-full text-sm font-medium sm:text-base",
+              error ? "text-amber-200" : "text-cyan-200",
+            )}
+          >
+            {error
+              ? error
+              : rerouting
+              ? "正在規劃路線…"
               : motorcycleUnsupported && travelMode === "motorcycle"
                 ? "機車模式尚未設定（NOT CONFIGURED）"
                 : `${travelModeLabel(travelMode)} · ${remaining ?? "計算距離中"}${
@@ -109,7 +118,12 @@ export function RouteConfirmBar({
           <Button
             type="button"
             onClick={onStartNav}
-            disabled={rerouting || (motorcycleUnsupported && travelMode === "motorcycle")}
+            disabled={
+              rerouting ||
+              Boolean(error) ||
+              distanceMeters == null ||
+              (motorcycleUnsupported && travelMode === "motorcycle")
+            }
             className="h-12 min-h-12 min-w-0 flex-1 rounded-xl bg-cyan-400 text-base font-semibold text-[#041016] hover:bg-cyan-300 sm:text-lg"
           >
             開始導航
