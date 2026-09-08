@@ -19,8 +19,11 @@ export function useMapPois({
 }) {
   const [pois, setPois] = useState<MapPoiFeature[]>([]);
   const originRef = useRef(origin);
-  originRef.current = origin;
   const fetchedKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    originRef.current = origin;
+  }, [origin]);
 
   const zoom = viewport?.zoom ?? 0;
   const bounds = viewport?.bounds;

@@ -10,8 +10,6 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { gunzipSync, gzipSync } from "node:zlib";
 import { yellowPagesLayerFromTags } from "./yellow-pages.mjs";
 
-const USER_AGENT =
-  "NavPilot/0.1 (https://github.com/jin358-cmd/nav-map; store-locator ingest)";
 const BROWSER_UA =
   "Mozilla/5.0 (compatible; NavPilot/0.1; +https://github.com/jin358-cmd/nav-map) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 const OUT = "src/data/taiwan-poi-index.json";
@@ -173,6 +171,7 @@ async function fetchText(url, options = {}, retries = 3) {
         ...options,
         headers: {
           "User-Agent": options.headers?.["User-Agent"] || BROWSER_UA,
+          "From": "https://github.com/jin358-cmd/nav-map",
           ...options.headers,
         },
       });
