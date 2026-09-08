@@ -377,6 +377,23 @@
   height: 0.42rem;
 }
 
+.poi-layer-read-pie--icon-ring {
+  position: absolute;
+  inset: -0.55rem;
+  width: auto;
+  height: auto;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1px rgba(103, 232, 249, 0.4);
+}
+
+.poi-layer-read-pie--icon-ring::after {
+  content: "";
+  width: 1.45rem;
+  height: 1.45rem;
+  border-radius: 999px;
+  background: transparent;
+}
+
 .poi-layer-read-anchor {
   position: absolute;
   inset: 0;

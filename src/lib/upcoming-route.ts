@@ -271,6 +271,68 @@ export function shouldShowGuidanceSigns(
   return distanceToNext <= GUIDANCE_SIGN_APPROACH_METERS;
 }
 
+/** 路口前 150 公尺：車頭到轉彎點的黃色引導線。 */
+export function turnGuidanceLine(
+  route: [number, number][],
+  routeMeters: number,
+  distanceToNext: number,
+  cueMeters?: number,
+  wasShowing = false,
+): [number, number][] {
+  if (route.length < 2 || !shouldShowGuidanceSigns(distanceToNext, wasShowing)) {
+    return [];
+  }
+  const turnAt = Number.isFinite(cueMeters)
+    ? Math.max(routeMeters, cueMeters as number)
+    : routeMeters + Math.max(0, distanceToNext);
+  const ahead = Math.max(56, turnAt - routeMeters + 22);
+  return sliceRouteAhead(route, routeMeters + 3, ahead);
+}
+
+const TURN_MARQUEE_SPACING_M = 42;
+
+/** 大間隔箭頭沿黃線朝路徑方向跑馬燈。 */
+export function turnMarqueeArrows(
+  line: [number, number][],
+  phase = 0,
+): GuidanceArrow[] {
+  if (line.length < 2) return [];
+  const spacing = TURN_MARQUEE_SPACING_M;
+  const shift = (((phase % 1) + 1) % 1) * spacing;
+  const placed: GuidanceArrow[] = [];
+  let leftover = spacing * 0.2 - shift;
+  let along = 0;
+
+  for (let index = 1; index < line.length; index += 1) {
+    const from = { lng: line[index - 1][0], lat: line[index - 1][1] };
+    const to = { lng: line[index][0], lat: line[index][1] };
+    const length = distanceKm(from, to) * 1000;
+    if (length < 0.5) {
+      along += length;
+      continue;
+    }
+    const bearing = bearingDegrees(from, to);
+    let cursor = leftover;
+    while (cursor < length) {
+      if (cursor >= 0 && along + cursor >= 8) {
+        const ratio = cursor / length;
+        placed.push({
+          lng: from.lng + (to.lng - from.lng) * ratio,
+          lat: from.lat + (to.lat - from.lat) * ratio,
+          bearing,
+          opacity: 1,
+          kind: "straight",
+          scale: 1.85,
+        });
+      }
+      cursor += spacing;
+    }
+    leftover = cursor - length;
+    along += length;
+  }
+  return placed;
+}
+
 export function pointAlongRoute(
   coordinates: [number, number][],
   meters: number,

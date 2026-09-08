@@ -1,9 +1,8 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { LayoutGrid, LocateFixed, ShoppingBag } from "lucide-react";
+import type { ReactNode, CSSProperties } from "react";
+import { LayoutGrid, LocateFixed, ShoppingCart } from "lucide-react";
 import { MapStyleMenu } from "@/components/overlay/map-style-menu";
-import { PoiLayerReadProgress } from "@/components/overlay/poi-layer-read-progress";
 import { Button } from "@/components/ui/button";
 import {
   mapControlButtonClass,
@@ -87,9 +86,18 @@ export function MapControls({
           tone={tone}
         >
           {poiLayersLoading ? (
-            <PoiLayerReadProgress compact progress={poiLayersProgress} />
+            <span className="relative inline-flex size-6 items-center justify-center">
+              <ShoppingCart className="size-6" strokeWidth={2.5} />
+              <span
+                className="poi-layer-read-pie poi-layer-read-pie--icon-ring"
+                style={
+                  { "--poi-progress": poiLayersProgress } as CSSProperties
+                }
+                aria-hidden
+              />
+            </span>
           ) : (
-            <ShoppingBag className="size-6" strokeWidth={2.5} />
+            <ShoppingCart className="size-6" strokeWidth={2.5} />
           )}
         </ControlButton>
       ) : null}

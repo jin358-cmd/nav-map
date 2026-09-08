@@ -3,17 +3,18 @@ import type {
   GeoJSONSource,
   Map as MapLibreMap,
 } from "maplibre-gl";
-import type { CameraMode } from "@/types/domain";
 import {
-  guidanceBowSigns,
   shouldShowGuidanceSigns,
+  turnGuidanceLine,
+  turnMarqueeArrows,
 } from "@/lib/upcoming-route";
 
-export const GUIDANCE_SOURCE_ID = "navpilot-bow-signs";
-export const GUIDANCE_LAYER_ID = "navpilot-bow-signs-layer";
-const BOW_STRAIGHT_ID = "navpilot-bow-sign-v1-straight";
-const BOW_LEFT_ID = "navpilot-bow-sign-v1-left";
-const BOW_RIGHT_ID = "navpilot-bow-sign-v1-right";
+export const GUIDANCE_SOURCE_ID = "navpilot-turn-arrows";
+export const GUIDANCE_LAYER_ID = "navpilot-turn-arrows-layer";
+export const TURN_LINE_SOURCE_ID = "navpilot-turn-line";
+export const TURN_LINE_GLOW_ID = "navpilot-turn-line-glow";
+export const TURN_LINE_LAYER_ID = "navpilot-turn-line-layer";
+const CHEVRON_IMAGE_ID = "navpilot-turn-chevron-v1";
 
 let showing = false;
 
@@ -21,207 +22,140 @@ function emptyCollection() {
   return { type: "FeatureCollection" as const, features: [] };
 }
 
-function fillPath(
-  ctx: CanvasRenderingContext2D,
-  draw: () => void,
-  fill: string | CanvasGradient,
-  stroke?: string,
-  lineWidth = 5,
-) {
-  ctx.beginPath();
-  draw();
-  ctx.closePath();
-  ctx.fillStyle = fill;
-  ctx.fill();
-  if (stroke) {
-    ctx.strokeStyle = stroke;
-    ctx.lineWidth = lineWidth;
-    ctx.lineJoin = "round";
-    ctx.lineCap = "round";
-    ctx.stroke();
-  }
+function emptyLine() {
+  return {
+    type: "Feature" as const,
+    properties: {},
+    geometry: { type: "LineString" as const, coordinates: [] as [number, number][] },
+  };
 }
 
-function bowFront(ctx: CanvasRenderingContext2D, kind: "straight" | "left" | "right") {
-  if (kind === "straight") {
-    ctx.moveTo(0, -112);
-    ctx.quadraticCurveTo(92, 4, 78, 20);
-    ctx.lineTo(30, 20);
-    ctx.lineTo(30, 82);
-    ctx.lineTo(-30, 82);
-    ctx.lineTo(-30, 20);
-    ctx.lineTo(-78, 20);
-    ctx.quadraticCurveTo(-92, 4, 0, -112);
-    return;
-  }
-  if (kind === "left") {
-    ctx.moveTo(32, 90);
-    ctx.lineTo(6, 90);
-    ctx.lineTo(6, 8);
-    ctx.quadraticCurveTo(6, -52, -42, -62);
-    ctx.lineTo(-24, -28);
-    ctx.lineTo(-98, -46);
-    ctx.lineTo(-52, -112);
-    ctx.lineTo(-40, -76);
-    ctx.quadraticCurveTo(52, -70, 32, 6);
-    return;
-  }
-  ctx.moveTo(-32, 90);
-  ctx.lineTo(-6, 90);
-  ctx.lineTo(-6, 8);
-  ctx.quadraticCurveTo(-6, -52, 42, -62);
-  ctx.lineTo(24, -28);
-  ctx.lineTo(98, -46);
-  ctx.lineTo(52, -112);
-  ctx.lineTo(40, -76);
-  ctx.quadraticCurveTo(-52, -70, -32, 6);
-}
-
-function createBowSignImage(kind: "straight" | "left" | "right") {
-  const size = 256;
+function createChevronImage() {
+  const size = 160;
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
-
   ctx.clearRect(0, 0, size, size);
-  ctx.translate(size / 2, size / 2 + 8);
+  ctx.translate(size / 2, size / 2);
+
+  const chevron = () => {
+    ctx.beginPath();
+    ctx.moveTo(0, -52);
+    ctx.lineTo(46, 14);
+    ctx.lineTo(22, 14);
+    ctx.lineTo(22, 48);
+    ctx.lineTo(-22, 48);
+    ctx.lineTo(-22, 14);
+    ctx.lineTo(-46, 14);
+    ctx.closePath();
+  };
 
   ctx.save();
-  ctx.fillStyle = "rgba(8, 47, 73, 0.34)";
+  ctx.fillStyle = "rgba(120, 53, 15, 0.35)";
   ctx.beginPath();
-  ctx.ellipse(10, 96, 54, 14, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 50, 28, 8, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  chevron();
+  ctx.fillStyle = "#854d0e";
+  ctx.fill();
+  ctx.lineWidth = 7;
+  ctx.strokeStyle = "#713f12";
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  ctx.stroke();
+
+  ctx.save();
+  ctx.translate(0, -3);
+  ctx.scale(0.86, 0.86);
+  chevron();
+  ctx.fillStyle = "#facc15";
   ctx.fill();
   ctx.restore();
 
   ctx.save();
-  ctx.translate(16, 18);
-  fillPath(ctx, () => bowFront(ctx, kind), "#0f766e");
+  ctx.translate(0, -10);
+  ctx.scale(0.42, 0.42);
+  chevron();
+  ctx.fillStyle = "#fef08a";
+  ctx.fill();
   ctx.restore();
-
-  fillPath(ctx, () => bowFront(ctx, kind), "#22d3ee", "#ecfeff", 6);
-
-  const sheen = ctx.createLinearGradient(-24, -118, 36, 86);
-  sheen.addColorStop(0, "rgba(255, 255, 255, 0.5)");
-  sheen.addColorStop(0.42, "rgba(165, 243, 252, 0.16)");
-  sheen.addColorStop(1, "rgba(8, 145, 178, 0.1)");
-  fillPath(ctx, () => bowFront(ctx, kind), sheen);
-
-  fillPath(
-    ctx,
-    () => {
-      if (kind === "straight") {
-        ctx.moveTo(0, -82);
-        ctx.quadraticCurveTo(38, 4, 32, 14);
-        ctx.lineTo(12, 14);
-        ctx.lineTo(12, 52);
-        ctx.lineTo(-12, 52);
-        ctx.lineTo(-12, 14);
-        ctx.lineTo(-32, 14);
-        ctx.quadraticCurveTo(-38, 4, 0, -82);
-        return;
-      }
-      if (kind === "left") {
-        ctx.moveTo(18, 62);
-        ctx.lineTo(14, 62);
-        ctx.lineTo(14, 8);
-        ctx.quadraticCurveTo(14, -28, -18, -36);
-        ctx.lineTo(-8, -16);
-        ctx.lineTo(-58, -28);
-        ctx.lineTo(-30, -70);
-        ctx.lineTo(-22, -46);
-        ctx.quadraticCurveTo(28, -40, 18, 4);
-        return;
-      }
-      ctx.moveTo(-18, 62);
-      ctx.lineTo(-14, 62);
-      ctx.lineTo(-14, 8);
-      ctx.quadraticCurveTo(-14, -28, 18, -36);
-      ctx.lineTo(8, -16);
-      ctx.lineTo(58, -28);
-      ctx.lineTo(30, -70);
-      ctx.lineTo(22, -46);
-      ctx.quadraticCurveTo(-28, -40, -18, 4);
-    },
-    "rgba(236, 254, 255, 0.9)",
-  );
-
-  ctx.beginPath();
-  if (kind === "straight") {
-    ctx.moveTo(0, -100);
-    ctx.lineTo(10, -36);
-  } else if (kind === "left") {
-    ctx.moveTo(-44, -96);
-    ctx.lineTo(-12, -40);
-  } else {
-    ctx.moveTo(44, -96);
-    ctx.lineTo(12, -40);
-  }
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
-  ctx.lineWidth = 5;
-  ctx.lineCap = "round";
-  ctx.stroke();
 
   return ctx.getImageData(0, 0, size, size);
 }
 
 function ensureImages(map: MapLibreMap) {
-  const images: Array<["straight" | "left" | "right", string]> = [
-    ["straight", BOW_STRAIGHT_ID],
-    ["left", BOW_LEFT_ID],
-    ["right", BOW_RIGHT_ID],
-  ];
-  for (const [kind, id] of images) {
-    if (map.hasImage(id)) continue;
-    const image = createBowSignImage(kind);
-    if (image) map.addImage(id, image, { pixelRatio: 2 });
+  if (map.hasImage(CHEVRON_IMAGE_ID)) return;
+  const image = createChevronImage();
+  if (image) map.addImage(CHEVRON_IMAGE_ID, image, { pixelRatio: 2 });
+}
+
+function ensureTurnLine(map: MapLibreMap) {
+  if (!map.getSource(TURN_LINE_SOURCE_ID)) {
+    map.addSource(TURN_LINE_SOURCE_ID, {
+      type: "geojson",
+      data: emptyLine(),
+    });
+  }
+  if (!map.getLayer(TURN_LINE_GLOW_ID)) {
+    map.addLayer({
+      id: TURN_LINE_GLOW_ID,
+      type: "line",
+      source: TURN_LINE_SOURCE_ID,
+      paint: {
+        "line-color": "#fde047",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 12, 10, 17, 22],
+        "line-opacity": 0.42,
+        "line-blur": 4,
+      },
+      layout: { "line-cap": "round", "line-join": "round" },
+    });
+  }
+  if (!map.getLayer(TURN_LINE_LAYER_ID)) {
+    map.addLayer({
+      id: TURN_LINE_LAYER_ID,
+      type: "line",
+      source: TURN_LINE_SOURCE_ID,
+      paint: {
+        "line-color": "#facc15",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 12, 5.5, 17, 12],
+        "line-opacity": 0.98,
+      },
+      layout: { "line-cap": "round", "line-join": "round" },
+    });
   }
 }
 
-function bowImage(): ExpressionSpecification {
-  return [
-    "match",
-    ["get", "kind"],
-    "left",
-    BOW_LEFT_ID,
-    "right",
-    BOW_RIGHT_ID,
-    BOW_STRAIGHT_ID,
-  ];
-}
-
-function bowSize(): ExpressionSpecification {
+function chevronSize(): ExpressionSpecification {
   return [
     "interpolate",
     ["linear"],
     ["zoom"],
     14.2,
-    ["*", ["get", "scale"], 0.92],
+    ["*", ["get", "scale"], 0.72],
     16.2,
-    ["*", ["get", "scale"], 1.28],
+    ["*", ["get", "scale"], 1.05],
     17.4,
-    ["*", ["get", "scale"], 1.52],
+    ["*", ["get", "scale"], 1.28],
     18.4,
-    ["*", ["get", "scale"], 1.72],
+    ["*", ["get", "scale"], 1.42],
   ];
 }
 
-function ensureBowLayer(map: MapLibreMap, cameraMode: CameraMode = "3d") {
-  const size = bowSize();
-  const image = bowImage();
-  const offset: [number, number] = cameraMode === "3d" ? [0, -44] : [0, -16];
+function ensureChevronLayer(map: MapLibreMap) {
   const layout = {
-    "icon-image": image,
-    "icon-size": size,
-    "icon-anchor": "bottom" as const,
-    "icon-offset": offset,
+    "icon-image": CHEVRON_IMAGE_ID,
+    "icon-size": chevronSize(),
+    "icon-anchor": "center" as const,
     "icon-rotate": ["get", "bearing"] as ExpressionSpecification,
     "icon-rotation-alignment": "map" as const,
     "icon-pitch-alignment": "viewport" as const,
     "icon-allow-overlap": true,
     "icon-ignore-placement": true,
-    "icon-padding": 2,
+    "icon-padding": 0,
   };
 
   if (!map.getLayer(GUIDANCE_LAYER_ID)) {
@@ -232,26 +166,44 @@ function ensureBowLayer(map: MapLibreMap, cameraMode: CameraMode = "3d") {
       layout,
       paint: {
         "icon-opacity": ["get", "opacity"],
-        "icon-halo-color": "#a5f3fc",
-        "icon-halo-width": 0.35,
       },
     });
     return;
   }
 
-  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-image", image);
-  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-size", size);
-  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-anchor", "bottom");
-  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-offset", offset);
+  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-image", CHEVRON_IMAGE_ID);
+  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-size", chevronSize());
+  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-anchor", "center");
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-rotation-alignment", "map");
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-pitch-alignment", "viewport");
 }
 
 function stackGuidanceLayers(map: MapLibreMap) {
-  for (const id of ["demo-route-glow", "demo-route-line", "demo-route-maneuver"]) {
+  for (const id of [
+    "demo-route-glow",
+    "demo-route-line",
+    "demo-route-maneuver",
+    TURN_LINE_GLOW_ID,
+    TURN_LINE_LAYER_ID,
+  ]) {
     if (map.getLayer(id)) map.moveLayer(id);
   }
   if (map.getLayer(GUIDANCE_LAYER_ID)) map.moveLayer(GUIDANCE_LAYER_ID);
+}
+
+function setTurnLine(map: MapLibreMap, line: [number, number][]) {
+  const source = map.getSource(TURN_LINE_SOURCE_ID);
+  const data =
+    line.length >= 2
+      ? {
+          type: "Feature" as const,
+          properties: {},
+          geometry: { type: "LineString" as const, coordinates: line },
+        }
+      : emptyLine();
+  if (source?.type === "geojson") {
+    (source as GeoJSONSource).setData(data);
+  }
 }
 
 export function upsertGuidanceArrows(
@@ -270,6 +222,7 @@ export function upsertGuidanceArrows(
 ) {
   if (!map.isStyleLoaded()) return;
   ensureImages(map);
+  ensureTurnLine(map);
 
   const live =
     navigating &&
@@ -277,34 +230,31 @@ export function upsertGuidanceArrows(
     shouldShowGuidanceSigns(distanceToNext, showing);
   showing = live;
 
-  const visible =
+  const line =
     live && route.length >= 2
-      ? guidanceBowSigns({
+      ? turnGuidanceLine(
           route,
           routeMeters,
           distanceToNext,
-          cueMeters: options.cueMeters,
-        })
+          options.cueMeters,
+          true,
+        )
       : [];
+  const arrows = line.length >= 2 ? turnMarqueeArrows(line, phase) : [];
 
   const data = {
     type: "FeatureCollection" as const,
-    features: visible.map((sign, index) => ({
+    features: arrows.map((arrow, index) => ({
       type: "Feature" as const,
       id: index,
       properties: {
-        bearing: sign.bearing,
-        opacity: sign.opacity,
-        kind: sign.kind,
-        scale:
-          sign.role === "hero"
-            ? sign.scale * (1 + 0.035 * Math.sin(phase * Math.PI * 2))
-            : sign.scale,
-        role: sign.role,
+        bearing: arrow.bearing,
+        opacity: arrow.opacity,
+        scale: arrow.scale,
       },
       geometry: {
         type: "Point" as const,
-        coordinates: [sign.lng, sign.lat],
+        coordinates: [arrow.lng, arrow.lat],
       },
     })),
   };
@@ -316,7 +266,8 @@ export function upsertGuidanceArrows(
     map.addSource(GUIDANCE_SOURCE_ID, { type: "geojson", data });
   }
 
-  ensureBowLayer(map, options.cameraMode ?? "3d");
+  setTurnLine(map, line);
+  ensureChevronLayer(map);
   stackGuidanceLayers(map);
 }
 
@@ -326,8 +277,12 @@ export function resetGuidanceArrowCache() {
 
 export function clearGuidanceArrows(map: MapLibreMap) {
   resetGuidanceArrowCache();
-  const source = map.getSource(GUIDANCE_SOURCE_ID);
-  if (source?.type === "geojson") {
-    (source as GeoJSONSource).setData(emptyCollection());
+  const arrows = map.getSource(GUIDANCE_SOURCE_ID);
+  if (arrows?.type === "geojson") {
+    (arrows as GeoJSONSource).setData(emptyCollection());
+  }
+  const line = map.getSource(TURN_LINE_SOURCE_ID);
+  if (line?.type === "geojson") {
+    (line as GeoJSONSource).setData(emptyLine());
   }
 }
