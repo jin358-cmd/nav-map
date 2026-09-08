@@ -997,8 +997,8 @@ export function DrivingMap({
         const posT = snapToFix ? 1 : damp(dt, followTau.posTau);
         const zoomT = pinchingRef.current ? 0 : snapToFix ? 1 : damp(dt, followTau.zoomTau);
         const currentBearing = mapNow.getBearing();
-        const bearingTau = northUp ? 0.22 : followTau.bearingTau;
-        const bearingHoldDeg = northUp ? 8 : followTau.bearingHoldDeg;
+        const bearingTau = northUp ? 0.14 : followTau.bearingTau;
+        const bearingHoldDeg = northUp ? 5 : followTau.bearingHoldDeg;
         const bearingGap = headingDelta(currentBearing, wanted.bearing);
         const nextBearing =
           snapToFix

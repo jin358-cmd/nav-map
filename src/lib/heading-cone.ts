@@ -9,8 +9,8 @@ export const HEADING_CONE_EDGE = "np-heading-cone-edge";
 /** Google Maps–like fan: ~66° total, not a 120° sweep. */
 const HALF_ANGLE_DEG = 33;
 const ARC_STEPS = 22;
-const STILL_HEADING_HOLD_DEG = 22;
-const STILL_HEADING_TAU = 0.55;
+const STILL_HEADING_HOLD_DEG = 14;
+const STILL_HEADING_TAU = 0.32;
 const MOVE_HEADING_HOLD_DEG = 1.4;
 const MOVE_HEADING_TAU = 0.08;
 const COMPASS_SPEED_MPS = 2.2;
