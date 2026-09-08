@@ -97,6 +97,11 @@ export function rankScore(
     score = Math.max(score, 110);
   }
   score += Math.round((poi.confidence ?? 0.8) * 8);
+  const needle = normalizePoiKey(query);
+  if (needle.length <= 2 && poi.brand) {
+    const prefixed = brandsForPrefix(query);
+    if (prefixed.some((item) => item.brand === poi.brand)) score += 28;
+  }
   const namedCity = countyMentionedInQuery(query);
   if (namedCity && normalizePoiKey(poi.city ?? "") === normalizePoiKey(namedCity)) {
     score += 14;
