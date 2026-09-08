@@ -20,7 +20,7 @@ export function SpeedHud({ sample }: { sample: SpeedSample }) {
   const display = kmh == null ? "--" : String(Math.round(kmh));
 
   return (
-    <div className="hud-speed-gps pointer-events-none flex w-full flex-col items-center justify-center">
+    <div className="hud-speed-gps pointer-events-none flex w-full flex-col items-start justify-center px-2">
       <p className="hud-speed-gps__value font-black leading-none tabular-nums text-white">
         {display}
       </p>
@@ -35,7 +35,7 @@ export function SpeedLimitBadge({
   kph: number | null;
 }) {
   return (
-    <div className="hud-speed-limit-slot pointer-events-none flex w-full items-center justify-center">
+    <div className="hud-speed-limit-slot pointer-events-none flex w-full items-center justify-start px-2">
       {kph != null ? (
         <div
           className="hud-speed-limit-badge flex items-center justify-center rounded-full bg-white text-zinc-900"

@@ -832,7 +832,7 @@
   container-type: inline-size;
   display: flex;
   flex-direction: column;
-  align-items: stretch;
+  align-items: flex-start;
   gap: 0.45rem;
 }
 
@@ -840,10 +840,12 @@
 .hud-trip-card {
   display: grid;
   grid-template-columns: var(--hud-trip-cols);
+  width: 100%;
 }
 
 .hud-speed-row {
-  padding-inline: calc(0.28rem + 1px);
+  padding-inline: 0;
+  justify-items: start;
 }
 
 .hud-speed-column {
@@ -851,7 +853,7 @@
   width: 100%;
   min-width: 0;
   flex-direction: column;
-  align-items: stretch;
+  align-items: flex-start;
   gap: 0.35rem;
 }
 
@@ -909,7 +911,9 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
+  align-items: flex-start;
   padding: 0 0.5rem;
+  text-align: left;
 }
 
 .hud-trip-label {
@@ -917,11 +921,13 @@
   font-weight: 500;
   line-height: 1;
   color: #e4e4e7;
+  text-align: left;
 }
 
 .hud-trip-metric {
   display: flex;
   align-items: baseline;
+  justify-content: flex-start;
   margin-top: 0.28rem;
   font-size: clamp(20px, 11.5cqi, 30px);
   font-weight: 800;
@@ -971,6 +977,7 @@
 
   .hud-speed-column {
     min-width: 0;
+    align-items: flex-start;
   }
 
   .hud-trip-card,
@@ -982,15 +989,16 @@
 
   .hud-trip-cell {
     padding: 0 0.28rem;
-    text-align: center;
+    text-align: left;
+    align-items: flex-start;
   }
 
   .hud-trip-label {
-    text-align: center;
+    text-align: left;
   }
 
   .hud-trip-metric {
-    justify-content: center;
+    justify-content: flex-start;
   }
 }
 
