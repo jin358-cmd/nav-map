@@ -43,6 +43,8 @@ import {
 } from "@/lib/poi-search";
 import { SEARCH_FIRST_SCREEN } from "@/lib/search-constants";
 import { poiCategoryLabel } from "@/lib/poi/category-label";
+import { classifyPoiQuery } from "@/lib/poi/intent";
+import { matchedBrand } from "@/lib/poi/aliases";
 import { useAddressSearch } from "@/hooks/use-address-search";
 import { useSpeechToText } from "@/hooks/use-speech-to-text";
 import { cn } from "@/lib/utils";
@@ -56,6 +58,18 @@ type AddressSearchProps = {
   error: string | null;
   onSelect: (hit: GeocodeHit) => void;
 };
+
+function isChainBrandHit(hit: GeocodeHit, query: string) {
+  if (hit.branchName?.trim()) return true;
+  if (classifyPoiQuery(query) === "brand") return true;
+  return Boolean(matchedBrand(hit.name));
+}
+
+function chainBranchLabel(hit: GeocodeHit) {
+  const branch = hit.branchName?.trim();
+  if (branch) return branch;
+  return formatTaiwanDisplayAddress(hit.name);
+}
 
 export function AddressSearch({
   bias,
@@ -416,6 +430,13 @@ export function AddressSearch({
                   (biasBucket
                     ? Math.round(distanceKm(biasBucket, hit.location) * 1000)
                     : undefined);
+                const chain = isChainBrandHit(hit, needle);
+                const branchLabel = chainBranchLabel(hit);
+                const addressLabel =
+                  hit.address && !sameTaiwanDisplayTitle(branchLabel, hit.address)
+                    ? formatTaiwanRoadName(hit.address) ||
+                      formatTaiwanDisplayAddress(hit.address)
+                    : "";
                 return (
                 <li key={hit.id} className="flex items-center">
                   <button
@@ -427,37 +448,54 @@ export function AddressSearch({
                   >
                     <MapPin className="size-4 shrink-0 text-cyan-300" />
                     <span className="block min-w-0 truncate whitespace-nowrap text-lg leading-7 text-white">
-                      <span className="font-medium">
-                        {formatTaiwanDisplayAddress(hit.name)}
-                      </span>
-                      {hit.branchName &&
-                      !formatTaiwanDisplayAddress(hit.name).includes(
-                        hit.branchName,
-                      ) ? (
-                        <span className="text-zinc-200"> {hit.branchName}</span>
-                      ) : null}
-                      {hit.address &&
-                      !sameTaiwanDisplayTitle(hit.name, hit.address) ? (
-                        <span className="text-zinc-400">
-                          {" "}
-                          · {formatTaiwanRoadName(hit.address)}
-                        </span>
-                      ) : null}
-                      {meters != null ? (
-                        <span className="text-cyan-200"> · {formatDistance(meters)}</span>
-                      ) : null}
-                      {hit.category ? (
-                        <span className="text-zinc-400">
-                          {" "}
-                          · {poiCategoryLabel(hit.category)}
-                        </span>
-                      ) : null}
-                      {hit.hours ? (
-                        <span className="text-zinc-400"> · {hit.hours}</span>
-                      ) : null}
-                      {hit.phone ? (
-                        <span className="text-zinc-400"> · {hit.phone}</span>
-                      ) : null}
+                      {chain ? (
+                        <>
+                          <span className="font-medium">{branchLabel}</span>
+                          {meters != null ? (
+                            <span className="text-cyan-200">
+                              {" "}
+                              · {formatDistance(meters)}
+                            </span>
+                          ) : null}
+                          {addressLabel ? (
+                            <span className="text-zinc-400">
+                              {" "}
+                              · {addressLabel}
+                            </span>
+                          ) : null}
+                        </>
+                      ) : (
+                        <>
+                          <span className="font-medium">
+                            {formatTaiwanDisplayAddress(hit.name)}
+                          </span>
+                          {hit.address &&
+                          !sameTaiwanDisplayTitle(hit.name, hit.address) ? (
+                            <span className="text-zinc-400">
+                              {" "}
+                              · {formatTaiwanRoadName(hit.address)}
+                            </span>
+                          ) : null}
+                          {meters != null ? (
+                            <span className="text-cyan-200">
+                              {" "}
+                              · {formatDistance(meters)}
+                            </span>
+                          ) : null}
+                          {hit.category ? (
+                            <span className="text-zinc-400">
+                              {" "}
+                              · {poiCategoryLabel(hit.category)}
+                            </span>
+                          ) : null}
+                          {hit.hours ? (
+                            <span className="text-zinc-400"> · {hit.hours}</span>
+                          ) : null}
+                          {hit.phone ? (
+                            <span className="text-zinc-400"> · {hit.phone}</span>
+                          ) : null}
+                        </>
+                      )}
                     </span>
                   </button>
                   <button
