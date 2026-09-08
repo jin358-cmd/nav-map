@@ -1121,6 +1121,8 @@ export function DrivingApp() {
     setParkingArrivalMinimized(false);
     setArrivalNotice(null);
     setToolsDrawerOpen(false);
+    setPoiMenuOpen(false);
+    setStyleMenuOpen(false);
     setFollowVehicle(true);
     setUserAdjustedMap(false);
     panIntentRef.current = false;

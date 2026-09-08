@@ -823,6 +823,106 @@
   overflow: visible;
 }
 
+.hud-anchor-rail:has(.hud-rail--collapsed) {
+  pointer-events: none;
+  z-index: 24;
+}
+
+.hud-rail {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.hud-rail--collapsed {
+  pointer-events: none;
+}
+
+.hud-rail-buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.625rem;
+  transform: translateX(0);
+  opacity: 1;
+  transition:
+    transform 220ms ease,
+    opacity 180ms ease;
+}
+
+.hud-rail--collapsed .hud-rail-buttons {
+  transform: translateX(
+    calc(100% + max(0.65rem, env(safe-area-inset-right)) + 0.35rem)
+  );
+  opacity: 0;
+  pointer-events: none;
+}
+
+.hud-rail-peek {
+  position: absolute;
+  top: 50%;
+  right: calc(
+    -1 *
+      max(
+        0px,
+        max(0.65rem, env(safe-area-inset-right)) - env(safe-area-inset-right)
+      )
+  );
+  z-index: 24;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 1.55rem;
+  height: 6.75rem;
+  padding: 0 0 0 0.12rem;
+  border: 0;
+  border-radius: 0.9rem 0 0 0.9rem;
+  color: #ecfeff;
+  background: linear-gradient(
+    180deg,
+    rgba(8, 47, 73, 0.92) 0%,
+    rgba(4, 16, 22, 0.94) 100%
+  );
+  box-shadow:
+    -2px 0 12px rgba(8, 47, 73, 0.35),
+    inset 0 0 0 1px rgba(103, 232, 249, 0.28);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-50%) translateX(0.7rem);
+  cursor: pointer;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform 220ms ease,
+    opacity 180ms ease;
+}
+
+.hud-rail--collapsed .hud-rail-peek {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(-50%) translateX(0);
+}
+
+.hud-rail-peek__bar {
+  position: absolute;
+  top: 50%;
+  right: 0.22rem;
+  width: 0.28rem;
+  height: 2.55rem;
+  border-radius: 99px;
+  background: #67e8f9;
+  box-shadow: 0 0 8px rgba(103, 232, 249, 0.75);
+  transform: translateY(-50%);
+}
+
+.hud-rail-peek__chevron {
+  width: 0.95rem;
+  height: 0.95rem;
+  margin-left: 0.02rem;
+  filter: drop-shadow(0 0 4px rgba(103, 232, 249, 0.55));
+}
+
 .map-style-menu {
   position: relative;
   display: flex;
@@ -853,7 +953,9 @@
   .poi-layer-drawer,
   .rail-flyout,
   .function-drawer,
-  .map-style-flyout {
+  .map-style-flyout,
+  .hud-rail-buttons,
+  .hud-rail-peek {
     transition: none;
   }
 }
