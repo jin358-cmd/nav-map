@@ -1,6 +1,6 @@
 "use client";
 
-import { Navigation } from "lucide-react";
+import { Navigation, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   formatDistance,
@@ -32,16 +32,17 @@ function cityFromOrigin(origin: ParkingCatalog["origin"]) {
   return "";
 }
 
-function parkingUpdateTitle(
+function parkingUpdateLines(
   city: string | undefined,
   origin: ParkingCatalog["origin"],
   fetchedAt?: string | null,
 ) {
   const area = (city || cityFromOrigin(origin)).replaceAll("台", "臺");
   const ago = fetchedAt ? formatUpdatedAgo(fetchedAt) : "剛剛";
-  return area
-    ? `${area}公有／民營停車場(更新・${ago})`
-    : `公有／民營停車場(更新・${ago})`;
+  return {
+    title: area ? `${area}公有／民營停車場` : "公有／民營停車場",
+    updated: `更新・${ago}`,
+  };
 }
 
 function markerClass(lot: ParkingLot) {
@@ -80,18 +81,26 @@ function occupancyLabel(lot: ParkingLot) {
   return `${Math.max(0, lot.carAvailable)} 格`;
 }
 
-function yellowLotLine(lot: ParkingLot, sort: ParkingSort) {
+function parkingLotCopy(lot: ParkingLot, sort: ParkingSort) {
   const distance =
-    lot.distanceMeters != null ? formatDistance(lot.distanceMeters) : null;
+    lot.distanceMeters != null ? formatDistance(lot.distanceMeters) : "距離未提供";
   const road = parkingRoad(lot);
-  const name = parkingNameLine(lot);
-  if (sort === "remaining") {
-    return [occupancyLabel(lot), distance, road].filter(Boolean).join("・");
-  }
   if (sort === "price") {
-    return [distance, formatParkingRate(lot), road].filter(Boolean).join("・");
+    return {
+      primary: [distance, formatParkingRate(lot)].filter(Boolean).join("・"),
+      secondary: road,
+    };
   }
-  return [distance, name, road].filter(Boolean).join("・");
+  if (sort === "remaining") {
+    return {
+      primary: [occupancyLabel(lot), distance].filter(Boolean).join("・"),
+      secondary: road,
+    };
+  }
+  return {
+    primary: [distance, parkingNameLine(lot)].filter(Boolean).join("・"),
+    secondary: road,
+  };
 }
 
 export function ParkingPanel({
@@ -128,6 +137,7 @@ export function ParkingPanel({
   onToggleArrivalPrompt?: (enabled: boolean) => void;
 }) {
   const ranked = sortParkingLots(lots, sort);
+  const header = parkingUpdateLines(city, origin, fetchedAt);
   return (
     <section
       className={cn(
@@ -145,8 +155,11 @@ export function ParkingPanel({
     >
       <div className="mb-2 flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold tracking-wide text-zinc-100">
-            {parkingUpdateTitle(city, origin, fetchedAt)}
+          <p className="text-sm font-semibold leading-tight tracking-wide text-zinc-100">
+            {header.title}
+          </p>
+          <p className="mt-0.5 text-[11px] leading-tight text-zinc-400">
+            {header.updated}
           </p>
           {onToggleArrivalPrompt ? (
             <div className="mt-1.5 flex items-center gap-1.5">
@@ -182,14 +195,14 @@ export function ParkingPanel({
         </div>
         <button
           type="button"
-          aria-label="關閉"
+          aria-label="關閉停車場"
           onClick={(event) => {
             event.stopPropagation();
             onClose();
           }}
-          className="flex h-12 min-w-[4.75rem] shrink-0 items-center justify-center rounded-xl bg-white/12 px-3 text-sm font-semibold text-white hover:bg-white/18 touch-manipulation"
+          className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-white/25 bg-white/12 text-white hover:bg-white/18 touch-manipulation"
         >
-          關閉
+          <X className="size-5" strokeWidth={2.5} />
         </button>
       </div>
       <div className="mb-2 flex gap-1.5">
@@ -222,7 +235,9 @@ export function ParkingPanel({
         </p>
       ) : (
         <ul className="max-h-[14.5rem] min-h-[14.5rem] space-y-2 overflow-y-auto">
-          {ranked.map((lot) => (
+          {ranked.map((lot) => {
+            const copy = parkingLotCopy(lot, sort);
+            return (
             <li key={lot.id}>
               <div
                 className={cn(
@@ -246,31 +261,12 @@ export function ParkingPanel({
                     onClick={() => onSelect(lot)}
                     className="w-full text-left text-[13px] font-semibold text-yellow-300 touch-manipulation"
                   >
-                    {sort === "remaining" ? (
-                      <span className="flex flex-col leading-snug">
-                        {occupancyLabel(lot) ? (
-                          <span>{occupancyLabel(lot)}</span>
-                        ) : null}
-                        <span>
-                          {lot.distanceMeters != null
-                            ? formatDistance(lot.distanceMeters)
-                            : "距離未提供"}
-                        </span>
-                        <span className="truncate">{parkingRoad(lot)}</span>
+                    <span className="flex flex-col leading-snug">
+                      <span className="truncate">{copy.primary}</span>
+                      <span className="truncate text-[12px] font-medium text-yellow-200/90">
+                        {copy.secondary}
                       </span>
-                    ) : sort === "distance" ? (
-                      <span className="flex flex-col leading-snug">
-                        <span>
-                          {lot.distanceMeters != null
-                            ? formatDistance(lot.distanceMeters)
-                            : "距離未提供"}
-                        </span>
-                        <span className="truncate">{parkingNameLine(lot)}</span>
-                        <span className="truncate">{parkingRoad(lot)}</span>
-                      </span>
-                    ) : (
-                      <span className="block truncate">{yellowLotLine(lot, sort)}</span>
-                    )}
+                    </span>
                   </button>
                   <Button
                     type="button"
@@ -283,7 +279,8 @@ export function ParkingPanel({
                 </div>
               </div>
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
     </section>
