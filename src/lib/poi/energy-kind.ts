@@ -5,9 +5,10 @@ export type EnergyKind = (typeof ENERGY_KINDS)[number];
 const GOGORO_RE =
   /gogoro|go\s*station|gostation|go站|換電|電池交換|電池交換站/i;
 const EV_STRONG_RE =
-  /充電樁|tesla|supercharger|特斯拉|u-?power|ionity|電車充電|汽車充電|ev\s*charger|charging station/i;
+  /充電樁|tesla supercharger|supercharger|特斯拉超充|特斯拉充電|u-?power|ionity|電車充電|汽車充電|ev\s*charger|charging station/i;
 const EV_STATION_RE = /充電站/;
 const NOT_EV_RE = /手機充電|行動電源|電動車超市|電動車專賣/;
+const GOGORO_STATION_RE = /換電|電池交換|gostation|go\s*station|go站/i;
 
 export type EnergyStationFields = {
   name?: string | null;
@@ -26,13 +27,23 @@ export function isEnergyKind(value: string | null | undefined): value is EnergyK
 
 export function classifyEnergyKind(poi: EnergyStationFields): EnergyKind | null {
   const text = haystack(poi);
-  if (GOGORO_RE.test(text)) return "gogoro";
+  if (GOGORO_RE.test(text)) {
+    if (
+      poi.category === "fuel" ||
+      poi.subcategory === "fuel" ||
+      poi.subcategory === "charging" ||
+      GOGORO_STATION_RE.test(text)
+    ) {
+      return "gogoro";
+    }
+    return null;
+  }
   if (!NOT_EV_RE.test(text)) {
     if (
       poi.subcategory === "charging" ||
       EV_STRONG_RE.test(text) ||
       EV_STATION_RE.test(text) ||
-      (/快充|慢充/.test(text) && /充/.test(text))
+      /快充|慢充/.test(text)
     ) {
       return "ev";
     }
