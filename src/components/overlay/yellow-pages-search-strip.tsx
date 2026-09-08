@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { formatDistance } from "@/lib/format";
 import { formatDistanceRoadLabel } from "@/lib/geocoding/format-taiwan-display-address";
 import { poiFeatureToPlace } from "@/lib/map-place";
@@ -18,11 +18,24 @@ export function YellowPagesSearchStrip({
   onSelect: (hit: GeocodeHit) => void;
 }) {
   const [shortcut, setShortcut] = useState<SearchShortcutId | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   const { pois, loading, error } = useYellowPagesNearby({ origin, shortcut });
   const selected = SEARCH_SHORTCUTS.find((item) => item.id === shortcut) ?? null;
 
+  useEffect(() => {
+    if (!shortcut) return;
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (rootRef.current?.contains(target)) return;
+      setShortcut(null);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [shortcut]);
+
   return (
-    <div className="mb-1.5">
+    <div ref={rootRef} className="mb-1.5">
       <div className="grid grid-cols-4 gap-1">
         {SEARCH_SHORTCUTS.map((item) => {
           const on = shortcut === item.id;
@@ -32,6 +45,8 @@ export function YellowPagesSearchStrip({
               key={item.id}
               type="button"
               aria-pressed={on}
+              aria-expanded={on}
+              aria-controls={on ? "navpilot-shortcut-preview" : undefined}
               aria-label={
                 item.id === "fuel" ? "加油站，含汽機車充電站" : `${item.label}附近`
               }
@@ -58,7 +73,10 @@ export function YellowPagesSearchStrip({
         })}
       </div>
       {shortcut ? (
-        <div className="mt-1 max-h-44 overflow-y-auto rounded-2xl border border-white/12 bg-black/72 px-2 py-1.5 shadow-[0_10px_28px_rgba(0,0,0,0.4)] backdrop-blur-xl">
+        <div
+          id="navpilot-shortcut-preview"
+          className="mt-1 max-h-44 overflow-y-auto rounded-2xl border border-white/12 bg-black/72 px-2 py-1.5 shadow-[0_10px_28px_rgba(0,0,0,0.4)] backdrop-blur-xl"
+        >
           <p className="px-1 pb-1 text-[10px] tracking-wide text-zinc-400">
             {selected
               ? `${selected.label}${selected.id === "fuel" ? " · 含汽機車充電站" : ""}`
