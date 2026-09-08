@@ -1129,23 +1129,24 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  align-items: flex-start;
+  align-items: center;
   padding: 0 0.5rem;
-  text-align: left;
+  text-align: center;
 }
 
 .hud-trip-label {
+  width: 100%;
   font-size: clamp(11px, 5.6cqi, 14px);
   font-weight: 500;
   line-height: 1;
   color: #e4e4e7;
-  text-align: left;
+  text-align: center;
 }
 
 .hud-trip-metric {
   display: flex;
   align-items: baseline;
-  justify-content: flex-start;
+  justify-content: center;
   margin-top: 0.28rem;
   font-size: clamp(20px, 11.5cqi, 30px);
   font-weight: 800;
@@ -1207,16 +1208,16 @@
 
   .hud-trip-cell {
     padding: 0 0.28rem;
-    text-align: left;
-    align-items: flex-start;
+    text-align: center;
+    align-items: center;
   }
 
   .hud-trip-label {
-    text-align: left;
+    text-align: center;
   }
 
   .hud-trip-metric {
-    justify-content: flex-start;
+    justify-content: center;
   }
 }
 
