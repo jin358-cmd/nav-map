@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import {
   mapControlButtonClass,
   mapControlTone,
-  mapHeadingUpButtonClass,
+  mapModeChipClass,
 } from "@/lib/map-control-tone";
 import { cn } from "@/lib/utils";
 import type {
@@ -257,7 +257,7 @@ export function MapControls({
         active={northUp}
         pressed={followVehicle}
         tone={tone}
-        className={headingUp ? mapHeadingUpButtonClass(tone) : undefined}
+        className={headingUp ? mapModeChipClass(tone) : undefined}
       >
         <LocateFixed
           className={cn("size-6", locating && "animate-pulse")}
@@ -270,15 +270,7 @@ export function MapControls({
         active={cameraMode === "3d"}
         pressed={cameraMode === "3d"}
         tone={tone}
-        className={
-          cameraMode === "2d"
-            ? tone === "dark"
-              ? "!border-[#67e8f9] !bg-[#155e75] !text-[#ecfeff]"
-              : tone === "satellite"
-                ? "border-[#111827] bg-zinc-800 text-white"
-                : "border-[#111827] bg-zinc-800 text-white"
-            : undefined
-        }
+        className={cameraMode === "2d" ? mapModeChipClass(tone) : undefined}
       >
         <span className="text-[1.05rem] font-black leading-none tracking-tight">
           {cameraMode === "3d" ? "3D" : "2D"}

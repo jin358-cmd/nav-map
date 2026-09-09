@@ -243,7 +243,7 @@ export function DrivingApp() {
   const [displayVehicle, setDisplayVehicle] = useState<DisplayPose | null>(null);
   const [cameraMode, setCameraMode] = useState<CameraMode>("3d");
   const [followOrientation, setFollowOrientation] =
-    useState<FollowOrientation>("north-up");
+    useState<FollowOrientation>("heading-up");
   const [followVehicle, setFollowVehicle] = useState(false);
   const [userAdjustedMap, setUserAdjustedMap] = useState(false);
   const mapDisplayMode = useSyncExternalStore(

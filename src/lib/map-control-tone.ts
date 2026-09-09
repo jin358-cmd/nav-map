@@ -30,14 +30,11 @@ export function mapControlButtonClass(tone: MapControlTone, active = false) {
   );
 }
 
-export function mapHeadingUpButtonClass(tone: MapControlTone) {
+export function mapModeChipClass(tone: MapControlTone) {
   if (tone === "dark") {
-    return "!border-[#fde68a] !bg-[#f59e0b] !text-[#422006] hover:!bg-[#fbbf24] [&_svg]:!text-[#422006]";
+    return "!border-[#67e8f9] !bg-[#155e75] !text-[#ecfeff] hover:!bg-[#0e7490] [&_svg]:!text-[#ecfeff]";
   }
-  if (tone === "satellite") {
-    return "!border-[#92400e] !bg-[#f59e0b] !text-[#422006] hover:!bg-[#fbbf24] [&_svg]:!text-[#422006]";
-  }
-  return "!border-[#b45309] !bg-[#f59e0b] !text-[#422006] hover:!bg-[#fbbf24] [&_svg]:!text-[#422006]";
+  return "border-[#111827] bg-zinc-800 text-white hover:bg-zinc-700 [&_svg]:!text-white";
 }
 
 export function mapStyleOptionClass(

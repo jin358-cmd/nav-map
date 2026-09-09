@@ -291,7 +291,7 @@ function cameraOptions(
   overlay?: DrivingMapProps["overlayPadding"],
   distanceToNext = Number.POSITIVE_INFINITY,
   junctionCue: LngLat | null = null,
-  followOrientation: FollowOrientation = "north-up",
+  followOrientation: FollowOrientation = "heading-up",
   recoverBlend = 0,
   compassHeading: number | null = null,
 ) {
@@ -422,7 +422,7 @@ export function DrivingMap({
   vehicleLiveRef,
   displayVehicleLiveRef,
   cameraMode,
-  followOrientation = "north-up",
+  followOrientation = "heading-up",
   followVehicle,
   mapDisplayMode = "dark",
   styleRevision = 0,
