@@ -1062,7 +1062,6 @@ export function DrivingApp() {
     try {
       await readDevicePosition();
       if (!wasFollowing) {
-        setFollowOrientation("north-up");
         setFollowVehicle(true);
       }
       setUserAdjustedMap(false);

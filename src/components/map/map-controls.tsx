@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import {
   mapControlButtonClass,
   mapControlTone,
+  mapHeadingUpButtonClass,
 } from "@/lib/map-control-tone";
 import { cn } from "@/lib/utils";
 import type {
@@ -74,8 +75,11 @@ export function MapControls({
 }: MapControlsProps) {
   const locating = gpsStatus === "locating";
   const northUp = followVehicle && followOrientation === "north-up";
+  const headingUp = followVehicle && followOrientation === "heading-up";
   const locateLabel = !followVehicle
-    ? "回到定位並北方朝上"
+    ? followOrientation === "heading-up"
+      ? "回到定位並對準車頭方向"
+      : "回到定位並北方朝上"
     : northUp
       ? "目前北方朝上。點擊切換車頭向上"
       : "目前車頭向上，點擊切換北方朝上";
@@ -251,8 +255,9 @@ export function MapControls({
         label={locateLabel}
         onClick={onLocate}
         active={northUp}
-        pressed={northUp}
+        pressed={followVehicle}
         tone={tone}
+        className={headingUp ? mapHeadingUpButtonClass(tone) : undefined}
       >
         <LocateFixed
           className={cn("size-6", locating && "animate-pulse")}

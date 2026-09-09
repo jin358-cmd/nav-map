@@ -96,7 +96,9 @@ import { damp, distanceKm, headingDelta, lerp, lerpAngle } from "@/lib/geo";
 import { subscribeDeviceCompass } from "@/lib/device-compass";
 import {
   coneHeadingTarget,
+  COMPASS_SPEED_MPS,
   ensureHeadingConeLayers,
+  followMapBearing,
   shouldShowHeadingCone,
   stepConeHeading,
   upsertHeadingCone,
@@ -291,6 +293,7 @@ function cameraOptions(
   junctionCue: LngLat | null = null,
   followOrientation: FollowOrientation = "north-up",
   recoverBlend = 0,
+  compassHeading: number | null = null,
 ) {
   const height = map.getContainer().clientHeight;
   const width = map.getContainer().clientWidth;
@@ -341,8 +344,7 @@ function cameraOptions(
       lerp(vehicle.lng, junctionCue?.lng ?? vehicle.lng, towardCue),
       lerp(vehicle.lat, junctionCue?.lat ?? vehicle.lat, towardCue),
     ] as [number, number],
-    bearing:
-      followOrientation === "heading-up" ? vehicle.heading : 0,
+    bearing: followMapBearing(followOrientation, vehicle, compassHeading),
     pitch: mode === "3d" ? lerp(cruisePitch, focusPitch, blend) : 0,
     zoom: navigating || mode === "3d" ? navZoom : OVERHEAD_ZOOM,
     padding: drivingPadding(height, width, mode, navigating, overlay),
@@ -559,6 +561,8 @@ export function DrivingMap({
   const lastFrameRef = useRef(0);
   const markerRotationRef = useRef((bootGps ?? vehicle).heading);
   const acquiredGpsRef = useRef(bootGps != null);
+  const snapFollowRef = useRef(false);
+  const prevFollowVehicleRef = useRef(followVehicle);
   const lastViewportEmitRef = useRef(0);
   const lastEmittedZoomRef = useRef(0);
   const rafRef = useRef(0);
@@ -805,6 +809,9 @@ export function DrivingMap({
           elapsedSinceFixSeconds: Math.max(0, (now - lastFixAtRef.current) / 1000),
         });
       }
+      const snapFollow = snapFollowRef.current;
+      if (snapFollow) snapFollowRef.current = false;
+      const snapCamera = snapToFix || snapFollow;
       const display = displayStateRef.current;
       const showVehicle = raw.source === "gps";
       setVehicleMarkerVisible(marker.getElement(), showVehicle);
@@ -973,6 +980,7 @@ export function DrivingMap({
           junctionCueRef.current,
           followOrientationRef.current,
           recoverBlend,
+          deviceCompassRef.current,
         );
         lastBlendRef.current = wanted.blend;
         const center = mapNow.getCenter();
@@ -980,14 +988,15 @@ export function DrivingMap({
           ? mapNow.getZoom()
           : (userZoomRef.current ?? wanted.zoom);
         const followTau = presentationFollowTau(raw.speedMps ?? 0, wanted.blend);
-        const posT = snapToFix ? 1 : damp(dt, followTau.posTau);
-        const zoomT = pinchingRef.current ? 0 : snapToFix ? 1 : damp(dt, followTau.zoomTau);
+        const posT = snapCamera ? 1 : damp(dt, followTau.posTau);
+        const zoomT = pinchingRef.current ? 0 : snapCamera ? 1 : damp(dt, followTau.zoomTau);
         const currentBearing = mapNow.getBearing();
-        const bearingTau = northUp ? 0.07 : followTau.bearingTau;
-        const bearingHoldDeg = northUp ? 2.2 : followTau.bearingHoldDeg;
+        const still = (raw.speedMps ?? 0) < COMPASS_SPEED_MPS;
+        const bearingTau = northUp ? 0.07 : still ? 0.09 : followTau.bearingTau;
+        const bearingHoldDeg = northUp ? 2.2 : still ? 0.8 : followTau.bearingHoldDeg;
         const bearingGap = headingDelta(currentBearing, wanted.bearing);
         const nextBearing =
-          snapToFix
+          snapCamera
             ? wanted.bearing
             : bearingGap < bearingHoldDeg
               ? currentBearing
@@ -998,17 +1007,17 @@ export function DrivingMap({
                 );
         try {
           mapNow.jumpTo({
-            center: snapToFix
+            center: snapCamera
               ? wanted.center
               : [
                   lerp(center.lng, wanted.center[0], posT),
                   lerp(center.lat, wanted.center[1], posT),
                 ],
             bearing: nextBearing,
-            pitch: snapToFix
+            pitch: snapCamera
               ? wanted.pitch
               : lerp(mapNow.getPitch(), wanted.pitch, damp(dt, 0.08)),
-            zoom: snapToFix ? zoomTarget : lerp(mapNow.getZoom(), zoomTarget, zoomT),
+            zoom: snapCamera ? zoomTarget : lerp(mapNow.getZoom(), zoomTarget, zoomT),
             padding: wanted.padding,
           });
         } catch {
@@ -1119,6 +1128,7 @@ export function DrivingMap({
               junctionCueRef.current,
               followOrientationRef.current,
               0,
+              deviceCompassRef.current,
             ),
           );
         }
@@ -1383,6 +1393,10 @@ export function DrivingMap({
   }, [layerVisibility.congestion, navigating, route, traffic]);
 
   useEffect(() => {
+    if (followVehicle && !prevFollowVehicleRef.current) {
+      snapFollowRef.current = true;
+    }
+    prevFollowVehicleRef.current = followVehicle;
     followVehicleRef.current = followVehicle;
     if (followVehicle) userZoomRef.current = null;
   }, [followVehicle]);
@@ -1431,6 +1445,7 @@ export function DrivingMap({
             junctionCueRef.current,
             followOrientationRef.current,
             0,
+            deviceCompassRef.current,
           );
           map.jumpTo({
             center: wanted.center,

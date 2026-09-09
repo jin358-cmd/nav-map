@@ -11,8 +11,9 @@ export function mapControlTone(mode: MapDisplayMode): MapControlTone {
 export function mapControlButtonClass(tone: MapControlTone, active = false) {
   if (tone === "satellite") {
     return cn(
-      "border-[#111827]/70 bg-white/94 text-[#111827] shadow-lg hover:bg-zinc-100 hover:text-[#0f172a]",
-      active && "border-[#0f172a] bg-zinc-100 text-[#0f172a]",
+      "border-[#1e3a5f] bg-white/94 text-[#0f172a] shadow-lg hover:bg-sky-50 hover:text-[#0f172a]",
+      active &&
+        "!border-[#0c4a6e] !bg-[#0369a1] !text-white hover:!bg-[#0284c7] [&_svg]:!text-white",
     );
   }
   if (tone === "dark") {
@@ -23,9 +24,20 @@ export function mapControlButtonClass(tone: MapControlTone, active = false) {
     );
   }
   return cn(
-    "border-zinc-400/80 bg-white/92 text-[#1F2937] shadow-lg hover:bg-zinc-100 hover:text-[#111827]",
-    active && "border-[#111827] bg-zinc-100 text-[#111827]",
+    "border-zinc-400 bg-white text-[#1F2937] shadow-lg hover:bg-sky-50 hover:text-[#0f172a]",
+    active &&
+      "!border-[#0c4a6e] !bg-[#0284c7] !text-white hover:!bg-[#0369a1] [&_svg]:!text-white",
   );
+}
+
+export function mapHeadingUpButtonClass(tone: MapControlTone) {
+  if (tone === "dark") {
+    return "!border-[#fde68a] !bg-[#f59e0b] !text-[#422006] hover:!bg-[#fbbf24] [&_svg]:!text-[#422006]";
+  }
+  if (tone === "satellite") {
+    return "!border-[#92400e] !bg-[#f59e0b] !text-[#422006] hover:!bg-[#fbbf24] [&_svg]:!text-[#422006]";
+  }
+  return "!border-[#b45309] !bg-[#f59e0b] !text-[#422006] hover:!bg-[#fbbf24] [&_svg]:!text-[#422006]";
 }
 
 export function mapStyleOptionClass(
@@ -33,19 +45,25 @@ export function mapStyleOptionClass(
   selected: boolean,
   pending: boolean,
 ) {
+  if (tone === "dark") {
+    return cn(
+      "bg-[#0b1220]/90 text-[#e2e8f0] hover:bg-[#164e63]/80",
+      selected && "bg-[#22d3ee] text-[#042f2e] ring-2 ring-[#ecfeff]",
+      pending && "ring-1 ring-[#67e8f9]/70",
+    );
+  }
+  if (tone === "satellite") {
+    return cn(
+      "border border-[#111827]/25 bg-white/94 text-[#1F2937] hover:bg-sky-50",
+      selected &&
+        "border-[#0c4a6e] bg-[#0369a1] text-white ring-2 ring-white hover:bg-[#0284c7]",
+      pending && "ring-1 ring-[#0284c7]",
+    );
+  }
   return cn(
-    "text-center",
-    tone === "dark"
-      ? "bg-[#0b1220]/90 text-[#e2e8f0] hover:bg-[#164e63]/80"
-      : "bg-white/94 text-[#1F2937] hover:bg-zinc-100",
+    "border border-zinc-300 bg-white text-[#1F2937] hover:bg-sky-50",
     selected &&
-      (tone === "dark"
-        ? "bg-[#22d3ee] text-[#042f2e] ring-1 ring-[#ecfeff]/80"
-        : "bg-zinc-100 text-[#111827] ring-1 ring-[#111827]/70"),
-    pending &&
-      (tone === "dark"
-        ? "ring-1 ring-[#67e8f9]/70"
-        : "ring-1 ring-[#1F2937]/45"),
-    tone === "satellite" && "border border-[#111827]/20",
+      "border-[#0c4a6e] bg-[#0284c7] text-white ring-2 ring-[#0c4a6e] hover:bg-[#0369a1]",
+    pending && "ring-1 ring-[#0284c7]/70",
   );
 }

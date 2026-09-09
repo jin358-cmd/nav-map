@@ -5,8 +5,8 @@ import type {
 } from "maplibre-gl";
 import {
   shouldShowGroundBow,
-  turnGroundArrows,
   turnGuidanceLine,
+  turnMarqueeArrows,
 } from "@/lib/upcoming-route";
 import type { CameraMode } from "@/types/domain";
 
@@ -15,7 +15,7 @@ export const GUIDANCE_LAYER_ID = "navpilot-turn-arrows-layer";
 export const TURN_LINE_SOURCE_ID = "navpilot-turn-line-v3";
 export const TURN_LINE_GLOW_ID = "navpilot-turn-line-glow-v3";
 export const TURN_LINE_LAYER_ID = "navpilot-turn-line-layer-v3";
-const CHEVRON_IMAGE_ID = "navpilot-ground-chevron-blue-v7";
+const CHEVRON_IMAGE_ID = "navpilot-ground-chevron-blue-v8";
 const STALE_TURN_IDS = [
   "navpilot-turn-line",
   "navpilot-turn-line-glow",
@@ -46,26 +46,37 @@ function createChevronImage() {
   ctx.clearRect(0, 0, size, size);
   ctx.translate(size / 2, size / 2);
 
-  const drawBow = (color: string, glow = false) => {
+  const strokeCaret = (
+    outer: number,
+    inner: number,
+    depth: number,
+    width: number,
+    color: string,
+    glow = false,
+  ) => {
     ctx.beginPath();
-    // BBox-centered crescent so the icon-anchor sits on the road midline.
-    ctx.moveTo(-26, 12);
-    ctx.quadraticCurveTo(0, -36, 26, 12);
-    ctx.lineTo(13, 8);
-    ctx.quadraticCurveTo(0, -12, -13, 8);
-    ctx.closePath();
+    ctx.moveTo(-depth, inner);
+    ctx.lineTo(0, -outer);
+    ctx.lineTo(depth, inner);
+    ctx.lineWidth = width;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = color;
     if (glow) {
-      ctx.shadowColor = "rgba(14, 165, 233, 0.65)";
+      ctx.shadowColor = "rgba(14, 165, 233, 0.7)";
       ctx.shadowBlur = 8;
+    } else {
+      ctx.shadowBlur = 0;
     }
-    ctx.fillStyle = color;
-    ctx.fill();
+    ctx.stroke();
   };
 
+  // Inverted-V caret, bbox-centered on the icon-anchor.
   ctx.save();
-  drawBow("#0284c7", true);
+  strokeCaret(18, 16, 22, 9, "#0369a1", true);
   ctx.restore();
-  drawBow("#7dd3fc");
+  strokeCaret(17, 15, 20, 6, "#38bdf8");
+  strokeCaret(16, 14, 17, 3, "#f0f9ff");
 
   return ctx.getImageData(0, 0, size, size);
 }
@@ -171,13 +182,13 @@ function chevronSize(): ExpressionSpecification {
     ["linear"],
     ["zoom"],
     14.2,
-    ["*", ["get", "scale"], 0.07],
+    ["*", ["get", "scale"], 0.11],
     16.2,
-    ["*", ["get", "scale"], 0.1],
+    ["*", ["get", "scale"], 0.15],
     17.4,
-    ["*", ["get", "scale"], 0.13],
+    ["*", ["get", "scale"], 0.19],
     18.6,
-    ["*", ["get", "scale"], 0.16],
+    ["*", ["get", "scale"], 0.23],
   ];
 }
 
@@ -279,14 +290,7 @@ export function upsertGuidanceArrows(
         )
       : [];
   const arrows = live
-    ? turnGroundArrows({
-        route,
-        routeMeters,
-        distanceToNext,
-        cueMeters: options.cueMeters,
-        phase,
-        wasShowing: true,
-      })
+    ? turnMarqueeArrows(line, phase, distanceToNext)
     : [];
 
   const data = {

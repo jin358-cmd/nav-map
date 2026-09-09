@@ -459,7 +459,9 @@ export function turnMarqueeArrows(
   const spacing = bowSpacingMeters(distanceToNext);
   const total = lineLengthMeters(line);
   const placed: GuidanceArrow[] = [];
-  let leftover = spacing * 0.22;
+  const cycle = ((phase % 1) + 1) % 1;
+  let leftover = (0.28 - cycle) * spacing;
+  if (leftover < 0) leftover += spacing;
   let along = 0;
 
   for (let index = 1; index < line.length; index += 1) {
@@ -477,7 +479,6 @@ export function turnMarqueeArrows(
       if (cursor >= 0 && at >= 6) {
         const ratio = cursor / length;
         const t = total > 0 ? Math.min(1, Math.max(0, at / total)) : 0;
-        const cycle = ((phase % 1) + 1) % 1;
         const delta = (t - cycle + 1) % 1;
         const pulse = delta < 0.3 ? 1 - delta / 0.3 : 0;
         placed.push({

@@ -1,6 +1,6 @@
 import type { GeoJSONSource, Map as MapLibreMap } from "maplibre-gl";
 import { damp, destinationPoint, headingDelta, lerpAngle } from "@/lib/geo";
-import type { LngLat, VehiclePose } from "@/types/domain";
+import type { FollowOrientation, LngLat, VehiclePose } from "@/types/domain";
 
 export const HEADING_CONE_SOURCE = "np-heading-cone";
 export const HEADING_CONE_FILL = "np-heading-cone-fill";
@@ -13,7 +13,7 @@ const STILL_HEADING_HOLD_DEG = 5;
 const STILL_HEADING_TAU = 0.12;
 const MOVE_HEADING_HOLD_DEG = 1.4;
 const MOVE_HEADING_TAU = 0.08;
-const COMPASS_SPEED_MPS = 2.2;
+export const COMPASS_SPEED_MPS = 2.2;
 
 export function stepConeHeading(
   current: number,
@@ -56,6 +56,21 @@ export function coneHeadingTarget({
   if (headingAvailable) return gpsHeading;
   if (compassHeading != null) return compassHeading;
   return fallbackHeading;
+}
+
+export function followMapBearing(
+  orientation: FollowOrientation,
+  vehicle: Pick<VehiclePose, "heading" | "headingAvailable" | "speedMps">,
+  compassHeading: number | null,
+) {
+  if (orientation !== "heading-up") return 0;
+  return coneHeadingTarget({
+    gpsHeading: vehicle.heading,
+    headingAvailable: vehicle.headingAvailable,
+    compassHeading,
+    speedMps: vehicle.speedMps,
+    fallbackHeading: vehicle.heading,
+  });
 }
 
 function firstLabelLayerId(map: MapLibreMap): string | undefined {
