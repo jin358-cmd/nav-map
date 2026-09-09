@@ -235,7 +235,7 @@ export function YellowPagesSearchStrip({
                 setShortcut(item.id);
               }}
               className={cn(
-                "flex min-w-0 flex-col items-center gap-0.5 rounded-xl px-1 py-1.5 text-center touch-manipulation",
+                "flex min-w-0 flex-col items-center gap-0.5 rounded-xl px-0.5 py-1.5 text-center touch-manipulation",
                 on ? "text-[#042f2e]" : "bg-black/55 text-zinc-100",
               )}
               style={
@@ -245,7 +245,7 @@ export function YellowPagesSearchStrip({
               }
             >
               <Icon className="size-5 shrink-0" strokeWidth={2.2} aria-hidden />
-              <span className="max-w-full truncate text-[12px] font-semibold leading-tight sm:text-[13px]">
+              <span className="max-w-full text-[14px] font-semibold leading-tight sm:text-[15px]">
                 {item.label}
               </span>
             </button>
