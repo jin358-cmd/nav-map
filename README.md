@@ -74,7 +74,7 @@ npm start
 
 定位權限可拒絕；拒絕後地圖仍可用，車輛標記留在預設中心。GPS 授權成功則移到目前位置。
 
-頂部搜尋列從第 1 個字開始即時 Suggest（debounce 110ms，不必按 Enter）。熱鍵「加油站」點下後由上滑出 **Gogoro充電站**、**Tesla超充站**、**電車充電站** 三個分項；點加油站本身則列出汽柴油站。「超商」點下後由上滑出 **統一**、**全家**、**萊爾富／OK**、**蝦皮店到店** 四個分項；點次分類後再點超商可看全部超商。點任何熱鍵會暫時隱藏搜尋列，點地圖空白處恢復。地圖定位預設北方朝上（可再點定位鈕切換車頭向上）。伺服器以 OSM 台灣 extract（osmium，非 Photon 主庫）做 prefix／品牌／鄰近搜尋，並可匯入經濟部商工開放資料的全國店面（門牌經國土測繪配對後才入庫，分類對齊中華黃頁）。本地沒有才補查國土測繪圖資服務雲、TGOS 與 Nominatim。更新索引：`npm run ingest:pois`（OSM extract）、`npm run ingest:chains`（7-ELEVEN／全家官網門市）與 `npm run ingest:company-registry`（經濟部公司／商業登記）。生活圈圖層依中華黃頁分類，各大類可再點入勾選小分類。核對筆數：`npm run verify:pois`。MapLibre 模式不使用 Google Geocoding／Places。點建議結果會定位並開啟 POI 資訊卡（可導航、可收藏）。詳見 [`docs/poi-search.md`](docs/poi-search.md)。
+頂部搜尋列從第 1 個字開始即時 Suggest（debounce 110ms，不必按 Enter）。熱鍵「加油站」點下後由上滑出 **Gogoro充電站**、**Tesla超充站**、**電車充電站** 三個分項；點加油站本身則列出汽柴油站。「超商」點下後由上滑出 **統一**、**全家**、**萊爾富／OK**、**蝦皮店到店** 四個分項；點次分類後再點超商可看全部超商。點任何熱鍵會暫時隱藏搜尋列，點地圖空白處恢復。熱鍵結果橫向顯示 3 筆、直向顯示 4 筆，其餘可上下滑動。地圖定位預設北方朝上（可再點定位鈕切換車頭向上）。伺服器以 OSM 台灣 extract（osmium，非 Photon 主庫）做 prefix／品牌／鄰近搜尋，並可匯入經濟部商工開放資料的全國店面（門牌經國土測繪配對後才入庫，分類對齊中華黃頁）。本地沒有才補查國土測繪圖資服務雲、TGOS 與 Nominatim。更新索引：`npm run ingest:pois`（OSM extract）、`npm run ingest:chains`（7-ELEVEN／全家官網門市）與 `npm run ingest:company-registry`（經濟部公司／商業登記）。生活圈圖層依中華黃頁分類，各大類可再點入勾選小分類。核對筆數：`npm run verify:pois`。MapLibre 模式不使用 Google Geocoding／Places。點建議結果會定位並開啟 POI 資訊卡（可導航、可收藏）。詳見 [`docs/poi-search.md`](docs/poi-search.md)。
 
 ## 第一階段已完成功能
 

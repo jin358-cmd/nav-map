@@ -14,6 +14,7 @@ import {
   type SearchShortcutId,
 } from "@/lib/search-shortcuts";
 import { useYellowPagesNearby } from "@/hooks/use-yellow-pages-nearby";
+import { useLandscape } from "@/hooks/use-landscape";
 import { cn } from "@/lib/utils";
 import type { GeocodeHit, LngLat } from "@/types/domain";
 
@@ -106,6 +107,8 @@ export function YellowPagesSearchStrip({
   const rootRef = useRef<HTMLDivElement>(null);
   const fuelOpen = shortcut === "fuel";
   const convenienceOpen = shortcut === "convenience";
+  const landscape = useLandscape();
+  const visibleResults = landscape ? 3 : 4;
   const resolvedEnergy = fuelOpen ? (energyKind ?? "petrol") : null;
   const resolvedConvenience = convenienceOpen ? (convenienceKind ?? "all") : null;
   const { pois, loading, error } = useYellowPagesNearby({
@@ -283,7 +286,7 @@ export function YellowPagesSearchStrip({
       {shortcut ? (
         <div
           id="navpilot-shortcut-preview"
-          className="mt-1 max-h-44 overflow-y-auto rounded-2xl border border-white/12 bg-black/72 px-2 py-1.5 shadow-[0_10px_28px_rgba(0,0,0,0.4)] backdrop-blur-xl"
+          className="mt-1 overflow-hidden rounded-2xl border border-white/12 bg-black/72 px-2 py-1.5 shadow-[0_10px_28px_rgba(0,0,0,0.4)] backdrop-blur-xl"
         >
           <p className="px-1 pb-1 text-[10px] tracking-wide text-zinc-400">
             {previewHeading(shortcut, resolvedEnergy, resolvedConvenience)}
@@ -299,13 +302,16 @@ export function YellowPagesSearchStrip({
                 : "開啟定位後即可列出附近店家"}
             </p>
           ) : (
-            <ul>
+            <ul
+              className="touch-pan-y overflow-y-auto overscroll-contain"
+              style={{ maxHeight: `calc(${visibleResults} * 3.5rem)` }}
+            >
               {pois.map((poi) => {
                 const title = formatLayerPoiTitle(poi);
                 const street = formatDistanceRoadLabel(poi.address);
                 const distance = formatDistance(poi.distanceMeters);
                 return (
-                  <li key={poi.id}>
+                  <li key={poi.id} className="h-14">
                     <button
                       type="button"
                       onClick={() => {
@@ -323,10 +329,10 @@ export function YellowPagesSearchStrip({
                           branchName: poi.branchName || undefined,
                         });
                       }}
-                      className="flex w-full min-w-0 items-start gap-2 rounded-xl px-1 py-1.5 text-left hover:bg-white/8 touch-manipulation"
+                      className="flex h-14 w-full min-w-0 items-center gap-2 rounded-xl px-1 text-left hover:bg-white/8 touch-manipulation"
                     >
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-semibold text-white">
+                        <span className="block truncate text-sm font-semibold leading-tight text-white">
                           {title}
                         </span>
                         <span className="mt-0.5 flex min-w-0 items-baseline gap-1.5 leading-snug text-zinc-200">
