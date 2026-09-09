@@ -155,8 +155,12 @@ export function addressParts(address) {
     .replaceAll("臺", "台")
     .replace(city.replaceAll("臺", "台"), "")
     .replace(town.replaceAll("臺", "台"), "");
-  const road = rest.match(/(.+?(?:路|街|大道|道))/u)?.[1] ?? "";
-  const afterRoad = road ? rest.slice(rest.indexOf(road) + road.length) : rest;
+  const village = rest.match(/^(.+?[村里])/u)?.[1] ?? "";
+  const afterVillage = village ? rest.slice(village.length) : rest;
+  const road = afterVillage.match(/(.+?(?:路|街|大道))/u)?.[1] ?? "";
+  const afterRoad = road
+    ? afterVillage.slice(afterVillage.indexOf(road) + road.length)
+    : afterVillage;
   const section = afterRoad.match(/^([0-9一二三四五六七八九十]+段)/u)?.[1] ?? "";
   const afterSection = section ? afterRoad.slice(section.length) : afterRoad;
   const lane = afterSection.match(/^(\d+巷)/u)?.[1] ?? "";
@@ -167,6 +171,7 @@ export function addressParts(address) {
   return {
     city: city.replaceAll("台", "臺"),
     town,
+    village,
     road,
     section,
     lane,
@@ -176,6 +181,7 @@ export function addressParts(address) {
     hasHouse: Boolean(house),
     hasLane: Boolean(lane || alley),
     hasRoad: Boolean(road),
+    hasVillage: Boolean(village),
   };
 }
 
@@ -186,24 +192,64 @@ export function addressParts(address) {
  * D 只命中道路中心點
  * E 完全無法可靠配對
  */
+const COUNTY_BOXES = [
+  { name: "連江縣", south: 25.93, north: 26.39, west: 119.9, east: 120.52 },
+  { name: "金門縣", south: 24.37, north: 24.54, west: 118.2, east: 118.52 },
+  { name: "澎湖縣", south: 23.18, north: 23.8, west: 119.3, east: 119.75 },
+  { name: "基隆市", south: 25.1, north: 25.2, west: 121.68, east: 121.8 },
+  { name: "新竹市", south: 24.76, north: 24.86, west: 120.9, east: 121.04 },
+  { name: "嘉義市", south: 23.45, north: 23.52, west: 120.42, east: 120.49 },
+  { name: "臺北市", south: 24.96, north: 25.21, west: 121.45, east: 121.67 },
+  { name: "宜蘭縣", south: 24.33, north: 24.88, west: 121.32, east: 121.98 },
+  { name: "桃園市", south: 24.82, north: 25.13, west: 120.98, east: 121.48 },
+  { name: "新竹縣", south: 24.42, north: 24.9, west: 120.88, east: 121.36 },
+  { name: "苗栗縣", south: 24.3, north: 24.75, west: 120.62, east: 121.26 },
+  { name: "臺中市", south: 24.0, north: 24.45, west: 120.45, east: 121.45 },
+  { name: "彰化縣", south: 23.82, north: 24.2, west: 120.22, east: 120.68 },
+  { name: "南投縣", south: 23.43, north: 24.15, west: 120.68, east: 121.3 },
+  { name: "雲林縣", south: 23.5, north: 23.86, west: 120.15, east: 120.72 },
+  { name: "嘉義縣", south: 23.2, north: 23.62, west: 120.18, east: 120.8 },
+  { name: "臺南市", south: 22.87, north: 23.42, west: 120.02, east: 120.66 },
+  { name: "高雄市", south: 22.48, north: 23.28, west: 120.17, east: 120.97 },
+  { name: "屏東縣", south: 21.9, north: 22.88, west: 120.36, east: 120.9 },
+  { name: "花蓮縣", south: 23.1, north: 24.4, west: 121.15, east: 121.78 },
+  { name: "臺東縣", south: 22.2, north: 23.45, west: 120.8, east: 121.62 },
+  { name: "新北市", south: 24.85, north: 25.3, west: 121.28, east: 122.01 },
+];
+
+export function countyFromLngLat(lat, lng) {
+  for (const box of COUNTY_BOXES) {
+    if (lat >= box.south && lat <= box.north && lng >= box.west && lng <= box.east) {
+      return box.name;
+    }
+  }
+  return null;
+}
+
 export function classifyMatchQuality(address, hit) {
   if (!hit || !Number.isFinite(hit.lat) || !Number.isFinite(hit.lng)) return "E";
+  const addrCity = cityFromAddress(address);
+  const hitCity = countyFromLngLat(hit.lat, hit.lng);
+  const offshore = addrCity === "連江縣" || addrCity === "金門縣" || addrCity === "澎湖縣";
+  if (offshore && hitCity && addrCity !== hitCity) return "E";
   const parts = addressParts(address);
   const original = halfWidth(address).replace(/\s+/g, "");
   const strippedFloor = Boolean(original.match(FLOOR_TAIL) || original.match(ROOM_TAIL));
   const label = compactKey(hit.label || hit.content || "");
   const house = parts.number ? `${parts.number}${parts.subNumber ? `之${parts.subNumber}` : ""}號` : "";
   const kind = String(hit.kind || "");
+  const villageHouse = parts.hasVillage && parts.hasHouse;
 
   if (kind === "ADDRESS" || kind === "poi") {
     if (house && label.includes(compactKey(house))) {
       return strippedFloor ? "B" : "A";
     }
     if (parts.hasHouse) return strippedFloor ? "B" : "A";
-    if (parts.hasLane) return "C";
+    if (parts.hasLane || villageHouse) return "C";
     return "D";
   }
   if (kind === "CROSSROAD") {
+    if (villageHouse) return "C";
     if (parts.hasLane && (label.includes("巷") || label.includes("弄") || parts.hasLane)) {
       return "C";
     }
@@ -211,10 +257,11 @@ export function classifyMatchQuality(address, hit) {
   }
   if (kind === "cache") {
     if (parts.hasHouse) return strippedFloor ? "B" : "A";
-    if (parts.hasLane) return "C";
+    if (parts.hasLane || villageHouse) return "C";
     return "D";
   }
   if (parts.hasHouse && (kind === "ADDRESS" || !kind)) return strippedFloor ? "B" : "A";
+  if (villageHouse) return "C";
   if (parts.hasLane) return "C";
   if (parts.hasRoad) return "D";
   return "E";

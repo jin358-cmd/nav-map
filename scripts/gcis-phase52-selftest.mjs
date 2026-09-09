@@ -46,13 +46,22 @@ assert(
   "A exact",
 );
 assert(
-  classifyMatchQuality("台南市北區海安路三段", {
-    lat: 22.99,
-    lng: 120.2,
+  classifyMatchQuality("連江縣南竿鄉津沙村64號", {
+    lat: 26.145578,
+    lng: 119.913019,
     kind: "CROSSROAD",
-    label: "海安路三段",
-  }) === "D",
-  "D road center",
+    label: "南竿鄉津沙村",
+  }) === "C",
+  "Matsu village house is C not D",
+);
+assert(
+  classifyMatchQuality("連江縣北竿鄉坂里村47號2樓", {
+    lat: 23.512867,
+    lng: 120.47706,
+    kind: "CROSSROAD",
+    label: "嘉義",
+  }) === "E",
+  "wrong county is E",
 );
 
 const high = navEligibilityScore({

@@ -74,7 +74,15 @@ export function matchTierWith(ctx: PoiQueryContext, poi: TaiwanPoiRecord): Match
   const aliases = poi.aliases;
   const address = poi.addressNormalized || "";
 
-  if (name === needle || brand === needle || branch === needle) return "exact";
+  if (name === needle || brand === needle || branch === needle) {
+    if (
+      ctx.categoryHit &&
+      ctx.needle === normalizePoiKey(ctx.categoryHit.names[0] ?? ctx.categoryHit.category)
+    ) {
+      return "category";
+    }
+    return "exact";
+  }
   if (aliases.includes(needle) || ctx.variants.includes(name)) return "exact";
 
   if (
@@ -160,6 +168,10 @@ export function rankScoreWith(
     if (here && normalizePoiKey(poi.city ?? "") === normalizePoiKey(here)) {
       score += 6;
     }
+  }
+  if (origin && prefersNearby(ctx.intent)) {
+    const km = distanceKm(origin, { lat: poi.latitude, lng: poi.longitude });
+    score -= Math.min(48, Math.round(km * 6));
   }
   return score;
 }
