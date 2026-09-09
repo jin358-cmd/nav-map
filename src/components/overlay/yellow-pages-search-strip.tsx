@@ -123,17 +123,15 @@ export function YellowPagesSearchStrip({
       <div
         id="navpilot-fuel-energy-drawer"
         className={cn(
-          "grid transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none",
-          fuelOpen
-            ? "grid-rows-[1fr] opacity-100"
-            : "pointer-events-none grid-rows-[0fr] opacity-0",
+          "grid transition-[grid-template-rows] duration-[400ms] ease-out motion-reduce:transition-none",
+          fuelOpen ? "grid-rows-[1fr]" : "pointer-events-none grid-rows-[0fr]",
         )}
         aria-hidden={!fuelOpen}
       >
         <div className="min-h-0 overflow-hidden">
           <div
             className={cn(
-              "mt-1 grid grid-cols-3 gap-1 transition-transform duration-300 ease-out motion-reduce:transition-none",
+              "mt-1 grid grid-cols-3 gap-1 transition-transform duration-[400ms] ease-out motion-reduce:transition-none",
               fuelOpen ? "translate-y-0" : "-translate-y-full",
             )}
           >
