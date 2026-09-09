@@ -1,3 +1,4 @@
+import { isConvenienceKind } from "@/lib/poi/convenience-kind";
 import { isEnergyKind } from "@/lib/poi/energy-kind";
 import { POI_MAIN_LAYER_IDS, type PoiMainLayerId } from "@/lib/poi/main-layers";
 import { poisInBounds, poisNearby } from "@/lib/poi/server-index";
@@ -62,6 +63,10 @@ export async function GET(request: Request) {
   const preferPhone = url.searchParams.get("preferPhone") === "1";
   const energyParam = url.searchParams.get("energyKind");
   const energyKind = isEnergyKind(energyParam) ? energyParam : undefined;
+  const convenienceParam = url.searchParams.get("convenienceKind");
+  const convenienceKind = isConvenienceKind(convenienceParam)
+    ? convenienceParam
+    : undefined;
   const origin =
     lng !== undefined && lat !== undefined ? { lng, lat } : undefined;
 
@@ -83,6 +88,7 @@ export async function GET(request: Request) {
       preferPhone,
       categories,
       energyKind,
+      convenienceKind,
     );
     return Response.json(
       { pois: rows.map(serializePoi) },

@@ -7,6 +7,7 @@ import { distanceKm } from "@/lib/geo";
 import type { GeocodeResult } from "@/lib/geocoding/types";
 import { buildPoiIndexes, diversifyByBrand, searchIndexedPois } from "@/lib/poi/prefix-index";
 import { CONVENIENCE_CHAIN_BRANDS, FUEL_CHAIN_BRANDS } from "@/lib/poi/aliases";
+import { matchesConvenienceKind, type ConvenienceKind } from "@/lib/poi/convenience-kind";
 import { matchesEnergyKind, type EnergyKind } from "@/lib/poi/energy-kind";
 import { POI_MAIN_LAYER_IDS, type PoiMainLayerId } from "@/lib/poi/main-layers";
 import { rankPois, rankScore } from "@/lib/poi/rank";
@@ -237,6 +238,7 @@ export function poisInBounds(
   layers?: PoiMainLayerId[],
   categories?: string[],
   energyKind?: EnergyKind | null,
+  convenienceKind?: ConvenienceKind | null,
 ) {
   const west = Math.min(bounds.west, bounds.east);
   const east = Math.max(bounds.west, bounds.east);
@@ -255,6 +257,7 @@ export function poisInBounds(
       return false;
     }
     if (energyKind) return matchesEnergyKind(poi, energyKind);
+    if (convenienceKind) return matchesConvenienceKind(poi, convenienceKind);
     if (categorySet) {
       return (
         categorySet.has(poi.category) ||
@@ -314,8 +317,14 @@ export function poisNearby(
   preferPhone = false,
   categories?: string[],
   energyKind?: EnergyKind | null,
+  convenienceKind?: ConvenienceKind | null,
 ) {
-  const cap = energyKind && energyKind !== "petrol" ? 12000 : 8000;
+  const cap =
+    energyKind && energyKind !== "petrol"
+      ? 12000
+      : convenienceKind && convenienceKind !== "all"
+        ? 6000
+        : 8000;
   const span = Math.max(400, Math.min(cap, radiusMeters)) / 111000;
   const cos = Math.max(0.2, Math.cos((origin.lat * Math.PI) / 180));
   const rows = poisInBounds(
@@ -330,6 +339,7 @@ export function poisNearby(
     categories?.length ? undefined : layers,
     categories,
     energyKind,
+    convenienceKind,
   );
   const radiusKm = radiusMeters / 1000;
   const ranked = rows

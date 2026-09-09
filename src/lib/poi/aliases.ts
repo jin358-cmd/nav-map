@@ -7,6 +7,12 @@ export const BRAND_ALIASES: { keys: string[]; names: string[]; brand: string; ca
   { keys: ["全國電子", "e-life", "elife"], names: ["全國電子"], brand: "E-Life", category: "other" },
   { keys: ["萊爾富", "hilife", "hi-life"], names: ["萊爾富"], brand: "Hi-Life", category: "convenience" },
   { keys: ["ok超商", "okmart", "ok mart"], names: ["OK超商"], brand: "OK Mart", category: "convenience" },
+  {
+    keys: ["蝦皮", "shopee", "蝦皮店到店"],
+    names: ["蝦皮店到店", "Shopee"],
+    brand: "蝦皮店到店",
+    category: "convenience",
+  },
   { keys: ["家樂福", "家樂", "carrefour"], names: ["家樂福"], brand: "Carrefour", category: "supermarket" },
   { keys: ["好市多", "costco"], names: ["好市多", "Costco"], brand: "Costco", category: "supermarket" },
   { keys: ["美廉社", "simplemart", "simple mart"], names: ["美廉社"], brand: "Simple Mart", category: "supermarket" },
@@ -40,6 +46,7 @@ export const CONVENIENCE_CHAIN_BRANDS = new Set([
   "FamilyMart",
   "Hi-Life",
   "OK Mart",
+  "蝦皮店到店",
 ]);
 
 export const FUEL_CHAIN_BRANDS = new Set([
@@ -55,6 +62,7 @@ export const BRAND_DISPLAY_LABEL: Record<string, string> = {
   FamilyMart: "全家",
   "Hi-Life": "萊爾富",
   "OK Mart": "OK超商",
+  蝦皮店到店: "蝦皮店到店",
   "PX Mart": "全聯",
   CPC: "中油",
   Formosa: "台塑",
@@ -141,6 +149,9 @@ export function nameFitsBrand(name: string, brand: string | null): boolean {
   }
   if (b.includes("gogoro") || b.includes("gostation")) {
     return /gogoro|gostation|換電|電池交換|go站/.test(n);
+  }
+  if (b.includes("蝦皮") || b.includes("shopee")) {
+    return /蝦皮|shopee|店到店/.test(n);
   }
   if (n.includes(b) || (n.length >= 2 && b.includes(n))) return true;
   if (b.includes("7eleven") || b === "711") {

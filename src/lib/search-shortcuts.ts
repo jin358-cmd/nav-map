@@ -1,5 +1,18 @@
 import type { LucideIcon } from "lucide-react";
-import { BatteryCharging, BedDouble, Fuel, PlugZap, Store, UtensilsCrossed, Zap } from "lucide-react";
+import {
+  BatteryCharging,
+  BedDouble,
+  CircleDot,
+  Fuel,
+  Package,
+  PlugZap,
+  ShoppingBag,
+  ShoppingBasket,
+  Store,
+  UtensilsCrossed,
+  Zap,
+} from "lucide-react";
+import type { ConvenienceKind } from "@/lib/poi/convenience-kind";
 import type { EnergyKind } from "@/lib/poi/energy-kind";
 import type { PoiCategory } from "@/lib/poi/schema";
 
@@ -33,7 +46,7 @@ export const SEARCH_SHORTCUTS: SearchShortcut[] = [
   {
     id: "convenience",
     label: "超商",
-    hint: "便利商店",
+    hint: "便利商店；點入後可看統一、全家、萊爾富、OK Mart 與蝦皮店到店",
     icon: Store,
     color: "#34d399",
     categories: ["convenience"],
@@ -98,4 +111,57 @@ export function fuelEnergyShortcutById(
 ): FuelEnergyShortcut | null {
   if (!id || id === "petrol") return null;
   return FUEL_ENERGY_SHORTCUTS.find((item) => item.id === id) ?? null;
+}
+
+export type ConvenienceBrandShortcut = {
+  id: Exclude<ConvenienceKind, "all">;
+  label: string;
+  hint: string;
+  icon: LucideIcon;
+  color: string;
+};
+
+export const CONVENIENCE_BRAND_SHORTCUTS: ConvenienceBrandShortcut[] = [
+  {
+    id: "seven",
+    label: "統一",
+    hint: "統一超商 7-ELEVEN",
+    icon: Store,
+    color: "#00703c",
+  },
+  {
+    id: "familymart",
+    label: "全家",
+    hint: "全家便利商店",
+    icon: ShoppingBag,
+    color: "#0078c8",
+  },
+  {
+    id: "hilife",
+    label: "萊爾富",
+    hint: "萊爾富",
+    icon: ShoppingBasket,
+    color: "#ff6a00",
+  },
+  {
+    id: "okmart",
+    label: "OK Mart",
+    hint: "OK 超商",
+    icon: CircleDot,
+    color: "#e31c25",
+  },
+  {
+    id: "shopee",
+    label: "蝦皮店到店",
+    hint: "蝦皮店到店取件點",
+    icon: Package,
+    color: "#ee4d2d",
+  },
+];
+
+export function convenienceBrandShortcutById(
+  id: ConvenienceKind | null,
+): ConvenienceBrandShortcut | null {
+  if (!id || id === "all") return null;
+  return CONVENIENCE_BRAND_SHORTCUTS.find((item) => item.id === id) ?? null;
 }

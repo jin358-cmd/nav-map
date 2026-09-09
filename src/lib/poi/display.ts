@@ -6,6 +6,7 @@ import {
   normalizePoiKey,
   resolveCanonicalBrand,
 } from "@/lib/poi/aliases";
+import { classifyConvenienceKind } from "@/lib/poi/convenience-kind";
 import { classifyEnergyKind } from "@/lib/poi/energy-kind";
 import type { PoiCategory } from "@/lib/poi/schema";
 
@@ -101,7 +102,13 @@ export function formatLayerPoiTitle(poi: {
     return formatChainStoreName(name, taggedBranch) || name;
   }
 
-  if (category === "convenience") {
+  if (category === "convenience" || classifyConvenienceKind(poi) === "shopee") {
+    if (classifyConvenienceKind(poi) === "shopee") {
+      if (!name || GENERIC_POI_NAME.test(name) || /^(蝦皮店到店|蝦皮取件|shopee)$/i.test(name)) {
+        return "蝦皮店到店";
+      }
+      return name;
+    }
     if (brand && taggedBranch) return joinBrandBranch(brand, taggedBranch);
     if (brand) {
       if (!name || GENERIC_POI_NAME.test(name)) return brand;
