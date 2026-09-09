@@ -432,5 +432,7 @@ export function toGeocodeHits(results: GeocodeResult[]) {
     branchName: item.branchName ?? undefined,
     phone: item.phone,
     hours: item.hours,
+    navEligibilityScore: item.navEligibilityScore,
+    locationIncomplete: item.locationIncomplete,
   }));
 }

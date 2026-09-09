@@ -9,6 +9,10 @@ import {
 } from "@/lib/poi/aliases";
 import { countyFromLngLat, countyMentionedInQuery } from "@/lib/poi/counties";
 import { classifyPoiQuery, prefersNearby } from "@/lib/poi/intent";
+import {
+  isSuggestEligiblePoi,
+  registryRankBoost,
+} from "@/lib/poi/nav-eligibility";
 import type { TaiwanPoiRecord } from "@/lib/poi/schema";
 
 export type MatchTier =
@@ -142,6 +146,7 @@ export function rankScoreWith(
     score = Math.max(score, 110);
   }
   score += Math.round((poi.confidence ?? 0.8) * 8);
+  score += registryRankBoost(poi);
   if (ctx.needle.length <= 2 && poi.brand) {
     if (ctx.prefixBrands.some((item) => item.brand === poi.brand)) score += 28;
   }
@@ -166,7 +171,7 @@ export function rankPois(
 ) {
   const ctx = poiQueryContext(query);
   const nearby = Boolean(origin && prefersNearby(ctx.intent));
-  const scored = rows.map((poi) => ({
+  const scored = rows.filter(isSuggestEligiblePoi).map((poi) => ({
     poi,
     score: rankScoreWith(ctx, poi, origin),
     dist: origin

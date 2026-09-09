@@ -98,6 +98,8 @@ export async function searchAddresses(
         branchName: item.branchName ?? undefined,
         phone: item.phone,
         hours: item.hours,
+        navEligibilityScore: item.navEligibilityScore,
+        locationIncomplete: item.locationIncomplete,
       } satisfies GeocodeHit,
     ];
   });

@@ -317,6 +317,8 @@ export type GeocodeHit = {
   branchName?: string;
   phone?: string;
   hours?: string;
+  navEligibilityScore?: number;
+  locationIncomplete?: boolean;
 };
 
 export type RouteDestination = {

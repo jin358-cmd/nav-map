@@ -3,7 +3,7 @@ import "server-only";
 import { encodeGeohash } from "@/lib/poi/geohash";
 import type { GeocodeResult } from "@/lib/geocoding/types";
 
-export const SUGGEST_CACHE_VERSION = "poi-suggest-9";
+export const SUGGEST_CACHE_VERSION = "poi-suggest-10";
 const HOT_TTL_MS = 10 * 60 * 1000;
 const HOT_QUERIES = new Set(
   [

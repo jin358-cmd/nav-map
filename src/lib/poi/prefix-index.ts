@@ -2,12 +2,14 @@ import { nameFitsBrand, normalizePoiKey } from "@/lib/poi/aliases";
 import { distanceKm } from "@/lib/geo";
 import { encodeGeohash, nearbyGeohashes } from "@/lib/poi/geohash";
 import { prefersNearby } from "@/lib/poi/intent";
+import { isSuggestEligiblePoi } from "@/lib/poi/nav-eligibility";
 import { matchTierWith, poiQueryContext, rankPois } from "@/lib/poi/rank";
 import type { PoiCategory, TaiwanPoiRecord } from "@/lib/poi/schema";
 
 export type PoiIndexes = {
   prefix: Map<string, TaiwanPoiRecord[]>;
   brand: Map<string, TaiwanPoiRecord[]>;
+  alias: Map<string, TaiwanPoiRecord[]>;
   category: Map<PoiCategory, TaiwanPoiRecord[]>;
   geo4: Map<string, TaiwanPoiRecord[]>;
   geo5: Map<string, TaiwanPoiRecord[]>;
@@ -34,24 +36,26 @@ function prefixesOf(value: string) {
 export function buildPoiIndexes(rows: TaiwanPoiRecord[]): PoiIndexes {
   const prefix = new Map<string, TaiwanPoiRecord[]>();
   const brand = new Map<string, TaiwanPoiRecord[]>();
+  const alias = new Map<string, TaiwanPoiRecord[]>();
   const category = new Map<PoiCategory, TaiwanPoiRecord[]>();
   const geo4 = new Map<string, TaiwanPoiRecord[]>();
   const geo5 = new Map<string, TaiwanPoiRecord[]>();
   for (const poi of rows) {
-    if (!poi.isActive) continue;
+    if (!isSuggestEligiblePoi(poi)) continue;
     const texts = [poi.name, poi.brand, poi.branchName, ...poi.aliases];
     for (const text of texts) {
       if (!text) continue;
       for (const key of prefixesOf(text)) add(prefix, key, poi);
     }
     if (poi.brand) add(brand, poi.brand, poi);
+    for (const key of poi.aliases) add(alias, key, poi);
     const bucket = category.get(poi.category);
     if (bucket) bucket.push(poi);
     else category.set(poi.category, [poi]);
     add(geo4, encodeGeohash(poi.latitude, poi.longitude, 4), poi);
     add(geo5, encodeGeohash(poi.latitude, poi.longitude, 5), poi);
   }
-  return { prefix, brand, category, geo4, geo5 };
+  return { prefix, brand, alias, category, geo4, geo5 };
 }
 
 function unique(rows: TaiwanPoiRecord[]) {
@@ -138,6 +142,7 @@ export function lookupIndexedPois(
       ...(ctx.brandHit ? indexes.brand.get(ctx.brandHit.brand) ?? [] : []),
       ...ctx.prefixBrands.flatMap((item) => indexes.brand.get(item.brand) ?? []),
       ...(ctx.categoryHit ? indexes.category.get(ctx.categoryHit.category) ?? [] : []),
+      ...(needle ? indexes.alias.get(needle) ?? [] : []),
     ],
     spatialIds,
     PREFIX_CANDIDATE_CAP,

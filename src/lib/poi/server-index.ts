@@ -12,6 +12,7 @@ import { matchesEnergyKind, type EnergyKind } from "@/lib/poi/energy-kind";
 import { matchesHotelKind, type HotelKind } from "@/lib/poi/hotel-kind";
 import { matchesRestaurantKind, type RestaurantKind } from "@/lib/poi/restaurant-kind";
 import { POI_MAIN_LAYER_IDS, type PoiMainLayerId } from "@/lib/poi/main-layers";
+import { isLocationIncomplete, isSuggestEligiblePoi, poiNavScore } from "@/lib/poi/nav-eligibility";
 import { rankPois, rankScore } from "@/lib/poi/rank";
 import {
   hydratePoiRecord,
@@ -80,8 +81,13 @@ function poisInGridBounds(bounds: {
 }
 
 function layerPickRank(poi: TaiwanPoiRecord) {
+  const score = poiNavScore(poi);
+  if (!isSuggestEligiblePoi(poi)) return 9;
   if (poi.category === "convenience") return 0;
+  if (score >= 80 && poi.brand) return 0;
   if (poi.brand) return 1;
+  if (poi.registryType === "business" && score >= 60) return 1;
+  if (poi.registryType === "company" && score < 60) return 6;
   return 2;
 }
 
@@ -167,6 +173,9 @@ function toGeocode(query: string, poi: TaiwanPoiRecord, origin?: { lat: number; 
     category: poi.category,
     branchName: poi.branchName,
     phone: poi.phone || undefined,
+    hours: poi.hours || undefined,
+    navEligibilityScore: poi.navEligibilityScore,
+    locationIncomplete: isLocationIncomplete(poi),
   };
 }
 
@@ -252,6 +261,7 @@ export function poisInBounds(
   const wanted = new Set(wantedLayers);
   const categorySet = categories?.length ? new Set(categories) : null;
   const rows = poisInGridBounds({ west, south, east, north }).filter((poi) => {
+    if (!isSuggestEligiblePoi(poi)) return false;
     if (
       poi.longitude < west ||
       poi.longitude > east ||
@@ -359,6 +369,7 @@ export function poisNearby(
       poi,
       km: distanceKm(origin, { lat: poi.latitude, lng: poi.longitude }),
       phone: Boolean(poi.phone),
+      nav: poiNavScore(poi),
     }))
     .filter((row) => row.km <= radiusKm)
     .sort((a, b) => {
@@ -366,6 +377,7 @@ export function poisNearby(
       const pick =
         nearbyCategoryRank(a.poi, categories) - nearbyCategoryRank(b.poi, categories);
       if (pick !== 0) return pick;
+      if (Math.abs(a.nav - b.nav) >= 15) return b.nav - a.nav;
       return a.km - b.km;
     })
     .slice(0, limit)

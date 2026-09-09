@@ -133,6 +133,9 @@ export function PlaceInfoCard({
             <dd>{address}</dd>
           </div>
         ) : null}
+        {place.locationIncomplete ? (
+          <p className="text-[11px] text-zinc-500">位置資料可能不完整</p>
+        ) : null}
         <div>
           <dt className="text-[11px] text-zinc-500">電話</dt>
           <dd>

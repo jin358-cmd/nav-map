@@ -33,6 +33,8 @@ export type MapPlace = {
   publicLot?: boolean;
   brand?: string | null;
   updatedAt?: string;
+  locationIncomplete?: boolean;
+  navEligibilityScore?: number;
   availabilityStatus?: ParkingLot["availabilityStatus"];
 };
 
@@ -49,6 +51,11 @@ export type MapPoiFeature = {
   source: string;
   updatedAt: string;
   phone?: string | null;
+  hours?: string | null;
+  navEligibilityScore?: number;
+  matchQuality?: "A" | "B" | "C" | "D" | "E" | null;
+  registryType?: "company" | "business" | null;
+  locationIncomplete?: boolean;
 };
 
 export function geocodeHitToPlace(hit: GeocodeHit): MapPlace {
@@ -67,6 +74,8 @@ export function geocodeHitToPlace(hit: GeocodeHit): MapPlace {
     source: hit.source,
     phone: hit.phone,
     hours: hit.hours,
+    locationIncomplete: hit.locationIncomplete,
+    navEligibilityScore: hit.navEligibilityScore,
   };
 }
 
@@ -82,6 +91,8 @@ export function mapPlaceToHit(place: MapPlace): GeocodeHit {
     category: place.category,
     phone: place.phone,
     hours: place.hours,
+    locationIncomplete: place.locationIncomplete,
+    navEligibilityScore: place.navEligibilityScore,
   };
 }
 
@@ -103,6 +114,9 @@ export function poiFeatureToPlace(
     location: feature.location,
     source: feature.source,
     phone: feature.phone || undefined,
+    hours: feature.hours || undefined,
+    locationIncomplete: feature.locationIncomplete,
+    navEligibilityScore: feature.navEligibilityScore,
     distanceMeters: origin
       ? Math.round(
           Math.hypot(

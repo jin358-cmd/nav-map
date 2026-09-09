@@ -61,6 +61,15 @@ export type TaiwanPoiRecord = {
   lastSeenAt?: string;
   sourceUpdatedAt?: string;
   phone?: string | null;
+  hours?: string | null;
+  registryType?: "company" | "business" | null;
+  matchQuality?: "A" | "B" | "C" | "D" | "E" | null;
+  navEligibilityScore?: number;
+  addressEntityCount?: number;
+  sourceStatus?: string;
+  previousName?: string;
+  previousAddress?: string;
+  industry?: string;
 };
 
 export type TaiwanPoiRow = {
@@ -170,6 +179,34 @@ export function hydratePoiRecord(row: Partial<TaiwanPoiRecord> & Record<string, 
     sourceUpdatedAt: String(row.sourceUpdatedAt ?? row.source_updated_at ?? "") || undefined,
     phone:
       String(row.phone ?? row.tel ?? row.Telephone ?? "").trim() || null,
+    hours:
+      String(row.hours ?? row.openingHours ?? row["opening_hours"] ?? "").trim() || null,
+    registryType:
+      row.registryType === "business" || row["registry_type"] === "business"
+        ? "business"
+        : row.registryType === "company" || row["registry_type"] === "company"
+          ? "company"
+          : null,
+    matchQuality: (["A", "B", "C", "D", "E"] as const).includes(
+      String(row.matchQuality ?? row["match_quality"] ?? "") as "A",
+    )
+      ? (String(row.matchQuality ?? row["match_quality"]) as TaiwanPoiRecord["matchQuality"])
+      : null,
+    navEligibilityScore: Number.isFinite(
+      Number(row.navEligibilityScore ?? row["nav_eligibility_score"]),
+    )
+      ? Number(row.navEligibilityScore ?? row["nav_eligibility_score"])
+      : undefined,
+    addressEntityCount: Number.isFinite(
+      Number(row.addressEntityCount ?? row["address_entity_count"]),
+    )
+      ? Number(row.addressEntityCount ?? row["address_entity_count"])
+      : undefined,
+    sourceStatus: String(row.sourceStatus ?? row["source_status"] ?? "").trim() || undefined,
+    previousName: String(row.previousName ?? row["previous_name"] ?? "").trim() || undefined,
+    previousAddress:
+      String(row.previousAddress ?? row["previous_address"] ?? "").trim() || undefined,
+    industry: String(row.industry ?? "").trim() || undefined,
   };
 }
 

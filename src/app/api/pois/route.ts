@@ -2,6 +2,7 @@ import { isConvenienceKind } from "@/lib/poi/convenience-kind";
 import { isEnergyKind } from "@/lib/poi/energy-kind";
 import { isHotelKind } from "@/lib/poi/hotel-kind";
 import { isRestaurantKind } from "@/lib/poi/restaurant-kind";
+import { isLocationIncomplete } from "@/lib/poi/nav-eligibility";
 import { POI_MAIN_LAYER_IDS, type PoiMainLayerId } from "@/lib/poi/main-layers";
 import { poisInBounds, poisNearby } from "@/lib/poi/server-index";
 import { POI_CATEGORIES, type PoiCategory, type TaiwanPoiRecord } from "@/lib/poi/schema";
@@ -46,6 +47,11 @@ function serializePoi(poi: TaiwanPoiRecord) {
     source: poi.source,
     updatedAt: poi.updatedAt,
     phone: poi.phone || null,
+    hours: poi.hours || null,
+    navEligibilityScore: poi.navEligibilityScore,
+    matchQuality: poi.matchQuality ?? null,
+    registryType: poi.registryType ?? null,
+    locationIncomplete: isLocationIncomplete(poi),
   };
 }
 

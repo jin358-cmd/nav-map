@@ -83,11 +83,43 @@ async function main() {
   const avg = ok.length
     ? ok.reduce((sum, row) => sum + row.httpMs, 0) / ok.length
     : null;
+  const nearby = [];
+  for (const city of CITIES) {
+    const url = new URL("/api/pois", BASE);
+    url.searchParams.set("nearby", "1");
+    url.searchParams.set("lat", String(city.lat));
+    url.searchParams.set("lng", String(city.lng));
+    url.searchParams.set("radius", "2000");
+    url.searchParams.set("limit", "16");
+    const t0 = performance.now();
+    try {
+      const response = await fetch(url, { cache: "no-store" });
+      const ms = performance.now() - t0;
+      const data = await response.json();
+      nearby.push({
+        city: city.name,
+        httpMs: Number(ms.toFixed(1)),
+        count: (data.pois ?? []).length,
+      });
+    } catch (error) {
+      nearby.push({
+        city: city.name,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+  const nearbyOk = nearby.filter((row) => row.httpMs != null);
+  const nearbyAvg = nearbyOk.length
+    ? nearbyOk.reduce((sum, row) => sum + row.httpMs, 0) / nearbyOk.length
+    : null;
   const report = {
     base: BASE,
     warmupHttpMs: warmupMs,
     averageHttpMs: avg ? Number(avg.toFixed(1)) : null,
+    nearbyAverageHttpMs: nearbyAvg ? Number(nearbyAvg.toFixed(1)) : null,
     androidDevice: "NOT AVAILABLE in this environment",
+    indexes: "in-memory prefix / brand / alias / category / geohash (no Postgres EXPLAIN ANALYZE)",
+    nearby,
     rows,
   };
   console.log(JSON.stringify(report, null, 2));

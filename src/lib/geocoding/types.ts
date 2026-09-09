@@ -33,6 +33,8 @@ export type GeocodeResult = {
   branchName?: string | null;
   phone?: string;
   hours?: string;
+  navEligibilityScore?: number;
+  locationIncomplete?: boolean;
 };
 
 export type GeocodeLookupMode = "suggest" | "search";
