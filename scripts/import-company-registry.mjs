@@ -33,17 +33,6 @@ import {
 import { isNavReady, navEligibilityScore } from "./gcis-score.mjs";
 import { industryFromTitle, STOREFRONT_INDUSTRIES } from "./gcis-yellow-pages.mjs";
 import { yellowPagesLayerFromTags } from "./yellow-pages.mjs";
-import {
-  COUNTIES,
-  cacheKey,
-  cityFromAddress,
-  classifyMatchQuality,
-  compactKey,
-  districtFromAddress,
-  halfWidth,
-  looksLikeStorefront,
-  nlscQuery,
-} from "./gcis-address.mjs";
 
 const USER_AGENT = "NavPilot/0.1 (https://github.com/jin358-cmd/nav-map; POI ingest)";
 const CATALOG_URL = "https://data.gcis.nat.gov.tw/od/datacategory";
