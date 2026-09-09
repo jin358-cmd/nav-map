@@ -27,7 +27,7 @@ export type HotelFields = {
 };
 
 function haystack(poi: HotelFields) {
-  return `${poi.name ?? ""} ${poi.brand ?? ""} ${poi.subcategory ?? ""}`;
+  return `${poi.name ?? ""} ${poi.brand ?? ""}`;
 }
 
 export function isHotelKind(
@@ -36,8 +36,11 @@ export function isHotelKind(
   return Boolean(value && HOTEL_KINDS.includes(value as HotelKind));
 }
 
+const NOT_LODGING_RE = /停車場|招呼站/;
+
 export function classifyHotelKind(poi: HotelFields): HotelKind | null {
   const text = haystack(poi);
+  if (NOT_LODGING_RE.test(text)) return null;
   if (MOTEL_RE.test(text)) return "motel";
   if (HOSTEL_RE.test(text) || poi.subcategory === "hostel") return "hostel";
   if (BUSINESS_RE.test(text)) return "business";
@@ -47,6 +50,7 @@ export function classifyHotelKind(poi: HotelFields): HotelKind | null {
 }
 
 export function matchesHotelKind(poi: HotelFields, kind: HotelKind) {
+  if (NOT_LODGING_RE.test(haystack(poi))) return false;
   if (kind === "all") return poi.category === "hotel";
   return classifyHotelKind(poi) === kind;
 }
