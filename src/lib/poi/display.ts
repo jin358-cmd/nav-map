@@ -138,6 +138,13 @@ export function formatEnergyStationTitle(poi: {
     return "Gogoro 換電站";
   }
 
+  if (kind === "tesla") {
+    if (!generic && /tesla|特斯拉|超充|supercharger/i.test(name)) return name;
+    if (brand && /tesla|特斯拉|supercharger/i.test(brand)) return brand;
+    if (!generic) return name;
+    return "Tesla 超充站";
+  }
+
   if (kind === "ev") {
     if (!generic) return name;
     if (brand && !GENERIC_POI_NAME.test(brand)) return brand;

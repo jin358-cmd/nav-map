@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { BatteryCharging, BedDouble, Fuel, Store, UtensilsCrossed, Zap } from "lucide-react";
+import { BatteryCharging, BedDouble, Fuel, PlugZap, Store, UtensilsCrossed, Zap } from "lucide-react";
 import type { EnergyKind } from "@/lib/poi/energy-kind";
 import type { PoiCategory } from "@/lib/poi/schema";
 
@@ -25,7 +25,7 @@ export const SEARCH_SHORTCUTS: SearchShortcut[] = [
   {
     id: "fuel",
     label: "加油站",
-    hint: "汽柴油站；點入後可看 Gogoro 與電車充電站",
+    hint: "汽柴油站；點入後可看 Gogoro、Tesla 超充與電車充電站",
     icon: Fuel,
     color: "#f59e0b",
     categories: ["fuel"],
@@ -78,10 +78,17 @@ export const FUEL_ENERGY_SHORTCUTS: FuelEnergyShortcut[] = [
     color: "#22c55e",
   },
   {
+    id: "tesla",
+    label: "Tesla超充站",
+    hint: "Tesla Supercharger",
+    icon: Zap,
+    color: "#e82127",
+  },
+  {
     id: "ev",
     label: "電車充電站",
     hint: "汽車充電樁",
-    icon: Zap,
+    icon: PlugZap,
     color: "#38bdf8",
   },
 ];

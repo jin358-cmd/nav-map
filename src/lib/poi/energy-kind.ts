@@ -1,11 +1,13 @@
-export const ENERGY_KINDS = ["petrol", "gogoro", "ev"] as const;
+export const ENERGY_KINDS = ["petrol", "gogoro", "tesla", "ev"] as const;
 
 export type EnergyKind = (typeof ENERGY_KINDS)[number];
 
 const GOGORO_RE =
   /gogoro|go\s*station|gostation|go站|換電|電池交換|電池交換站/i;
+const TESLA_NAME_RE = /tesla|特斯拉/i;
+const TESLA_CHARGE_RE = /supercharger|超充|充電|charging/i;
 const EV_STRONG_RE =
-  /充電樁|tesla supercharger|supercharger|特斯拉超充|特斯拉充電|u-?power|ionity|電車充電|汽車充電|ev\s*charger|charging station/i;
+  /充電樁|u-?power|ionity|電車充電|汽車充電|ev\s*charger|charging station/i;
 const EV_STATION_RE = /充電站/;
 const NOT_EV_RE = /手機充電|行動電源|電動車超市|電動車專賣/;
 const GOGORO_STATION_RE = /換電|電池交換|gostation|go\s*station|go站/i;
@@ -25,6 +27,11 @@ export function isEnergyKind(value: string | null | undefined): value is EnergyK
   return Boolean(value && ENERGY_KINDS.includes(value as EnergyKind));
 }
 
+function isTeslaSupercharger(text: string) {
+  if (TESLA_NAME_RE.test(text) && TESLA_CHARGE_RE.test(text)) return true;
+  return /supercharger/i.test(text);
+}
+
 export function classifyEnergyKind(poi: EnergyStationFields): EnergyKind | null {
   const text = haystack(poi);
   if (GOGORO_RE.test(text)) {
@@ -38,6 +45,7 @@ export function classifyEnergyKind(poi: EnergyStationFields): EnergyKind | null 
     }
     return null;
   }
+  if (isTeslaSupercharger(text)) return "tesla";
   if (!NOT_EV_RE.test(text)) {
     if (
       poi.subcategory === "charging" ||

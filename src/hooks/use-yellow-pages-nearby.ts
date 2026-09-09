@@ -21,7 +21,7 @@ function quantizeNearbyOrigin(origin: LngLat | null): LngLat | null {
 
 function nearbyRadiusMeters(shortcut: SearchShortcutId, energyKind: EnergyKind | null) {
   if (shortcut !== "fuel") return 2800;
-  if (energyKind === "gogoro" || energyKind === "ev") return 8000;
+  if (energyKind === "gogoro" || energyKind === "tesla" || energyKind === "ev") return 8000;
   return 4200;
 }
 
