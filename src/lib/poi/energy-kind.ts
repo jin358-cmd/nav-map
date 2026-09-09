@@ -28,8 +28,15 @@ export function isEnergyKind(value: string | null | undefined): value is EnergyK
   return Boolean(value && ENERGY_KINDS.includes(value as EnergyKind));
 }
 
-function isTeslaSupercharger(text: string) {
-  if (TESLA_STRONG_RE.test(text)) return true;
+function isTeslaSupercharger(poi: EnergyStationFields, text: string) {
+  if (/體驗中心|旗艦店|餐酒館|展示中心|服務中心/.test(text)) return false;
+  const nameText = `${poi.name ?? ""} ${poi.subcategory ?? ""}`;
+  if (TESLA_STRONG_RE.test(nameText)) return true;
+  const fuelSite =
+    poi.category === "fuel" ||
+    poi.subcategory === "fuel" ||
+    poi.subcategory === "charging";
+  if (fuelSite && TESLA_STRONG_RE.test(text)) return true;
   return TESLA_NAME_RE.test(text) && TESLA_CHARGE_RE.test(text);
 }
 
@@ -46,7 +53,7 @@ export function classifyEnergyKind(poi: EnergyStationFields): EnergyKind | null 
     }
     return null;
   }
-  if (isTeslaSupercharger(text)) return "tesla";
+  if (isTeslaSupercharger(poi, text)) return "tesla";
   if (!NOT_EV_RE.test(text)) {
     if (
       poi.subcategory === "charging" ||

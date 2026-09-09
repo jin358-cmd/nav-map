@@ -132,6 +132,16 @@ export function nameFitsBrand(name: string, brand: string | null): boolean {
   const n = normalizePoiKey(name);
   const b = normalizePoiKey(brand);
   if (!n || !b) return true;
+  if (b.includes("teslasupercharger") || b.includes("supercharger") || b === "tesla" || b.includes("特斯拉")) {
+    if (/體驗中心|旗艦店|餐酒館|展示中心|服務中心/.test(name)) return false;
+    return (
+      /supercharger|超級充電|超充/.test(n) ||
+      (/tesla|特斯拉/.test(n) && /充電|charging|supercharger|超充/.test(n))
+    );
+  }
+  if (b.includes("gogoro") || b.includes("gostation")) {
+    return /gogoro|gostation|換電|電池交換|go站/.test(n);
+  }
   if (n.includes(b) || (n.length >= 2 && b.includes(n))) return true;
   if (b.includes("7eleven") || b === "711") {
     if (/攤位|號攤|郵筒|公車/.test(name)) return false;
@@ -167,12 +177,6 @@ export function nameFitsBrand(name: string, brand: string | null): boolean {
   }
   if (b.includes("速邁樂") || b.includes("smile")) {
     return n.includes("速邁樂") || n.includes("smile");
-  }
-  if (b.includes("tesla") || b.includes("特斯拉") || b.includes("supercharger")) {
-    return /tesla|特斯拉|supercharger|超級充電|超充/.test(n);
-  }
-  if (b.includes("gogoro") || b.includes("gostation")) {
-    return /gogoro|gostation|換電|電池交換|go站/.test(n);
   }
   return false;
 }
