@@ -21,6 +21,18 @@ export const BRAND_ALIASES: { keys: string[]; names: string[]; brand: string; ca
   { keys: ["台亞", "fpcc", "台亞石油", "台亞加油站"], names: ["台亞石油", "台亞"], brand: "台亞", category: "fuel" },
   { keys: ["全國加油站", "全國加油", "npc加油", "npc"], names: ["全國加油站", "全國"], brand: "全國", category: "fuel" },
   { keys: ["速邁樂", "smile", "統一速邁樂", "速邁樂加油站"], names: ["速邁樂", "Smile"], brand: "速邁樂", category: "fuel" },
+  {
+    keys: ["tesla", "特斯拉", "teslasupercharger", "supercharger"],
+    names: ["Tesla Supercharger", "Tesla 超充", "特斯拉超充"],
+    brand: "Tesla Supercharger",
+    category: "fuel",
+  },
+  {
+    keys: ["gogoro", "gostation", "go station", "gogoronetwork"],
+    names: ["Gogoro", "Gogoro 換電站", "GoStation"],
+    brand: "Gogoro",
+    category: "fuel",
+  },
 ];
 
 export const CONVENIENCE_CHAIN_BRANDS = new Set([
@@ -49,6 +61,8 @@ export const BRAND_DISPLAY_LABEL: Record<string, string> = {
   台亞: "台亞",
   全國: "全國",
   速邁樂: "速邁樂",
+  "Tesla Supercharger": "Tesla 超充",
+  Gogoro: "Gogoro",
 };
 
 export function brandDisplayLabel(brand?: string | null) {
@@ -154,6 +168,12 @@ export function nameFitsBrand(name: string, brand: string | null): boolean {
   if (b.includes("速邁樂") || b.includes("smile")) {
     return n.includes("速邁樂") || n.includes("smile");
   }
+  if (b.includes("tesla") || b.includes("特斯拉") || b.includes("supercharger")) {
+    return /tesla|特斯拉|supercharger|超級充電|超充/.test(n);
+  }
+  if (b.includes("gogoro") || b.includes("gostation")) {
+    return /gogoro|gostation|換電|電池交換|go站/.test(n);
+  }
   return false;
 }
 
@@ -218,7 +238,12 @@ export function keepTaggedChainBrand(
   if (nameFitsBrand(name, resolved)) return true;
   if (/攤位|號攤|郵筒|公車/.test(name)) return false;
   const known = BRAND_ALIASES.find((item) => item.brand === resolved);
-  if (!known) return false;
+  if (!known) {
+    return (
+      (category === "fuel" || !category) &&
+      /gogoro|tesla|特斯拉|supercharger/i.test(`${resolved} ${brand ?? ""} ${name}`)
+    );
+  }
   if (known.category === "convenience") {
     return category === "convenience" || CONVENIENCE_CHAIN_BRANDS.has(resolved);
   }

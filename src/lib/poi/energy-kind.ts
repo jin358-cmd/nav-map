@@ -6,6 +6,7 @@ const GOGORO_RE =
   /gogoro|go\s*station|gostation|go站|換電|電池交換|電池交換站/i;
 const TESLA_NAME_RE = /tesla|特斯拉/i;
 const TESLA_CHARGE_RE = /supercharger|超充|充電|charging/i;
+const TESLA_STRONG_RE = /supercharger|超級充電站|超充站/i;
 const EV_STRONG_RE =
   /充電樁|u-?power|ionity|電車充電|汽車充電|ev\s*charger|charging station/i;
 const EV_STATION_RE = /充電站/;
@@ -28,8 +29,8 @@ export function isEnergyKind(value: string | null | undefined): value is EnergyK
 }
 
 function isTeslaSupercharger(text: string) {
-  if (TESLA_NAME_RE.test(text) && TESLA_CHARGE_RE.test(text)) return true;
-  return /supercharger/i.test(text);
+  if (TESLA_STRONG_RE.test(text)) return true;
+  return TESLA_NAME_RE.test(text) && TESLA_CHARGE_RE.test(text);
 }
 
 export function classifyEnergyKind(poi: EnergyStationFields): EnergyKind | null {

@@ -124,7 +124,9 @@ export function YellowPagesSearchStrip({
         id="navpilot-fuel-energy-drawer"
         className={cn(
           "grid transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none",
-          fuelOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
+          fuelOpen
+            ? "grid-rows-[1fr] opacity-100"
+            : "pointer-events-none grid-rows-[0fr] opacity-0",
         )}
         aria-hidden={!fuelOpen}
       >
@@ -132,7 +134,7 @@ export function YellowPagesSearchStrip({
           <div
             className={cn(
               "mt-1 grid grid-cols-3 gap-1 transition-transform duration-300 ease-out motion-reduce:transition-none",
-              fuelOpen ? "translate-y-0" : "-translate-y-3",
+              fuelOpen ? "translate-y-0" : "-translate-y-full",
             )}
           >
             {FUEL_ENERGY_SHORTCUTS.map((item) => {
