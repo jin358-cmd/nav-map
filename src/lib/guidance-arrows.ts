@@ -15,7 +15,7 @@ export const GUIDANCE_LAYER_ID = "navpilot-turn-arrows-layer";
 export const TURN_LINE_SOURCE_ID = "navpilot-turn-line-v3";
 export const TURN_LINE_GLOW_ID = "navpilot-turn-line-glow-v3";
 export const TURN_LINE_LAYER_ID = "navpilot-turn-line-layer-v3";
-const CHEVRON_IMAGE_ID = "navpilot-ground-chevron-blue-v6";
+const CHEVRON_IMAGE_ID = "navpilot-ground-chevron-blue-v7";
 const STALE_TURN_IDS = [
   "navpilot-turn-line",
   "navpilot-turn-line-glow",
@@ -48,10 +48,11 @@ function createChevronImage() {
 
   const drawBow = (color: string, glow = false) => {
     ctx.beginPath();
-    ctx.moveTo(-30, 18);
-    ctx.quadraticCurveTo(0, -40, 30, 18);
-    ctx.lineTo(16, 12);
-    ctx.quadraticCurveTo(0, -14, -16, 12);
+    // BBox-centered crescent so the icon-anchor sits on the road midline.
+    ctx.moveTo(-26, 12);
+    ctx.quadraticCurveTo(0, -36, 26, 12);
+    ctx.lineTo(13, 8);
+    ctx.quadraticCurveTo(0, -12, -13, 8);
     ctx.closePath();
     if (glow) {
       ctx.shadowColor = "rgba(14, 165, 233, 0.65)";
@@ -185,6 +186,7 @@ function ensureChevronLayer(map: MapLibreMap) {
     "icon-image": CHEVRON_IMAGE_ID,
     "icon-size": chevronSize(),
     "icon-anchor": "center" as const,
+    "icon-offset": [0, 0] as [number, number],
     "icon-rotate": ["get", "bearing"] as ExpressionSpecification,
     "icon-rotation-alignment": "map" as const,
     "icon-pitch-alignment": "map" as const,
@@ -209,6 +211,7 @@ function ensureChevronLayer(map: MapLibreMap) {
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-image", CHEVRON_IMAGE_ID);
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-size", chevronSize());
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-anchor", "center");
+  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-offset", [0, 0]);
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-rotation-alignment", "map");
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-pitch-alignment", "map");
 }

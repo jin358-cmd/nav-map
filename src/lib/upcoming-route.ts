@@ -48,14 +48,82 @@ function segmentsFromRoute(coordinates: [number, number][]): RouteSegment[] {
   return segments;
 }
 
+/** Web Mercator Y so interpolated points sit on the MapLibre-drawn chord. */
+function mercatorLatToY(lat: number) {
+  const clamped = Math.max(-85.05112878, Math.min(85.05112878, lat));
+  const sine = Math.sin((clamped * Math.PI) / 180);
+  return 0.5 * Math.log((1 + sine) / (1 - sine));
+}
+
+function mercatorYToLat(y: number) {
+  return (Math.atan(Math.sinh(y)) * 180) / Math.PI;
+}
+
 function pointAt(segment: RouteSegment, meters: number): [number, number] {
   const ratio = segment.lengthMeters
     ? Math.max(0, Math.min(1, (meters - segment.startMeters) / segment.lengthMeters))
     : 0;
-  return [
-    segment.from[0] + (segment.to[0] - segment.from[0]) * ratio,
-    segment.from[1] + (segment.to[1] - segment.from[1]) * ratio,
-  ];
+  if (ratio <= 0) return [segment.from[0], segment.from[1]];
+  if (ratio >= 1) return [segment.to[0], segment.to[1]];
+  const lng =
+    segment.from[0] + (segment.to[0] - segment.from[0]) * ratio;
+  const y0 = mercatorLatToY(segment.from[1]);
+  const y1 = mercatorLatToY(segment.to[1]);
+  return [lng, mercatorYToLat(y0 + (y1 - y0) * ratio)];
+}
+
+function interpolateAlong(
+  segments: RouteSegment[],
+  meters: number,
+): { lng: number; lat: number; segment: RouteSegment } | null {
+  if (!segments.length) return null;
+  let remaining = Math.max(0, meters);
+  for (let index = 0; index < segments.length; index += 1) {
+    const segment = segments[index];
+    const last = index === segments.length - 1;
+    if (remaining <= segment.lengthMeters || last) {
+      const at = pointAt(
+        segment,
+        segment.startMeters + Math.min(remaining, segment.lengthMeters),
+      );
+      return { lng: at[0], lat: at[1], segment };
+    }
+    remaining -= segment.lengthMeters;
+  }
+  return null;
+}
+
+/** Chord length used to smooth jagged vertex bearings onto the road tangent. */
+const BEARING_CHORD_METERS = 12;
+
+function poseAlongSegments(
+  segments: RouteSegment[],
+  meters: number,
+): { lng: number; lat: number; bearing: number } | null {
+  const point = interpolateAlong(segments, meters);
+  if (!point) return null;
+  const back = interpolateAlong(
+    segments,
+    Math.max(0, meters - BEARING_CHORD_METERS * 0.35),
+  );
+  const forward = interpolateAlong(segments, meters + BEARING_CHORD_METERS);
+  const from = back ?? point;
+  const to = forward ?? point;
+  const same =
+    Math.abs(from.lng - to.lng) < 1e-12 && Math.abs(from.lat - to.lat) < 1e-12;
+  return {
+    lng: point.lng,
+    lat: point.lat,
+    bearing: same
+      ? bearingDegrees(
+          { lng: point.segment.from[0], lat: point.segment.from[1] },
+          { lng: point.segment.to[0], lat: point.segment.to[1] },
+        )
+      : bearingDegrees(
+          { lng: from.lng, lat: from.lat },
+          { lng: to.lng, lat: to.lat },
+        ),
+  };
 }
 
 export function sliceRouteAhead(
@@ -360,10 +428,11 @@ export function turnGroundArrows({
   const span = Math.max(1, end - start);
   const cycle = ((phase % 1) + 1) % 1;
   const placed: GuidanceArrow[] = [];
+  const segments = segmentsFromRoute(route);
 
   for (let at = first; at <= end + 0.01; at += spacing) {
     if (at < start) continue;
-    const point = pointAlongRoute(route, at);
+    const point = poseAlongSegments(segments, at);
     if (!point) continue;
     const t = (at - start) / span;
     const delta = (t - cycle + 1) % 1;
@@ -433,29 +502,7 @@ export function pointAlongRoute(
   meters: number,
 ): { lng: number; lat: number; bearing: number } | null {
   if (coordinates.length < 2) return null;
-  const segments = segmentsFromRoute(coordinates);
-  if (!segments.length) return null;
-  let remaining = Math.max(0, meters);
-  for (let index = 0; index < segments.length; index += 1) {
-    const segment = segments[index];
-    const last = index === segments.length - 1;
-    if (remaining <= segment.lengthMeters || last) {
-      const at = pointAt(
-        segment,
-        segment.startMeters + Math.min(remaining, segment.lengthMeters),
-      );
-      return {
-        lng: at[0],
-        lat: at[1],
-        bearing: bearingDegrees(
-          { lng: segment.from[0], lat: segment.from[1] },
-          { lng: segment.to[0], lat: segment.to[1] },
-        ),
-      };
-    }
-    remaining -= segment.lengthMeters;
-  }
-  return null;
+  return poseAlongSegments(segmentsFromRoute(coordinates), meters);
 }
 
 export type GuidanceBowSign = {

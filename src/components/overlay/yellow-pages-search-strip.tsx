@@ -245,7 +245,7 @@ export function YellowPagesSearchStrip({
               }
             >
               <Icon className="size-5 shrink-0" strokeWidth={2.2} aria-hidden />
-              <span className="max-w-full truncate text-[10px] font-semibold leading-tight sm:text-[11px]">
+              <span className="max-w-full truncate text-[12px] font-semibold leading-tight sm:text-[13px]">
                 {item.label}
               </span>
             </button>
