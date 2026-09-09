@@ -3,16 +3,21 @@ import {
   BatteryCharging,
   BedDouble,
   Fuel,
+  Leaf,
   Package,
+  Pizza,
   PlugZap,
+  Sandwich,
   ShoppingBag,
   ShoppingBasket,
+  Soup,
   Store,
   UtensilsCrossed,
   Zap,
 } from "lucide-react";
 import type { ConvenienceKind } from "@/lib/poi/convenience-kind";
 import type { EnergyKind } from "@/lib/poi/energy-kind";
+import type { RestaurantKind } from "@/lib/poi/restaurant-kind";
 import type { PoiCategory } from "@/lib/poi/schema";
 
 export const SEARCH_SHORTCUT_IDS = [
@@ -53,7 +58,7 @@ export const SEARCH_SHORTCUTS: SearchShortcut[] = [
   {
     id: "restaurant",
     label: "餐廳",
-    hint: "附近餐廳",
+    hint: "附近餐廳；點入後可看速食、中餐、西餐與素食",
     icon: UtensilsCrossed,
     color: "#fb923c",
     categories: ["restaurant"],
@@ -156,4 +161,50 @@ export function convenienceBrandShortcutById(
 ): ConvenienceBrandShortcut | null {
   if (!id || id === "all") return null;
   return CONVENIENCE_BRAND_SHORTCUTS.find((item) => item.id === id) ?? null;
+}
+
+export type RestaurantCuisineShortcut = {
+  id: Exclude<RestaurantKind, "all">;
+  label: string;
+  hint: string;
+  icon: LucideIcon;
+  color: string;
+};
+
+export const RESTAURANT_CUISINE_SHORTCUTS: RestaurantCuisineShortcut[] = [
+  {
+    id: "fast",
+    label: "速食",
+    hint: "漢堡、炸雞等速食",
+    icon: Sandwich,
+    color: "#ef4444",
+  },
+  {
+    id: "chinese",
+    label: "中餐",
+    hint: "中式料理、小吃",
+    icon: Soup,
+    color: "#b45309",
+  },
+  {
+    id: "western",
+    label: "西餐",
+    hint: "西式、義式、牛排",
+    icon: Pizza,
+    color: "#6366f1",
+  },
+  {
+    id: "vegetarian",
+    label: "素食",
+    hint: "素食、蔬食",
+    icon: Leaf,
+    color: "#16a34a",
+  },
+];
+
+export function restaurantCuisineShortcutById(
+  id: RestaurantKind | null,
+): RestaurantCuisineShortcut | null {
+  if (!id || id === "all") return null;
+  return RESTAURANT_CUISINE_SHORTCUTS.find((item) => item.id === id) ?? null;
 }

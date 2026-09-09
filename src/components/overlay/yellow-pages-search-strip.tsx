@@ -6,10 +6,12 @@ import { formatDistanceRoadLabel } from "@/lib/geocoding/format-taiwan-display-a
 import { poiFeatureToPlace } from "@/lib/map-place";
 import type { ConvenienceKind } from "@/lib/poi/convenience-kind";
 import type { EnergyKind } from "@/lib/poi/energy-kind";
+import type { RestaurantKind } from "@/lib/poi/restaurant-kind";
 import { formatLayerPoiTitle } from "@/lib/poi/display";
 import {
   CONVENIENCE_BRAND_SHORTCUTS,
   FUEL_ENERGY_SHORTCUTS,
+  RESTAURANT_CUISINE_SHORTCUTS,
   SEARCH_SHORTCUTS,
   type SearchShortcutId,
 } from "@/lib/search-shortcuts";
@@ -22,6 +24,7 @@ function emptyCopy(
   shortcut: SearchShortcutId | null,
   energyKind: EnergyKind | null,
   convenienceKind: ConvenienceKind | null,
+  restaurantKind: RestaurantKind | null,
 ) {
   if (shortcut === "fuel" && energyKind === "gogoro") return "附近暫無 Gogoro 充電站";
   if (shortcut === "fuel" && energyKind === "tesla") return "附近暫無 Tesla 超充站";
@@ -34,6 +37,11 @@ function emptyCopy(
   }
   if (shortcut === "convenience" && convenienceKind === "shopee") return "附近暫無蝦皮店到店";
   if (shortcut === "convenience") return "附近暫無超商";
+  if (shortcut === "restaurant" && restaurantKind === "fast") return "附近暫無速食店";
+  if (shortcut === "restaurant" && restaurantKind === "chinese") return "附近暫無中餐";
+  if (shortcut === "restaurant" && restaurantKind === "western") return "附近暫無西餐";
+  if (shortcut === "restaurant" && restaurantKind === "vegetarian") return "附近暫無素食";
+  if (shortcut === "restaurant") return "附近暫無餐廳";
   return "附近暫無此分類店家";
 }
 
@@ -41,6 +49,7 @@ function previewHeading(
   shortcut: SearchShortcutId | null,
   energyKind: EnergyKind | null,
   convenienceKind: ConvenienceKind | null,
+  restaurantKind: RestaurantKind | null,
 ) {
   if (shortcut === "fuel" && energyKind === "gogoro") return "Gogoro 充電站";
   if (shortcut === "fuel" && energyKind === "tesla") return "Tesla 超充站";
@@ -51,6 +60,11 @@ function previewHeading(
   if (shortcut === "convenience" && convenienceKind === "hilife_ok") return "萊爾富／OK";
   if (shortcut === "convenience" && convenienceKind === "shopee") return "蝦皮店到店";
   if (shortcut === "convenience") return "超商";
+  if (shortcut === "restaurant" && restaurantKind === "fast") return "速食";
+  if (shortcut === "restaurant" && restaurantKind === "chinese") return "中餐";
+  if (shortcut === "restaurant" && restaurantKind === "western") return "西餐";
+  if (shortcut === "restaurant" && restaurantKind === "vegetarian") return "素食";
+  if (shortcut === "restaurant") return "餐廳";
   const selected = SEARCH_SHORTCUTS.find((item) => item.id === shortcut);
   return selected?.label ?? "附近店家";
 }
@@ -104,18 +118,22 @@ export function YellowPagesSearchStrip({
   const [shortcut, setShortcut] = useState<SearchShortcutId | null>(null);
   const [energyKind, setEnergyKind] = useState<EnergyKind | null>(null);
   const [convenienceKind, setConvenienceKind] = useState<ConvenienceKind | null>(null);
+  const [restaurantKind, setRestaurantKind] = useState<RestaurantKind | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const fuelOpen = shortcut === "fuel";
   const convenienceOpen = shortcut === "convenience";
+  const restaurantOpen = shortcut === "restaurant";
   const landscape = useLandscape();
   const visibleResults = landscape ? 3 : 4;
   const resolvedEnergy = fuelOpen ? (energyKind ?? "petrol") : null;
   const resolvedConvenience = convenienceOpen ? (convenienceKind ?? "all") : null;
+  const resolvedRestaurant = restaurantOpen ? (restaurantKind ?? "all") : null;
   const { pois, loading, error } = useYellowPagesNearby({
     origin,
     shortcut,
     energyKind: resolvedEnergy,
     convenienceKind: resolvedConvenience,
+    restaurantKind: resolvedRestaurant,
   });
 
   useEffect(() => {
@@ -132,6 +150,7 @@ export function YellowPagesSearchStrip({
       setShortcut(null);
       setEnergyKind(null);
       setConvenienceKind(null);
+      setRestaurantKind(null);
     };
   }, [resetRef]);
 
@@ -151,23 +170,29 @@ export function YellowPagesSearchStrip({
                   ? fuelOpen
                   : item.id === "convenience"
                     ? convenienceOpen
-                    : on
+                    : item.id === "restaurant"
+                      ? restaurantOpen
+                      : on
               }
               aria-controls={
                 item.id === "fuel"
                   ? "navpilot-fuel-energy-drawer"
                   : item.id === "convenience"
                     ? "navpilot-convenience-brand-drawer"
-                    : on
-                      ? "navpilot-shortcut-preview"
-                      : undefined
+                    : item.id === "restaurant"
+                      ? "navpilot-restaurant-cuisine-drawer"
+                      : on
+                        ? "navpilot-shortcut-preview"
+                        : undefined
               }
               aria-label={
                 item.id === "fuel"
                   ? "加油站，點入後展開 Gogoro、Tesla 超充與電車充電站"
                   : item.id === "convenience"
                     ? "超商，點入後展開統一、全家、萊爾富／OK 與蝦皮店到店"
-                    : `${item.label}附近`
+                    : item.id === "restaurant"
+                      ? "餐廳，點入後展開速食、中餐、西餐與素食"
+                      : `${item.label}附近`
               }
               title={item.hint}
               onClick={() => {
@@ -179,6 +204,7 @@ export function YellowPagesSearchStrip({
                   setShortcut("fuel");
                   setEnergyKind("petrol");
                   setConvenienceKind(null);
+                  setRestaurantKind(null);
                   return;
                 }
                 if (item.id === "convenience") {
@@ -189,10 +215,23 @@ export function YellowPagesSearchStrip({
                   setShortcut("convenience");
                   setConvenienceKind("all");
                   setEnergyKind(null);
+                  setRestaurantKind(null);
+                  return;
+                }
+                if (item.id === "restaurant") {
+                  if (restaurantOpen) {
+                    setRestaurantKind("all");
+                    return;
+                  }
+                  setShortcut("restaurant");
+                  setRestaurantKind("all");
+                  setEnergyKind(null);
+                  setConvenienceKind(null);
                   return;
                 }
                 setEnergyKind(null);
                 setConvenienceKind(null);
+                setRestaurantKind(null);
                 setShortcut(item.id);
               }}
               className={cn(
@@ -283,13 +322,55 @@ export function YellowPagesSearchStrip({
           );
         })}
       </SlideDownDrawer>
+      <SlideDownDrawer
+        id="navpilot-restaurant-cuisine-drawer"
+        open={restaurantOpen}
+        columns={4}
+      >
+        {RESTAURANT_CUISINE_SHORTCUTS.map((item) => {
+          const on = restaurantKind === item.id;
+          const Icon = item.icon;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              tabIndex={restaurantOpen ? 0 : -1}
+              aria-pressed={on}
+              aria-label={`${item.label}附近`}
+              title={item.hint}
+              onClick={() =>
+                setRestaurantKind((current) => (current === item.id ? "all" : item.id))
+              }
+              className={cn(
+                "flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-center touch-manipulation",
+                on ? "text-white" : "bg-black/55 text-zinc-100",
+              )}
+              style={
+                on
+                  ? { background: item.color }
+                  : { border: "1px solid rgba(255,255,255,0.14)" }
+              }
+            >
+              <Icon className="size-5 shrink-0" strokeWidth={2.2} aria-hidden />
+              <span className="max-w-full text-[12px] font-semibold leading-tight sm:text-[13px]">
+                {item.label}
+              </span>
+            </button>
+          );
+        })}
+      </SlideDownDrawer>
       {shortcut ? (
         <div
           id="navpilot-shortcut-preview"
           className="mt-1 overflow-hidden rounded-2xl border border-white/12 bg-black/72 px-2 py-1.5 shadow-[0_10px_28px_rgba(0,0,0,0.4)] backdrop-blur-xl"
         >
           <p className="px-1 pb-1 text-[10px] tracking-wide text-zinc-400">
-            {previewHeading(shortcut, resolvedEnergy, resolvedConvenience)}
+            {previewHeading(
+              shortcut,
+              resolvedEnergy,
+              resolvedConvenience,
+              resolvedRestaurant,
+            )}
           </p>
           {loading && pois.length === 0 ? (
             <p className="px-1 py-2 text-sm text-zinc-300">讀取中…</p>
@@ -298,7 +379,12 @@ export function YellowPagesSearchStrip({
           ) : pois.length === 0 ? (
             <p className="px-1 py-2 text-sm text-zinc-300">
               {origin
-                ? emptyCopy(shortcut, resolvedEnergy, resolvedConvenience)
+                ? emptyCopy(
+                    shortcut,
+                    resolvedEnergy,
+                    resolvedConvenience,
+                    resolvedRestaurant,
+                  )
                 : "開啟定位後即可列出附近店家"}
             </p>
           ) : (

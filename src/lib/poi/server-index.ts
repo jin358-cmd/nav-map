@@ -9,6 +9,7 @@ import { buildPoiIndexes, diversifyByBrand, searchIndexedPois } from "@/lib/poi/
 import { CONVENIENCE_CHAIN_BRANDS, FUEL_CHAIN_BRANDS } from "@/lib/poi/aliases";
 import { matchesConvenienceKind, type ConvenienceKind } from "@/lib/poi/convenience-kind";
 import { matchesEnergyKind, type EnergyKind } from "@/lib/poi/energy-kind";
+import { matchesRestaurantKind, type RestaurantKind } from "@/lib/poi/restaurant-kind";
 import { POI_MAIN_LAYER_IDS, type PoiMainLayerId } from "@/lib/poi/main-layers";
 import { rankPois, rankScore } from "@/lib/poi/rank";
 import {
@@ -239,6 +240,7 @@ export function poisInBounds(
   categories?: string[],
   energyKind?: EnergyKind | null,
   convenienceKind?: ConvenienceKind | null,
+  restaurantKind?: RestaurantKind | null,
 ) {
   const west = Math.min(bounds.west, bounds.east);
   const east = Math.max(bounds.west, bounds.east);
@@ -258,6 +260,7 @@ export function poisInBounds(
     }
     if (energyKind) return matchesEnergyKind(poi, energyKind);
     if (convenienceKind) return matchesConvenienceKind(poi, convenienceKind);
+    if (restaurantKind) return matchesRestaurantKind(poi, restaurantKind);
     if (categorySet) {
       return (
         categorySet.has(poi.category) ||
@@ -318,11 +321,13 @@ export function poisNearby(
   categories?: string[],
   energyKind?: EnergyKind | null,
   convenienceKind?: ConvenienceKind | null,
+  restaurantKind?: RestaurantKind | null,
 ) {
   const cap =
     energyKind && energyKind !== "petrol"
       ? 12000
-      : convenienceKind && convenienceKind !== "all"
+      : (convenienceKind && convenienceKind !== "all") ||
+          (restaurantKind && restaurantKind !== "all")
         ? 6000
         : 8000;
   const span = Math.max(400, Math.min(cap, radiusMeters)) / 111000;
@@ -340,6 +345,7 @@ export function poisNearby(
     categories,
     energyKind,
     convenienceKind,
+    restaurantKind,
   );
   const radiusKm = radiusMeters / 1000;
   const ranked = rows

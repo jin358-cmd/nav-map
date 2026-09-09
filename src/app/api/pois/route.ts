@@ -1,5 +1,6 @@
 import { isConvenienceKind } from "@/lib/poi/convenience-kind";
 import { isEnergyKind } from "@/lib/poi/energy-kind";
+import { isRestaurantKind } from "@/lib/poi/restaurant-kind";
 import { POI_MAIN_LAYER_IDS, type PoiMainLayerId } from "@/lib/poi/main-layers";
 import { poisInBounds, poisNearby } from "@/lib/poi/server-index";
 import { POI_CATEGORIES, type PoiCategory, type TaiwanPoiRecord } from "@/lib/poi/schema";
@@ -67,6 +68,10 @@ export async function GET(request: Request) {
   const convenienceKind = isConvenienceKind(convenienceParam)
     ? convenienceParam
     : undefined;
+  const restaurantParam = url.searchParams.get("restaurantKind");
+  const restaurantKind = isRestaurantKind(restaurantParam)
+    ? restaurantParam
+    : undefined;
   const origin =
     lng !== undefined && lat !== undefined ? { lng, lat } : undefined;
 
@@ -89,6 +94,7 @@ export async function GET(request: Request) {
       categories,
       energyKind,
       convenienceKind,
+      restaurantKind,
     );
     return Response.json(
       { pois: rows.map(serializePoi) },
