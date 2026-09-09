@@ -15,7 +15,7 @@ export const GUIDANCE_LAYER_ID = "navpilot-turn-arrows-layer";
 export const TURN_LINE_SOURCE_ID = "navpilot-turn-line-v3";
 export const TURN_LINE_GLOW_ID = "navpilot-turn-line-glow-v3";
 export const TURN_LINE_LAYER_ID = "navpilot-turn-line-layer-v3";
-const CHEVRON_IMAGE_ID = "navpilot-ground-chevron-blue-v5";
+const CHEVRON_IMAGE_ID = "navpilot-ground-chevron-blue-v6";
 const STALE_TURN_IDS = [
   "navpilot-turn-line",
   "navpilot-turn-line-glow",
@@ -36,25 +36,6 @@ function emptyLine() {
   };
 }
 
-function strokeChevron(
-  ctx: CanvasRenderingContext2D,
-  outer: number,
-  inner: number,
-  depth: number,
-  width: number,
-  color: string,
-) {
-  ctx.beginPath();
-  ctx.moveTo(-depth, inner);
-  ctx.lineTo(0, -outer);
-  ctx.lineTo(depth, inner);
-  ctx.lineWidth = width;
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-  ctx.strokeStyle = color;
-  ctx.stroke();
-}
-
 function createChevronImage() {
   const size = 128;
   const canvas = document.createElement("canvas");
@@ -65,13 +46,25 @@ function createChevronImage() {
   ctx.clearRect(0, 0, size, size);
   ctx.translate(size / 2, size / 2);
 
+  const drawBow = (color: string, glow = false) => {
+    ctx.beginPath();
+    ctx.moveTo(-30, 18);
+    ctx.quadraticCurveTo(0, -40, 30, 18);
+    ctx.lineTo(16, 12);
+    ctx.quadraticCurveTo(0, -14, -16, 12);
+    ctx.closePath();
+    if (glow) {
+      ctx.shadowColor = "rgba(14, 165, 233, 0.65)";
+      ctx.shadowBlur = 8;
+    }
+    ctx.fillStyle = color;
+    ctx.fill();
+  };
+
   ctx.save();
-  ctx.shadowColor = "rgba(14, 165, 233, 0.85)";
-  ctx.shadowBlur = 8;
-  strokeChevron(ctx, 30, 22, 24, 9, "#0369a1");
+  drawBow("#0284c7", true);
   ctx.restore();
-  strokeChevron(ctx, 28, 20, 22, 6, "#38bdf8");
-  strokeChevron(ctx, 26, 18, 18, 3, "#f0f9ff");
+  drawBow("#7dd3fc");
 
   return ctx.getImageData(0, 0, size, size);
 }
@@ -177,13 +170,13 @@ function chevronSize(): ExpressionSpecification {
     ["linear"],
     ["zoom"],
     14.2,
-    ["*", ["get", "scale"], 0.12],
+    ["*", ["get", "scale"], 0.07],
     16.2,
-    ["*", ["get", "scale"], 0.16],
+    ["*", ["get", "scale"], 0.1],
     17.4,
-    ["*", ["get", "scale"], 0.2],
+    ["*", ["get", "scale"], 0.13],
     18.6,
-    ["*", ["get", "scale"], 0.24],
+    ["*", ["get", "scale"], 0.16],
   ];
 }
 

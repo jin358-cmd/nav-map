@@ -353,7 +353,7 @@ export function turnGroundArrows({
   const turnAt = Number.isFinite(cueMeters)
     ? Math.max(routeMeters, cueMeters as number)
     : routeMeters + Math.max(0, distanceToNext);
-  const spacing = 18;
+  const spacing = 14;
   const start = routeMeters + 8;
   const end = turnAt + 36;
   const first = turnAt - Math.ceil((turnAt - start) / spacing) * spacing;
