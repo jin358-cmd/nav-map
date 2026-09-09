@@ -622,8 +622,9 @@ async function main() {
   const job = beginJob(prevCheckpoint, sourceVersion, now);
   const slice = sliceUnmatchedQueue(unmatchedSorted, job, NLSC_LIMIT);
   const queued = slice.batch;
+  const thisRunIds = new Set(queued.map((shop) => shop.taxId));
   console.log(
-    `[gcis] geocode ${queued.length} / unmatched ${unmatchedSorted.length} resume offset=${slice.start_offset} lastId=${job.last_successful_registry_id || "-"}`,
+    `[gcis] geocode ${queued.length} / unmatched ${unmatchedSorted.length} resume offset=${slice.start_offset} queue=${slice.queue_offset} lastId=${job.last_successful_registry_id || "-"}`,
   );
 
   writeFileSync(CHECKPOINT, `${JSON.stringify(job, null, 2)}\n`);
@@ -793,13 +794,15 @@ async function main() {
 
     if (nearbyRows(grid, row).some((prev) => tooClose(prev, row))) {
       skippedDup += 1;
-      pushReject({
-        registry_id: row.sourceId,
-        name: row.name,
-        address: row.address,
-        reason: "duplicate",
-        raw_data: { matchQuality: row.matchQuality },
-      });
+      if (thisRunIds.has(row.sourceId)) {
+        pushReject({
+          registry_id: row.sourceId,
+          name: row.name,
+          address: row.address,
+          reason: "duplicate",
+          raw_data: { matchQuality: row.matchQuality },
+        });
+      }
       continue;
     }
     merged.push(row);

@@ -43,19 +43,22 @@ export function beginJob(existing, sourceVersion, now = new Date().toISOString()
 
 export function sliceUnmatchedQueue(queue, checkpoint, limit) {
   const list = Array.isArray(queue) ? queue : [];
-  let start = 0;
+  let queueOffset = 0;
   const lastId = String(checkpoint?.last_successful_registry_id || "");
   if (lastId) {
     const idx = list.findIndex((shop) => String(shop.taxId) > lastId);
-    start = idx === -1 ? list.length : idx;
+    queueOffset = idx === -1 ? list.length : idx;
   } else if (Number(checkpoint?.last_successful_offset) > 0) {
-    start = Number(checkpoint.last_successful_offset);
+    queueOffset = Math.min(list.length, Number(checkpoint.last_successful_offset));
   }
   const size = limit < 0 ? list.length : Math.max(0, Number(limit) || 0);
+  const globalStart = Number(checkpoint?.last_successful_offset) || 0;
+  const take = size === 0 ? 0 : Math.min(size, Math.max(0, list.length - queueOffset));
   return {
-    start_offset: start,
-    end_offset: Math.min(list.length, start + size),
-    batch: size === 0 ? [] : list.slice(start, start + size),
+    queue_offset: queueOffset,
+    start_offset: globalStart,
+    end_offset: globalStart + take,
+    batch: take === 0 ? [] : list.slice(queueOffset, queueOffset + take),
   };
 }
 

@@ -1,0 +1,30 @@
+[
+  {
+    "job_id": "gcis-2026-09-09-e70ba995",
+    "batch_id": 1,
+    "start_offset": 0,
+    "end_offset": 1000,
+    "total_input": 1000,
+    "matched": 939,
+    "unmatched": 61,
+    "skipped": 0,
+    "failed": 0,
+    "duration": 104879,
+    "retry_count": 0,
+    "recorded_at": "2026-09-09T09:15:04.991Z"
+  },
+  {
+    "job_id": "gcis-2026-09-09-fddcf96c",
+    "batch_id": 2,
+    "start_offset": 1000,
+    "end_offset": 1050,
+    "total_input": 50,
+    "matched": 46,
+    "unmatched": 4,
+    "skipped": 0,
+    "failed": 0,
+    "duration": 7418,
+    "retry_count": 0,
+    "recorded_at": "2026-09-09T09:16:24.675Z"
+  }
+]

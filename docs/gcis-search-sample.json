@@ -1,0 +1,1016 @@
+{
+  "origin": {
+    "lat": 22.9908,
+    "lng": 120.2049
+  },
+  "rows": [
+    {
+      "q": "7",
+      "httpMs": 89.3,
+      "count": 24,
+      "results": [
+        {
+          "name": "7-ELEVEN郡王",
+          "address": "台南市中西區府前路一段144號",
+          "score": null,
+          "incomplete": false,
+          "category": "convenience"
+        },
+        {
+          "name": "7-ELEVEN天公",
+          "address": "台南市中西區忠義路二段109號",
+          "score": null,
+          "incomplete": false,
+          "category": "convenience"
+        },
+        {
+          "name": "7-ELEVEN永福",
+          "address": "台南市中西區永福路二段65號1樓",
+          "score": null,
+          "incomplete": false,
+          "category": "convenience"
+        },
+        {
+          "name": "7-ELEVEN武德",
+          "address": "台南市中西區青年路134號",
+          "score": null,
+          "incomplete": false,
+          "category": "convenience"
+        },
+        {
+          "name": "7-Eleven",
+          "address": "臺南市中西區民族路二段76之13號",
+          "score": null,
+          "incomplete": false,
+          "category": "convenience"
+        },
+        {
+          "name": "7-ELEVEN台南民族",
+          "address": "台南市中西區民族路二段53號",
+          "score": null,
+          "incomplete": false,
+          "category": "convenience"
+        },
+        {
+          "name": "7-ELEVEN赤崁",
+          "address": "台南市中西區民族路二段331號",
+          "score": null,
+          "incomplete": false,
+          "category": "convenience"
+        },
+        {
+          "name": "7-ELEVEN南英",
+          "address": "台南市中西區永福路一段30號32號1、 2樓",
+          "score": null,
+          "incomplete": false,
+          "category": "convenience"
+        }
+      ]
+    },
+    {
+      "q": "711",
+      "httpMs": 56.3,
+      "count": 24,
+      "results": [
+        {
+          "name": "7-ELEVEN郡王",
+          "address": "台南市中西區府前路一段144號",
+          "score": null,
+          "incomplete": false,
+          "category": "convenience"
+        },
+        {
+          "name": "7-ELEVEN天公",
+          "address": "台南市中西區忠義路二段109號",
+          "score": null,
+          "incomplete": false,
+          "category": "convenience"
+        },
+        {
+          "name": "7-ELEVEN永福",
+          "address": "台南市中西區永福路二段65號1樓",
+          "score": null,
+          "incomplete": false,
+          "category": "convenience"
+        },
+        {
+          "name": "7-ELEVEN武德",
+          "address": "台南市中西區青年路134號",
+          "score": null,
+          "incomplete": false,
+          "category": "convenience"
+        },
+        {
+          "name": "7-Eleven",
+          "address": "臺南市中西區民族路二段76之13號",
+          "score": null,
+          "incomplete": false,
+          "category": "convenience"
+        },
+        {
+          "name": "7-ELEVEN台南民族",
+          "address": "台南市中西區民族路二段53號",
+          "score": null,
+          "incomplete": false,
+          "category": "convenience"
+        },
+        {
+          "name": "7-ELEVEN赤崁",
+          "address": "台南市中西區民族路二段331號",
+          "score": null,
+          "incomplete": false,
+          "category": "convenience"
+        },
+        {
+          "name": "7-ELEVEN南英",
+          "address": "台南市中西區永福路一段30號32號1、 2樓",
+          "score": null,
+          "incomplete": false,
+          "category": "convenience"
+        }
+      ]
+    },
+    {
+      "q": "全家",
+      "httpMs": 73.9,
+      "count": 24,
+      "results": [
+        {
+          "name": "全家台南永福店",
+          "address": "台南市中西區永福路一段191號",
+          "score": null,
+          "incomplete": false,
+          "category": "convenience"
+        },
+        {
+          "name": "全家台南府華店",
+          "address": "台南市中西區府前路二段37號1樓",
+          "score": null,
+          "incomplete": false,
+          "category": "convenience"
+        },
+        {
+          "name": "全家台南忠義店",
+          "address": "台南市中西區忠義路一段56號1樓",
+          "score": null,
+          "incomplete": false,
+          "category": "convenience"
+        },
+        {
+          "name": "全家台南康樂一店",
+          "address": "台南市中西區康樂街135號1樓",
+          "score": null,
+          "incomplete": false,
+          "category": "convenience"
+        },
+        {
+          "name": "全家台南康樂二店",
+          "address": "台南市中西區康樂街150號",
+          "score": null,
+          "incomplete": false,
+          "category": "convenience"
+        },
+        {
+          "name": "全家台南尊王店",
+          "address": "台南市中西區金華路三段143號",
+          "score": null,
+          "incomplete": false,
+          "category": "convenience"
+        },
+        {
+          "name": "全家台南赤崁店",
+          "address": "台南市中西區民族路二段257號",
+          "score": null,
+          "incomplete": false,
+          "category": "convenience"
+        },
+        {
+          "name": "全家台南五妃店",
+          "address": "台南市中西區五妃街270號1樓",
+          "score": null,
+          "incomplete": false,
+          "category": "convenience"
+        }
+      ]
+    },
+    {
+      "q": "全聯",
+      "httpMs": 26.8,
+      "count": 24,
+      "results": [
+        {
+          "name": "全聯福利中心",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "supermarket"
+        },
+        {
+          "name": "全聯福利中心",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "supermarket"
+        },
+        {
+          "name": "全聯福利中心",
+          "address": "臺南市東區長榮路二段180號",
+          "score": null,
+          "incomplete": false,
+          "category": "supermarket"
+        },
+        {
+          "name": "全聯福利中心",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "supermarket"
+        },
+        {
+          "name": "全聯福利中心",
+          "address": "臺南市北區西門路四段111號",
+          "score": null,
+          "incomplete": false,
+          "category": "supermarket"
+        },
+        {
+          "name": "全聯福利中心",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "supermarket"
+        },
+        {
+          "name": "全聯福利中心",
+          "address": "˙701臺南市東區東安路20號",
+          "score": null,
+          "incomplete": false,
+          "category": "supermarket"
+        },
+        {
+          "name": "全聯福利中心",
+          "address": "臺南市北區和緯路二段172號",
+          "score": null,
+          "incomplete": false,
+          "category": "supermarket"
+        }
+      ]
+    },
+    {
+      "q": "星巴克",
+      "httpMs": 34.5,
+      "count": 24,
+      "results": [
+        {
+          "name": "星巴克",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "cafe"
+        },
+        {
+          "name": "星巴克",
+          "address": "臺南市中西區西門路二段120號",
+          "score": null,
+          "incomplete": false,
+          "category": "cafe"
+        },
+        {
+          "name": "星巴克",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "cafe"
+        },
+        {
+          "name": "星巴克",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "cafe"
+        },
+        {
+          "name": "星巴克",
+          "address": "臺南市中西區中華西路二段16號1樓",
+          "score": null,
+          "incomplete": false,
+          "category": "cafe"
+        },
+        {
+          "name": "星巴克",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "cafe"
+        },
+        {
+          "name": "星巴克",
+          "address": "臺南市中西區民生路二段489號",
+          "score": null,
+          "incomplete": false,
+          "category": "cafe"
+        },
+        {
+          "name": "星巴克",
+          "address": "臺南市中西區中華西路二段851巷28號",
+          "score": null,
+          "incomplete": false,
+          "category": "cafe"
+        }
+      ]
+    },
+    {
+      "q": "麥當勞",
+      "httpMs": 29.5,
+      "count": 24,
+      "results": [
+        {
+          "name": "麥當勞",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "restaurant"
+        },
+        {
+          "name": "麥當勞",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "restaurant"
+        },
+        {
+          "name": "麥當勞",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "restaurant"
+        },
+        {
+          "name": "麥當勞",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "restaurant"
+        },
+        {
+          "name": "麥當勞",
+          "address": "臺南市北區和緯路三段288號",
+          "score": null,
+          "incomplete": false,
+          "category": "restaurant"
+        },
+        {
+          "name": "麥當勞",
+          "address": "臺南市永康區中正北路56-1號臺南市永康區中正北路56-1",
+          "score": null,
+          "incomplete": false,
+          "category": "restaurant"
+        },
+        {
+          "name": "麥當勞",
+          "address": "臺南市歸仁區中山路二段131號",
+          "score": null,
+          "incomplete": false,
+          "category": "restaurant"
+        },
+        {
+          "name": "麥當勞",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "restaurant"
+        }
+      ]
+    },
+    {
+      "q": "中油",
+      "httpMs": 29.7,
+      "count": 24,
+      "results": [
+        {
+          "name": "台灣中油",
+          "address": "臺南市北區公園南路211號",
+          "score": null,
+          "incomplete": false,
+          "category": "fuel"
+        },
+        {
+          "name": "台灣中油府前路",
+          "address": "台南市中西區府前路二段256號",
+          "score": null,
+          "incomplete": false,
+          "category": "fuel"
+        },
+        {
+          "name": "台灣中油民生路",
+          "address": "台南市中西區民生路二段303號",
+          "score": null,
+          "incomplete": false,
+          "category": "fuel"
+        },
+        {
+          "name": "台灣中油文賢路",
+          "address": "臺南市中西區文賢路229號",
+          "score": null,
+          "incomplete": false,
+          "category": "fuel"
+        },
+        {
+          "name": "台灣中油國",
+          "address": "台南市南區國民路246號",
+          "score": null,
+          "incomplete": false,
+          "category": "fuel"
+        },
+        {
+          "name": "台灣中油",
+          "address": "台南市東區中華東路三段170號",
+          "score": null,
+          "incomplete": false,
+          "category": "fuel"
+        },
+        {
+          "name": "台灣中油",
+          "address": "臺南市東區中華東路三段171號",
+          "score": null,
+          "incomplete": false,
+          "category": "fuel"
+        },
+        {
+          "name": "千越加油站",
+          "address": "台南市北區開元路467號",
+          "score": null,
+          "incomplete": false,
+          "category": "fuel"
+        }
+      ]
+    },
+    {
+      "q": "家樂福",
+      "httpMs": 41.3,
+      "count": 24,
+      "results": [
+        {
+          "name": "家樂福台南安平店i郵箱",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "supermarket"
+        },
+        {
+          "name": "家樂福超市",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "supermarket"
+        },
+        {
+          "name": "家樂福超市",
+          "address": "台南市北區北安路一段167號",
+          "score": null,
+          "incomplete": false,
+          "category": "supermarket"
+        },
+        {
+          "name": "家樂福",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "supermarket"
+        },
+        {
+          "name": "家樂福永康中華店i郵箱",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "supermarket"
+        },
+        {
+          "name": "家樂福",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "supermarket"
+        },
+        {
+          "name": "家樂福仁德店i郵箱",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "supermarket"
+        },
+        {
+          "name": "家樂福",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "supermarket"
+        }
+      ]
+    },
+    {
+      "q": "餐廳",
+      "httpMs": 77.3,
+      "count": 24,
+      "results": [
+        {
+          "name": "六宿學生餐廳",
+          "address": "臺南市永康區南台街1號",
+          "score": null,
+          "incomplete": false,
+          "category": "restaurant"
+        },
+        {
+          "name": "寶哥黑輪",
+          "address": "台南市中西區府前路一段196巷25號",
+          "score": null,
+          "incomplete": false,
+          "category": "restaurant"
+        },
+        {
+          "name": "魚之鄉鮮魚店",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "restaurant"
+        },
+        {
+          "name": "福欣素食坊",
+          "address": "臺南市中西區南門路67號",
+          "score": null,
+          "incomplete": false,
+          "category": "restaurant"
+        },
+        {
+          "name": "廣仔虱目魚丸",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "restaurant"
+        },
+        {
+          "name": "上海味香小吃店",
+          "address": "臺南市中西區民權路一段273號",
+          "score": null,
+          "incomplete": false,
+          "category": "restaurant"
+        },
+        {
+          "name": "三元齋素食",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "restaurant"
+        },
+        {
+          "name": "小古巴漢堡",
+          "address": "臺南市中西區城隍街48號",
+          "score": null,
+          "incomplete": false,
+          "category": "restaurant"
+        }
+      ]
+    },
+    {
+      "q": "咖啡",
+      "httpMs": 37.9,
+      "count": 24,
+      "results": [
+        {
+          "name": "咖啡深藏金華門市",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "cafe"
+        },
+        {
+          "name": "窄門咖啡",
+          "address": "臺南市中西區南門路67號",
+          "score": null,
+          "incomplete": false,
+          "category": "cafe"
+        },
+        {
+          "name": "木華咖啡",
+          "address": "臺南市中西區青年路12號",
+          "score": null,
+          "incomplete": false,
+          "category": "cafe"
+        },
+        {
+          "name": "小小星 茶",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "cafe"
+        },
+        {
+          "name": "客美多咖啡",
+          "address": "臺南市中西區民生路一段76號",
+          "score": null,
+          "incomplete": false,
+          "category": "cafe"
+        },
+        {
+          "name": "甘單咖啡",
+          "address": "臺南市中西區民權路二段4巷13號",
+          "score": null,
+          "incomplete": false,
+          "category": "cafe"
+        },
+        {
+          "name": "阿烏咖啡",
+          "address": "臺南市中西區開山路201號",
+          "score": null,
+          "incomplete": false,
+          "category": "cafe"
+        },
+        {
+          "name": "浪漫治癒咖啡專門店",
+          "address": "臺南市中西區民族路二段279號",
+          "score": null,
+          "incomplete": false,
+          "category": "cafe"
+        }
+      ]
+    },
+    {
+      "q": "藥局",
+      "httpMs": 21.8,
+      "count": 24,
+      "results": [
+        {
+          "name": "藥局",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "pharmacy"
+        },
+        {
+          "name": "藥局",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "pharmacy"
+        },
+        {
+          "name": "復生藥局",
+          "address": "台南市中西區府前路一段212號",
+          "score": null,
+          "incomplete": false,
+          "category": "pharmacy"
+        },
+        {
+          "name": "千代藥局",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "pharmacy"
+        },
+        {
+          "name": "全心藥局",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "pharmacy"
+        },
+        {
+          "name": "瑞芳藥局",
+          "address": "台南市中西區府前路一段134號",
+          "score": null,
+          "incomplete": false,
+          "category": "pharmacy"
+        },
+        {
+          "name": "五代全民藥局",
+          "address": "臺南市中西區民族路二段76之9號",
+          "score": null,
+          "incomplete": false,
+          "category": "pharmacy"
+        },
+        {
+          "name": "西門藥局",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "pharmacy"
+        }
+      ]
+    },
+    {
+      "q": "醫院",
+      "httpMs": 19.9,
+      "count": 24,
+      "results": [
+        {
+          "name": "醫院",
+          "address": "臺北市",
+          "score": null,
+          "incomplete": false,
+          "category": "hospital"
+        },
+        {
+          "name": "醫院",
+          "address": "臺北市",
+          "score": null,
+          "incomplete": false,
+          "category": "hospital"
+        },
+        {
+          "name": "永和醫院",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "hospital"
+        },
+        {
+          "name": "仁愛醫院",
+          "address": "臺南市東區北門路一段10號",
+          "score": null,
+          "incomplete": false,
+          "category": "hospital"
+        },
+        {
+          "name": "宏科醫院",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "hospital"
+        },
+        {
+          "name": "新生醫院",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "hospital"
+        },
+        {
+          "name": "聖恩醫院",
+          "address": "嘉義縣",
+          "score": null,
+          "incomplete": false,
+          "category": "hospital"
+        },
+        {
+          "name": "現代醫院",
+          "address": "嘉義縣",
+          "score": null,
+          "incomplete": false,
+          "category": "hospital"
+        }
+      ]
+    },
+    {
+      "q": "停車場",
+      "httpMs": 38.2,
+      "count": 24,
+      "results": [
+        {
+          "name": "停車場",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "parking"
+        },
+        {
+          "name": "停車場",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "parking"
+        },
+        {
+          "name": "停車場",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "parking"
+        },
+        {
+          "name": "停車場",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "parking"
+        },
+        {
+          "name": "停車場",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "parking"
+        },
+        {
+          "name": "停車場",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "parking"
+        },
+        {
+          "name": "停車場",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "parking"
+        },
+        {
+          "name": "停車場",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "parking"
+        }
+      ]
+    },
+    {
+      "q": "加油站",
+      "httpMs": 31.6,
+      "count": 24,
+      "results": [
+        {
+          "name": "加油站",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "fuel"
+        },
+        {
+          "name": "台灣中油",
+          "address": "臺南市北區公園南路211號",
+          "score": null,
+          "incomplete": false,
+          "category": "fuel"
+        },
+        {
+          "name": "加油站",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "fuel"
+        },
+        {
+          "name": "加油站",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "fuel"
+        },
+        {
+          "name": "加油站",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "fuel"
+        },
+        {
+          "name": "加油站",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "fuel"
+        },
+        {
+          "name": "加油站",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "fuel"
+        },
+        {
+          "name": "全國加油站",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "fuel"
+        }
+      ]
+    },
+    {
+      "q": "服飾",
+      "httpMs": 28.6,
+      "count": 19,
+      "results": [
+        {
+          "name": "服飾店",
+          "address": "嘉義縣",
+          "score": null,
+          "incomplete": false,
+          "category": "other"
+        },
+        {
+          "name": "服飾店",
+          "address": "嘉義縣",
+          "score": null,
+          "incomplete": false,
+          "category": "other"
+        },
+        {
+          "name": "遠大服飾",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "other"
+        },
+        {
+          "name": "喬治奶油日韓服飾",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "other"
+        },
+        {
+          "name": "鐵板巷服飾批發",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "other"
+        },
+        {
+          "name": "角 流行服飾",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "other"
+        },
+        {
+          "name": "大樺服飾批發零售",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "other"
+        },
+        {
+          "name": "名家館進口服飾批發",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "other"
+        }
+      ]
+    },
+    {
+      "q": "飯店",
+      "httpMs": 32.5,
+      "count": 24,
+      "results": [
+        {
+          "name": "東亞樓飯店",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "hotel"
+        },
+        {
+          "name": "劍橋大飯店",
+          "address": "臺南市中西區民族路二段217號",
+          "score": null,
+          "incomplete": false,
+          "category": "hotel"
+        },
+        {
+          "name": "大立大飯店",
+          "address": "臺南市中西區中成路6號",
+          "score": null,
+          "incomplete": false,
+          "category": "hotel"
+        },
+        {
+          "name": "新朝代飯店",
+          "address": "台南市北區成功路46號",
+          "score": null,
+          "incomplete": false,
+          "category": "hotel"
+        },
+        {
+          "name": "禧榕軒大飯店",
+          "address": "臺南市北區成功路28號",
+          "score": null,
+          "incomplete": false,
+          "category": "hotel"
+        },
+        {
+          "name": "首相大飯店",
+          "address": "臺南市北區公園路128號",
+          "score": null,
+          "incomplete": false,
+          "category": "hotel"
+        },
+        {
+          "name": "鐵道",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "hotel"
+        },
+        {
+          "name": "亞伯大飯店",
+          "address": "臺南市",
+          "score": null,
+          "incomplete": false,
+          "category": "hotel"
+        }
+      ]
+    }
+  ]
+}

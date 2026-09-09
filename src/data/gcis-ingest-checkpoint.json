@@ -1,0 +1,11 @@
+{
+  "job_id": "gcis-2026-09-09-e70ba995",
+  "source_version": "gcis-catalog-56-files-56",
+  "last_successful_offset": 1050,
+  "last_successful_registry_id": "00049648",
+  "batch_id": 2,
+  "status": "completed",
+  "started_at": "2026-09-09T09:12:41.670Z",
+  "updated_at": "2026-09-09T09:16:30.000Z",
+  "failed_reason": null
+}

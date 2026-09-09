@@ -5,55 +5,90 @@
   "geocoder": "NLSC TextQueryMap + existing POI address match",
   "status": "IMPORTED",
   "cityFilter": null,
-  "fetchedShops": 657784,
-  "geocoded": 0,
-  "geoFail": 0,
-  "unmatchedLeft": 647235,
-  "located": 14441,
-  "inserted": 10939,
-  "skippedDup": 3502,
-  "withPhone": 5049,
-  "durationMs": 28156,
+  "batchSize": 50,
+  "fetchedShops": 657729,
+  "geocoded": 46,
+  "geoFail": 4,
+  "cacheHits": 14603,
+  "poiHits": 16,
+  "unmatchedLeft": 643057,
+  "located": 12666,
+  "inserted": 12666,
+  "skippedDup": 5819,
+  "withPhone": 4670,
+  "phonesFilled": 0,
+  "osmMerged": 24,
+  "clusterDownranked": 3736,
+  "inactiveKept": 68,
+  "invalidStatus": 1829202,
+  "noAddress": 1,
+  "invalidAddress": 3,
+  "rejected": 5827,
+  "navReady": 7380,
+  "avgNavEligibilityScore": 74.14,
+  "registryMix": {
+    "company": 10813,
+    "business": 1921
+  },
+  "matchQuality": {
+    "A": 2942,
+    "B": 8712,
+    "C": 7,
+    "D": 1070,
+    "E": 3
+  },
+  "nlscRequests": 50,
+  "nlscErrors": 0,
+  "nlscErrorRate": 0,
+  "retryCount": 0,
+  "checkpoint": {
+    "job_id": "gcis-2026-09-09-fddcf96c",
+    "batch_id": 2,
+    "last_successful_offset": 1050,
+    "last_successful_registry_id": "00049648",
+    "status": "completed"
+  },
+  "durationMs": 49032,
   "datasets": [
     {
       "title": "公司登記(依營業項目別)－機車零售業",
       "rows": 15077,
-      "active": 6957
+      "active": 6953
     },
     {
       "title": "公司登記(依營業項目別)－汽車零售業",
       "rows": 28143,
-      "active": 13281
+      "active": 13269
     },
     {
       "title": "公司登記(依營業項目別)－眼鏡零售業",
       "rows": 17992,
-      "active": 6580
+      "active": 6573
     },
     {
       "title": "公司登記(依營業項目別)－文教、樂器、育樂用品零售業",
       "rows": 136839,
-      "active": 52575
+      "active": 52563
     },
     {
       "title": "公司登記(依營業項目別)－鐘錶零售業",
       "rows": 20308,
-      "active": 7074
+      "active": 7069
     },
     {
       "title": "公司登記(依營業項目別)－超級市場業",
       "rows": 10719,
-      "active": 4199
+      "active": 4201
     },
     {
       "title": "公司登記(依營業項目別)－百貨公司業",
       "rows": 14629,
-      "active": 5135
+      "active": 5131
     },
     {
       "title": "公司登記(依營業項目別)－餐館業",
       "rows": 62508,
-      "active": 27451
+      "active": 27441
     },
     {
       "title": "公司登記(依營業項目別)－電器零售業",
@@ -63,62 +98,62 @@
     {
       "title": "公司登記(依營業項目別)－建材零售業",
       "rows": 112766,
-      "active": 51776
+      "active": 51782
     },
     {
       "title": "公司登記(依營業項目別)－汽、機車零件配備零售業",
       "rows": 56701,
-      "active": 26799
+      "active": 26788
     },
     {
       "title": "公司登記(依營業項目別)－布疋、衣著、鞋、帽、傘、服飾品零售業",
       "rows": 140176,
-      "active": 53379
+      "active": 53358
     },
     {
       "title": "公司登記(依營業項目別)－日常用品零售業",
       "rows": 166727,
-      "active": 64694
+      "active": 64653
     },
     {
       "title": "公司登記(依營業項目別)－化粧品零售業",
       "rows": 126803,
-      "active": 42516
+      "active": 42498
     },
     {
       "title": "公司登記(依營業項目別)－五金零售業",
       "rows": 159507,
-      "active": 74777
+      "active": 74775
     },
     {
       "title": "公司登記(依營業項目別)－農產品零售業",
       "rows": 59507,
-      "active": 25628
+      "active": 25623
     },
     {
       "title": "公司登記(依營業項目別)－食品什貨、飲料零售業",
       "rows": 208206,
-      "active": 79774
+      "active": 79744
     },
     {
       "title": "公司登記(依營業項目別)－菸酒零售業",
       "rows": 59365,
-      "active": 23752
+      "active": 23745
     },
     {
       "title": "公司登記(依營業項目別)－水產品零售業",
       "rows": 35020,
-      "active": 14839
+      "active": 14836
     },
     {
       "title": "公司登記(依營業項目別)－畜產品零售業",
       "rows": 27917,
-      "active": 12221
+      "active": 12214
     },
     {
       "title": "公司登記(依營業項目別)－烘焙炊蒸食品製造業",
       "rows": 16142,
-      "active": 7906
+      "active": 7901
     },
     {
       "title": "公司登記(依營業項目別)－短期補習班業",
@@ -138,7 +173,7 @@
     {
       "title": "公司登記(依營業項目別)－西藥零售業",
       "rows": 3372,
-      "active": 1217
+      "active": 1216
     },
     {
       "title": "公司登記(依營業項目別)－中藥零售業",
@@ -148,32 +183,32 @@
     {
       "title": "公司登記(依營業項目別)－瘦身美容業",
       "rows": 10933,
-      "active": 3619
+      "active": 3620
     },
     {
       "title": "公司登記(依營業項目別)－美容美髮服務",
       "rows": 16712,
-      "active": 5850
+      "active": 5851
     },
     {
       "title": "公司登記(依營業項目別)－飲料店業",
       "rows": 57147,
-      "active": 24877
+      "active": 24870
     },
     {
       "title": "公司登記(依營業項目別)－餐廳餐館",
       "rows": 63280,
-      "active": 27532
+      "active": 27522
     },
     {
       "title": "公司登記(依營業項目別)－其他綜合零售",
       "rows": 86656,
-      "active": 35107
+      "active": 35094
     },
     {
       "title": "公司登記(依營業項目別)－便利商店",
       "rows": 16417,
-      "active": 5997
+      "active": 5995
     },
     {
       "title": "商業登記(依營業項目別)－汽車零售業",
@@ -297,53 +332,337 @@
     }
   ],
   "byCategory": {
-    "other": 5972,
-    "restaurant": 1426,
-    "mall": 909,
-    "school": 797,
-    "supermarket": 1252,
-    "fuel": 5,
-    "pharmacy": 6,
-    "cafe": 68,
-    "convenience": 4006
+    "supermarket": 794,
+    "restaurant": 1388,
+    "school": 711,
+    "other": 5060,
+    "mall": 737,
+    "pharmacy": 5,
+    "cafe": 63,
+    "convenience": 3970,
+    "fuel": 6
   },
   "byYellowPages": {
-    "transport": 4270,
-    "food": 6752,
-    "clothing": 909,
-    "education": 797,
-    "housing": 1478,
-    "medical": 6,
-    "leisure": 229
+    "food": 6215,
+    "education": 711,
+    "transport": 3759,
+    "clothing": 737,
+    "housing": 1118,
+    "medical": 5,
+    "leisure": 189
   },
   "byCity": {
-    "桃園市": 692,
-    "臺南市": 469,
-    "新北市": 1884,
-    "臺中市": 898,
-    "屏東縣": 439,
-    "彰化縣": 454,
-    "高雄市": 1517,
-    "臺北市": 1405,
-    "金門縣": 418,
-    "宜蘭縣": 384,
-    "新竹市": 448,
-    "南投縣": 376,
-    "嘉義市": 311,
-    "澎湖縣": 340,
-    "基隆市": 389,
-    "花蓮縣": 384,
-    "雲林縣": 395,
-    "苗栗縣": 442,
-    "嘉義縣": 396,
-    "新竹縣": 496,
-    "臺東縣": 315,
-    "連江縣": 308,
+    "金門縣": 329,
+    "屏東縣": 394,
+    "彰化縣": 485,
+    "高雄市": 1140,
+    "桃園市": 727,
+    "臺北市": 949,
+    "臺中市": 703,
+    "新北市": 1780,
+    "新竹市": 401,
+    "基隆市": 350,
+    "臺南市": 404,
+    "雲林縣": 368,
+    "澎湖縣": 296,
+    "宜蘭縣": 355,
+    "花蓮縣": 342,
+    "南投縣": 359,
+    "新竹縣": 432,
+    "嘉義縣": 370,
+    "苗栗縣": 406,
+    "臺東縣": 290,
+    "嘉義市": 329,
+    "連江縣": 246,
     "未知": 13,
-    "台南市": 316,
+    "台南市": 315,
     "台中市": 544,
     "台北市": 376,
-    "台東縣": 32
+    "台東縣": 31
   },
-  "written": "src/data/taiwan-poi-index.json"
+  "byCounty": {
+    "臺北市": {
+      "rawCandidates": 54536,
+      "addressMatched": 932,
+      "navReady": 803,
+      "active": 932,
+      "matchRate": 0.0171,
+      "rejectRate": 0.9829
+    },
+    "新北市": {
+      "rawCandidates": 107457,
+      "addressMatched": 1761,
+      "navReady": 1037,
+      "active": 1761,
+      "matchRate": 0.0164,
+      "rejectRate": 0.9836
+    },
+    "桃園市": {
+      "rawCandidates": 39216,
+      "addressMatched": 727,
+      "navReady": 385,
+      "active": 727,
+      "matchRate": 0.0185,
+      "rejectRate": 0.9815
+    },
+    "臺中市": {
+      "rawCandidates": 95456,
+      "addressMatched": 696,
+      "navReady": 589,
+      "active": 696,
+      "matchRate": 0.0073,
+      "rejectRate": 0.9927
+    },
+    "臺南市": {
+      "rawCandidates": 61948,
+      "addressMatched": 404,
+      "navReady": 362,
+      "active": 404,
+      "matchRate": 0.0065,
+      "rejectRate": 0.9935
+    },
+    "高雄市": {
+      "rawCandidates": 78890,
+      "addressMatched": 1135,
+      "navReady": 567,
+      "active": 1135,
+      "matchRate": 0.0144,
+      "rejectRate": 0.9856
+    },
+    "基隆市": {
+      "rawCandidates": 9178,
+      "addressMatched": 346,
+      "navReady": 286,
+      "active": 346,
+      "matchRate": 0.0377,
+      "rejectRate": 0.9623
+    },
+    "新竹市": {
+      "rawCandidates": 14994,
+      "addressMatched": 395,
+      "navReady": 289,
+      "active": 395,
+      "matchRate": 0.0263,
+      "rejectRate": 0.9737
+    },
+    "新竹縣": {
+      "rawCandidates": 16725,
+      "addressMatched": 431,
+      "navReady": 281,
+      "active": 431,
+      "matchRate": 0.0258,
+      "rejectRate": 0.9742
+    },
+    "苗栗縣": {
+      "rawCandidates": 15879,
+      "addressMatched": 406,
+      "navReady": 188,
+      "active": 406,
+      "matchRate": 0.0256,
+      "rejectRate": 0.9744
+    },
+    "彰化縣": {
+      "rawCandidates": 33055,
+      "addressMatched": 483,
+      "navReady": 282,
+      "active": 483,
+      "matchRate": 0.0146,
+      "rejectRate": 0.9854
+    },
+    "南投縣": {
+      "rawCandidates": 15118,
+      "addressMatched": 359,
+      "navReady": 260,
+      "active": 359,
+      "matchRate": 0.0237,
+      "rejectRate": 0.9763
+    },
+    "雲林縣": {
+      "rawCandidates": 16667,
+      "addressMatched": 368,
+      "navReady": 233,
+      "active": 368,
+      "matchRate": 0.0221,
+      "rejectRate": 0.9779
+    },
+    "嘉義市": {
+      "rawCandidates": 9809,
+      "addressMatched": 328,
+      "navReady": 284,
+      "active": 328,
+      "matchRate": 0.0334,
+      "rejectRate": 0.9666
+    },
+    "嘉義縣": {
+      "rawCandidates": 10747,
+      "addressMatched": 370,
+      "navReady": 144,
+      "active": 370,
+      "matchRate": 0.0344,
+      "rejectRate": 0.9656
+    },
+    "屏東縣": {
+      "rawCandidates": 19890,
+      "addressMatched": 392,
+      "navReady": 285,
+      "active": 392,
+      "matchRate": 0.0197,
+      "rejectRate": 0.9803
+    },
+    "宜蘭縣": {
+      "rawCandidates": 17836,
+      "addressMatched": 355,
+      "navReady": 281,
+      "active": 355,
+      "matchRate": 0.0199,
+      "rejectRate": 0.9801
+    },
+    "花蓮縣": {
+      "rawCandidates": 13985,
+      "addressMatched": 341,
+      "navReady": 245,
+      "active": 341,
+      "matchRate": 0.0244,
+      "rejectRate": 0.9756
+    },
+    "臺東縣": {
+      "rawCandidates": 8695,
+      "addressMatched": 290,
+      "navReady": 260,
+      "active": 290,
+      "matchRate": 0.0334,
+      "rejectRate": 0.9666
+    },
+    "澎湖縣": {
+      "rawCandidates": 2335,
+      "addressMatched": 296,
+      "navReady": 148,
+      "active": 296,
+      "matchRate": 0.1268,
+      "rejectRate": 0.8732
+    },
+    "金門縣": {
+      "rawCandidates": 14506,
+      "addressMatched": 328,
+      "navReady": 166,
+      "active": 328,
+      "matchRate": 0.0226,
+      "rejectRate": 0.9774
+    },
+    "連江縣": {
+      "rawCandidates": 794,
+      "addressMatched": 245,
+      "navReady": 0,
+      "active": 245,
+      "matchRate": 0.3086,
+      "rejectRate": 0.6914
+    },
+    "未知": {
+      "rawCandidates": 13,
+      "addressMatched": 12,
+      "navReady": 5,
+      "active": 12,
+      "matchRate": 0.9231,
+      "rejectRate": 0.0769
+    },
+    "台南市": {
+      "rawCandidates": 0,
+      "addressMatched": 315,
+      "navReady": 0,
+      "active": 315,
+      "matchRate": 0,
+      "rejectRate": 0
+    },
+    "台中市": {
+      "rawCandidates": 0,
+      "addressMatched": 544,
+      "navReady": 0,
+      "active": 544,
+      "matchRate": 0,
+      "rejectRate": 0
+    },
+    "台北市": {
+      "rawCandidates": 0,
+      "addressMatched": 376,
+      "navReady": 0,
+      "active": 376,
+      "matchRate": 0,
+      "rejectRate": 0
+    },
+    "台東縣": {
+      "rawCandidates": 0,
+      "addressMatched": 31,
+      "navReady": 0,
+      "active": 31,
+      "matchRate": 0,
+      "rejectRate": 0
+    }
+  },
+  "byMainCategory": {
+    "food": {
+      "sourceCount": 277686,
+      "matchedCount": 6185,
+      "navReadyCount": 1793,
+      "activeCount": 6185,
+      "avgConfidence": 0.901,
+      "avgNavEligibilityScore": 27.65
+    },
+    "clothing": {
+      "sourceCount": 60057,
+      "matchedCount": 730,
+      "navReadyCount": 630,
+      "activeCount": 730,
+      "avgConfidence": 0.84,
+      "avgNavEligibilityScore": 73.84
+    },
+    "housing": {
+      "sourceCount": 187706,
+      "matchedCount": 1102,
+      "navReadyCount": 909,
+      "activeCount": 1102,
+      "avgConfidence": 0.836,
+      "avgNavEligibilityScore": 73.63
+    },
+    "transport": {
+      "sourceCount": 55484,
+      "matchedCount": 3752,
+      "navReadyCount": 3323,
+      "activeCount": 3752,
+      "avgConfidence": 0.835,
+      "avgNavEligibilityScore": 74.22
+    },
+    "education": {
+      "sourceCount": 40781,
+      "matchedCount": 711,
+      "navReadyCount": 575,
+      "activeCount": 711,
+      "avgConfidence": 0.806,
+      "avgNavEligibilityScore": 72.08
+    },
+    "leisure": {
+      "sourceCount": 33601,
+      "matchedCount": 182,
+      "navReadyCount": 147,
+      "activeCount": 182,
+      "avgConfidence": 0.814,
+      "avgNavEligibilityScore": 80.12
+    },
+    "medical": {
+      "sourceCount": 2414,
+      "matchedCount": 4,
+      "navReadyCount": 3,
+      "activeCount": 4,
+      "avgConfidence": 0.76,
+      "avgNavEligibilityScore": 68.5
+    }
+  },
+  "written": "src/data/taiwan-poi-index.json",
+  "round": {
+    "nlsc_attempted": 1050,
+    "nlsc_matched": 985,
+    "nlsc_failed": 65,
+    "resume_tested": true,
+    "resumed_from_registry_id": "00047368",
+    "did_not_restart_from_zero": true
+  }
 }

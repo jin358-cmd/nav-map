@@ -94,7 +94,16 @@ const resumed = sliceUnmatchedQueue(
   10,
 );
 assert(resumed.start_offset === 10, `resume start ${resumed.start_offset}`);
+assert(resumed.queue_offset === 10, `queue offset ${resumed.queue_offset}`);
 assert(resumed.batch[0].taxId === queue[10].taxId, "resume tax id");
-assert(resumed.batch[0].taxId !== queue[0].taxId, "must not restart at 0");
+const shrunk = queue.slice(10);
+const resumedShrunk = sliceUnmatchedQueue(
+  shrunk,
+  { last_successful_registry_id: queue[9].taxId, last_successful_offset: 10 },
+  10,
+);
+assert(resumedShrunk.batch[0].taxId === queue[10].taxId, "shrunk queue continues");
+assert(resumedShrunk.start_offset === 10, "global offset kept");
+assert(resumedShrunk.queue_offset === 0, "current queue already dropped done ids");
 
 console.log("gcis-phase52-selftest ok");

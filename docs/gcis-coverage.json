@@ -1,0 +1,277 @@
+{
+  "totalIndex": 149481,
+  "gov": 12734,
+  "govActive": 12666,
+  "navReady": 7380,
+  "avgNavEligibilityScore": 51.27,
+  "registryMix": {
+    "company": 10813,
+    "business": 1921
+  },
+  "matchQuality": {
+    "A": 2942,
+    "B": 4783,
+    "C": 7,
+    "D": 1070,
+    "E": 3,
+    "?": 3929
+  },
+  "clusterDownranked": 466,
+  "withBrand": 3887,
+  "withPhone": 4670,
+  "byCounty": {
+    "臺北市": {
+      "matched": 932,
+      "navReady": 803,
+      "active": 932,
+      "avgScore": 74.06
+    },
+    "新北市": {
+      "matched": 1761,
+      "navReady": 1037,
+      "active": 1761,
+      "avgScore": 48.5
+    },
+    "桃園市": {
+      "matched": 727,
+      "navReady": 385,
+      "active": 727,
+      "avgScore": 41.78
+    },
+    "臺中市": {
+      "matched": 696,
+      "navReady": 589,
+      "active": 696,
+      "avgScore": 73.84
+    },
+    "臺南市": {
+      "matched": 404,
+      "navReady": 362,
+      "active": 404,
+      "avgScore": 75.07
+    },
+    "高雄市": {
+      "matched": 1135,
+      "navReady": 567,
+      "active": 1135,
+      "avgScore": 42.66
+    },
+    "基隆市": {
+      "matched": 346,
+      "navReady": 286,
+      "active": 346,
+      "avgScore": 66.53
+    },
+    "新竹市": {
+      "matched": 395,
+      "navReady": 289,
+      "active": 395,
+      "avgScore": 59.57
+    },
+    "新竹縣": {
+      "matched": 431,
+      "navReady": 281,
+      "active": 431,
+      "avgScore": 53.05
+    },
+    "苗栗縣": {
+      "matched": 406,
+      "navReady": 188,
+      "active": 406,
+      "avgScore": 47.6
+    },
+    "彰化縣": {
+      "matched": 483,
+      "navReady": 282,
+      "active": 483,
+      "avgScore": 48.89
+    },
+    "南投縣": {
+      "matched": 359,
+      "navReady": 260,
+      "active": 359,
+      "avgScore": 60.64
+    },
+    "雲林縣": {
+      "matched": 368,
+      "navReady": 233,
+      "active": 368,
+      "avgScore": 57.53
+    },
+    "嘉義市": {
+      "matched": 328,
+      "navReady": 284,
+      "active": 328,
+      "avgScore": 70.48
+    },
+    "嘉義縣": {
+      "matched": 370,
+      "navReady": 144,
+      "active": 370,
+      "avgScore": 51.68
+    },
+    "屏東縣": {
+      "matched": 392,
+      "navReady": 285,
+      "active": 392,
+      "avgScore": 58.53
+    },
+    "宜蘭縣": {
+      "matched": 355,
+      "navReady": 281,
+      "active": 355,
+      "avgScore": 62.55
+    },
+    "花蓮縣": {
+      "matched": 341,
+      "navReady": 245,
+      "active": 341,
+      "avgScore": 60.93
+    },
+    "臺東縣": {
+      "matched": 290,
+      "navReady": 260,
+      "active": 290,
+      "avgScore": 74.62
+    },
+    "澎湖縣": {
+      "matched": 296,
+      "navReady": 148,
+      "active": 296,
+      "avgScore": 59.72
+    },
+    "金門縣": {
+      "matched": 328,
+      "navReady": 166,
+      "active": 328,
+      "avgScore": 59.59
+    },
+    "連江縣": {
+      "matched": 245,
+      "navReady": 0,
+      "active": 245,
+      "avgScore": 52.13
+    },
+    "未知": {
+      "matched": 12,
+      "navReady": 5,
+      "active": 12,
+      "avgScore": 52.83
+    },
+    "台南市": {
+      "matched": 315,
+      "navReady": 0,
+      "active": 315,
+      "avgScore": 0
+    },
+    "台中市": {
+      "matched": 544,
+      "navReady": 0,
+      "active": 544,
+      "avgScore": 0
+    },
+    "台北市": {
+      "matched": 376,
+      "navReady": 0,
+      "active": 376,
+      "avgScore": 0
+    },
+    "台東縣": {
+      "matched": 31,
+      "navReady": 0,
+      "active": 31,
+      "avgScore": 0
+    }
+  },
+  "byMainCategory": {
+    "food": {
+      "matched": 6185,
+      "navReady": 1793,
+      "active": 6185,
+      "avgScore": 27.65
+    },
+    "education": {
+      "matched": 711,
+      "navReady": 575,
+      "active": 711,
+      "avgScore": 72.08
+    },
+    "transport": {
+      "matched": 3752,
+      "navReady": 3323,
+      "active": 3752,
+      "avgScore": 74.22
+    },
+    "clothing": {
+      "matched": 730,
+      "navReady": 630,
+      "active": 730,
+      "avgScore": 73.84
+    },
+    "housing": {
+      "matched": 1102,
+      "navReady": 909,
+      "active": 1102,
+      "avgScore": 73.63
+    },
+    "medical": {
+      "matched": 4,
+      "navReady": 3,
+      "active": 4,
+      "avgScore": 68.5
+    },
+    "leisure": {
+      "matched": 182,
+      "navReady": 147,
+      "active": 182,
+      "avgScore": 80.12
+    }
+  },
+  "navSampleFlags": {
+    "supermarket": {
+      "n": 20,
+      "cityMismatch": 0,
+      "outOfTaiwan": 0
+    },
+    "restaurant": {
+      "n": 20,
+      "cityMismatch": 0,
+      "outOfTaiwan": 0
+    },
+    "school": {
+      "n": 20,
+      "cityMismatch": 0,
+      "outOfTaiwan": 0
+    },
+    "other": {
+      "n": 20,
+      "cityMismatch": 0,
+      "outOfTaiwan": 0
+    },
+    "mall": {
+      "n": 20,
+      "cityMismatch": 0,
+      "outOfTaiwan": 0
+    },
+    "pharmacy": {
+      "n": 3,
+      "cityMismatch": 0,
+      "outOfTaiwan": 0
+    },
+    "cafe": {
+      "n": 20,
+      "cityMismatch": 0,
+      "outOfTaiwan": 0
+    },
+    "convenience": {
+      "n": 20,
+      "cityMismatch": 0,
+      "outOfTaiwan": 0
+    },
+    "fuel": {
+      "n": 4,
+      "cityMismatch": 0,
+      "outOfTaiwan": 0
+    }
+  }
+}
