@@ -2,7 +2,6 @@ import type { LucideIcon } from "lucide-react";
 import {
   BatteryCharging,
   BedDouble,
-  CircleDot,
   Fuel,
   Package,
   PlugZap,
@@ -46,7 +45,7 @@ export const SEARCH_SHORTCUTS: SearchShortcut[] = [
   {
     id: "convenience",
     label: "超商",
-    hint: "便利商店；點入後可看統一、全家、萊爾富、OK Mart 與蝦皮店到店",
+    hint: "便利商店；點入後可看統一、全家、萊爾富／OK 與蝦皮店到店",
     icon: Store,
     color: "#34d399",
     categories: ["convenience"],
@@ -137,18 +136,11 @@ export const CONVENIENCE_BRAND_SHORTCUTS: ConvenienceBrandShortcut[] = [
     color: "#0078c8",
   },
   {
-    id: "hilife",
-    label: "萊爾富",
-    hint: "萊爾富",
+    id: "hilife_ok",
+    label: "萊爾富／OK",
+    hint: "萊爾富與 OK Mart",
     icon: ShoppingBasket,
     color: "#ff6a00",
-  },
-  {
-    id: "okmart",
-    label: "OK Mart",
-    hint: "OK 超商",
-    icon: CircleDot,
-    color: "#e31c25",
   },
   {
     id: "shopee",

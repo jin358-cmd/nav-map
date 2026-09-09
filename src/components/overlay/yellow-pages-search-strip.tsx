@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type MutableRefObject, type ReactNode } from "react";
 import { formatDistance } from "@/lib/format";
 import { formatDistanceRoadLabel } from "@/lib/geocoding/format-taiwan-display-address";
 import { poiFeatureToPlace } from "@/lib/map-place";
@@ -28,8 +28,9 @@ function emptyCopy(
   if (shortcut === "fuel") return "附近暫無加油站";
   if (shortcut === "convenience" && convenienceKind === "seven") return "附近暫無統一超商";
   if (shortcut === "convenience" && convenienceKind === "familymart") return "附近暫無全家";
-  if (shortcut === "convenience" && convenienceKind === "hilife") return "附近暫無萊爾富";
-  if (shortcut === "convenience" && convenienceKind === "okmart") return "附近暫無 OK Mart";
+  if (shortcut === "convenience" && convenienceKind === "hilife_ok") {
+    return "附近暫無萊爾富或 OK Mart";
+  }
   if (shortcut === "convenience" && convenienceKind === "shopee") return "附近暫無蝦皮店到店";
   if (shortcut === "convenience") return "附近暫無超商";
   return "附近暫無此分類店家";
@@ -46,8 +47,7 @@ function previewHeading(
   if (shortcut === "fuel") return "加油站";
   if (shortcut === "convenience" && convenienceKind === "seven") return "統一";
   if (shortcut === "convenience" && convenienceKind === "familymart") return "全家";
-  if (shortcut === "convenience" && convenienceKind === "hilife") return "萊爾富";
-  if (shortcut === "convenience" && convenienceKind === "okmart") return "OK Mart";
+  if (shortcut === "convenience" && convenienceKind === "hilife_ok") return "萊爾富／OK";
   if (shortcut === "convenience" && convenienceKind === "shopee") return "蝦皮店到店";
   if (shortcut === "convenience") return "超商";
   const selected = SEARCH_SHORTCUTS.find((item) => item.id === shortcut);
@@ -62,7 +62,7 @@ function SlideDownDrawer({
 }: {
   id: string;
   open: boolean;
-  columns: 3 | 5;
+  columns: 3 | 4;
   children: ReactNode;
 }) {
   return (
@@ -78,7 +78,7 @@ function SlideDownDrawer({
         <div
           className={cn(
             "mt-1 grid gap-1 transition-transform duration-[400ms] ease-out motion-reduce:transition-none",
-            columns === 5 ? "grid-cols-3 sm:grid-cols-5" : "grid-cols-3",
+            columns === 4 ? "grid-cols-4" : "grid-cols-3",
             open ? "translate-y-0" : "-translate-y-full",
           )}
         >
@@ -92,9 +92,13 @@ function SlideDownDrawer({
 export function YellowPagesSearchStrip({
   origin,
   onSelect,
+  onBrowseChange,
+  resetRef,
 }: {
   origin: LngLat | null;
   onSelect: (hit: GeocodeHit) => void;
+  onBrowseChange?: (active: boolean) => void;
+  resetRef?: MutableRefObject<() => void>;
 }) {
   const [shortcut, setShortcut] = useState<SearchShortcutId | null>(null);
   const [energyKind, setEnergyKind] = useState<EnergyKind | null>(null);
@@ -112,18 +116,21 @@ export function YellowPagesSearchStrip({
   });
 
   useEffect(() => {
-    if (!shortcut) return;
-    const onPointerDown = (event: PointerEvent) => {
-      const target = event.target as Node | null;
-      if (!target) return;
-      if (rootRef.current?.contains(target)) return;
+    onBrowseChange?.(Boolean(shortcut));
+  }, [onBrowseChange, shortcut]);
+
+  useEffect(() => {
+    return () => onBrowseChange?.(false);
+  }, [onBrowseChange]);
+
+  useEffect(() => {
+    if (!resetRef) return;
+    resetRef.current = () => {
       setShortcut(null);
       setEnergyKind(null);
       setConvenienceKind(null);
     };
-    document.addEventListener("pointerdown", onPointerDown);
-    return () => document.removeEventListener("pointerdown", onPointerDown);
-  }, [shortcut]);
+  }, [resetRef]);
 
   return (
     <div ref={rootRef} className="mb-1.5">
@@ -156,16 +163,14 @@ export function YellowPagesSearchStrip({
                 item.id === "fuel"
                   ? "加油站，點入後展開 Gogoro、Tesla 超充與電車充電站"
                   : item.id === "convenience"
-                    ? "超商，點入後展開統一、全家、萊爾富、OK Mart 與蝦皮店到店"
+                    ? "超商，點入後展開統一、全家、萊爾富／OK 與蝦皮店到店"
                     : `${item.label}附近`
               }
               title={item.hint}
               onClick={() => {
                 if (item.id === "fuel") {
                   if (fuelOpen) {
-                    setShortcut(null);
-                    setEnergyKind(null);
-                    setConvenienceKind(null);
+                    setEnergyKind("petrol");
                     return;
                   }
                   setShortcut("fuel");
@@ -175,9 +180,7 @@ export function YellowPagesSearchStrip({
                 }
                 if (item.id === "convenience") {
                   if (convenienceOpen) {
-                    setShortcut(null);
-                    setEnergyKind(null);
-                    setConvenienceKind(null);
+                    setConvenienceKind("all");
                     return;
                   }
                   setShortcut("convenience");
@@ -187,7 +190,7 @@ export function YellowPagesSearchStrip({
                 }
                 setEnergyKind(null);
                 setConvenienceKind(null);
-                setShortcut((current) => (current === item.id ? null : item.id));
+                setShortcut(item.id);
               }}
               className={cn(
                 "flex min-w-0 flex-col items-center gap-0.5 rounded-xl px-1 py-1.5 text-center touch-manipulation",
@@ -232,8 +235,8 @@ export function YellowPagesSearchStrip({
                   : { border: "1px solid rgba(255,255,255,0.14)" }
               }
             >
-              <Icon className="size-4 shrink-0" strokeWidth={2.2} aria-hidden />
-              <span className="max-w-full truncate text-[9px] font-semibold leading-tight sm:text-[10px]">
+              <Icon className="size-5 shrink-0" strokeWidth={2.2} aria-hidden />
+              <span className="max-w-full text-[12px] font-semibold leading-tight sm:text-[13px]">
                 {item.label}
               </span>
             </button>
@@ -243,7 +246,7 @@ export function YellowPagesSearchStrip({
       <SlideDownDrawer
         id="navpilot-convenience-brand-drawer"
         open={convenienceOpen}
-        columns={5}
+        columns={4}
       >
         {CONVENIENCE_BRAND_SHORTCUTS.map((item) => {
           const on = convenienceKind === item.id;
@@ -269,8 +272,8 @@ export function YellowPagesSearchStrip({
                   : { border: "1px solid rgba(255,255,255,0.14)" }
               }
             >
-              <Icon className="size-4 shrink-0" strokeWidth={2.2} aria-hidden />
-              <span className="max-w-full truncate text-[9px] font-semibold leading-tight sm:text-[10px]">
+              <Icon className="size-5 shrink-0" strokeWidth={2.2} aria-hidden />
+              <span className="max-w-full text-[12px] font-semibold leading-tight sm:text-[13px]">
                 {item.label}
               </span>
             </button>

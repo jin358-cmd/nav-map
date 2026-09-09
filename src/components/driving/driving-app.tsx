@@ -297,6 +297,8 @@ export function DrivingApp() {
   const [parkingSort, setParkingSort] = useState<ParkingSort>("distance");
   const [selectedParking, setSelectedParking] = useState<ParkingLot | null>(null);
   const [selectedMapPlace, setSelectedMapPlace] = useState<MapPlace | null>(null);
+  const [shortcutBrowse, setShortcutBrowse] = useState(false);
+  const resetShortcutBrowseRef = useRef<() => void>(() => {});
   const [parkingArrivalOpen, setParkingArrivalOpen] = useState(false);
   const [parkingArrivalMinimized, setParkingArrivalMinimized] = useState(false);
   const [arrivalNotice, setArrivalNotice] = useState<string | null>(null);
@@ -974,6 +976,7 @@ export function DrivingApp() {
   }, [closeParking, parkingArrivalOpen]);
 
   const handleEmptyMapClick = useCallback(() => {
+    resetShortcutBrowseRef.current();
     shrinkFunctionPanels();
   }, [shrinkFunctionPanels]);
 
@@ -1823,6 +1826,8 @@ export function DrivingApp() {
             <>
               <YellowPagesSearchStrip
                 origin={searchBias}
+                onBrowseChange={setShortcutBrowse}
+                resetRef={resetShortcutBrowseRef}
                 onSelect={(hit) => {
                   setParkingOpen(false);
                   setFavoritesOpen(false);
@@ -1833,33 +1838,37 @@ export function DrivingApp() {
                   void applyRoute(hit);
                 }}
               />
-              <AddressSearch
-                bias={searchBias}
-                region={locatedRegion}
-                busy={routing}
-                error={routeError}
-                onSelect={(hit) => {
-                  setParkingOpen(false);
-                  setFavoritesOpen(false);
-                  setEventListKind(null);
-                  setSelectedEvent(null);
-                  setSelectedCctv(null);
-                  setSelectedParking(null);
-                  void applyRoute(hit);
-                }}
-              />
-              <SavedPlaceBar
-                home={homePlace}
-                work={workPlace}
-                customs={customPlaces}
-                onGo={(place) => void applyRoute(savedPlaceToHit(place))}
-                onEdit={(type, id) => {
-                  setEditingPlaceType(type);
-                  setEditingPlaceId(id ?? null);
-                  setPickMode(false);
-                  setPickLocation(null);
-                }}
-              />
+              {!shortcutBrowse ? (
+                <>
+                  <AddressSearch
+                    bias={searchBias}
+                    region={locatedRegion}
+                    busy={routing}
+                    error={routeError}
+                    onSelect={(hit) => {
+                      setParkingOpen(false);
+                      setFavoritesOpen(false);
+                      setEventListKind(null);
+                      setSelectedEvent(null);
+                      setSelectedCctv(null);
+                      setSelectedParking(null);
+                      void applyRoute(hit);
+                    }}
+                  />
+                  <SavedPlaceBar
+                    home={homePlace}
+                    work={workPlace}
+                    customs={customPlaces}
+                    onGo={(place) => void applyRoute(savedPlaceToHit(place))}
+                    onEdit={(type, id) => {
+                      setEditingPlaceType(type);
+                      setEditingPlaceId(id ?? null);
+                      setPickMode(false);
+                      setPickLocation(null);
+                    }}
+                  />
+                </>
+              ) : null}
             </>
           )}
           {favoritesOpen ? (

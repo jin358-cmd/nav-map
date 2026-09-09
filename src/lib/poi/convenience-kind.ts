@@ -2,12 +2,19 @@ export const CONVENIENCE_KINDS = [
   "all",
   "seven",
   "familymart",
-  "hilife",
-  "okmart",
+  "hilife_ok",
   "shopee",
 ] as const;
 
 export type ConvenienceKind = (typeof CONVENIENCE_KINDS)[number];
+
+export type ConvenienceClass =
+  | "all"
+  | "seven"
+  | "familymart"
+  | "hilife"
+  | "okmart"
+  | "shopee";
 
 const SHOPEE_RE = /蝦皮|shopee|店到店/i;
 const SEVEN_RE = /7-?eleven|7eleven|統一超商|小七|7-11/i;
@@ -15,7 +22,7 @@ const FAMILY_RE = /全家|familymart|family\s*mart/i;
 const HILIFE_RE = /萊爾富|hi-?life/i;
 const OK_RE = /ok\s*mart|ok超商|ok便利|okmart/i;
 
-const BRAND_TO_KIND: Record<string, Exclude<ConvenienceKind, "all">> = {
+const BRAND_TO_KIND: Record<string, Exclude<ConvenienceClass, "all">> = {
   "7-Eleven": "seven",
   FamilyMart: "familymart",
   "Hi-Life": "hilife",
@@ -42,7 +49,7 @@ export function isConvenienceKind(
 
 export function classifyConvenienceKind(
   poi: ConvenienceStationFields,
-): ConvenienceKind | null {
+): ConvenienceClass | null {
   const text = haystack(poi);
   if (SHOPEE_RE.test(text)) return "shopee";
   const branded = poi.brand ? BRAND_TO_KIND[poi.brand] : undefined;
@@ -64,5 +71,7 @@ export function matchesConvenienceKind(
       poi.category === "convenience" || classifyConvenienceKind(poi) === "shopee"
     );
   }
-  return classifyConvenienceKind(poi) === kind;
+  const classified = classifyConvenienceKind(poi);
+  if (kind === "hilife_ok") return classified === "hilife" || classified === "okmart";
+  return classified === kind;
 }
