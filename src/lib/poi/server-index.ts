@@ -9,6 +9,7 @@ import { buildPoiIndexes, diversifyByBrand, searchIndexedPois } from "@/lib/poi/
 import { CONVENIENCE_CHAIN_BRANDS, FUEL_CHAIN_BRANDS } from "@/lib/poi/aliases";
 import { matchesConvenienceKind, type ConvenienceKind } from "@/lib/poi/convenience-kind";
 import { matchesEnergyKind, type EnergyKind } from "@/lib/poi/energy-kind";
+import { matchesHotelKind, type HotelKind } from "@/lib/poi/hotel-kind";
 import { matchesRestaurantKind, type RestaurantKind } from "@/lib/poi/restaurant-kind";
 import { POI_MAIN_LAYER_IDS, type PoiMainLayerId } from "@/lib/poi/main-layers";
 import { rankPois, rankScore } from "@/lib/poi/rank";
@@ -241,6 +242,7 @@ export function poisInBounds(
   energyKind?: EnergyKind | null,
   convenienceKind?: ConvenienceKind | null,
   restaurantKind?: RestaurantKind | null,
+  hotelKind?: HotelKind | null,
 ) {
   const west = Math.min(bounds.west, bounds.east);
   const east = Math.max(bounds.west, bounds.east);
@@ -261,6 +263,7 @@ export function poisInBounds(
     if (energyKind) return matchesEnergyKind(poi, energyKind);
     if (convenienceKind) return matchesConvenienceKind(poi, convenienceKind);
     if (restaurantKind) return matchesRestaurantKind(poi, restaurantKind);
+    if (hotelKind) return matchesHotelKind(poi, hotelKind);
     if (categorySet) {
       return (
         categorySet.has(poi.category) ||
@@ -322,12 +325,14 @@ export function poisNearby(
   energyKind?: EnergyKind | null,
   convenienceKind?: ConvenienceKind | null,
   restaurantKind?: RestaurantKind | null,
+  hotelKind?: HotelKind | null,
 ) {
   const cap =
     energyKind && energyKind !== "petrol"
       ? 12000
       : (convenienceKind && convenienceKind !== "all") ||
-          (restaurantKind && restaurantKind !== "all")
+          (restaurantKind && restaurantKind !== "all") ||
+          (hotelKind && hotelKind !== "all")
         ? 6000
         : 8000;
   const span = Math.max(400, Math.min(cap, radiusMeters)) / 111000;
@@ -346,6 +351,7 @@ export function poisNearby(
     energyKind,
     convenienceKind,
     restaurantKind,
+    hotelKind,
   );
   const radiusKm = radiusMeters / 1000;
   const ranked = rows

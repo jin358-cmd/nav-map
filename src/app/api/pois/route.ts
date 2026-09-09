@@ -1,5 +1,6 @@
 import { isConvenienceKind } from "@/lib/poi/convenience-kind";
 import { isEnergyKind } from "@/lib/poi/energy-kind";
+import { isHotelKind } from "@/lib/poi/hotel-kind";
 import { isRestaurantKind } from "@/lib/poi/restaurant-kind";
 import { POI_MAIN_LAYER_IDS, type PoiMainLayerId } from "@/lib/poi/main-layers";
 import { poisInBounds, poisNearby } from "@/lib/poi/server-index";
@@ -72,6 +73,8 @@ export async function GET(request: Request) {
   const restaurantKind = isRestaurantKind(restaurantParam)
     ? restaurantParam
     : undefined;
+  const hotelParam = url.searchParams.get("hotelKind");
+  const hotelKind = isHotelKind(hotelParam) ? hotelParam : undefined;
   const origin =
     lng !== undefined && lat !== undefined ? { lng, lat } : undefined;
 
@@ -95,6 +98,7 @@ export async function GET(request: Request) {
       energyKind,
       convenienceKind,
       restaurantKind,
+      hotelKind,
     );
     return Response.json(
       { pois: rows.map(serializePoi) },

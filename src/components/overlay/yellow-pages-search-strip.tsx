@@ -6,11 +6,13 @@ import { formatDistanceRoadLabel } from "@/lib/geocoding/format-taiwan-display-a
 import { poiFeatureToPlace } from "@/lib/map-place";
 import type { ConvenienceKind } from "@/lib/poi/convenience-kind";
 import type { EnergyKind } from "@/lib/poi/energy-kind";
+import type { HotelKind } from "@/lib/poi/hotel-kind";
 import type { RestaurantKind } from "@/lib/poi/restaurant-kind";
 import { formatLayerPoiTitle } from "@/lib/poi/display";
 import {
   CONVENIENCE_BRAND_SHORTCUTS,
   FUEL_ENERGY_SHORTCUTS,
+  HOTEL_LODGING_SHORTCUTS,
   RESTAURANT_CUISINE_SHORTCUTS,
   SEARCH_SHORTCUTS,
   type SearchShortcutId,
@@ -25,6 +27,7 @@ function emptyCopy(
   energyKind: EnergyKind | null,
   convenienceKind: ConvenienceKind | null,
   restaurantKind: RestaurantKind | null,
+  hotelKind: HotelKind | null,
 ) {
   if (shortcut === "fuel" && energyKind === "gogoro") return "附近暫無 Gogoro 充電站";
   if (shortcut === "fuel" && energyKind === "tesla") return "附近暫無 Tesla 超充站";
@@ -42,6 +45,11 @@ function emptyCopy(
   if (shortcut === "restaurant" && restaurantKind === "western") return "附近暫無西餐";
   if (shortcut === "restaurant" && restaurantKind === "vegetarian") return "附近暫無素食";
   if (shortcut === "restaurant") return "附近暫無餐廳";
+  if (shortcut === "hotel" && hotelKind === "hostel") return "附近暫無青年旅館";
+  if (shortcut === "hotel" && hotelKind === "business") return "附近暫無商旅";
+  if (shortcut === "hotel" && hotelKind === "hotel") return "附近暫無飯店";
+  if (shortcut === "hotel" && hotelKind === "motel") return "附近暫無汽車旅館";
+  if (shortcut === "hotel") return "附近暫無住宿";
   return "附近暫無此分類店家";
 }
 
@@ -50,6 +58,7 @@ function previewHeading(
   energyKind: EnergyKind | null,
   convenienceKind: ConvenienceKind | null,
   restaurantKind: RestaurantKind | null,
+  hotelKind: HotelKind | null,
 ) {
   if (shortcut === "fuel" && energyKind === "gogoro") return "Gogoro 充電站";
   if (shortcut === "fuel" && energyKind === "tesla") return "Tesla 超充站";
@@ -65,6 +74,11 @@ function previewHeading(
   if (shortcut === "restaurant" && restaurantKind === "western") return "西餐";
   if (shortcut === "restaurant" && restaurantKind === "vegetarian") return "素食";
   if (shortcut === "restaurant") return "餐廳";
+  if (shortcut === "hotel" && hotelKind === "hostel") return "青年旅館";
+  if (shortcut === "hotel" && hotelKind === "business") return "商旅";
+  if (shortcut === "hotel" && hotelKind === "hotel") return "飯店";
+  if (shortcut === "hotel" && hotelKind === "motel") return "汽車旅館";
+  if (shortcut === "hotel") return "飯店住宿";
   const selected = SEARCH_SHORTCUTS.find((item) => item.id === shortcut);
   return selected?.label ?? "附近店家";
 }
@@ -119,21 +133,25 @@ export function YellowPagesSearchStrip({
   const [energyKind, setEnergyKind] = useState<EnergyKind | null>(null);
   const [convenienceKind, setConvenienceKind] = useState<ConvenienceKind | null>(null);
   const [restaurantKind, setRestaurantKind] = useState<RestaurantKind | null>(null);
+  const [hotelKind, setHotelKind] = useState<HotelKind | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const fuelOpen = shortcut === "fuel";
   const convenienceOpen = shortcut === "convenience";
   const restaurantOpen = shortcut === "restaurant";
+  const hotelOpen = shortcut === "hotel";
   const landscape = useLandscape();
   const visibleResults = landscape ? 3 : 4;
   const resolvedEnergy = fuelOpen ? (energyKind ?? "petrol") : null;
   const resolvedConvenience = convenienceOpen ? (convenienceKind ?? "all") : null;
   const resolvedRestaurant = restaurantOpen ? (restaurantKind ?? "all") : null;
+  const resolvedHotel = hotelOpen ? (hotelKind ?? "all") : null;
   const { pois, loading, error } = useYellowPagesNearby({
     origin,
     shortcut,
     energyKind: resolvedEnergy,
     convenienceKind: resolvedConvenience,
     restaurantKind: resolvedRestaurant,
+    hotelKind: resolvedHotel,
   });
 
   useEffect(() => {
@@ -151,6 +169,7 @@ export function YellowPagesSearchStrip({
       setEnergyKind(null);
       setConvenienceKind(null);
       setRestaurantKind(null);
+      setHotelKind(null);
     };
   }, [resetRef]);
 
@@ -172,7 +191,9 @@ export function YellowPagesSearchStrip({
                     ? convenienceOpen
                     : item.id === "restaurant"
                       ? restaurantOpen
-                      : on
+                      : item.id === "hotel"
+                        ? hotelOpen
+                        : on
               }
               aria-controls={
                 item.id === "fuel"
@@ -181,9 +202,11 @@ export function YellowPagesSearchStrip({
                     ? "navpilot-convenience-brand-drawer"
                     : item.id === "restaurant"
                       ? "navpilot-restaurant-cuisine-drawer"
-                      : on
-                        ? "navpilot-shortcut-preview"
-                        : undefined
+                      : item.id === "hotel"
+                        ? "navpilot-hotel-lodging-drawer"
+                        : on
+                          ? "navpilot-shortcut-preview"
+                          : undefined
               }
               aria-label={
                 item.id === "fuel"
@@ -192,7 +215,9 @@ export function YellowPagesSearchStrip({
                     ? "超商，點入後展開統一、全家、萊爾富／OK 與蝦皮店到店"
                     : item.id === "restaurant"
                       ? "餐廳，點入後展開速食、中餐、西餐與素食"
-                      : `${item.label}附近`
+                      : item.id === "hotel"
+                        ? "飯店住宿，點入後展開青年旅館、商旅、飯店與汽車旅館"
+                        : `${item.label}附近`
               }
               title={item.hint}
               onClick={() => {
@@ -205,6 +230,7 @@ export function YellowPagesSearchStrip({
                   setEnergyKind("petrol");
                   setConvenienceKind(null);
                   setRestaurantKind(null);
+                  setHotelKind(null);
                   return;
                 }
                 if (item.id === "convenience") {
@@ -216,6 +242,7 @@ export function YellowPagesSearchStrip({
                   setConvenienceKind("all");
                   setEnergyKind(null);
                   setRestaurantKind(null);
+                  setHotelKind(null);
                   return;
                 }
                 if (item.id === "restaurant") {
@@ -227,11 +254,25 @@ export function YellowPagesSearchStrip({
                   setRestaurantKind("all");
                   setEnergyKind(null);
                   setConvenienceKind(null);
+                  setHotelKind(null);
+                  return;
+                }
+                if (item.id === "hotel") {
+                  if (hotelOpen) {
+                    setHotelKind("all");
+                    return;
+                  }
+                  setShortcut("hotel");
+                  setHotelKind("all");
+                  setEnergyKind(null);
+                  setConvenienceKind(null);
+                  setRestaurantKind(null);
                   return;
                 }
                 setEnergyKind(null);
                 setConvenienceKind(null);
                 setRestaurantKind(null);
+                setHotelKind(null);
                 setShortcut(item.id);
               }}
               className={cn(
@@ -359,6 +400,43 @@ export function YellowPagesSearchStrip({
           );
         })}
       </SlideDownDrawer>
+      <SlideDownDrawer
+        id="navpilot-hotel-lodging-drawer"
+        open={hotelOpen}
+        columns={4}
+      >
+        {HOTEL_LODGING_SHORTCUTS.map((item) => {
+          const on = hotelKind === item.id;
+          const Icon = item.icon;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              tabIndex={hotelOpen ? 0 : -1}
+              aria-pressed={on}
+              aria-label={`${item.label}附近`}
+              title={item.hint}
+              onClick={() =>
+                setHotelKind((current) => (current === item.id ? "all" : item.id))
+              }
+              className={cn(
+                "flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-center touch-manipulation",
+                on ? "text-white" : "bg-black/55 text-zinc-100",
+              )}
+              style={
+                on
+                  ? { background: item.color }
+                  : { border: "1px solid rgba(255,255,255,0.14)" }
+              }
+            >
+              <Icon className="size-5 shrink-0" strokeWidth={2.2} aria-hidden />
+              <span className="max-w-full text-[12px] font-semibold leading-tight sm:text-[13px]">
+                {item.label}
+              </span>
+            </button>
+          );
+        })}
+      </SlideDownDrawer>
       {shortcut ? (
         <div
           id="navpilot-shortcut-preview"
@@ -370,6 +448,7 @@ export function YellowPagesSearchStrip({
               resolvedEnergy,
               resolvedConvenience,
               resolvedRestaurant,
+              resolvedHotel,
             )}
           </p>
           {loading && pois.length === 0 ? (
@@ -384,6 +463,7 @@ export function YellowPagesSearchStrip({
                     resolvedEnergy,
                     resolvedConvenience,
                     resolvedRestaurant,
+                    resolvedHotel,
                   )
                 : "開啟定位後即可列出附近店家"}
             </p>

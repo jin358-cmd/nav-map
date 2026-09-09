@@ -1,8 +1,12 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  Backpack,
   BatteryCharging,
   BedDouble,
+  Briefcase,
+  Car,
   Fuel,
+  Hotel,
   Leaf,
   Package,
   Pizza,
@@ -17,6 +21,7 @@ import {
 } from "lucide-react";
 import type { ConvenienceKind } from "@/lib/poi/convenience-kind";
 import type { EnergyKind } from "@/lib/poi/energy-kind";
+import type { HotelKind } from "@/lib/poi/hotel-kind";
 import type { RestaurantKind } from "@/lib/poi/restaurant-kind";
 import type { PoiCategory } from "@/lib/poi/schema";
 
@@ -66,7 +71,7 @@ export const SEARCH_SHORTCUTS: SearchShortcut[] = [
   {
     id: "hotel",
     label: "飯店住宿",
-    hint: "飯店、旅館、民宿",
+    hint: "住宿；點入後可看青年旅館、商旅、飯店與汽車旅館",
     icon: BedDouble,
     color: "#60a5fa",
     categories: ["hotel"],
@@ -207,4 +212,50 @@ export function restaurantCuisineShortcutById(
 ): RestaurantCuisineShortcut | null {
   if (!id || id === "all") return null;
   return RESTAURANT_CUISINE_SHORTCUTS.find((item) => item.id === id) ?? null;
+}
+
+export type HotelLodgingShortcut = {
+  id: Exclude<HotelKind, "all">;
+  label: string;
+  hint: string;
+  icon: LucideIcon;
+  color: string;
+};
+
+export const HOTEL_LODGING_SHORTCUTS: HotelLodgingShortcut[] = [
+  {
+    id: "hostel",
+    label: "青年旅館",
+    hint: "青年旅館、背包客棧",
+    icon: Backpack,
+    color: "#0d9488",
+  },
+  {
+    id: "business",
+    label: "商旅",
+    hint: "商務旅館、商旅",
+    icon: Briefcase,
+    color: "#2563eb",
+  },
+  {
+    id: "hotel",
+    label: "飯店",
+    hint: "飯店、酒店",
+    icon: Hotel,
+    color: "#7c3aed",
+  },
+  {
+    id: "motel",
+    label: "汽車旅館",
+    hint: "汽車旅館",
+    icon: Car,
+    color: "#db2777",
+  },
+];
+
+export function hotelLodgingShortcutById(
+  id: HotelKind | null,
+): HotelLodgingShortcut | null {
+  if (!id || id === "all") return null;
+  return HOTEL_LODGING_SHORTCUTS.find((item) => item.id === id) ?? null;
 }

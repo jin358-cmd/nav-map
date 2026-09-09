@@ -5,6 +5,7 @@ import type { MapPoiFeature } from "@/lib/map-place";
 import { distanceKm } from "@/lib/geo";
 import type { ConvenienceKind } from "@/lib/poi/convenience-kind";
 import type { EnergyKind } from "@/lib/poi/energy-kind";
+import type { HotelKind } from "@/lib/poi/hotel-kind";
 import type { RestaurantKind } from "@/lib/poi/restaurant-kind";
 import type { SearchShortcutId } from "@/lib/search-shortcuts";
 import { searchShortcutById } from "@/lib/search-shortcuts";
@@ -26,6 +27,7 @@ function nearbyRadiusMeters(
   energyKind: EnergyKind | null,
   convenienceKind: ConvenienceKind | null,
   restaurantKind: RestaurantKind | null,
+  hotelKind: HotelKind | null,
 ) {
   if (shortcut === "fuel") {
     if (energyKind === "gogoro" || energyKind === "tesla" || energyKind === "ev") {
@@ -42,6 +44,10 @@ function nearbyRadiusMeters(
     if (restaurantKind && restaurantKind !== "all") return 3200;
     return 2800;
   }
+  if (shortcut === "hotel") {
+    if (hotelKind && hotelKind !== "all") return 4200;
+    return 3200;
+  }
   return 2800;
 }
 
@@ -51,12 +57,14 @@ export function useYellowPagesNearby({
   energyKind = null,
   convenienceKind = null,
   restaurantKind = null,
+  hotelKind = null,
 }: {
   origin: LngLat | null;
   shortcut: SearchShortcutId | null;
   energyKind?: EnergyKind | null;
   convenienceKind?: ConvenienceKind | null;
   restaurantKind?: RestaurantKind | null;
+  hotelKind?: HotelKind | null;
 }) {
   const [pois, setPois] = useState<NearbyShortcutPoi[]>([]);
   const [loading, setLoading] = useState(false);
@@ -80,8 +88,9 @@ export function useYellowPagesNearby({
     selectedId === "convenience" ? (convenienceKind ?? "all") : null;
   const resolvedRestaurant =
     selectedId === "restaurant" ? (restaurantKind ?? "all") : null;
+  const resolvedHotel = selectedId === "hotel" ? (hotelKind ?? "all") : null;
   const fetchKey = selectedId
-    ? `${selectedId}:${resolvedEnergy ?? ""}:${resolvedConvenience ?? ""}:${resolvedRestaurant ?? ""}`
+    ? `${selectedId}:${resolvedEnergy ?? ""}:${resolvedConvenience ?? ""}:${resolvedRestaurant ?? ""}:${resolvedHotel ?? ""}`
     : null;
   const ready = Boolean(selected && lng != null && lat != null);
   const fetchKeyRef = useRef<string | null>(null);
@@ -106,6 +115,7 @@ export function useYellowPagesNearby({
             resolvedEnergy,
             resolvedConvenience,
             resolvedRestaurant,
+            resolvedHotel,
           ),
         ),
         limit: "14",
@@ -113,6 +123,7 @@ export function useYellowPagesNearby({
       if (resolvedEnergy) params.set("energyKind", resolvedEnergy);
       if (resolvedConvenience) params.set("convenienceKind", resolvedConvenience);
       if (resolvedRestaurant) params.set("restaurantKind", resolvedRestaurant);
+      if (resolvedHotel) params.set("hotelKind", resolvedHotel);
       void fetch(`/api/pois?${params}`, { signal: controller.signal })
         .then(async (response) => {
           if (!response.ok) throw new Error("nearby failed");
@@ -142,7 +153,7 @@ export function useYellowPagesNearby({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [fetchKey, lat, lng, resolvedConvenience, resolvedEnergy, resolvedRestaurant, selected]);
+  }, [fetchKey, lat, lng, resolvedConvenience, resolvedEnergy, resolvedHotel, resolvedRestaurant, selected]);
 
   if (!ready || !fetchKey) {
     return { pois: [] as NearbyShortcutPoi[], loading: false, error: null };
