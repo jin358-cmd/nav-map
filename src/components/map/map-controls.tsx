@@ -75,10 +75,10 @@ export function MapControls({
   const locating = gpsStatus === "locating";
   const northUp = followVehicle && followOrientation === "north-up";
   const locateLabel = !followVehicle
-    ? "回到定位並車頭向上"
+    ? "回到定位並北方朝上"
     : northUp
-      ? "目前北方朝上，地圖隨設備羅盤旋轉。點擊切換車頭向上"
-      : "目前車頭向上，點擊切換北方朝上（羅盤旋轉）";
+      ? "目前北方朝上。點擊切換車頭向上"
+      : "目前車頭向上，點擊切換北方朝上";
   const tone = mapControlTone(pendingMapDisplayMode ?? mapDisplayMode);
   const flyoutOpen = styleMenuOpen || toolsDrawerOpen || poiMenuOpen;
   const [wasNavigating, setWasNavigating] = useState(navigating);

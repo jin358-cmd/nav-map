@@ -289,9 +289,8 @@ function cameraOptions(
   overlay?: DrivingMapProps["overlayPadding"],
   distanceToNext = Number.POSITIVE_INFINITY,
   junctionCue: LngLat | null = null,
-  followOrientation: FollowOrientation = "heading-up",
+  followOrientation: FollowOrientation = "north-up",
   recoverBlend = 0,
-  compassHeading: number | null = null,
 ) {
   const height = map.getContainer().clientHeight;
   const width = map.getContainer().clientWidth;
@@ -343,9 +342,7 @@ function cameraOptions(
       lerp(vehicle.lat, junctionCue?.lat ?? vehicle.lat, towardCue),
     ] as [number, number],
     bearing:
-      followOrientation === "heading-up"
-        ? vehicle.heading
-        : compassHeading ?? 0,
+      followOrientation === "heading-up" ? vehicle.heading : 0,
     pitch: mode === "3d" ? lerp(cruisePitch, focusPitch, blend) : 0,
     zoom: navigating || mode === "3d" ? navZoom : OVERHEAD_ZOOM,
     padding: drivingPadding(height, width, mode, navigating, overlay),
@@ -423,7 +420,7 @@ export function DrivingMap({
   vehicleLiveRef,
   displayVehicleLiveRef,
   cameraMode,
-  followOrientation = "heading-up",
+  followOrientation = "north-up",
   followVehicle,
   mapDisplayMode = "dark",
   styleRevision = 0,
@@ -561,7 +558,6 @@ export function DrivingMap({
   const readyRef = useRef(false);
   const lastFrameRef = useRef(0);
   const markerRotationRef = useRef((bootGps ?? vehicle).heading);
-  const cameraCompassRef = useRef<number | null>(null);
   const acquiredGpsRef = useRef(bootGps != null);
   const lastViewportEmitRef = useRef(0);
   const lastEmittedZoomRef = useRef(0);
@@ -719,7 +715,7 @@ export function DrivingMap({
         : [TAIWAN_OVERVIEW.lng, TAIWAN_OVERVIEW.lat],
       zoom: startPose ? DRIVING_ZOOM : TAIWAN_OVERVIEW_ZOOM,
       pitch: startPose ? DRIVING_PITCH : 0,
-      bearing: startPose ? startPose.heading : 0,
+      bearing: 0,
       maxPitch: 80,
       attributionControl: false,
       fadeDuration: 0,
@@ -966,20 +962,6 @@ export function DrivingMap({
           recoverFromRef.current,
         );
         const northUp = !headingUp;
-        if (northUp) {
-          const compassRaw = deviceCompassRef.current;
-          cameraCompassRef.current =
-            compassRaw == null
-              ? cameraCompassRef.current
-              : cameraCompassRef.current == null || snapToFix
-                ? compassRaw
-                : stepConeHeading(
-                    cameraCompassRef.current,
-                    compassRaw,
-                    dt,
-                    raw.speedMps ?? 0,
-                  );
-        }
         const wanted = cameraOptions(
           mapNow,
           displayPose,
@@ -991,7 +973,6 @@ export function DrivingMap({
           junctionCueRef.current,
           followOrientationRef.current,
           recoverBlend,
-          northUp ? cameraCompassRef.current : null,
         );
         lastBlendRef.current = wanted.blend;
         const center = mapNow.getCenter();
@@ -1138,9 +1119,6 @@ export function DrivingMap({
               junctionCueRef.current,
               followOrientationRef.current,
               0,
-              followOrientationRef.current === "north-up"
-                ? cameraCompassRef.current
-                : null,
             ),
           );
         }
@@ -1453,9 +1431,6 @@ export function DrivingMap({
             junctionCueRef.current,
             followOrientationRef.current,
             0,
-            followOrientationRef.current === "north-up"
-              ? cameraCompassRef.current
-              : null,
           );
           map.jumpTo({
             center: wanted.center,

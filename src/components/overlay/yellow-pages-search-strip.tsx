@@ -115,40 +115,46 @@ export function YellowPagesSearchStrip({
           );
         })}
       </div>
-      {shortcut === "fuel" ? (
-        <div className="mt-1 grid grid-cols-2 gap-1">
-          {FUEL_ENERGY_SHORTCUTS.map((item) => {
-            const on = energyKind === item.id;
-            const Icon = item.icon;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                aria-pressed={on}
-                aria-label={`${item.label}附近`}
-                title={item.hint}
-                onClick={() =>
-                  setEnergyKind((current) => (current === item.id ? "petrol" : item.id))
+      <div className="mt-1 grid grid-cols-2 gap-1">
+        {FUEL_ENERGY_SHORTCUTS.map((item) => {
+          const on = shortcut === "fuel" && energyKind === item.id;
+          const Icon = item.icon;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              aria-pressed={on}
+              aria-expanded={on}
+              aria-controls={on ? "navpilot-shortcut-preview" : undefined}
+              aria-label={`${item.label}附近`}
+              title={item.hint}
+              onClick={() => {
+                if (shortcut === "fuel" && energyKind === item.id) {
+                  setShortcut(null);
+                  setEnergyKind(null);
+                  return;
                 }
-                className={cn(
-                  "flex min-w-0 items-center justify-center gap-1.5 rounded-xl px-2 py-1.5 text-center touch-manipulation",
-                  on ? "text-[#042f2e]" : "bg-black/55 text-zinc-100",
-                )}
-                style={
-                  on
-                    ? { background: item.color }
-                    : { border: "1px solid rgba(255,255,255,0.14)" }
-                }
-              >
-                <Icon className="size-4 shrink-0" strokeWidth={2.2} aria-hidden />
-                <span className="max-w-full truncate text-[10px] font-semibold leading-tight sm:text-[11px]">
-                  {item.label}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      ) : null}
+                setShortcut("fuel");
+                setEnergyKind(item.id);
+              }}
+              className={cn(
+                "flex min-w-0 items-center justify-center gap-1.5 rounded-xl px-2 py-1.5 text-center touch-manipulation",
+                on ? "text-[#042f2e]" : "bg-black/55 text-zinc-100",
+              )}
+              style={
+                on
+                  ? { background: item.color }
+                  : { border: "1px solid rgba(255,255,255,0.14)" }
+              }
+            >
+              <Icon className="size-4 shrink-0" strokeWidth={2.2} aria-hidden />
+              <span className="max-w-full truncate text-[10px] font-semibold leading-tight sm:text-[11px]">
+                {item.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
       {shortcut ? (
         <div
           id="navpilot-shortcut-preview"
