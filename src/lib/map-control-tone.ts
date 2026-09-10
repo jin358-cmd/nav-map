@@ -30,11 +30,26 @@ export function mapControlButtonClass(tone: MapControlTone, active = false) {
   );
 }
 
-export function mapModeChipClass(tone: MapControlTone) {
+/**
+ * 2D／定位常態 vs 3D／北上選取：
+ * 白天常態白、選取黑；夜間常態黑、選取青藍。
+ */
+export function mapViewToggleClass(tone: MapControlTone, selected: boolean) {
   if (tone === "dark") {
-    return "!border-[#67e8f9] !bg-[#155e75] !text-[#ecfeff] hover:!bg-[#0e7490] [&_svg]:!text-[#ecfeff]";
+    if (selected) {
+      return "!border-2 !border-[#67e8f9] !bg-[#22d3ee] !text-[#042f2e] hover:!bg-[#67e8f9] [&_svg]:!text-[#042f2e]";
+    }
+    return "!border-2 !border-[#67e8f9] !bg-black !text-white hover:!bg-[#111827] [&_svg]:!text-white";
   }
-  return "border-[#111827] bg-zinc-800 text-white hover:bg-zinc-700 [&_svg]:!text-white";
+  if (selected) {
+    return "!border-2 !border-[#111827] !bg-black !text-white hover:!bg-zinc-800 [&_svg]:!text-white";
+  }
+  return "!border-2 !border-zinc-400 !bg-white !text-[#1F2937] hover:!bg-zinc-100 [&_svg]:!text-[#1F2937]";
+}
+
+/** @deprecated 改用 mapViewToggleClass */
+export function mapModeChipClass(tone: MapControlTone, selected = false) {
+  return mapViewToggleClass(tone, selected);
 }
 
 export function mapStyleOptionClass(

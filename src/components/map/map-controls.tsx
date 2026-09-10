@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import {
   mapControlButtonClass,
   mapControlTone,
-  mapModeChipClass,
+  mapViewToggleClass,
 } from "@/lib/map-control-tone";
 import { cn } from "@/lib/utils";
 import type {
@@ -75,7 +75,6 @@ export function MapControls({
 }: MapControlsProps) {
   const locating = gpsStatus === "locating";
   const northUp = followVehicle && followOrientation === "north-up";
-  const headingUp = followVehicle && followOrientation === "heading-up";
   const locateLabel = !followVehicle
     ? followOrientation === "heading-up"
       ? "回到定位並對準車頭方向"
@@ -254,10 +253,10 @@ export function MapControls({
       <ControlButton
         label={locateLabel}
         onClick={onLocate}
-        active={northUp}
+        active={false}
         pressed={followVehicle}
         tone={tone}
-        className={headingUp ? mapModeChipClass(tone) : undefined}
+        className={mapViewToggleClass(tone, northUp)}
       >
         <LocateFixed
           className={cn("size-6", locating && "animate-pulse")}
@@ -267,10 +266,10 @@ export function MapControls({
       <ControlButton
         label={cameraMode === "3d" ? "目前 3D，點擊切換 2D" : "目前 2D，點擊切換 3D"}
         onClick={onToggleCamera}
-        active={cameraMode === "3d"}
+        active={false}
         pressed={cameraMode === "3d"}
         tone={tone}
-        className={cameraMode === "2d" ? mapModeChipClass(tone) : undefined}
+        className={mapViewToggleClass(tone, cameraMode === "3d")}
       >
         <span className="text-[1.05rem] font-black leading-none tracking-tight">
           {cameraMode === "3d" ? "3D" : "2D"}
