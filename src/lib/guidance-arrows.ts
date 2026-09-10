@@ -15,7 +15,7 @@ export const GUIDANCE_LAYER_ID = "navpilot-turn-arrows-layer";
 export const TURN_LINE_SOURCE_ID = "navpilot-turn-line-v3";
 export const TURN_LINE_GLOW_ID = "navpilot-turn-line-glow-v3";
 export const TURN_LINE_LAYER_ID = "navpilot-turn-line-layer-v3";
-const CHEVRON_IMAGE_ID = "navpilot-ground-chevron-blue-v8";
+const CHEVRON_IMAGE_ID = "navpilot-ground-chevron-blue-v9";
 const STALE_TURN_IDS = [
   "navpilot-turn-line",
   "navpilot-turn-line-glow",
@@ -47,17 +47,17 @@ function createChevronImage() {
   ctx.translate(size / 2, size / 2);
 
   const strokeCaret = (
-    outer: number,
-    inner: number,
+    length: number,
     depth: number,
     width: number,
     color: string,
     glow = false,
   ) => {
     ctx.beginPath();
-    ctx.moveTo(-depth, inner);
-    ctx.lineTo(0, -outer);
-    ctx.lineTo(depth, inner);
+    // Tip sits on the icon-anchor so the head stays on the line center.
+    ctx.moveTo(-depth, length);
+    ctx.lineTo(0, 0);
+    ctx.lineTo(depth, length);
     ctx.lineWidth = width;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
@@ -71,12 +71,11 @@ function createChevronImage() {
     ctx.stroke();
   };
 
-  // Inverted-V caret, bbox-centered on the icon-anchor.
   ctx.save();
-  strokeCaret(18, 16, 22, 9, "#0369a1", true);
+  strokeCaret(34, 22, 9, "#0369a1", true);
   ctx.restore();
-  strokeCaret(17, 15, 20, 6, "#38bdf8");
-  strokeCaret(16, 14, 17, 3, "#f0f9ff");
+  strokeCaret(32, 20, 6, "#38bdf8");
+  strokeCaret(28, 17, 3, "#f0f9ff");
 
   return ctx.getImageData(0, 0, size, size);
 }
@@ -223,6 +222,7 @@ function ensureChevronLayer(map: MapLibreMap) {
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-size", chevronSize());
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-anchor", "center");
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-offset", [0, 0]);
+  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-rotate", ["get", "bearing"]);
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-rotation-alignment", "map");
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-pitch-alignment", "map");
 }

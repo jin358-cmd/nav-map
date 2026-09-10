@@ -94,7 +94,18 @@ function interpolateAlong(
 }
 
 /** Chord length used to smooth jagged vertex bearings onto the road tangent. */
-const BEARING_CHORD_METERS = 12;
+const BEARING_CHORD_METERS = 14;
+
+/** Clockwise from north, matching the Mercator chord MapLibre draws. */
+export function mercatorBearing(
+  from: { lng: number; lat: number },
+  to: { lng: number; lat: number },
+) {
+  const dx = to.lng - from.lng;
+  const dy = mercatorLatToY(to.lat) - mercatorLatToY(from.lat);
+  if (Math.abs(dx) < 1e-15 && Math.abs(dy) < 1e-15) return 0;
+  return (Math.atan2(dx, dy) * (180 / Math.PI) + 360) % 360;
+}
 
 function poseAlongSegments(
   segments: RouteSegment[],
@@ -115,11 +126,11 @@ function poseAlongSegments(
     lng: point.lng,
     lat: point.lat,
     bearing: same
-      ? bearingDegrees(
+      ? mercatorBearing(
           { lng: point.segment.from[0], lat: point.segment.from[1] },
           { lng: point.segment.to[0], lat: point.segment.to[1] },
         )
-      : bearingDegrees(
+      : mercatorBearing(
           { lng: from.lng, lat: from.lat },
           { lng: to.lng, lat: to.lat },
         ),
@@ -229,34 +240,20 @@ export function guidanceArrowsAlong(
 ): GuidanceArrow[] {
   if (line.length < 2) return [];
   const turn = findManeuverTurn(line);
+  const segments = segmentsFromRoute(line);
+  const total = lineLengthMeters(line);
   const placed: Omit<GuidanceArrow, "opacity" | "scale" | "kind">[] = [];
-  let leftover = spacingMeters * 0.35;
-  let along = 0;
+  const leftover = spacingMeters * 0.35;
 
-  for (let index = 1; index < line.length; index += 1) {
-    const from = { lng: line[index - 1][0], lat: line[index - 1][1] };
-    const to = { lng: line[index][0], lat: line[index][1] };
-    const length = distanceKm(from, to) * 1000;
-    if (length < 0.4) {
-      along += length;
-      continue;
-    }
-    const bearing = bearingDegrees(from, to);
-    let cursor = leftover;
-    while (cursor < length) {
-      const at = along + cursor;
-      if (cursor >= 0 && at >= VEHICLE_CLEARANCE_M) {
-        const ratio = cursor / length;
-        placed.push({
-          lng: from.lng + (to.lng - from.lng) * ratio,
-          lat: from.lat + (to.lat - from.lat) * ratio,
-          bearing,
-        });
-      }
-      cursor += spacingMeters;
-    }
-    leftover = cursor - length;
-    along += length;
+  for (let at = leftover; at <= total + 0.01; at += spacingMeters) {
+    if (at < VEHICLE_CLEARANCE_M) continue;
+    const pose = poseAlongSegments(segments, at);
+    if (!pose) continue;
+    placed.push({
+      lng: pose.lng,
+      lat: pose.lat,
+      bearing: pose.bearing,
+    });
   }
 
   const count = placed.length;
@@ -449,51 +446,36 @@ export function turnGroundArrows({
   return placed;
 }
 
-/** @deprecated 改用 turnGroundArrows；保留給舊呼叫。 */
+/** 地面路標釘在引導線中心；phase 只驅動流水光，不左右偏移。 */
 export function turnMarqueeArrows(
   line: [number, number][],
   phase = 0,
   distanceToNext = GROUND_BOW_APPROACH_METERS,
 ): GuidanceArrow[] {
   if (line.length < 2) return [];
+  const segments = segmentsFromRoute(line);
   const spacing = bowSpacingMeters(distanceToNext);
   const total = lineLengthMeters(line);
-  const placed: GuidanceArrow[] = [];
+  if (total < 6) return [];
   const cycle = ((phase % 1) + 1) % 1;
-  let leftover = (0.28 - cycle) * spacing;
-  if (leftover < 0) leftover += spacing;
-  let along = 0;
+  const first = 0.28 * spacing;
+  const placed: GuidanceArrow[] = [];
 
-  for (let index = 1; index < line.length; index += 1) {
-    const from = { lng: line[index - 1][0], lat: line[index - 1][1] };
-    const to = { lng: line[index][0], lat: line[index][1] };
-    const length = distanceKm(from, to) * 1000;
-    if (length < 0.5) {
-      along += length;
-      continue;
-    }
-    const bearing = bearingDegrees(from, to);
-    let cursor = leftover;
-    while (cursor < length) {
-      const at = along + cursor;
-      if (cursor >= 0 && at >= 6) {
-        const ratio = cursor / length;
-        const t = total > 0 ? Math.min(1, Math.max(0, at / total)) : 0;
-        const delta = (t - cycle + 1) % 1;
-        const pulse = delta < 0.3 ? 1 - delta / 0.3 : 0;
-        placed.push({
-          lng: from.lng + (to.lng - from.lng) * ratio,
-          lat: from.lat + (to.lat - from.lat) * ratio,
-          bearing,
-          opacity: 0.22 + pulse * 0.78,
-          kind: "straight",
-          scale: 1,
-        });
-      }
-      cursor += spacing;
-    }
-    leftover = cursor - length;
-    along += length;
+  for (let at = first; at <= total + 0.01; at += spacing) {
+    if (at < 6) continue;
+    const pose = poseAlongSegments(segments, at);
+    if (!pose) continue;
+    const t = Math.min(1, Math.max(0, at / total));
+    const delta = (t - cycle + 1) % 1;
+    const pulse = delta < 0.3 ? 1 - delta / 0.3 : 0;
+    placed.push({
+      lng: pose.lng,
+      lat: pose.lat,
+      bearing: pose.bearing,
+      opacity: 0.22 + pulse * 0.78,
+      kind: "straight",
+      scale: 1,
+    });
   }
   return placed;
 }
