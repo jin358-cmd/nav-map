@@ -101,9 +101,10 @@ export function mercatorBearing(
   from: { lng: number; lat: number },
   to: { lng: number; lat: number },
 ) {
-  const dx = to.lng - from.lng;
+  // mercatorLatToY is in radians; convert Δlng so atan2 is not cocked.
+  const dx = ((to.lng - from.lng) * Math.PI) / 180;
   const dy = mercatorLatToY(to.lat) - mercatorLatToY(from.lat);
-  if (Math.abs(dx) < 1e-15 && Math.abs(dy) < 1e-15) return 0;
+  if (Math.abs(dx) < 1e-18 && Math.abs(dy) < 1e-18) return 0;
   return (Math.atan2(dx, dy) * (180 / Math.PI) + 360) % 360;
 }
 
