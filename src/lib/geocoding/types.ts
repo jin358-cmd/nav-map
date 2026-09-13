@@ -35,6 +35,11 @@ export type GeocodeResult = {
   hours?: string;
   navEligibilityScore?: number;
   locationIncomplete?: boolean;
+  resultGroup?: "exact-house" | "interpolated" | "nearby" | "poi";
+  accuracyLabel?: string;
+  regionValidation?: "ok" | "mismatch" | "unavailable";
+  rankScore?: number;
+  intent?: "address" | "poi" | "mixed";
 };
 
 export type GeocodeLookupMode = "suggest" | "search";

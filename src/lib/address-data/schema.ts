@@ -26,6 +26,14 @@ export type AddressDataRecord = {
   lane: string | null;
   alley: string | null;
   houseNumber: string | null;
+  subNumber?: string | null;
+  attachedNumber?: string | null;
+  locality?: string | null;
+  canonicalAddressKey?: string | null;
+  sourcePriority?: number;
+  qualityScore?: number;
+  regionValidation?: "ok" | "mismatch" | "unavailable" | null;
+  dataVersion?: string | null;
   normalizedAddress: string;
   displayAddress: string;
   latitude: number | null;

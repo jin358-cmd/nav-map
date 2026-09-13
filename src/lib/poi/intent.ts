@@ -6,7 +6,10 @@ import {
 } from "@/lib/poi/aliases";
 
 export function isDoorplateQuery(query: string) {
-  return /[路街巷弄段號大道]/.test(query) && /\d/.test(query);
+  if (/[路街巷弄段號大道]/.test(query) && /\d/.test(query)) return true;
+  if (/[村里].*(?:\d+|[一二三四五六七八九十]+)鄰.*\d+號/u.test(query)) return true;
+  if (/[縣市].*[區鄉鎮市].*\d+號/u.test(query)) return true;
+  return false;
 }
 
 export type PoiQueryIntent = "exact" | "brand" | "category" | "address" | "mixed";
