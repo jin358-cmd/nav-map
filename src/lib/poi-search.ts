@@ -1,3 +1,4 @@
+import { inferResultGroup } from "@/lib/geocoding/address-ranking";
 import { formatTaiwanDisplayAddress } from "@/lib/geocoding/format-taiwan-display-address";
 import { comparableTaiwanText } from "@/lib/geocoding/normalizeTaiwanAddress";
 import { distanceKm } from "@/lib/geo";
@@ -106,8 +107,8 @@ export function rankSearchHits(
   if (intent === "address") {
     const groupRank = { "exact-house": 0, interpolated: 1, nearby: 2, poi: 3 } as const;
     return [...hits].sort((a, b) => {
-      const ga = groupRank[a.resultGroup ?? "nearby"];
-      const gb = groupRank[b.resultGroup ?? "nearby"];
+      const ga = groupRank[inferResultGroup(a)];
+      const gb = groupRank[inferResultGroup(b)];
       if (ga !== gb) return ga - gb;
       if (Boolean(a.exactHouseNumber) !== Boolean(b.exactHouseNumber)) {
         return a.exactHouseNumber ? -1 : 1;

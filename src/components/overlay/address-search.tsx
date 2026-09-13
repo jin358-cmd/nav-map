@@ -29,6 +29,10 @@ import {
   subscribeFavorites,
 } from "@/lib/favorites";
 import {
+  inferResultGroup,
+  RESULT_GROUP_LABELS,
+} from "@/lib/geocoding/address-ranking";
+import {
   formatTaiwanDisplayAddress,
   formatTaiwanRoadName,
   sameTaiwanDisplayTitle,
@@ -304,7 +308,9 @@ export function AddressSearch({
               ? "正在聽取語音…說完後會查門牌與地圖"
               : lookup.submitted
                 ? "已查門牌與地圖 · 點選結果開始導航"
-                : "輸入即可顯示店家建議，不必按 Enter"}
+                : classifyPoiQuery(needle) === "address"
+                  ? "門牌結果依精確／推估／附近分組"
+                  : "輸入即可顯示店家建議，不必按 Enter"}
             {region?.city
               ? ` · 優先 ${region.city}${region.town}`
               : ""}
@@ -437,18 +443,10 @@ export function AddressSearch({
                     ? formatTaiwanRoadName(hit.address) ||
                       formatTaiwanDisplayAddress(hit.address)
                     : "";
-                const group = hit.resultGroup;
-                const prevGroup = shownHits[index - 1]?.resultGroup;
-                const groupLabel =
-                  group === "exact-house"
-                    ? "精確門牌"
-                    : group === "interpolated"
-                      ? "推估門牌"
-                      : group === "nearby"
-                        ? "附近巷弄／道路"
-                        : group === "poi"
-                          ? "店家／地標"
-                          : null;
+                const group = inferResultGroup(hit);
+                const prevGroup =
+                  index > 0 ? inferResultGroup(shownHits[index - 1]) : null;
+                const groupLabel = RESULT_GROUP_LABELS[group];
                 const accuracy =
                   hit.accuracyLabel ||
                   (hit.exactHouseNumber
@@ -461,7 +459,7 @@ export function AddressSearch({
                 return (
                 <li key={hit.id}>
                   {groupLabel && group !== prevGroup ? (
-                    <p className="px-3 pt-2 text-[10px] tracking-wide text-zinc-500">
+                    <p className="sticky top-0 z-10 bg-black/85 px-3 py-1.5 text-xs font-medium tracking-wide text-cyan-100">
                       {groupLabel}
                     </p>
                   ) : null}

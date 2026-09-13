@@ -136,6 +136,41 @@ export function resultGroupFor(
   return item.category ? "poi" : "nearby";
 }
 
+export const RESULT_GROUP_LABELS: Record<ResultGroup, string> = {
+  "exact-house": "精確門牌",
+  interpolated: "推估門牌",
+  nearby: "附近巷弄／道路",
+  poi: "店家／地標",
+};
+
+export function inferResultGroup(item: {
+  resultGroup?: ResultGroup | null;
+  exactHouseNumber?: boolean;
+  matchKind?: string;
+  category?: string;
+  source?: string;
+}): ResultGroup {
+  if (
+    item.resultGroup === "exact-house" ||
+    item.resultGroup === "interpolated" ||
+    item.resultGroup === "nearby" ||
+    item.resultGroup === "poi"
+  ) {
+    return item.resultGroup;
+  }
+  if (item.exactHouseNumber || item.matchKind === "exact-house") return "exact-house";
+  if (item.matchKind === "interpolated") return "interpolated";
+  if (
+    item.matchKind === "landmark" ||
+    item.source === "local" ||
+    item.source === "overture" ||
+    item.category
+  ) {
+    return "poi";
+  }
+  return "nearby";
+}
+
 export function rankAddressResults(
   rows: GeocodeResult[],
   query: string,

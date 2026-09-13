@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { rankAddressResults } from "../address-ranking";
+import { inferResultGroup, rankAddressResults } from "../address-ranking";
 import type { GeocodeResult } from "../types";
 
 function hit(
@@ -124,9 +124,20 @@ function testCountyGeomMismatch() {
   assert.notEqual(ranked[0].exactHouseNumber, true);
 }
 
+function testInferMissingGroup() {
+  assert.equal(
+    inferResultGroup({ exactHouseNumber: true, matchKind: "exact-house" }),
+    "exact-house",
+  );
+  assert.equal(inferResultGroup({ matchKind: "interpolated" }), "interpolated");
+  assert.equal(inferResultGroup({ matchKind: "road-center" }), "nearby");
+  assert.equal(inferResultGroup({ category: "restaurant" }), "poi");
+}
+
 testExactBeatsRoadCenter();
 testCacheDoesNotWin();
 testWrongCountyExcludedFromExact();
 testNonSouthCountyUsesBox();
 testCountyGeomMismatch();
-console.log(JSON.stringify({ ok: true, suite: "address-ranking", tests: 5 }));
+testInferMissingGroup();
+console.log(JSON.stringify({ ok: true, suite: "address-ranking", tests: 6 }));
