@@ -556,7 +556,7 @@ export function DrivingApp() {
     [searchOrigin, vehicle.lat, vehicle.lng, vehicle.source],
   );
   const locatedRegion = useLocatedRegion(regionPoint);
-  const { pois: mapPois, loading: poiLayersLoading, progress: poiLayersProgress } =
+  const { pois: mapPois, loading: poiLayersLoading, progress: poiLayersProgress, meta: poiSourceMeta } =
     useMapPois({
       viewport,
       origin: searchOrigin,
@@ -1912,6 +1912,7 @@ export function DrivingApp() {
             loading={poiLayersLoading}
             progress={poiLayersProgress}
             loadingLabel={poiLayersReadLabel}
+            sourceMeta={poiSourceMeta}
             onToggle={(id) => {
               setPoiLayerVisibility((current) => {
                 const nextOn = !current[id];

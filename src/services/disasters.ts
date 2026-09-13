@@ -132,11 +132,24 @@ export async function fetchDisasterCatalog(): Promise<DisasterCatalog> {
 
   const fetchedAt = new Date().toISOString();
   try {
-    const response = await fetch(process.env.NCDR_ALERT_FEED_URL || DEFAULT_FEED, {
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-      headers: { Accept: "application/json" },
-      next: { revalidate: 120 },
-    });
+    const feedUrl = process.env.NCDR_ALERT_FEED_URL || DEFAULT_FEED;
+    let response: Response | null = null;
+    let lastError: unknown = null;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        response = await fetch(feedUrl, {
+          signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+          headers: { Accept: "application/json" },
+          next: { revalidate: 120 },
+        });
+        if (response.ok) break;
+        lastError = new Error(`NCDR feed failed (${response.status})`);
+      } catch (error) {
+        lastError = error;
+        response = null;
+      }
+    }
+    if (!response?.ok) throw lastError instanceof Error ? lastError : new Error("NCDR feed failed");
     if (!response.ok) throw new Error(`NCDR feed failed (${response.status})`);
     const feed = (await response.json()) as { entry?: NcdrEntry | NcdrEntry[] };
     const entries = (Array.isArray(feed.entry) ? feed.entry : feed.entry ? [feed.entry] : [])

@@ -82,6 +82,9 @@ export const POI_SUBCATEGORIES: Record<PoiMainLayerId, PoiSubcategory[]> = {
     { id: "hospital", label: "醫院", aliases: [] },
     { id: "clinic", label: "診所", aliases: ["dentist", "doctors"] },
     { id: "pharmacy", label: "藥局", aliases: [] },
+    { id: "other", label: "其他", aliases: [] },
+  ],
+  life: [
     { id: "bank", label: "銀行", aliases: ["atm"] },
     { id: "post-office", label: "郵局", aliases: ["post_office"] },
     { id: "police", label: "警察", aliases: [] },

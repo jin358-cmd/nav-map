@@ -17,6 +17,7 @@ export const YELLOW_PAGES_LAYERS: Array<{
   { id: "education", label: "育", yellowPages: "教育文化" },
   { id: "leisure", label: "樂", yellowPages: "休閒育樂" },
   { id: "medical", label: "醫", yellowPages: "醫療保健" },
+  { id: "life", label: "生活", yellowPages: "生活服務" },
 ];
 
 const FOOD = new Set([
@@ -101,6 +102,12 @@ const MEDICAL = new Set([
   "hospital",
   "clinic",
   "pharmacy",
+  "dentist",
+  "doctors",
+  "medical",
+]);
+
+const LIFE = new Set([
   "bank",
   "atm",
   "post-office",
@@ -108,8 +115,7 @@ const MEDICAL = new Set([
   "fire-station",
   "government",
   "public-facility",
-  "dentist",
-  "doctors",
+  "life",
 ]);
 
 export function yellowPagesLayerFromTags(
@@ -126,7 +132,8 @@ export function yellowPagesLayerFromTags(
     if (TRANSPORT.has(key)) return "transport";
     if (EDUCATION.has(key)) return "education";
     if (MEDICAL.has(key)) return "medical";
+    if (LIFE.has(key)) return "life";
     if (LEISURE.has(key)) return "leisure";
   }
-  return "leisure";
+  return "life";
 }

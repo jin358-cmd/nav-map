@@ -24,6 +24,7 @@ export function PoiLayerDrawer({
   loading = false,
   progress = 0,
   loadingLabel = LIFE_CIRCLE_LAYER_LABEL,
+  sourceMeta,
   onToggle,
   onToggleSub,
   onSetAllSubs,
@@ -34,6 +35,12 @@ export function PoiLayerDrawer({
   loading?: boolean;
   progress?: number;
   loadingLabel?: string;
+  sourceMeta?: {
+    count: number;
+    source: string;
+    dataVersion: string;
+    updatedAt: string;
+  } | null;
   onToggle: (id: PoiMainLayerId) => void;
   onToggleSub: (id: PoiMainLayerId, subId: string) => void;
   onSetAllSubs: (id: PoiMainLayerId, on: boolean) => void;
@@ -202,6 +209,13 @@ export function PoiLayerDrawer({
           })}
         </div>
       )}
+      {sourceMeta ? (
+        <p className="mt-1.5 border-t border-white/10 px-1 pt-1.5 text-[10px] leading-snug text-zinc-500">
+          本視野 {sourceMeta.count} 筆 ·{" "}
+          {sourceMeta.source === "supabase" ? "雲端索引" : "本機索引"} ·{" "}
+          {sourceMeta.dataVersion || "未標版本"}
+        </p>
+      ) : null}
     </aside>
   );
 }

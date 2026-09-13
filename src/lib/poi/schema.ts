@@ -6,6 +6,7 @@ import {
   resolveCanonicalBrand,
 } from "@/lib/poi/aliases";
 import {
+  POI_MAIN_LAYER_IDS,
   poiMainLayerFromCategory,
   poiSubcategoryFromCategory,
   type PoiMainLayerId,
@@ -106,15 +107,20 @@ function compactKey(value: string) {
     .replace(/[\s\-_.＋+]/g, "");
 }
 
+function officialCounty(value: string | null) {
+  return value ? value.replaceAll("台", "臺") : null;
+}
+
 export function hydratePoiRecord(row: Partial<TaiwanPoiRecord> & Record<string, unknown>): TaiwanPoiRecord | null {
   const latitude = Number(row.latitude);
   const longitude = Number(row.longitude);
   const name = String(row.name ?? "").trim();
   if (!name || !Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
-  const county =
+  const county = officialCounty(
     (typeof row.county === "string" && row.county) ||
-    (typeof row.city === "string" && row.city) ||
-    null;
+      (typeof row.city === "string" && row.city) ||
+      null,
+  );
   const address = String(row.address ?? "");
   const nameNormalized = String(row.nameNormalized ?? compactKey(name));
   const aliases = Array.isArray(row.aliases)
@@ -151,7 +157,10 @@ export function hydratePoiRecord(row: Partial<TaiwanPoiRecord> & Record<string, 
   const subcategory =
     String(row.subcategory ?? row.sub_category ?? "").trim() ||
     poiSubcategoryFromCategory(category);
-  const mainCategory = poiMainLayerFromCategory(category, subcategory);
+  const declaredMain = String(row.mainCategory ?? row.main_category ?? "");
+  const mainCategory = (POI_MAIN_LAYER_IDS as readonly string[]).includes(declaredMain)
+    ? (declaredMain as PoiMainLayerId)
+    : poiMainLayerFromCategory(category, subcategory);
   return {
     id: String(row.id ?? `${row.source ?? "osm"}-${row.sourceId ?? row.source_id ?? ""}`),
     name,
@@ -164,7 +173,7 @@ export function hydratePoiRecord(row: Partial<TaiwanPoiRecord> & Record<string, 
     branchName: (row.branchName as string | null) ?? (row.branch_name as string | null) ?? null,
     address,
     addressNormalized: String(row.addressNormalized ?? compactKey(address)),
-    city: (row.city as string | null) ?? county,
+    city: officialCounty((row.city as string | null) ?? county),
     county,
     district: (row.district as string | null) ?? null,
     latitude,
@@ -218,6 +227,7 @@ export function rowToRecord(row: TaiwanPoiRow): TaiwanPoiRecord {
       nameNormalized: row.name_normalized,
       aliases: row.aliases,
       category: row.category,
+      main_category: row.main_category ?? undefined,
       subcategory: row.subcategory ?? undefined,
       brand: row.brand,
       branchName: row.branch_name,

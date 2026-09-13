@@ -25,6 +25,12 @@ export function useMapPois({
   const [pois, setPois] = useState<MapPoiFeature[]>([]);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [meta, setMeta] = useState<{
+    count: number;
+    source: string;
+    dataVersion: string;
+    updatedAt: string;
+  } | null>(null);
   const originRef = useRef(origin);
   const fetchedKeyRef = useRef<string | null>(null);
   const hideTimerRef = useRef<number | null>(null);
@@ -59,6 +65,7 @@ export function useMapPois({
       }
       const reset = window.setTimeout(() => {
         setPois([]);
+        setMeta(null);
         setLoading(false);
         setProgress(0);
       }, 0);
@@ -141,12 +148,25 @@ export function useMapPois({
       void fetch(`/api/pois?${params}`, { signal: controller.signal })
         .then(async (response) => {
           if (!response.ok) throw new Error("poi viewport failed");
-          return response.json() as Promise<{ pois?: MapPoiFeature[] }>;
+          return response.json() as Promise<{
+            pois?: MapPoiFeature[];
+            count?: number;
+            source?: string;
+            dataVersion?: string;
+            updatedAt?: string;
+          }>;
         })
         .then((data) => {
           if (controller.signal.aborted) return;
           fetchedKeyRef.current = key;
-          setPois(data.pois ?? []);
+          const rows = data.pois ?? [];
+          setPois(rows);
+          setMeta({
+            count: data.count ?? rows.length,
+            source: data.source ?? "local-index",
+            dataVersion: data.dataVersion ?? "",
+            updatedAt: data.updatedAt ?? "",
+          });
           finishRead(true);
         })
         .catch(() => {
@@ -173,5 +193,6 @@ export function useMapPois({
     pois,
     loading: reading,
     progress: reading ? progress : 0,
+    meta,
   };
 }

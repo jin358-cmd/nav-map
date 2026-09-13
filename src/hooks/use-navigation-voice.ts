@@ -16,7 +16,8 @@ async function speakWithChatGpt(text: string, signal: AbortSignal) {
     body: JSON.stringify({ text }),
     signal,
   });
-  if (response.status === 204 || !response.ok) {
+  const contentType = response.headers.get("content-type") || "";
+  if (!response.ok || contentType.includes("application/json")) {
     throw new Error("chatgpt-voice-unavailable");
   }
   const blob = await response.blob();

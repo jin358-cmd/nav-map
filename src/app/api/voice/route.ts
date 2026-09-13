@@ -7,7 +7,7 @@ const OPENAI_TTS_URL = "https://api.openai.com/v1/audio/speech";
 export async function POST(request: Request) {
   const key = process.env.OPENAI_API_KEY?.trim();
   if (!key) {
-    return Response.json({ fallback: true, engine: "system" }, { status: 204 });
+    return Response.json({ fallback: true, engine: "system" });
   }
 
   let text = "";
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
         signal: AbortSignal.timeout(12_000),
       });
       if (!fallback.ok) {
-        return Response.json({ fallback: true, engine: "system" }, { status: 204 });
+        return Response.json({ fallback: true, engine: "system" });
       }
       return new Response(fallback.body, {
         headers: {
@@ -71,6 +71,6 @@ export async function POST(request: Request) {
       },
     });
   } catch {
-    return Response.json({ fallback: true, engine: "system" }, { status: 204 });
+    return Response.json({ fallback: true, engine: "system" });
   }
 }

@@ -14,6 +14,7 @@ export const POI_MAIN_LAYER_IDS = [
   "education",
   "leisure",
   "medical",
+  "life",
 ] as const;
 
 export type PoiMainLayerId = (typeof POI_MAIN_LAYER_IDS)[number];
@@ -31,6 +32,7 @@ export const POI_MAIN_LAYERS: Array<{
   { id: "education", label: "育 · 教育文化", short: "育", yp: "教育文化" },
   { id: "leisure", label: "樂 · 休閒育樂", short: "樂", yp: "休閒育樂" },
   { id: "medical", label: "醫 · 醫療保健", short: "醫", yp: "醫療保健" },
+  { id: "life", label: "生活 · 機關郵政", short: "生活", yp: "生活服務" },
 ];
 
 export const LIFE_CIRCLE_LAYER_LABEL = "生活圈圖層";
@@ -45,6 +47,7 @@ export const DEFAULT_POI_LAYER_VISIBILITY: PoiLayerVisibility = {
   education: false,
   leisure: false,
   medical: false,
+  life: false,
 };
 
 export const POI_LAYER_COLORS: Record<PoiMainLayerId, string> = {
@@ -55,6 +58,7 @@ export const POI_LAYER_COLORS: Record<PoiMainLayerId, string> = {
   education: "#a78bfa",
   leisure: "#facc15",
   medical: "#ef4444",
+  life: "#94a3b8",
 };
 
 export function defaultPoiLayerVisibility(): PoiLayerVisibility {

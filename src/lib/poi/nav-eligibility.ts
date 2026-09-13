@@ -19,6 +19,14 @@ export function isSuggestEligiblePoi(poi: TaiwanPoiRecord) {
   return poiNavScore(poi) >= MIN_SUGGEST_NAV_SCORE;
 }
 
+/** Phase 5.3A map publish: A/B and score ≥ 60. Do not relax to hit a quota. */
+export function isPublishedNavPoi(poi: TaiwanPoiRecord) {
+  if (!poi.isActive) return false;
+  const quality = poi.matchQuality;
+  if (quality !== "A" && quality !== "B") return false;
+  return poiNavScore(poi) >= MIN_NAV_READY_SCORE;
+}
+
 export function isLocationIncomplete(poi: Pick<TaiwanPoiRecord, "navEligibilityScore" | "matchQuality">) {
   if (poi.matchQuality === "C" || poi.matchQuality === "D") return true;
   if (typeof poi.navEligibilityScore === "number" && poi.navEligibilityScore < MIN_NAV_READY_SCORE) {

@@ -5,6 +5,7 @@ import { isRestaurantKind } from "@/lib/poi/restaurant-kind";
 import { isLocationIncomplete } from "@/lib/poi/nav-eligibility";
 import { POI_MAIN_LAYER_IDS, type PoiMainLayerId } from "@/lib/poi/main-layers";
 import { poisInBounds, poisNearby } from "@/lib/poi/server-index";
+import { fetchSouthPoisInBounds, southPoiMeta } from "@/lib/poi/supabase-bounds";
 import { POI_CATEGORIES, type PoiCategory, type TaiwanPoiRecord } from "@/lib/poi/schema";
 
 function readNumber(value: string | null) {
@@ -107,7 +108,11 @@ export async function GET(request: Request) {
       hotelKind,
     );
     return Response.json(
-      { pois: rows.map(serializePoi) },
+      {
+        pois: rows.map(serializePoi),
+        count: rows.length,
+        ...southPoiMeta("local-index"),
+      },
       {
         headers: {
           "Cache-Control": "public, max-age=15, s-maxage=15, stale-while-revalidate=60",
@@ -129,10 +134,20 @@ export async function GET(request: Request) {
     return Response.json({ error: "請提供臺灣範圍內的地圖視野" }, { status: 400 });
   }
 
-  const rows = poisInBounds({ west, south, east, north }, origin, limit, layers);
+  const live = await fetchSouthPoisInBounds({
+    west,
+    south,
+    east,
+    north,
+    layers,
+    limit: Math.min(limit, 240),
+  });
+  const rows = live?.pois ?? poisInBounds({ west, south, east, north }, origin, limit, layers);
   return Response.json(
     {
       pois: rows.map(serializePoi),
+      count: rows.length,
+      ...southPoiMeta(live ? "supabase" : "local-index"),
     },
     {
       headers: {

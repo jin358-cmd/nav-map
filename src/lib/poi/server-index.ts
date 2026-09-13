@@ -12,7 +12,13 @@ import { matchesEnergyKind, type EnergyKind } from "@/lib/poi/energy-kind";
 import { matchesHotelKind, type HotelKind } from "@/lib/poi/hotel-kind";
 import { matchesRestaurantKind, type RestaurantKind } from "@/lib/poi/restaurant-kind";
 import { POI_MAIN_LAYER_IDS, type PoiMainLayerId } from "@/lib/poi/main-layers";
-import { isLocationIncomplete, isSuggestEligiblePoi, poiNavScore } from "@/lib/poi/nav-eligibility";
+import {
+  isLocationIncomplete,
+  isPublishedNavPoi,
+  isSuggestEligiblePoi,
+  poiNavScore,
+} from "@/lib/poi/nav-eligibility";
+import { isSouthPilotCounty } from "@/lib/poi/south-pilot";
 import { rankPois, rankScore } from "@/lib/poi/rank";
 import {
   hydratePoiRecord,
@@ -21,15 +27,25 @@ import {
   type TaiwanPoiRow,
 } from "@/lib/poi/schema";
 
+const MAX_LOCAL_INDEX_BYTES = 20 * 1024 * 1024;
+
+function loadJsonGz(path: string): Array<Record<string, unknown>> {
+  const stat = existsSync(path) ? readFileSync(path) : null;
+  if (!stat) return [];
+  if (stat.byteLength > MAX_LOCAL_INDEX_BYTES) {
+    console.warn(`[poi-index] skip oversized ${path} (${stat.byteLength} bytes)`);
+    return [];
+  }
+  return JSON.parse(gunzipSync(stat).toString("utf8")) as Array<Record<string, unknown>>;
+}
+
 function loadPoiPayload(): Array<Record<string, unknown>> {
+  const fallback = join(process.cwd(), "src/data/south-poi-fallback.json.gz");
   const gz = join(process.cwd(), "src/data/taiwan-poi-index.json.gz");
   const json = join(process.cwd(), "src/data/taiwan-poi-index.json");
   try {
-    if (existsSync(gz)) {
-      return JSON.parse(gunzipSync(readFileSync(gz)).toString("utf8")) as Array<
-        Record<string, unknown>
-      >;
-    }
+    if (existsSync(fallback)) return loadJsonGz(fallback);
+    if (existsSync(gz)) return loadJsonGz(gz);
     if (existsSync(json)) {
       return JSON.parse(readFileSync(json).toString("utf8")) as Array<Record<string, unknown>>;
     }
@@ -261,7 +277,10 @@ export function poisInBounds(
   const wanted = new Set(wantedLayers);
   const categorySet = categories?.length ? new Set(categories) : null;
   const rows = poisInGridBounds({ west, south, east, north }).filter((poi) => {
-    if (!isSuggestEligiblePoi(poi)) return false;
+    if (!isPublishedNavPoi(poi)) return false;
+    if (!isSouthPilotCounty(poi.county) && !isSouthPilotCounty(poi.city)) {
+      return false;
+    }
     if (
       poi.longitude < west ||
       poi.longitude > east ||
