@@ -18,7 +18,12 @@
     "test:gcis": "node scripts/gcis-phase52-selftest.mjs",
     "measure:suggest": "node scripts/measure-suggest.mjs",
     "verify:pois": "node scripts/verify-poi-index.mjs",
-    "sync:parking": "node scripts/sync-tainan-parking.mjs"
+    "sync:parking": "node scripts/sync-tainan-parking.mjs",
+    "export:south-pois": "node scripts/export-south-pois.mjs",
+    "import:south-pois": "node scripts/import-south-pois-supabase.mjs",
+    "verify:south-pois": "node scripts/verify-south-pois.mjs",
+    "test:south-pois": "node scripts/south-poi-selftest.mjs",
+    "test:south-pois-api": "node scripts/test-south-poi-api.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

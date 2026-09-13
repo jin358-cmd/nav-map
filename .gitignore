@@ -38,6 +38,14 @@ yarn-error.log*
 src/data/taiwan-poi-index.json
 src/data/poi-chain-ingest-checkpoint.json
 
+# Phase 5.3A south extracts stay local — only summaries/checksums go in git
+data/south-pilot/*.ndjson
+data/south-pilot/*.json.gz
+data/south-pilot/rows/
+src/data/south-poi-fallback.json.gz
+!data/south-pilot/README.md
+!data/south-pilot/.gitkeep
+
 # vercel
 .vercel
 
