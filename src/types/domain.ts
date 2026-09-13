@@ -319,6 +319,9 @@ export type GeocodeHit = {
   hours?: string;
   navEligibilityScore?: number;
   locationIncomplete?: boolean;
+  resultGroup?: "exact-house" | "interpolated" | "nearby" | "poi";
+  accuracyLabel?: string;
+  regionValidation?: "ok" | "mismatch" | "unavailable";
 };
 
 export type RouteDestination = {

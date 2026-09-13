@@ -424,7 +424,7 @@ export function AddressSearch({
 
           {!busy && shownHits.length > 0 ? (
             <ul className="max-h-56 overflow-y-auto py-1">
-              {shownHits.map((hit) => {
+              {shownHits.map((hit, index) => {
                 const meters =
                   hit.distanceMeters ??
                   (biasBucket
@@ -437,8 +437,35 @@ export function AddressSearch({
                     ? formatTaiwanRoadName(hit.address) ||
                       formatTaiwanDisplayAddress(hit.address)
                     : "";
+                const group = hit.resultGroup;
+                const prevGroup = shownHits[index - 1]?.resultGroup;
+                const groupLabel =
+                  group === "exact-house"
+                    ? "精確門牌"
+                    : group === "interpolated"
+                      ? "推估門牌"
+                      : group === "nearby"
+                        ? "附近巷弄／道路"
+                        : group === "poi"
+                          ? "店家／地標"
+                          : null;
+                const accuracy =
+                  hit.accuracyLabel ||
+                  (hit.exactHouseNumber
+                    ? "精確門牌"
+                    : hit.matchKind === "interpolated"
+                      ? "推估"
+                      : hit.matchKind === "lane-center" || hit.matchKind === "road-center"
+                        ? "附近"
+                        : null);
                 return (
-                <li key={hit.id} className="flex items-center">
+                <li key={hit.id}>
+                  {groupLabel && group !== prevGroup ? (
+                    <p className="px-3 pt-2 text-[10px] tracking-wide text-zinc-500">
+                      {groupLabel}
+                    </p>
+                  ) : null}
+                  <div className="flex items-center">
                   <button
                     type="button"
                     onClick={() => {
@@ -494,6 +521,9 @@ export function AddressSearch({
                           {hit.phone ? (
                             <span className="text-zinc-400"> · {hit.phone}</span>
                           ) : null}
+                          {accuracy && accuracy !== "精確門牌" ? (
+                            <span className="text-amber-200"> · {accuracy}</span>
+                          ) : null}
                         </>
                       )}
                     </span>
@@ -514,6 +544,7 @@ export function AddressSearch({
                       )}
                     />
                   </button>
+                  </div>
                 </li>
                 );
               })}

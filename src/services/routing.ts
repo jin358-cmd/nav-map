@@ -100,6 +100,9 @@ export async function searchAddresses(
         hours: item.hours,
         navEligibilityScore: item.navEligibilityScore,
         locationIncomplete: item.locationIncomplete,
+        resultGroup: item.resultGroup,
+        accuracyLabel: item.accuracyLabel,
+        regionValidation: item.regionValidation,
       } satisfies GeocodeHit,
     ];
   });

@@ -1,0 +1,35 @@
+{
+  "source": "src/data/gcis-import-rejects.jsonl",
+  "totalRejects": 5901,
+  "batch10NoCoordinateApprox": 0,
+  "expectedGeoFail": 2121,
+  "allReasons": {
+    "missing_admin_unit": 1,
+    "parse_failed": 11,
+    "official_source_empty": 50,
+    "rural_address_without_road": 7,
+    "duplicate_or_inactive": 5832
+  },
+  "southReasons": {
+    "parse_failed": 1,
+    "official_source_empty": 23,
+    "rural_address_without_road": 3,
+    "duplicate_or_inactive": 1255
+  },
+  "retryPolicy": {
+    "willRetry": [
+      "parse_failed",
+      "rural_address_without_road",
+      "timeout_or_transport"
+    ],
+    "willNotRetry": [
+      "official_source_empty",
+      "invalid_coordinate",
+      "duplicate_or_inactive"
+    ],
+    "note": "未重打 NLSC。official_source_empty 不得無限重試。巷弄／道路中心只能進 review。"
+  },
+  "missing": [
+    "Batch 10 的 2,121 筆 NLSC 失敗明細未完整保存在 gcis-import-rejects.jsonl（2026-09-13 no_coordinate=0）。現有 rejects 多為歷史 low_nav／duplicate。未重打 NLSC。"
+  ]
+}

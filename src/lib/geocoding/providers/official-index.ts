@@ -4,7 +4,7 @@ import { formatTaiwanDisplayAddress } from "@/lib/geocoding/format-taiwan-displa
 import type { GeocodeProvider, GeocodeResult } from "@/lib/geocoding/types";
 
 function supabaseConfig() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "";
+  const url = (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "").trim();
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ?? "";
   if (!url || !serviceKey) return null;
   return { url: url.replace(/\/$/, ""), serviceKey };
@@ -21,23 +21,35 @@ export function createOfficialIndexProvider(): GeocodeProvider {
     enabled: Boolean(config),
     async search(query, options) {
       if (!config || query.trim().length < 2) return [];
-      const params = new URLSearchParams({
-        select:
-          "id,display_address,normalized_address,latitude,longitude,accuracy,source,county,district,road",
-        normalized_address: `ilike.*${query.trim()}*`,
-        limit: "12",
-      });
-      const response = await fetch(
-        `${config.url}/rest/v1/taiwan_address_index?${params}`,
-        {
-          headers: {
-            apikey: config.serviceKey,
-            Authorization: `Bearer ${config.serviceKey}`,
-          },
-          cache: "no-store",
-          signal: options?.signal,
+      const rpc = await fetch(`${config.url}/rest/v1/rpc/search_taiwan_addresses`, {
+        method: "POST",
+        headers: {
+          apikey: config.serviceKey,
+          Authorization: `Bearer ${config.serviceKey}`,
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify({ q: query.trim(), max_results: 12 }),
+        cache: "no-store",
+        signal: options?.signal,
+      });
+      const response = rpc.ok
+        ? rpc
+        : await fetch(
+            `${config.url}/rest/v1/taiwan_address_index?${new URLSearchParams({
+              select:
+                "id,display_address,normalized_address,latitude,longitude,accuracy,source,county,district,road",
+              normalized_address: `ilike.*${query.trim()}*`,
+              limit: "12",
+            })}`,
+            {
+              headers: {
+                apikey: config.serviceKey,
+                Authorization: `Bearer ${config.serviceKey}`,
+              },
+              cache: "no-store",
+              signal: options?.signal,
+            },
+          );
       if (!response.ok) return [];
       const rows = (await response.json()) as Array<{
         id?: string;

@@ -4,11 +4,11 @@ import { matchLandmarks } from "@/data/landmarks";
 import { distanceKm } from "@/lib/geo";
 import { formatTaiwanDisplayAddress } from "@/lib/geocoding/format-taiwan-display-address";
 import {
-  comparableTaiwanText,
   matchKindLabel,
   normalizeTaiwanAddress,
   relaxedAddressQueries,
 } from "@/lib/geocoding/normalizeTaiwanAddress";
+import { rankAddressResults } from "@/lib/geocoding/address-ranking";
 import {
   readAddressCache,
   writeAddressCache,
@@ -124,88 +124,12 @@ function mergeResults(rows: GeocodeResult[]) {
   return kept;
 }
 
-function textHasRegion(text: string, token: string) {
-  if (!token) return false;
-  return comparableTaiwanText(text).includes(comparableTaiwanText(token));
-}
-
-function locatedRegionScore(
-  item: GeocodeResult,
-  city: string,
-  town: string,
-) {
-  const hay = `${item.label} ${item.formattedAddress}`;
-  if (town && textHasRegion(hay, town)) return 4;
-  if (city && textHasRegion(hay, city)) return 2;
-  return 0;
-}
-
 function sortResults(
   rows: GeocodeResult[],
-  parsedCity: string,
-  parsedTown: string,
-  preferLane: boolean,
+  query: string,
   origin?: { lat: number; lng: number },
-  located?: { city: string; town: string },
 ) {
-  const kindRank = preferLane
-    ? {
-        "exact-house": 0,
-        interpolated: 1,
-        "lane-center": 2,
-        approximate: 3,
-        "road-center": 4,
-        landmark: 5,
-      }
-    : {
-        "exact-house": 0,
-        interpolated: 1,
-        approximate: 2,
-        "lane-center": 3,
-        "road-center": 4,
-        landmark: 5,
-      };
-  const sourceRank: Record<GeocodeSource, number> = {
-    cache: 0,
-    index: 1,
-    tgos: 2,
-    nlsc: 3,
-    local: 4,
-    overture: 5,
-    osm: 6,
-    google: 7,
-  };
-  const preferCity = parsedCity || located?.city || "";
-  const preferTown = parsedTown || located?.town || "";
-  return [...rows].sort((a, b) => {
-    const regionDelta =
-      locatedRegionScore(b, preferCity, preferTown) -
-      locatedRegionScore(a, preferCity, preferTown);
-    if (regionDelta !== 0) return regionDelta;
-    if (a.exactHouseNumber !== b.exactHouseNumber) {
-      return a.exactHouseNumber ? -1 : 1;
-    }
-    const kindDelta = kindRank[a.matchKind] - kindRank[b.matchKind];
-    if (kindDelta !== 0) return kindDelta;
-    const cityA = parsedCity && textHasRegion(a.formattedAddress, parsedCity);
-    const cityB = parsedCity && textHasRegion(b.formattedAddress, parsedCity);
-    if (Boolean(cityA) !== Boolean(cityB)) return cityA ? -1 : 1;
-    const townA = parsedTown && textHasRegion(a.formattedAddress, parsedTown);
-    const townB = parsedTown && textHasRegion(b.formattedAddress, parsedTown);
-    if (Boolean(townA) !== Boolean(townB)) return townA ? -1 : 1;
-    const sourceDelta = sourceRank[a.source] - sourceRank[b.source];
-    if (sourceDelta !== 0) return sourceDelta;
-    if (origin) {
-      const distA =
-        a.distanceMeters ??
-        distanceKm(origin, { lat: a.latitude, lng: a.longitude }) * 1000;
-      const distB =
-        b.distanceMeters ??
-        distanceKm(origin, { lat: b.latitude, lng: b.longitude }) * 1000;
-      if (distA !== distB) return distA - distB;
-    }
-    return b.confidence - a.confidence;
-  });
+  return rankAddressResults(rows, query, origin);
 }
 
 function withDistance(
@@ -220,9 +144,13 @@ function withDistance(
     ),
     formattedAddress:
       item.matchKind === "landmark" ||
-      item.formattedAddress.includes(matchKindLabel(item.matchKind))
+      item.formattedAddress.includes(matchKindLabel(item.matchKind)) ||
+      item.formattedAddress.includes("推估") ||
+      item.formattedAddress.includes("附近")
         ? item.formattedAddress
-        : `${item.formattedAddress} · ${matchKindLabel(item.matchKind)}`,
+        : item.exactHouseNumber
+          ? `${item.formattedAddress} · ${matchKindLabel(item.matchKind)}`
+          : `${item.formattedAddress} · ${item.matchKind === "interpolated" ? "推估" : matchKindLabel(item.matchKind)}`,
   }));
 }
 
@@ -288,35 +216,38 @@ export async function searchGeocode(
         };
 
   const intent = classifyPoiQuery(query);
-  const locals = await localResults(
-    query,
-    options.latitude,
-    options.longitude,
-    options.signal,
-  );
+  const addressIntent = intent === "address";
+  const locals =
+    addressIntent
+      ? []
+      : await localResults(query, options.latitude, options.longitude, options.signal);
   if (locals.length) statuses.local = "ok";
 
   const cached = await readAddressCache(parsed.normalizedAddress, key);
   if (cached?.length) statuses.cache = "ok";
 
-  const located = {
-    city: options.locatedCity?.trim() || "",
-    town: options.locatedTown?.trim() || "",
-  };
   const rankedLocals = sortResults(
     withDistance(mergeResults([...locals, ...(cached ?? [])]), origin),
-    parsed.parts.city,
-    parsed.parts.town,
-    parsed.hasLaneOrAlley,
+    query,
     origin,
-    located,
   ).slice(0, SEARCH_RESULT_LIMIT);
   const qualityCount = rankedLocals.filter((item) => (item.confidence ?? 0) >= 0.7).length;
   const localReady =
-    intent !== "address" &&
+    !addressIntent &&
+    intent !== "mixed" &&
     (qualityCount >= 4 || (intent === "exact" && qualityCount >= 1));
 
-  if (mode === "suggest" || localReady) {
+  if (localReady) {
+    return {
+      query,
+      normalizedQuery: parsed.normalizedAddress,
+      cacheHit: Boolean(cached?.length),
+      results: rankedLocals,
+      providers: statuses,
+    };
+  }
+
+  if (mode === "suggest" && !addressIntent && intent !== "mixed") {
     return {
       query,
       normalizedQuery: parsed.normalizedAddress,
@@ -334,26 +265,30 @@ export async function searchGeocode(
   const deadline = Date.now() + OVERALL_TIMEOUT_MS;
   const relaxations = relaxedAddressQueries(parsed);
   const firstQuery = relaxations[0]?.query ?? parsed.searchAddress;
+  const typedCounty = Boolean(parsed.parts.city);
   const remoteOptions =
-    intent === "exact"
+    intent === "exact" || typedCounty
       ? { ...options, latitude: undefined, longitude: undefined }
       : options;
+  const allowOsm = mode !== "suggest";
   let ranOsm = false;
 
   if (Date.now() <= deadline && !options.signal?.aborted) {
-    const [official, osmRows] = await Promise.all([
-      Promise.allSettled([
-        runProvider(officialIndex, firstQuery, remoteOptions, statuses),
-        runProvider(tgos, firstQuery, remoteOptions, statuses),
-        runProvider(nlsc, firstQuery, remoteOptions, statuses),
-      ]),
-      runProvider(osm, firstQuery, remoteOptions, statuses),
+    const official = await Promise.allSettled([
+      runProvider(officialIndex, firstQuery, remoteOptions, statuses),
+      runProvider(tgos, firstQuery, remoteOptions, statuses),
+      runProvider(nlsc, firstQuery, remoteOptions, statuses),
     ]);
-    ranOsm = true;
     for (const outcome of official) {
       if (outcome.status === "fulfilled") collected.push(...outcome.value);
     }
-    collected.push(...osmRows);
+    if (allowOsm) {
+      const osmRows = await runProvider(osm, firstQuery, remoteOptions, statuses);
+      ranOsm = true;
+      collected.push(...osmRows);
+    } else {
+      statuses.osm = "disabled";
+    }
   }
 
   const strongEnough =
@@ -381,6 +316,7 @@ export async function searchGeocode(
   }
 
   if (
+    allowOsm &&
     !ranOsm &&
     !collected.some((item) => item.exactHouseNumber) &&
     Date.now() < deadline &&
@@ -391,14 +327,7 @@ export async function searchGeocode(
   }
 
   const merged = applyLaneRoadLabels(
-    sortResults(
-      withDistance(mergeResults(collected), origin),
-      parsed.parts.city,
-      parsed.parts.town,
-      parsed.hasLaneOrAlley,
-      origin,
-      located,
-    ),
+    sortResults(withDistance(mergeResults(collected), origin), query, origin),
   ).slice(0, SEARCH_RESULT_LIMIT);
 
   if (merged.length) {
@@ -434,5 +363,8 @@ export function toGeocodeHits(results: GeocodeResult[]) {
     hours: item.hours,
     navEligibilityScore: item.navEligibilityScore,
     locationIncomplete: item.locationIncomplete,
+    resultGroup: item.resultGroup,
+    accuracyLabel: item.accuracyLabel,
+    regionValidation: item.regionValidation,
   }));
 }

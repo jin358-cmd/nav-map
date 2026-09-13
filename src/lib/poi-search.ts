@@ -103,6 +103,18 @@ export function rankSearchHits(
   region?: SearchRegion | null,
 ): GeocodeHit[] {
   const intent = classifyPoiQuery(query);
+  if (intent === "address") {
+    const groupRank = { "exact-house": 0, interpolated: 1, nearby: 2, poi: 3 } as const;
+    return [...hits].sort((a, b) => {
+      const ga = groupRank[a.resultGroup ?? "nearby"];
+      const gb = groupRank[b.resultGroup ?? "nearby"];
+      if (ga !== gb) return ga - gb;
+      if (Boolean(a.exactHouseNumber) !== Boolean(b.exactHouseNumber)) {
+        return a.exactHouseNumber ? -1 : 1;
+      }
+      return 0;
+    });
+  }
   const nearby = Boolean(origin && prefersNearby(intent));
   const located =
     region && !queryNamesOtherCity(query, region.city) ? region : null;
