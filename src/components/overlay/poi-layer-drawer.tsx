@@ -214,8 +214,15 @@ export function PoiLayerDrawer({
           本視野 {sourceMeta.count} 筆 ·{" "}
           {sourceMeta.source === "supabase" ? "雲端索引" : "本機索引"} ·{" "}
           {sourceMeta.dataVersion || "未標版本"}
+          {sourceMeta.count === 0
+            ? "。此範圍沒有已公開的南部可導航店家。"
+            : ""}
         </p>
-      ) : null}
+      ) : (
+        <p className="mt-1.5 border-t border-white/10 px-1 pt-1.5 text-[10px] leading-snug text-zinc-500">
+          開啟食衣住行等開關後，地圖才會載入南部店家。
+        </p>
+      )}
     </aside>
   );
 }

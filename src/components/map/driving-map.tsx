@@ -55,8 +55,8 @@ import {
 } from "@/lib/parking-layer";
 import {
   bindPoiLayerClicks,
-  POI_HIT_LAYER_ID,
-  POI_LAYER_ID,
+  isPoiMapLayer,
+  poiInteractiveLayerIds,
   upsertPoiLayer,
 } from "@/lib/poi-layer";
 import { CCTV_LAYER_HIT_ID, CCTV_LAYER_ID } from "@/lib/cctv-constants";
@@ -1165,8 +1165,7 @@ export function DrivingMap({
         CONSTRUCTION_LAYER_ID,
         DISASTER_HIT_LAYER_ID,
         DISASTER_LAYER_ID,
-        POI_HIT_LAYER_ID,
-        POI_LAYER_ID,
+        ...poiInteractiveLayerIds(),
       ].filter((id) => map.getLayer(id));
       const hits = candidateLayers.length
         ? map.queryRenderedFeatures([event.point.x, event.point.y], {
@@ -1174,16 +1173,8 @@ export function DrivingMap({
           })
         : [];
       if (hits.length) {
-        const poiHit = hits.find(
-          (feature) =>
-            feature.layer.id === POI_HIT_LAYER_ID ||
-            feature.layer.id === POI_LAYER_ID,
-        );
-        const occupied = hits.some(
-          (feature) =>
-            feature.layer.id !== POI_HIT_LAYER_ID &&
-            feature.layer.id !== POI_LAYER_ID,
-        );
+        const poiHit = hits.find((feature) => isPoiMapLayer(feature.layer.id));
+        const occupied = hits.some((feature) => !isPoiMapLayer(feature.layer.id));
         if (!occupied && poiHit && typeof poiHit.properties?.id === "string") {
           onPoiSelectRef.current?.(poiHit.properties.id);
         }

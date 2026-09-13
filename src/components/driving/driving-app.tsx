@@ -1672,6 +1672,12 @@ export function DrivingApp() {
         <div className="poi-layer-read-anchor">
           <PoiLayerReadProgress progress={poiLayersProgress} label={poiLayersReadLabel} />
         </div>
+      ) : poiSourceMeta && anyPoiLayerOn(poiLayerVisibility) ? (
+        <p className="pointer-events-none absolute top-[max(4.5rem,env(safe-area-inset-top))] left-1/2 z-20 -translate-x-1/2 rounded-full bg-black/65 px-3 py-1 text-[11px] text-zinc-200">
+          {poiSourceMeta.count} 筆 ·{" "}
+          {poiSourceMeta.source === "supabase" ? "雲端索引" : "本機索引"} ·{" "}
+          {poiSourceMeta.dataVersion}
+        </p>
       ) : null}
 
       {styleHint ? (
