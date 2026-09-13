@@ -1,13 +1,13 @@
 {
   "version": 4,
   "extractUrl": "https://data.bbbike.org/osm/pbf/region/asia/taiwan.osm.pbf",
-  "updatedAt": "2026-09-09T09:15:39.812Z",
-  "active": 148586,
-  "total": 149481,
+  "updatedAt": "2026-09-13T10:51:17.236Z",
+  "active": 805419,
+  "total": 812257,
   "incremental": true,
   "chainsUpdatedAt": "2026-09-08T16:39:45.829Z",
   "yellowPages": true,
-  "gcisUpdatedAt": "2026-09-09T09:15:39.812Z",
-  "gcisImported": 12666,
-  "gcisNavReady": 7380
+  "gcisUpdatedAt": "2026-09-13T10:51:17.236Z",
+  "gcisImported": 669499,
+  "gcisNavReady": 582839
 }

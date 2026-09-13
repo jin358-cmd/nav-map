@@ -1,0 +1,152 @@
+{
+  "dataVersion": "south-pilot-20260913-batch10",
+  "generatedAt": "2026-09-13T19:14:45.796Z",
+  "sourceFile": "/tmp/phase53a-src/taiwan-poi-index.json.gz",
+  "sourceCount": 812257,
+  "sourceSha256": "657c34315a8ea072f564722607ff4edcce146d76e2af41bcc330d6b0a2fc490f",
+  "checkpoint": "completed",
+  "regions": [
+    "雲林縣",
+    "嘉義市",
+    "嘉義縣",
+    "臺南市",
+    "高雄市",
+    "屏東縣"
+  ],
+  "expected": {
+    "candidates": 226721,
+    "located": 206952,
+    "navReady": 179717,
+    "unmatched": 19769,
+    "review": 27235
+  },
+  "actual": {
+    "candidates": 236645,
+    "located": 236645,
+    "gcisNavReady": 179717,
+    "navReady": 179601,
+    "review": 57044,
+    "reject": 0,
+    "published": 179601
+  },
+  "diffs": {
+    "candidates": 9924,
+    "located": 29693,
+    "gcisNavReady": 0,
+    "published": -116,
+    "unmatched": -19769,
+    "review": 29809
+  },
+  "byCounty": {
+    "雲林縣": {
+      "candidates": 20298,
+      "located": 20298,
+      "gcisNavReady": 11516,
+      "navReady": 11515,
+      "review": 8783,
+      "reject": 0,
+      "published": 11515
+    },
+    "嘉義市": {
+      "candidates": 12030,
+      "located": 12030,
+      "gcisNavReady": 9801,
+      "navReady": 9781,
+      "review": 2249,
+      "reject": 0,
+      "published": 9781
+    },
+    "嘉義縣": {
+      "candidates": 13616,
+      "located": 13616,
+      "gcisNavReady": 4543,
+      "navReady": 4538,
+      "review": 9078,
+      "reject": 0,
+      "published": 4538
+    },
+    "臺南市": {
+      "candidates": 73098,
+      "located": 73098,
+      "gcisNavReady": 56529,
+      "navReady": 56452,
+      "review": 16646,
+      "reject": 0,
+      "published": 56452
+    },
+    "高雄市": {
+      "candidates": 93591,
+      "located": 93591,
+      "gcisNavReady": 78879,
+      "navReady": 78870,
+      "review": 14721,
+      "reject": 0,
+      "published": 78870
+    },
+    "屏東縣": {
+      "candidates": 24012,
+      "located": 24012,
+      "gcisNavReady": 18449,
+      "navReady": 18445,
+      "review": 5567,
+      "reject": 0,
+      "published": 18445
+    }
+  },
+  "chiayiCombined": {
+    "candidates": 25646,
+    "located": 25646,
+    "gcisNavReady": 14344,
+    "published": 14319
+  },
+  "byCategory": {
+    "leisure": 29315,
+    "food": 95145,
+    "transport": 17563,
+    "housing": 69246,
+    "life": 1015,
+    "medical": 1910,
+    "education": 7602,
+    "clothing": 14849
+  },
+  "byQuality": {
+    "A": 60674,
+    "B": 120847,
+    "C": 94,
+    "D": 26201,
+    "E": 111,
+    "none": 28718
+  },
+  "reviewReasons": {
+    "county_only_address": 16466,
+    "below_nav_threshold": 39978,
+    "vague_name": 62,
+    "county_geom_conflict": 597
+  },
+  "chiayiYunlinReviewReasons": {
+    "雲林縣": {
+      "county_only_address": 1655,
+      "below_nav_threshold": 7064,
+      "vague_name": 6,
+      "county_geom_conflict": 64
+    },
+    "嘉義縣": {
+      "county_only_address": 1351,
+      "below_nav_threshold": 7690,
+      "vague_name": 3,
+      "county_geom_conflict": 37
+    }
+  },
+  "duplicateSourceId": 0,
+  "countyGeomConflicts": 597,
+  "coordAnomalies": 0,
+  "sameCoordClusters": 145,
+  "outsideSouthNormalized": 0,
+  "estimatedUpsertBatches": 79,
+  "notes": [
+    "GCIS 南部候選 226,721 = 已配對 206,952 + 未定位 19,769。未定位不在索引內，故 index reject≈0。",
+    "索引南部列 − GCIS 已配對 ≈ OSM／連鎖等非 GCIS 列，故 candidates／located 會高於純 GCIS 基準。",
+    "gcisNavReady 沿用 A/B 且分數≥60，不放寬。published 再扣除籠統店名、僅縣市地址、明顯縣市衝突、無法分類生活。",
+    "台／臺 已正規化；區域外不得 published。"
+  ]
+}

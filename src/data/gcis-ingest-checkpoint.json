@@ -1,11 +1,11 @@
 {
-  "job_id": "gcis-2026-09-09-e70ba995",
-  "source_version": "gcis-catalog-56-files-56",
-  "last_successful_offset": 1050,
-  "last_successful_registry_id": "00049648",
-  "batch_id": 2,
+  "job_id": "gcis-2026-09-13-7120bb79",
+  "source_version": "gcis-catalog-94-files-94",
+  "last_successful_offset": 69751,
+  "last_successful_registry_id": "XX574650",
+  "batch_id": 10,
   "status": "completed",
-  "started_at": "2026-09-09T09:12:41.670Z",
-  "updated_at": "2026-09-09T09:16:30.000Z",
+  "started_at": "2026-09-13T10:51:17.236Z",
+  "updated_at": "2026-09-13T16:32:27.321Z",
   "failed_reason": null
 }
