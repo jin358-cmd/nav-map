@@ -1,3 +1,4 @@
+import { validateAdminPoint } from "./admin-boxes";
 import {
   comparableTaiwanText,
   houseToken,
@@ -16,15 +17,6 @@ export type RankedGeocodeResult = GeocodeResult & {
   accuracyLabel: string;
   regionValidation: RegionValidation;
   originalSource?: GeocodeSource;
-};
-
-const SOUTH_BOXES: Record<string, { south: number; north: number; west: number; east: number }> = {
-  雲林縣: { south: 23.45, north: 23.92, west: 120.02, east: 120.82 },
-  嘉義市: { south: 23.43, north: 23.54, west: 120.39, east: 120.51 },
-  嘉義縣: { south: 23.12, north: 23.66, west: 120.08, east: 120.88 },
-  臺南市: { south: 22.8, north: 23.46, west: 119.92, east: 120.72 },
-  高雄市: { south: 22.28, north: 23.32, west: 120.1, east: 121.05 },
-  屏東縣: { south: 21.7, north: 22.95, west: 120.28, east: 120.98 },
 };
 
 function haystack(item: GeocodeResult) {
@@ -47,21 +39,18 @@ export function validateRegion(
 ): RegionValidation {
   const county = parsed.parts.city;
   if (!county) return "unavailable";
-  const box = SOUTH_BOXES[county];
   const hay = haystack(item);
   const textMatch = containsToken(hay, county);
-  if (box) {
-    const inBox =
-      item.latitude >= box.south &&
-      item.latitude <= box.north &&
-      item.longitude >= box.west &&
-      item.longitude <= box.east;
-    if (!inBox && !textMatch) return "mismatch";
-    if (textMatch || inBox) return "ok";
-  }
-  if (textMatch) return "ok";
+  const admin = validateAdminPoint(
+    county,
+    parsed.parts.town,
+    item.latitude,
+    item.longitude,
+  );
+  if (admin.region === "mismatch" && !textMatch) return "mismatch";
+  if (textMatch || admin.region === "ok") return "ok";
   if (/[縣市]/.test(hay) && !textMatch) return "mismatch";
-  return box ? "ok" : "unavailable";
+  return admin.region;
 }
 
 export function scoreAddressCandidate(
@@ -89,6 +78,13 @@ export function scoreAddressCandidate(
   if (parsed.parts.alley && containsToken(hay, parsed.parts.alley)) score += 8;
   if (parsed.parts.city && containsToken(hay, parsed.parts.city)) score += 10;
   if (parsed.parts.town && containsToken(hay, parsed.parts.town)) score += 12;
+  const admin = validateAdminPoint(
+    parsed.parts.city,
+    parsed.parts.town,
+    item.latitude,
+    item.longitude,
+  );
+  if (admin.districtInside) score += 6;
   if (
     (parsed.parts.village && containsToken(hay, parsed.parts.village)) ||
     (parsed.parts.neighborhood && containsToken(hay, parsed.parts.neighborhood)) ||

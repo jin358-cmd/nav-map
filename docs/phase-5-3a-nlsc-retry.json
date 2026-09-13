@@ -1,0 +1,19 @@
+{
+  "reconstructed": 3995,
+  "retried": 3995,
+  "recoveredNav": 1705,
+  "reviewOnly": 2277,
+  "stillEmpty": 9,
+  "transportError": 4,
+  "southRecoveredNav": 462,
+  "southMergedIntoLocalIndex": 421,
+  "wroteSupabase": false,
+  "wrotePoiIndex": false,
+  "updatedGeocodeCache": true,
+  "outputs": {
+    "recovered": "data/south-pilot/nlsc-retry-recovered.jsonl",
+    "stillFail": "data/south-pilot/nlsc-retry-still-fail.jsonl",
+    "cache": "src/data/gcis-geocode-cache.json"
+  },
+  "note": "道路／巷弄中心只進 review。未寫入 taiwan_address_index 或 POI 索引。"
+}

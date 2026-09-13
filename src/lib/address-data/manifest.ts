@@ -1,19 +1,25 @@
 import type { AddressSourceManifest } from "@/lib/address-data/schema";
 import { TAIWAN_COUNTIES } from "@/lib/address-data/schema";
 
-const CHECKED_AT = "2026-09-04";
+const CHECKED_AT = "2026-09-13";
+const SOUTH = new Set(["雲林縣", "嘉義市", "嘉義縣", "臺南市", "高雄市", "屏東縣"]);
 
 function countyDoorplate(county: string): AddressSourceManifest {
+  const southDerived = SOUTH.has(county);
   return {
     county,
     datasetName: `${county}門牌公開資料`,
-    sourceUrl: "NOT CONFIGURED",
-    license: "各縣市政府開放資料授權，匯入前須核對條款",
-    coordinateSystem: "unknown",
+    sourceUrl: southDerived ? "local://src/data/south-address-index.json.gz" : "NOT CONFIGURED",
+    license: southDerived
+      ? "OGDL + NLSC 衍生 staging，不是該縣市合法門牌原始檔"
+      : "各縣市政府開放資料授權，匯入前須核對條款",
+    coordinateSystem: "EPSG:4326",
     lastCheckedAt: CHECKED_AT,
-    enabled: false,
-    status: "not_configured",
-    notes: "不得在未核准前寫死下載網址或偽造門牌座標。",
+    enabled: southDerived,
+    status: southDerived ? "nlsc_derived" : "not_configured",
+    notes: southDerived
+      ? "本機 NLSC 衍生門牌 staging。ADDRESS_DOORPLATES_DIR 有官方檔時才改標 official-county-file。"
+      : "不得在未核准前寫死下載網址或偽造門牌座標。",
   };
 }
 
@@ -82,7 +88,7 @@ export const ADDRESS_SOURCE_MANIFEST: AddressSourceManifest[] = [
     lastCheckedAt: CHECKED_AT,
     enabled: false,
     status: "not_configured",
-    notes: "需套用 supabase/migrations 與 SUPABASE_SERVICE_ROLE_KEY。",
+    notes: "未確認 NavPilot 專案前不寫庫。本機改走 south-address-index.json.gz。",
   },
   ...TAIWAN_COUNTIES.map((county) => countyDoorplate(county)),
 ];

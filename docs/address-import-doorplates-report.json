@@ -1,0 +1,228 @@
+{
+  "dataset": "各縣市合法門牌公開資料",
+  "status": "partial",
+  "dryRun": true,
+  "addressDoorplatesDir": null,
+  "officialCounties": 0,
+  "nlscDerivedCounties": 6,
+  "notConfiguredCounties": 16,
+  "supabaseConfigured": false,
+  "wroteSupabase": false,
+  "counties": [
+    {
+      "county": "臺北市",
+      "status": "NOT CONFIGURED",
+      "total": 0,
+      "withCoordinates": 0,
+      "withoutCoordinates": 0,
+      "duplicates": 0,
+      "failed": 0
+    },
+    {
+      "county": "新北市",
+      "status": "NOT CONFIGURED",
+      "total": 0,
+      "withCoordinates": 0,
+      "withoutCoordinates": 0,
+      "duplicates": 0,
+      "failed": 0
+    },
+    {
+      "county": "桃園市",
+      "status": "NOT CONFIGURED",
+      "total": 0,
+      "withCoordinates": 0,
+      "withoutCoordinates": 0,
+      "duplicates": 0,
+      "failed": 0
+    },
+    {
+      "county": "臺中市",
+      "status": "NOT CONFIGURED",
+      "total": 0,
+      "withCoordinates": 0,
+      "withoutCoordinates": 0,
+      "duplicates": 0,
+      "failed": 0
+    },
+    {
+      "county": "臺南市",
+      "status": "nlsc-derived",
+      "file": "src/data/south-address-index.json.gz",
+      "total": null,
+      "withCoordinates": null,
+      "withoutCoordinates": 0,
+      "duplicates": 0,
+      "failed": 0,
+      "note": "本機 staging，不是各縣市合法門牌原始檔。"
+    },
+    {
+      "county": "高雄市",
+      "status": "nlsc-derived",
+      "file": "src/data/south-address-index.json.gz",
+      "total": null,
+      "withCoordinates": null,
+      "withoutCoordinates": 0,
+      "duplicates": 0,
+      "failed": 0,
+      "note": "本機 staging，不是各縣市合法門牌原始檔。"
+    },
+    {
+      "county": "基隆市",
+      "status": "NOT CONFIGURED",
+      "total": 0,
+      "withCoordinates": 0,
+      "withoutCoordinates": 0,
+      "duplicates": 0,
+      "failed": 0
+    },
+    {
+      "county": "新竹市",
+      "status": "NOT CONFIGURED",
+      "total": 0,
+      "withCoordinates": 0,
+      "withoutCoordinates": 0,
+      "duplicates": 0,
+      "failed": 0
+    },
+    {
+      "county": "新竹縣",
+      "status": "NOT CONFIGURED",
+      "total": 0,
+      "withCoordinates": 0,
+      "withoutCoordinates": 0,
+      "duplicates": 0,
+      "failed": 0
+    },
+    {
+      "county": "苗栗縣",
+      "status": "NOT CONFIGURED",
+      "total": 0,
+      "withCoordinates": 0,
+      "withoutCoordinates": 0,
+      "duplicates": 0,
+      "failed": 0
+    },
+    {
+      "county": "彰化縣",
+      "status": "NOT CONFIGURED",
+      "total": 0,
+      "withCoordinates": 0,
+      "withoutCoordinates": 0,
+      "duplicates": 0,
+      "failed": 0
+    },
+    {
+      "county": "南投縣",
+      "status": "NOT CONFIGURED",
+      "total": 0,
+      "withCoordinates": 0,
+      "withoutCoordinates": 0,
+      "duplicates": 0,
+      "failed": 0
+    },
+    {
+      "county": "雲林縣",
+      "status": "nlsc-derived",
+      "file": "src/data/south-address-index.json.gz",
+      "total": null,
+      "withCoordinates": null,
+      "withoutCoordinates": 0,
+      "duplicates": 0,
+      "failed": 0,
+      "note": "本機 staging，不是各縣市合法門牌原始檔。"
+    },
+    {
+      "county": "嘉義市",
+      "status": "nlsc-derived",
+      "file": "src/data/south-address-index.json.gz",
+      "total": null,
+      "withCoordinates": null,
+      "withoutCoordinates": 0,
+      "duplicates": 0,
+      "failed": 0,
+      "note": "本機 staging，不是各縣市合法門牌原始檔。"
+    },
+    {
+      "county": "嘉義縣",
+      "status": "nlsc-derived",
+      "file": "src/data/south-address-index.json.gz",
+      "total": null,
+      "withCoordinates": null,
+      "withoutCoordinates": 0,
+      "duplicates": 0,
+      "failed": 0,
+      "note": "本機 staging，不是各縣市合法門牌原始檔。"
+    },
+    {
+      "county": "屏東縣",
+      "status": "nlsc-derived",
+      "file": "src/data/south-address-index.json.gz",
+      "total": null,
+      "withCoordinates": null,
+      "withoutCoordinates": 0,
+      "duplicates": 0,
+      "failed": 0,
+      "note": "本機 staging，不是各縣市合法門牌原始檔。"
+    },
+    {
+      "county": "宜蘭縣",
+      "status": "NOT CONFIGURED",
+      "total": 0,
+      "withCoordinates": 0,
+      "withoutCoordinates": 0,
+      "duplicates": 0,
+      "failed": 0
+    },
+    {
+      "county": "花蓮縣",
+      "status": "NOT CONFIGURED",
+      "total": 0,
+      "withCoordinates": 0,
+      "withoutCoordinates": 0,
+      "duplicates": 0,
+      "failed": 0
+    },
+    {
+      "county": "臺東縣",
+      "status": "NOT CONFIGURED",
+      "total": 0,
+      "withCoordinates": 0,
+      "withoutCoordinates": 0,
+      "duplicates": 0,
+      "failed": 0
+    },
+    {
+      "county": "澎湖縣",
+      "status": "NOT CONFIGURED",
+      "total": 0,
+      "withCoordinates": 0,
+      "withoutCoordinates": 0,
+      "duplicates": 0,
+      "failed": 0
+    },
+    {
+      "county": "金門縣",
+      "status": "NOT CONFIGURED",
+      "total": 0,
+      "withCoordinates": 0,
+      "withoutCoordinates": 0,
+      "duplicates": 0,
+      "failed": 0
+    },
+    {
+      "county": "連江縣",
+      "status": "NOT CONFIGURED",
+      "total": 0,
+      "withCoordinates": 0,
+      "withoutCoordinates": 0,
+      "duplicates": 0,
+      "failed": 0
+    }
+  ],
+  "notes": [
+    "缺官方檔的縣市不會被其他縣市擋住。",
+    "nlsc-derived 不得標成官方合法門牌。",
+    "未確認 NavPilot Supabase 前不寫 taiwan_address_index。"
+  ]
+}

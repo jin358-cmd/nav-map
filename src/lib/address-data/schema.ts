@@ -12,7 +12,9 @@ export type AddressSourceStatus =
   | "enabled"
   | "not_configured"
   | "dataset_not_imported"
-  | "disabled";
+  | "disabled"
+  | "nlsc_derived"
+  | "local_staging";
 
 export type AddressDataRecord = {
   id: string;

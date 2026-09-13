@@ -1,6 +1,10 @@
 import "server-only";
 
 import { formatTaiwanDisplayAddress } from "@/lib/geocoding/format-taiwan-display-address";
+import {
+  localAddressIndexEnabled,
+  searchLocalAddressIndex,
+} from "@/lib/geocoding/local-address-index";
 import type { GeocodeProvider, GeocodeResult } from "@/lib/geocoding/types";
 
 function supabaseConfig() {
@@ -11,16 +15,20 @@ function supabaseConfig() {
 }
 
 export function officialIndexEnabled() {
-  return Boolean(supabaseConfig());
+  return Boolean(supabaseConfig() || localAddressIndexEnabled());
 }
 
 export function createOfficialIndexProvider(): GeocodeProvider {
   const config = supabaseConfig();
+  const localEnabled = localAddressIndexEnabled();
   return {
     name: "index",
-    enabled: Boolean(config),
+    enabled: Boolean(config || localEnabled),
     async search(query, options) {
-      if (!config || query.trim().length < 2) return [];
+      if (query.trim().length < 2) return [];
+      if (!config) {
+        return searchLocalAddressIndex(query, 12);
+      }
       const rpc = await fetch(`${config.url}/rest/v1/rpc/search_taiwan_addresses`, {
         method: "POST",
         headers: {
@@ -50,7 +58,9 @@ export function createOfficialIndexProvider(): GeocodeProvider {
               signal: options?.signal,
             },
           );
-      if (!response.ok) return [];
+      if (!response.ok) {
+        return localEnabled ? searchLocalAddressIndex(query, 12) : [];
+      }
       const rows = (await response.json()) as Array<{
         id?: string;
         display_address?: string;
@@ -60,7 +70,7 @@ export function createOfficialIndexProvider(): GeocodeProvider {
         accuracy?: GeocodeResult["matchKind"];
         source?: string;
       }>;
-      return rows
+      const mapped = rows
         .filter(
           (row) =>
             Number.isFinite(row.latitude) && Number.isFinite(row.longitude),
@@ -80,6 +90,8 @@ export function createOfficialIndexProvider(): GeocodeProvider {
           exactHouseNumber: row.accuracy === "exact-house",
           matchKind: row.accuracy ?? "approximate",
         }));
+      if (mapped.length) return mapped;
+      return localEnabled ? searchLocalAddressIndex(query, 12) : [];
     },
   };
 }

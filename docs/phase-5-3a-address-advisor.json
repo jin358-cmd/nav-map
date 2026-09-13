@@ -1,0 +1,27 @@
+{
+  "mode": "local",
+  "supabaseAdvisors": "not_configured",
+  "wroteSupabase": false,
+  "index": "src/data/south-address-index.json.gz",
+  "source": "nlsc-derived",
+  "notOfficialCountyFile": true,
+  "rows": 181373,
+  "regionValidation": {
+    "ok": 180782,
+    "mismatch": 591,
+    "noCounty": 0
+  },
+  "byAccuracy": {
+    "interpolated": 9606,
+    "road-center": 3319,
+    "lane-center": 138,
+    "exact-house": 168309,
+    "approximate": 1
+  },
+  "districtBoxes": 175,
+  "countyBoxes": 22,
+  "flags": [
+    "591 筆座標落在宣告縣市包箱外（仍保留，不刪列）",
+    "官方多邊形未提供，district 包箱不得當成界線驗證完成"
+  ]
+}

@@ -89,7 +89,44 @@ function testWrongCountyExcludedFromExact() {
   assert.notEqual(ranked.find((row) => row.id === "taipei")?.exactHouseNumber, true);
 }
 
+function testNonSouthCountyUsesBox() {
+  const ranked = rankAddressResults(
+    [
+      hit({
+        id: "tp",
+        label: "臺北市中正區重慶南路一段122號",
+        latitude: 25.04,
+        longitude: 121.51,
+        matchKind: "exact-house",
+        exactHouseNumber: true,
+      }),
+    ],
+    "臺北市中正區重慶南路一段122號",
+  );
+  assert.equal(ranked[0].regionValidation, "ok");
+}
+
+function testCountyGeomMismatch() {
+  const ranked = rankAddressResults(
+    [
+      hit({
+        id: "wrong",
+        label: "高雄市前鎮區中山路1號",
+        latitude: 22.59,
+        longitude: 120.31,
+        matchKind: "exact-house",
+        exactHouseNumber: true,
+      }),
+    ],
+    "臺北市中正區中山路1號",
+  );
+  assert.equal(ranked[0].regionValidation, "mismatch");
+  assert.notEqual(ranked[0].exactHouseNumber, true);
+}
+
 testExactBeatsRoadCenter();
 testCacheDoesNotWin();
 testWrongCountyExcludedFromExact();
-console.log(JSON.stringify({ ok: true, suite: "address-ranking", tests: 3 }));
+testNonSouthCountyUsesBox();
+testCountyGeomMismatch();
+console.log(JSON.stringify({ ok: true, suite: "address-ranking", tests: 5 }));

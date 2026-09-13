@@ -1,0 +1,1382 @@
+{
+  "version": "admin-boxes-20260913-derived",
+  "kind": "coarse-envelopes",
+  "notOfficialPolygons": true,
+  "notes": "縣市包箱供 region_validation。鄉鎮區包箱由南部已定位 POI 衍生，不是官方界線多邊形。",
+  "counties": {
+    "臺北市": {
+      "south": 24.93,
+      "north": 25.22,
+      "west": 121.45,
+      "east": 121.67
+    },
+    "新北市": {
+      "south": 24.67,
+      "north": 25.31,
+      "west": 121.28,
+      "east": 122.01
+    },
+    "桃園市": {
+      "south": 24.58,
+      "north": 25.13,
+      "west": 120.98,
+      "east": 121.48
+    },
+    "臺中市": {
+      "south": 24,
+      "north": 24.45,
+      "west": 120.45,
+      "east": 121.45
+    },
+    "臺南市": {
+      "south": 22.8,
+      "north": 23.46,
+      "west": 119.92,
+      "east": 120.72
+    },
+    "高雄市": {
+      "south": 22.28,
+      "north": 23.32,
+      "west": 120.1,
+      "east": 121.05
+    },
+    "基隆市": {
+      "south": 25.08,
+      "north": 25.21,
+      "west": 121.66,
+      "east": 121.81
+    },
+    "新竹市": {
+      "south": 24.76,
+      "north": 24.86,
+      "west": 120.9,
+      "east": 121.04
+    },
+    "新竹縣": {
+      "south": 24.42,
+      "north": 24.9,
+      "west": 120.88,
+      "east": 121.36
+    },
+    "苗栗縣": {
+      "south": 24.3,
+      "north": 24.75,
+      "west": 120.62,
+      "east": 121.26
+    },
+    "彰化縣": {
+      "south": 23.82,
+      "north": 24.2,
+      "west": 120.22,
+      "east": 120.68
+    },
+    "南投縣": {
+      "south": 23.43,
+      "north": 24.15,
+      "west": 120.68,
+      "east": 121.3
+    },
+    "雲林縣": {
+      "south": 23.45,
+      "north": 23.92,
+      "west": 120.02,
+      "east": 120.82
+    },
+    "嘉義市": {
+      "south": 23.43,
+      "north": 23.54,
+      "west": 120.39,
+      "east": 120.51
+    },
+    "嘉義縣": {
+      "south": 23.12,
+      "north": 23.66,
+      "west": 120.08,
+      "east": 120.88
+    },
+    "屏東縣": {
+      "south": 21.7,
+      "north": 22.95,
+      "west": 120.28,
+      "east": 120.98
+    },
+    "宜蘭縣": {
+      "south": 24.33,
+      "north": 24.88,
+      "west": 121.32,
+      "east": 121.98
+    },
+    "花蓮縣": {
+      "south": 23.1,
+      "north": 24.4,
+      "west": 121.15,
+      "east": 121.78
+    },
+    "臺東縣": {
+      "south": 22.2,
+      "north": 23.45,
+      "west": 120.8,
+      "east": 121.62
+    },
+    "澎湖縣": {
+      "south": 23.18,
+      "north": 23.8,
+      "west": 119.3,
+      "east": 119.75
+    },
+    "金門縣": {
+      "south": 24.37,
+      "north": 24.54,
+      "west": 118.2,
+      "east": 118.52
+    },
+    "連江縣": {
+      "south": 25.93,
+      "north": 26.39,
+      "west": 119.9,
+      "east": 120.52
+    }
+  },
+  "districts": {
+    "臺北市": {
+      "中正區": {
+        "south": 25.02,
+        "north": 25.05,
+        "west": 121.5,
+        "east": 121.53,
+        "source": "seed"
+      },
+      "松山區": {
+        "south": 22.5323,
+        "north": 23.7294,
+        "west": 120.2263,
+        "east": 120.5803,
+        "source": "derived-from-located-pois"
+      },
+      "信義區": {
+        "south": 22.5589,
+        "north": 23.7636,
+        "west": 120.2269,
+        "east": 120.5786,
+        "source": "derived-from-located-pois"
+      }
+    },
+    "高雄市": {
+      "橋頭區": {
+        "south": 22.4886,
+        "north": 24.1562,
+        "west": 120.1692,
+        "east": 120.7276,
+        "source": "derived-from-located-pois"
+      },
+      "鳳山區": {
+        "south": 21.9772,
+        "north": 25.1449,
+        "west": 120.1417,
+        "east": 121.7564,
+        "source": "derived-from-located-pois"
+      },
+      "鹽埕區": {
+        "south": 22.4879,
+        "north": 25.0243,
+        "west": 120.1668,
+        "east": 121.5249,
+        "source": "derived-from-located-pois"
+      },
+      "楠梓區": {
+        "south": 22.4521,
+        "north": 25.0693,
+        "west": 120.1532,
+        "east": 121.4481,
+        "source": "derived-from-located-pois"
+      },
+      "鼓山區": {
+        "south": 22.4622,
+        "north": 25.0618,
+        "west": 120.1901,
+        "east": 121.7997,
+        "source": "derived-from-located-pois"
+      },
+      "旗山區": {
+        "south": 22.5911,
+        "north": 23.0246,
+        "west": 120.2053,
+        "east": 120.5564,
+        "source": "derived-from-located-pois"
+      },
+      "旗津區": {
+        "south": 22.5565,
+        "north": 23.1191,
+        "west": 120.2503,
+        "east": 120.6168,
+        "source": "derived-from-located-pois"
+      },
+      "新興區": {
+        "south": 22.5506,
+        "north": 25.1384,
+        "west": 120.158,
+        "east": 121.7581,
+        "source": "derived-from-located-pois"
+      },
+      "苓雅區": {
+        "south": 22.3262,
+        "north": 25.0814,
+        "west": 118.3475,
+        "east": 121.741,
+        "source": "derived-from-located-pois"
+      },
+      "左營區": {
+        "south": 21.9924,
+        "north": 25.1888,
+        "west": 119.5626,
+        "east": 121.7427,
+        "source": "derived-from-located-pois"
+      },
+      "前鎮區": {
+        "south": 22.3239,
+        "north": 25.1227,
+        "west": 120.1852,
+        "east": 121.649,
+        "source": "derived-from-located-pois"
+      },
+      "三民區": {
+        "south": 22.1109,
+        "north": 25.1309,
+        "west": 119.4067,
+        "east": 121.5682,
+        "source": "derived-from-located-pois"
+      },
+      "路竹區": {
+        "south": 22.6035,
+        "north": 25.0766,
+        "west": 120.1563,
+        "east": 121.6628,
+        "source": "derived-from-located-pois"
+      },
+      "燕巢區": {
+        "south": 22.7365,
+        "north": 22.8359,
+        "west": 120.3002,
+        "east": 120.44,
+        "source": "derived-from-located-pois"
+      },
+      "岡山區": {
+        "south": 22.504,
+        "north": 25.0308,
+        "west": 120.0914,
+        "east": 121.3158,
+        "source": "derived-from-located-pois"
+      },
+      "仁武區": {
+        "south": 22.6019,
+        "north": 25.0241,
+        "west": 120.175,
+        "east": 121.5016,
+        "source": "derived-from-located-pois"
+      },
+      "大樹區": {
+        "south": 22.5879,
+        "north": 25.152,
+        "west": 118.3233,
+        "east": 121.4738,
+        "source": "derived-from-located-pois"
+      },
+      "小港區": {
+        "south": 22.4599,
+        "north": 25.0136,
+        "west": 120.2282,
+        "east": 121.5287,
+        "source": "derived-from-located-pois"
+      },
+      "茂林區": {
+        "south": 22.8637,
+        "north": 22.977,
+        "west": 120.6349,
+        "east": 120.7316,
+        "source": "derived-from-located-pois"
+      },
+      "阿蓮區": {
+        "south": 22.6082,
+        "north": 24.1081,
+        "west": 120.2324,
+        "east": 120.5696,
+        "source": "derived-from-located-pois"
+      },
+      "林園區": {
+        "south": 22.3686,
+        "north": 24.9309,
+        "west": 120.1903,
+        "east": 121.2703,
+        "source": "derived-from-located-pois"
+      },
+      "茄萣區": {
+        "south": 22.851,
+        "north": 23.0284,
+        "west": 120.1571,
+        "east": 120.3195,
+        "source": "derived-from-located-pois"
+      },
+      "內門區": {
+        "south": 22.5001,
+        "north": 23.0984,
+        "west": 120.3455,
+        "east": 120.5393,
+        "source": "derived-from-located-pois"
+      },
+      "大寮區": {
+        "south": 22.4723,
+        "north": 25.0863,
+        "west": 120.1866,
+        "east": 121.6968,
+        "source": "derived-from-located-pois"
+      },
+      "湖內區": {
+        "south": 22.6502,
+        "north": 23.4434,
+        "west": 120.1729,
+        "east": 120.5323,
+        "source": "derived-from-located-pois"
+      },
+      "大社區": {
+        "south": 22.5668,
+        "north": 25.1533,
+        "west": 120.2398,
+        "east": 121.8113,
+        "source": "derived-from-located-pois"
+      },
+      "鳥松區": {
+        "south": 21.96,
+        "north": 24.9831,
+        "west": 120.2784,
+        "east": 121.2866,
+        "source": "derived-from-located-pois"
+      },
+      "六龜區": {
+        "south": 22.8649,
+        "north": 23.6659,
+        "west": 120.5886,
+        "east": 121.432,
+        "source": "derived-from-located-pois"
+      },
+      "前金區": {
+        "south": 22.5736,
+        "north": 23.8022,
+        "west": 120.2186,
+        "east": 120.4992,
+        "source": "derived-from-located-pois"
+      },
+      "美濃區": {
+        "south": 22.6557,
+        "north": 24.0764,
+        "west": 120.2786,
+        "east": 120.6189,
+        "source": "derived-from-located-pois"
+      },
+      "鳳山區鎮": {
+        "south": 22.4712,
+        "north": 22.9844,
+        "west": 120.1805,
+        "east": 120.5246,
+        "source": "derived-from-located-pois"
+      },
+      "前金區市": {
+        "south": 22.606,
+        "north": 22.6476,
+        "west": 120.2738,
+        "east": 120.3077,
+        "source": "derived-from-located-pois"
+      },
+      "梓官區": {
+        "south": 22.6395,
+        "north": 22.949,
+        "west": 120.1696,
+        "east": 120.365,
+        "source": "derived-from-located-pois"
+      },
+      "桃源區": {
+        "south": 22.5894,
+        "north": 23.2898,
+        "west": 120.2594,
+        "east": 120.8416,
+        "source": "derived-from-located-pois"
+      },
+      "甲仙區": {
+        "south": 22.6416,
+        "north": 23.4829,
+        "west": 120.2555,
+        "east": 120.6515,
+        "source": "derived-from-located-pois"
+      },
+      "永安區": {
+        "south": 22.7862,
+        "north": 22.8511,
+        "west": 120.1917,
+        "east": 120.2747,
+        "source": "derived-from-located-pois"
+      },
+      "彌陀區": {
+        "south": 22.7299,
+        "north": 25.0313,
+        "west": 120.2134,
+        "east": 121.3242,
+        "source": "derived-from-located-pois"
+      },
+      "前鎮區鎮": {
+        "south": 22.424,
+        "north": 25.0646,
+        "west": 120.2783,
+        "east": 121.538,
+        "source": "derived-from-located-pois"
+      },
+      "田寮區": {
+        "south": 22.812,
+        "north": 22.9095,
+        "west": 120.3299,
+        "east": 120.4457,
+        "source": "derived-from-located-pois"
+      },
+      "杉林區": {
+        "south": 22.8715,
+        "north": 23.06,
+        "west": 120.5115,
+        "east": 120.6801,
+        "source": "derived-from-located-pois"
+      },
+      "那瑪夏區": {
+        "south": 23.2032,
+        "north": 23.294,
+        "west": 120.6779,
+        "east": 120.7355,
+        "source": "derived-from-located-pois"
+      },
+      "前鎮區前鎮": {
+        "south": 22.5725,
+        "north": 22.6228,
+        "west": 120.289,
+        "east": 120.3242,
+        "source": "derived-from-located-pois"
+      },
+      "三民區市": {
+        "south": 21.991,
+        "north": 22.653,
+        "west": 120.2715,
+        "east": 120.7561,
+        "source": "derived-from-located-pois"
+      },
+      "大樹區新鎮": {
+        "south": 22.6324,
+        "north": 22.6711,
+        "west": 120.4021,
+        "east": 120.4368,
+        "source": "derived-from-located-pois"
+      },
+      "小港區店鎮": {
+        "south": 22.5453,
+        "north": 22.5812,
+        "west": 120.3338,
+        "east": 120.373,
+        "source": "derived-from-located-pois"
+      }
+    },
+    "臺南市": {
+      "中西區": {
+        "south": 21.9924,
+        "north": 25.0187,
+        "west": 120.1558,
+        "east": 121.5675,
+        "source": "derived-from-located-pois"
+      },
+      "南區": {
+        "south": 22.552,
+        "north": 25.0848,
+        "west": 120.1547,
+        "east": 121.4925,
+        "source": "derived-from-located-pois"
+      },
+      "安平區": {
+        "south": 22.6127,
+        "north": 26.2384,
+        "west": 119.9833,
+        "east": 121.5412,
+        "source": "derived-from-located-pois"
+      },
+      "新市區": {
+        "south": 22.6636,
+        "north": 23.947,
+        "west": 120.2401,
+        "east": 121.2388,
+        "source": "derived-from-located-pois"
+      },
+      "東山區": {
+        "south": 22.9394,
+        "north": 24.2983,
+        "west": 120.2001,
+        "east": 120.8791,
+        "source": "derived-from-located-pois"
+      },
+      "東區": {
+        "south": 22.5005,
+        "north": 25.0491,
+        "west": 120.1465,
+        "east": 121.5591,
+        "source": "derived-from-located-pois"
+      },
+      "新化區": {
+        "south": 22.6227,
+        "north": 24.7954,
+        "west": 120.0953,
+        "east": 121.032,
+        "source": "derived-from-located-pois"
+      },
+      "白河區": {
+        "south": 22.9558,
+        "north": 25.0814,
+        "west": 120.1855,
+        "east": 121.6741,
+        "source": "derived-from-located-pois"
+      },
+      "北區": {
+        "south": 22.5957,
+        "north": 25.105,
+        "west": 119.5696,
+        "east": 121.5494,
+        "source": "derived-from-located-pois"
+      },
+      "永康區": {
+        "south": 21.9371,
+        "north": 25.0655,
+        "west": 120.1624,
+        "east": 121.4753,
+        "source": "derived-from-located-pois"
+      },
+      "仁德區": {
+        "south": 22.7081,
+        "north": 25.0652,
+        "west": 119.5644,
+        "east": 121.5573,
+        "source": "derived-from-located-pois"
+      },
+      "歸仁區": {
+        "south": 22.7134,
+        "north": 23.7154,
+        "west": 120.1298,
+        "east": 120.5539,
+        "source": "derived-from-located-pois"
+      },
+      "新營區": {
+        "south": 22.5254,
+        "north": 25.0445,
+        "west": 120.1481,
+        "east": 121.5327,
+        "source": "derived-from-located-pois"
+      },
+      "關廟區": {
+        "south": 22.7184,
+        "north": 24.7123,
+        "west": 120.0892,
+        "east": 120.883,
+        "source": "derived-from-located-pois"
+      },
+      "楠西區": {
+        "south": 23.1181,
+        "north": 23.2397,
+        "west": 120.3348,
+        "east": 120.5758,
+        "source": "derived-from-located-pois"
+      },
+      "安南區": {
+        "south": 22.5331,
+        "north": 26.1741,
+        "west": 119.9038,
+        "east": 121.0147,
+        "source": "derived-from-located-pois"
+      },
+      "南化區": {
+        "south": 22.829,
+        "north": 23.2844,
+        "west": 120.1721,
+        "east": 120.6226,
+        "source": "derived-from-located-pois"
+      },
+      "左鎮區": {
+        "south": 22.9629,
+        "north": 23.0912,
+        "west": 120.3604,
+        "east": 120.4568,
+        "source": "derived-from-located-pois"
+      },
+      "龍崎區": {
+        "south": 22.9144,
+        "north": 23.8229,
+        "west": 120.1686,
+        "east": 120.445,
+        "source": "derived-from-located-pois"
+      },
+      "麻豆區": {
+        "south": 22.624,
+        "north": 25.0499,
+        "west": 120.146,
+        "east": 121.5427,
+        "source": "derived-from-located-pois"
+      },
+      "安定區": {
+        "south": 22.9152,
+        "north": 24.3565,
+        "west": 120.1722,
+        "east": 120.6845,
+        "source": "derived-from-located-pois"
+      },
+      "六甲區": {
+        "south": 22.5316,
+        "north": 25.0814,
+        "west": 120.2178,
+        "east": 121.6741,
+        "source": "derived-from-located-pois"
+      },
+      "下營區": {
+        "south": 22.9494,
+        "north": 23.3362,
+        "west": 120.1635,
+        "east": 120.4172,
+        "source": "derived-from-located-pois"
+      },
+      "佳里區": {
+        "south": 22.4937,
+        "north": 25.2546,
+        "west": 119.5592,
+        "east": 121.868,
+        "source": "derived-from-located-pois"
+      },
+      "柳營區": {
+        "south": 23.0286,
+        "north": 25.0694,
+        "west": 120.1421,
+        "east": 121.5262,
+        "source": "derived-from-located-pois"
+      },
+      "山上區": {
+        "south": 22.6028,
+        "north": 23.1415,
+        "west": 120.3177,
+        "east": 120.4221,
+        "source": "derived-from-located-pois"
+      },
+      "善化區": {
+        "south": 22.6358,
+        "north": 23.5097,
+        "west": 120.1715,
+        "east": 120.4977,
+        "source": "derived-from-located-pois"
+      },
+      "玉井區": {
+        "south": 22.9466,
+        "north": 25.0814,
+        "west": 120.2137,
+        "east": 121.6741,
+        "source": "derived-from-located-pois"
+      },
+      "西港區": {
+        "south": 23.0684,
+        "north": 25.0814,
+        "west": 120.1385,
+        "east": 121.6741,
+        "source": "derived-from-located-pois"
+      },
+      "官田區": {
+        "south": 23.0284,
+        "north": 23.3666,
+        "west": 120.1896,
+        "east": 120.4925,
+        "source": "derived-from-located-pois"
+      },
+      "北門區": {
+        "south": 22.9984,
+        "north": 23.7878,
+        "west": 120.0815,
+        "east": 120.3266,
+        "source": "derived-from-located-pois"
+      },
+      "後壁區": {
+        "south": 23.0922,
+        "north": 23.8007,
+        "west": 120.2846,
+        "east": 120.4445,
+        "source": "derived-from-located-pois"
+      },
+      "學甲區": {
+        "south": 22.5854,
+        "north": 23.4035,
+        "west": 120.1234,
+        "east": 120.4327,
+        "source": "derived-from-located-pois"
+      },
+      "鹽水區": {
+        "south": 22.9038,
+        "north": 25.0814,
+        "west": 120.1968,
+        "east": 121.6741,
+        "source": "derived-from-located-pois"
+      },
+      "七股區": {
+        "south": 22.6423,
+        "north": 23.2042,
+        "west": 120.022,
+        "east": 120.3218,
+        "source": "derived-from-located-pois"
+      },
+      "大內區": {
+        "south": 23.0943,
+        "north": 23.1794,
+        "west": 120.3351,
+        "east": 120.4411,
+        "source": "derived-from-located-pois"
+      },
+      "將軍區": {
+        "south": 22.975,
+        "north": 23.8184,
+        "west": 120.0689,
+        "east": 120.4305,
+        "source": "derived-from-located-pois"
+      },
+      "歸仁區後市": {
+        "south": 22.6436,
+        "north": 23.2482,
+        "west": 120.2726,
+        "east": 120.4919,
+        "source": "derived-from-located-pois"
+      },
+      "新市區新市": {
+        "south": 23.0125,
+        "north": 23.3238,
+        "west": 120.2321,
+        "east": 120.3275,
+        "source": "derived-from-located-pois"
+      },
+      "官田區二鎮": {
+        "south": 23.1804,
+        "north": 25.0253,
+        "west": 120.2993,
+        "east": 121.315,
+        "source": "derived-from-located-pois"
+      },
+      "佳里區鎮": {
+        "south": 23.1315,
+        "north": 24.9513,
+        "west": 120.1626,
+        "east": 121.3801,
+        "source": "derived-from-located-pois"
+      },
+      "新營區護鎮": {
+        "south": 23.3013,
+        "north": 23.3469,
+        "west": 120.2669,
+        "east": 120.3279,
+        "source": "derived-from-located-pois"
+      }
+    },
+    "屏東縣": {
+      "內埔鄉": {
+        "south": 22.4849,
+        "north": 25.067,
+        "west": 120.1709,
+        "east": 121.5397,
+        "source": "derived-from-located-pois"
+      },
+      "屏東市": {
+        "south": 22.3101,
+        "north": 25.0755,
+        "west": 118.3041,
+        "east": 121.831,
+        "source": "derived-from-located-pois"
+      },
+      "長治鄉": {
+        "south": 22.6354,
+        "north": 24.1535,
+        "west": 120.2874,
+        "east": 120.6432,
+        "source": "derived-from-located-pois"
+      },
+      "恆春鎮": {
+        "south": 21.8891,
+        "north": 25.0804,
+        "west": 120.1596,
+        "east": 121.6041,
+        "source": "derived-from-located-pois"
+      },
+      "高樹鄉": {
+        "south": 22.5504,
+        "north": 25.0708,
+        "west": 120.3237,
+        "east": 121.3969,
+        "source": "derived-from-located-pois"
+      },
+      "枋山鄉": {
+        "south": 22.1604,
+        "north": 23.9857,
+        "west": 120.6004,
+        "east": 121.6077,
+        "source": "derived-from-located-pois"
+      },
+      "泰武鄉": {
+        "south": 22.5332,
+        "north": 22.6434,
+        "west": 120.5958,
+        "east": 120.7016,
+        "source": "derived-from-located-pois"
+      },
+      "來義鄉": {
+        "south": 22.4198,
+        "north": 25.1049,
+        "west": 120.5643,
+        "east": 121.4048,
+        "source": "derived-from-located-pois"
+      },
+      "霧臺鄉": {
+        "south": 22.6746,
+        "north": 22.7805,
+        "west": 120.5624,
+        "east": 120.7751,
+        "source": "derived-from-located-pois"
+      },
+      "牡丹鄉": {
+        "south": 22.0551,
+        "north": 23.0346,
+        "west": 120.7288,
+        "east": 121.3386,
+        "source": "derived-from-located-pois"
+      },
+      "新埤鄉": {
+        "south": 22.4342,
+        "north": 22.613,
+        "west": 120.3081,
+        "east": 120.6408,
+        "source": "derived-from-located-pois"
+      },
+      "東港鎮": {
+        "south": 21.9936,
+        "north": 23.3214,
+        "west": 120.2649,
+        "east": 120.7621,
+        "source": "derived-from-located-pois"
+      },
+      "琉球鄉": {
+        "south": 22.3078,
+        "north": 22.3692,
+        "west": 120.3395,
+        "east": 120.4033,
+        "source": "derived-from-located-pois"
+      },
+      "潮州鎮": {
+        "south": 22.0053,
+        "north": 25.0229,
+        "west": 120.2732,
+        "east": 121.4988,
+        "source": "derived-from-located-pois"
+      },
+      "萬丹鄉": {
+        "south": 22.5197,
+        "north": 23.1386,
+        "west": 120.1918,
+        "east": 120.5372,
+        "source": "derived-from-located-pois"
+      },
+      "新園鄉": {
+        "south": 22.4561,
+        "north": 24.1782,
+        "west": 120.1547,
+        "east": 120.4975,
+        "source": "derived-from-located-pois"
+      },
+      "鹽埔鄉": {
+        "south": 22.6662,
+        "north": 25.0447,
+        "west": 120.2738,
+        "east": 121.4838,
+        "source": "derived-from-located-pois"
+      },
+      "佳冬鄉": {
+        "south": 22.3871,
+        "north": 22.6084,
+        "west": 120.3461,
+        "east": 120.5864,
+        "source": "derived-from-located-pois"
+      },
+      "九如鄉": {
+        "south": 22.6269,
+        "north": 23.0572,
+        "west": 120.2394,
+        "east": 120.5383,
+        "source": "derived-from-located-pois"
+      },
+      "竹田鄉": {
+        "south": 22.5441,
+        "north": 24.2059,
+        "west": 120.2822,
+        "east": 120.6274,
+        "source": "derived-from-located-pois"
+      },
+      "車城鄉": {
+        "south": 22.0062,
+        "north": 25.0691,
+        "west": 120.3011,
+        "east": 121.6219,
+        "source": "derived-from-located-pois"
+      },
+      "里港鄉": {
+        "south": 22.5706,
+        "north": 24.1721,
+        "west": 120.3278,
+        "east": 120.5684,
+        "source": "derived-from-located-pois"
+      },
+      "林邊鄉": {
+        "south": 22.4017,
+        "north": 24.1926,
+        "west": 120.3131,
+        "east": 120.6598,
+        "source": "derived-from-located-pois"
+      },
+      "麟洛鄉": {
+        "south": 22.6153,
+        "north": 22.6812,
+        "west": 120.2655,
+        "east": 120.571,
+        "source": "derived-from-located-pois"
+      },
+      "南州鄉": {
+        "south": 22.3362,
+        "north": 23.3962,
+        "west": 120.3209,
+        "east": 120.6105,
+        "source": "derived-from-located-pois"
+      },
+      "春日鄉": {
+        "south": 22.3434,
+        "north": 22.4485,
+        "west": 120.6082,
+        "east": 120.6796,
+        "source": "derived-from-located-pois"
+      },
+      "崁頂鄉": {
+        "south": 22.4782,
+        "north": 22.7323,
+        "west": 120.2994,
+        "east": 120.5424,
+        "source": "derived-from-located-pois"
+      },
+      "萬巒鄉": {
+        "south": 22.5094,
+        "north": 22.6591,
+        "west": 120.3071,
+        "east": 120.6504,
+        "source": "derived-from-located-pois"
+      },
+      "枋寮鄉": {
+        "south": 22.3298,
+        "north": 22.8719,
+        "west": 120.2416,
+        "east": 120.6384,
+        "source": "derived-from-located-pois"
+      },
+      "滿州鄉": {
+        "south": 21.9519,
+        "north": 22.6498,
+        "west": 120.2875,
+        "east": 120.9009,
+        "source": "derived-from-located-pois"
+      },
+      "東港鎮鎮": {
+        "south": 22.4426,
+        "north": 22.4783,
+        "west": 120.4267,
+        "east": 120.4614,
+        "source": "derived-from-located-pois"
+      },
+      "獅子鄉": {
+        "south": 22.1286,
+        "north": 22.3263,
+        "west": 120.6301,
+        "east": 120.8658,
+        "source": "derived-from-located-pois"
+      },
+      "三地門鄉": {
+        "south": 22.6643,
+        "north": 22.8548,
+        "west": 120.3053,
+        "east": 120.7217,
+        "source": "derived-from-located-pois"
+      },
+      "恒春鎮": {
+        "south": 21.8895,
+        "north": 22.0212,
+        "west": 120.6901,
+        "east": 120.8677,
+        "source": "derived-from-located-pois"
+      },
+      "瑪家鄉": {
+        "south": 22.6143,
+        "north": 22.9258,
+        "west": 120.5817,
+        "east": 120.7302,
+        "source": "derived-from-located-pois"
+      },
+      "林邊鄉鎮": {
+        "south": 22.429,
+        "north": 22.4746,
+        "west": 120.4865,
+        "east": 120.5262,
+        "source": "derived-from-located-pois"
+      },
+      "屏東市安鎮": {
+        "south": 22.6341,
+        "north": 22.684,
+        "west": 120.4082,
+        "east": 120.5019,
+        "source": "derived-from-located-pois"
+      }
+    },
+    "雲林縣": {
+      "北港鎮": {
+        "south": 23.2125,
+        "north": 25.043,
+        "west": 120.1653,
+        "east": 121.5361,
+        "source": "derived-from-located-pois"
+      },
+      "土庫鎮": {
+        "south": 23.5452,
+        "north": 24.2366,
+        "west": 120.1562,
+        "east": 120.7116,
+        "source": "derived-from-located-pois"
+      },
+      "虎尾鎮": {
+        "south": 22.5627,
+        "north": 24.1196,
+        "west": 120.1493,
+        "east": 121.6011,
+        "source": "derived-from-located-pois"
+      },
+      "崙背鄉": {
+        "south": 22.6004,
+        "north": 24.1587,
+        "west": 120.2862,
+        "east": 120.733,
+        "source": "derived-from-located-pois"
+      },
+      "斗六市": {
+        "south": 21.9301,
+        "north": 25.1288,
+        "west": 120.1562,
+        "east": 121.5346,
+        "source": "derived-from-located-pois"
+      },
+      "西螺鎮": {
+        "south": 23.5524,
+        "north": 25.0827,
+        "west": 120.1562,
+        "east": 121.5859,
+        "source": "derived-from-located-pois"
+      },
+      "麥寮鄉": {
+        "south": 23.4122,
+        "north": 24.2384,
+        "west": 120.1912,
+        "east": 120.6887,
+        "source": "derived-from-located-pois"
+      },
+      "斗六市鎮": {
+        "south": 22.5394,
+        "north": 25.0555,
+        "west": 120.2677,
+        "east": 121.6391,
+        "source": "derived-from-located-pois"
+      },
+      "臺西鄉": {
+        "south": 23.6464,
+        "north": 25.0019,
+        "west": 120.1692,
+        "east": 121.4448,
+        "source": "derived-from-located-pois"
+      },
+      "古坑鄉": {
+        "south": 22.9492,
+        "north": 24.1351,
+        "west": 120.2147,
+        "east": 120.7406,
+        "source": "derived-from-located-pois"
+      },
+      "二崙鄉": {
+        "south": 23.7315,
+        "north": 25.017,
+        "west": 120.3354,
+        "east": 121.5402,
+        "source": "derived-from-located-pois"
+      },
+      "斗南鎮": {
+        "south": 22.5993,
+        "north": 25.0671,
+        "west": 120.1562,
+        "east": 121.4607,
+        "source": "derived-from-located-pois"
+      },
+      "口湖鄉": {
+        "south": 23.413,
+        "north": 25.0256,
+        "west": 120.1254,
+        "east": 121.4425,
+        "source": "derived-from-located-pois"
+      },
+      "莿桐鄉": {
+        "south": 22.5525,
+        "north": 24.9161,
+        "west": 120.346,
+        "east": 121.1567,
+        "source": "derived-from-located-pois"
+      },
+      "元長鄉": {
+        "south": 23.5665,
+        "north": 25.0548,
+        "west": 119.6222,
+        "east": 121.3068,
+        "source": "derived-from-located-pois"
+      },
+      "水林鄉": {
+        "south": 23.4957,
+        "north": 23.643,
+        "west": 120.1836,
+        "east": 120.2839,
+        "source": "derived-from-located-pois"
+      },
+      "四湖鄉": {
+        "south": 23.0635,
+        "north": 23.6905,
+        "west": 120.1288,
+        "east": 120.2879,
+        "source": "derived-from-located-pois"
+      },
+      "林內鄉": {
+        "south": 23.5007,
+        "north": 23.796,
+        "west": 120.4308,
+        "east": 120.6921,
+        "source": "derived-from-located-pois"
+      },
+      "東勢鄉": {
+        "south": 23.649,
+        "north": 24.812,
+        "west": 120.2079,
+        "east": 120.9907,
+        "source": "derived-from-located-pois"
+      },
+      "褒忠鄉": {
+        "south": 22.8529,
+        "north": 25.0747,
+        "west": 120.2063,
+        "east": 121.559,
+        "source": "derived-from-located-pois"
+      },
+      "大埤鄉": {
+        "south": 22.9559,
+        "north": 23.6868,
+        "west": 120.2123,
+        "east": 120.489,
+        "source": "derived-from-located-pois"
+      },
+      "大埤鄉北鎮": {
+        "south": 23.6147,
+        "north": 23.6548,
+        "west": 120.3707,
+        "east": 120.4164,
+        "source": "derived-from-located-pois"
+      },
+      "大埤鄉西鎮": {
+        "south": 23.6042,
+        "north": 23.6373,
+        "west": 120.3665,
+        "east": 120.4005,
+        "source": "derived-from-located-pois"
+      }
+    },
+    "嘉義縣": {
+      "民雄鄉": {
+        "south": 23.0014,
+        "north": 25.0108,
+        "west": 120.2031,
+        "east": 121.7683,
+        "source": "derived-from-located-pois"
+      },
+      "梅山鄉": {
+        "south": 23.4394,
+        "north": 24.767,
+        "west": 120.333,
+        "east": 121.113,
+        "source": "derived-from-located-pois"
+      },
+      "中埔鄉": {
+        "south": 23.0172,
+        "north": 25.047,
+        "west": 120.2975,
+        "east": 121.302,
+        "source": "derived-from-located-pois"
+      },
+      "溪口鄉": {
+        "south": 23.4677,
+        "north": 24.0931,
+        "west": 120.3536,
+        "east": 120.6019,
+        "source": "derived-from-located-pois"
+      },
+      "義竹鄉": {
+        "south": 23.0604,
+        "north": 24.0046,
+        "west": 120.1691,
+        "east": 120.9317,
+        "source": "derived-from-located-pois"
+      },
+      "朴子市大鄉": {
+        "south": 23.4404,
+        "north": 23.4849,
+        "west": 120.2224,
+        "east": 120.2993,
+        "source": "derived-from-located-pois"
+      },
+      "大林鎮": {
+        "south": 23.4286,
+        "north": 25.0406,
+        "west": 120.3596,
+        "east": 121.4908,
+        "source": "derived-from-located-pois"
+      },
+      "水上鄉": {
+        "south": 22.9745,
+        "north": 24.7423,
+        "west": 120.1495,
+        "east": 121.8272,
+        "source": "derived-from-located-pois"
+      },
+      "新港鄉": {
+        "south": 23.4415,
+        "north": 24.1891,
+        "west": 120.2105,
+        "east": 120.5954,
+        "source": "derived-from-located-pois"
+      },
+      "六腳鄉": {
+        "south": 23.0113,
+        "north": 23.5754,
+        "west": 120.1166,
+        "east": 120.4853,
+        "source": "derived-from-located-pois"
+      },
+      "太保市": {
+        "south": 22.6198,
+        "north": 25.2056,
+        "west": 120.1747,
+        "east": 121.4609,
+        "source": "derived-from-located-pois"
+      },
+      "布袋鎮": {
+        "south": 22.6249,
+        "north": 24.9867,
+        "west": 120.1214,
+        "east": 121.4505,
+        "source": "derived-from-located-pois"
+      },
+      "竹崎鄉": {
+        "south": 23.0161,
+        "north": 24.9066,
+        "west": 120.2391,
+        "east": 121.2192,
+        "source": "derived-from-located-pois"
+      },
+      "朴子市": {
+        "south": 22.6629,
+        "north": 25.096,
+        "west": 120.1255,
+        "east": 121.3945,
+        "source": "derived-from-located-pois"
+      },
+      "東石鄉": {
+        "south": 23.4031,
+        "north": 23.5258,
+        "west": 120.1202,
+        "east": 120.2408,
+        "source": "derived-from-located-pois"
+      },
+      "民雄鄉鎮": {
+        "south": 23.5536,
+        "north": 23.5947,
+        "west": 120.4238,
+        "east": 120.4669,
+        "source": "derived-from-located-pois"
+      },
+      "阿里山鄉": {
+        "south": 23.2815,
+        "north": 24.9106,
+        "west": 120.2594,
+        "east": 121.1459,
+        "source": "derived-from-located-pois"
+      },
+      "鹿草鄉": {
+        "south": 23.3579,
+        "north": 23.5182,
+        "west": 120.2463,
+        "east": 120.4548,
+        "source": "derived-from-located-pois"
+      },
+      "大埔鄉": {
+        "south": 23.2233,
+        "north": 23.331,
+        "west": 120.5275,
+        "east": 120.6425,
+        "source": "derived-from-located-pois"
+      },
+      "水上鄉三鎮": {
+        "south": 23.3974,
+        "north": 23.4337,
+        "west": 120.3704,
+        "east": 120.4042,
+        "source": "derived-from-located-pois"
+      },
+      "番路鄉": {
+        "south": 23.3428,
+        "north": 23.4999,
+        "west": 120.4185,
+        "east": 120.6916,
+        "source": "derived-from-located-pois"
+      },
+      "水上鄉柳鄉": {
+        "south": 23.42,
+        "north": 23.4629,
+        "west": 120.3998,
+        "east": 120.4382,
+        "source": "derived-from-located-pois"
+      },
+      "水上鄉南鄉": {
+        "south": 23.395,
+        "north": 23.4324,
+        "west": 120.4237,
+        "east": 120.4842,
+        "source": "derived-from-located-pois"
+      }
+    },
+    "嘉義市": {
+      "東區": {
+        "south": 22.5864,
+        "north": 25.0617,
+        "west": 120.1479,
+        "east": 121.7683,
+        "source": "derived-from-located-pois"
+      },
+      "西區": {
+        "south": 21.989,
+        "north": 25.1451,
+        "west": 120.1399,
+        "east": 121.7683,
+        "source": "derived-from-located-pois"
+      }
+    }
+  },
+  "updatedAt": "2026-09-13T19:44:38.059Z"
+}

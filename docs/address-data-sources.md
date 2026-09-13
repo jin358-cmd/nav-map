@@ -19,9 +19,9 @@ Google Geocoding／Places Web Service 維持 `disabled_by_map_renderer_policy`�
 | 來源 | 腳本 | 狀態 |
 | --- | --- | --- |
 | 內政部全國路名 | `scripts/import-taiwan-road-names.mjs` | NOT CONFIGURED |
-| 各縣市合法門牌 | `scripts/import-taiwan-doorplates.mjs` | NOT CONFIGURED |
+| 各縣市合法門牌 | `scripts/import-taiwan-doorplates.mjs` | 官方檔未設定；南部 `nlsc-derived` staging |
 | Overture Places／Buildings | `scripts/import-overture-places.mjs` | DATASET NOT IMPORTED |
-| Supabase `taiwan_address_index` | `supabase/migrations/20260904_taiwan_address_index.sql` | NOT CONFIGURED |
+| Supabase `taiwan_address_index` | `supabase/migrations/20260904_taiwan_address_index.sql` | NOT CONFIGURED（本機 `south-address-index.json.gz` 可搜） |
 | Supabase `taiwan_poi_index` | `supabase/migrations/20260905_taiwan_poi_index.sql` | NOT CONFIGURED（本機 JSON 索引可先用） |
 
 Overture 只補強店家、地標與建築物，不得標成精確門牌。大型 GeoParquet 只能後端 ETL。

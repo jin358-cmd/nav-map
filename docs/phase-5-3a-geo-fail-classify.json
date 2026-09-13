@@ -1,35 +1,51 @@
 {
-  "source": "src/data/gcis-import-rejects.jsonl",
-  "totalRejects": 5901,
-  "batch10NoCoordinateApprox": 0,
+  "source": "reconstructed from GCIS CSVs minus located POI index / geocode hits",
   "expectedGeoFail": 2121,
+  "reconstructed": 3995,
+  "deltaFromExpected": 1874,
+  "note": "無法只切出 Batch 10 的 2,121 列；目前未定位店家 3,995（含歷史批次殘留）。uniqueActiveShops=748302 與 ingest 報告一致。",
+  "south": 1455,
+  "missingCsv": 0,
+  "catalogFiles": 94,
+  "uniqueActiveShops": 748302,
+  "locatedGovInIndex": 675510,
   "allReasons": {
-    "missing_admin_unit": 1,
-    "parse_failed": 11,
-    "official_source_empty": 50,
-    "rural_address_without_road": 7,
-    "duplicate_or_inactive": 5832
+    "official_source_empty": 3359,
+    "parse_failed": 387,
+    "rural_address_without_road": 249
   },
   "southReasons": {
-    "parse_failed": 1,
-    "official_source_empty": 23,
-    "rural_address_without_road": 3,
-    "duplicate_or_inactive": 1255
+    "official_source_empty": 1270,
+    "rural_address_without_road": 72,
+    "parse_failed": 113
+  },
+  "retry": {
+    "retried": 3995,
+    "recoveredNav": 1705,
+    "reviewOnly": 2277,
+    "stillEmpty": 9,
+    "transportError": 4,
+    "southRecoveredNav": 462,
+    "southMergedIntoLocalIndex": 421,
+    "wroteSupabase": false,
+    "wrotePoiIndex": false
   },
   "retryPolicy": {
     "willRetry": [
       "parse_failed",
       "rural_address_without_road",
-      "timeout_or_transport"
+      "timeout_or_transport",
+      "query_changed"
     ],
-    "willNotRetry": [
-      "official_source_empty",
-      "invalid_coordinate",
-      "duplicate_or_inactive"
+    "willNotRetrySecondPass": [
+      "official_source_empty after one improved query"
     ],
-    "note": "未重打 NLSC。official_source_empty 不得無限重試。巷弄／道路中心只能進 review。"
+    "note": "已單次重打改善 query（保留無路名之村／里／鄰）。巷弄／道路中心只進 review。"
   },
-  "missing": [
-    "Batch 10 的 2,121 筆 NLSC 失敗明細未完整保存在 gcis-import-rejects.jsonl（2026-09-13 no_coordinate=0）。現有 rejects 多為歷史 low_nav／duplicate。未重打 NLSC。"
-  ]
+  "outputs": {
+    "jsonl": "data/south-pilot/nlsc-fail-reconstructed.jsonl",
+    "count": 3995,
+    "retryable": 2602
+  },
+  "missing": []
 }

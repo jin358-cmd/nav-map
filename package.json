@@ -24,9 +24,14 @@
     "verify:south-pois": "node scripts/verify-south-pois.mjs",
     "test:south-pois": "node scripts/south-poi-selftest.mjs",
     "test:south-pois-api": "node scripts/test-south-poi-api.mjs",
-    "test:address": "npx --yes tsx src/lib/geocoding/__tests__/normalizeTaiwanAddress.test.ts && npx --yes tsx src/lib/geocoding/__tests__/address-ranking.test.ts && npx --yes tsx src/lib/geocoding/__tests__/south-address-regression.test.ts",
+    "test:address": "npx --yes tsx src/lib/geocoding/__tests__/normalizeTaiwanAddress.test.ts && npx --yes tsx src/lib/geocoding/__tests__/address-ranking.test.ts && npx --yes tsx src/lib/geocoding/__tests__/south-address-regression.test.ts && npx --yes tsx src/lib/geocoding/__tests__/admin-boxes.test.ts && npx --yes tsx src/lib/geocoding/__tests__/local-address-index.test.ts",
     "build:address-fixture": "node scripts/build-south-address-fixture.mjs",
-    "classify:geo-fail": "node scripts/classify-gcis-geo-failures.mjs"
+    "build:address-index": "node scripts/build-south-address-index.mjs",
+    "import:doorplates": "node scripts/import-taiwan-doorplates.mjs",
+    "advise:address": "node scripts/advise-address-index.mjs",
+    "classify:geo-fail": "node scripts/classify-gcis-geo-failures.mjs",
+    "reconstruct:nlsc-fails": "node scripts/reconstruct-nlsc-fails.mjs",
+    "retry:nlsc-fails": "node scripts/retry-nlsc-fails.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

@@ -16,3 +16,16 @@ npm run import:south-pois   # 預設仍是 dry-run
 - `SOUTH_POI_APPLY=1`
 
 未確認專案前不得寫入，也不得自建可能產生費用的新專案。
+
+## 門牌 staging
+
+```bash
+npm run build:address-index      # NLSC 衍生，不是官方縣市門牌檔
+npm run import:doorplates        # 預設 dry-run
+npm run reconstruct:nlsc-fails
+npm run retry:nlsc-fails         # 單次重打；不寫雲端
+npm run advise:address
+```
+
+`ADDRESS_DOORPLATES_DIR` 放 `{縣市}.csv|json|geojson` 才會標 `official-county-file`。
+`ADDRESS_INDEX_APPLY=1` 在專案未確認前仍會拒絕寫 `taiwan_address_index`。

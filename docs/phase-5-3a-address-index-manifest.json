@@ -1,0 +1,31 @@
+{
+  "dataset": "南部本機門牌 staging（NLSC 衍生）",
+  "status": "nlsc-derived",
+  "notOfficialCountyFile": true,
+  "sourceIndex": "/tmp/phase53a-src/taiwan-poi-index.json.gz",
+  "sourceSha256": "657c34315a8ea072f564722607ff4edcce146d76e2af41bcc330d6b0a2fc490f",
+  "output": "src/data/south-address-index.json.gz",
+  "outputSha256": "ea5b0923e61b3f7014672f76d5a6d57e9270c2b0b78822497f257f541b5e75cc",
+  "bytes": 5017691,
+  "uniqueAddresses": 181794,
+  "mergedRetryNav": 421,
+  "southLocatedPois": 236645,
+  "byCounty": {
+    "臺南市": 56756,
+    "嘉義市": 9913,
+    "嘉義縣": 4835,
+    "雲林縣": 12495,
+    "高雄市": 78063,
+    "屏東縣": 19311
+  },
+  "byAccuracy": {
+    "interpolated": 9606,
+    "road-center": 3319,
+    "lane-center": 138,
+    "exact-house": 168309,
+    "approximate": 1
+  },
+  "derivedDistricts": 172,
+  "supabase": "not_written",
+  "note": "未確認 NavPilot Supabase 前只寫本機 staging，不得標成各縣市合法門牌原始檔。"
+}
