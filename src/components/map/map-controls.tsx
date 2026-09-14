@@ -254,19 +254,6 @@ export function MapControls({
         </ControlButton>
       ) : null}
       <ControlButton
-        label={locateLabel}
-        onClick={onLocate}
-        active={false}
-        pressed={followVehicle}
-        tone={tone}
-        className={mapViewToggleClass(tone, northUp)}
-      >
-        <LocateFixed
-          className={cn("size-6", locating && "animate-pulse")}
-          strokeWidth={2.5}
-        />
-      </ControlButton>
-      <ControlButton
         label={cameraMode === "3d" ? "目前 3D，點擊切換 2D" : "目前 2D，點擊切換 3D"}
         onClick={onToggleCamera}
         active={false}
@@ -316,6 +303,25 @@ export function MapControls({
           </ControlButton>
         </div>
       ) : null}
+      </div>
+      <div className="hud-rail-locate">
+        <ControlButton
+          label={locateLabel}
+          onClick={() => {
+            if (collapsed) expandRail();
+            bumpIdle();
+            onLocate();
+          }}
+          active={false}
+          pressed={followVehicle}
+          tone={tone}
+          className={mapViewToggleClass(tone, northUp)}
+        >
+          <LocateFixed
+            className={cn("size-6", locating && "animate-pulse")}
+            strokeWidth={2.5}
+          />
+        </ControlButton>
       </div>
     </div>
   );

@@ -888,6 +888,17 @@
   pointer-events: none;
 }
 
+.hud-rail-locate {
+  position: relative;
+  z-index: 26;
+  margin-top: 0.625rem;
+  pointer-events: auto;
+}
+
+.hud-rail--collapsed .hud-rail-locate {
+  margin-top: 0;
+}
+
 .hud-rail-peek {
   position: absolute;
   top: 50%;

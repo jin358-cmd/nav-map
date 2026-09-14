@@ -4,9 +4,13 @@ import type {
   Map as MapLibreMap,
 } from "maplibre-gl";
 import {
+  guidanceArrowsAlong,
+  lineLengthMeters,
+  marqueeSpacingMeters,
   shouldShowGroundBow,
   sliceRouteAhead,
   turnGuidanceLine,
+  turnMarqueeArrows,
 } from "@/lib/upcoming-route";
 import type { CameraMode } from "@/types/domain";
 
@@ -15,7 +19,7 @@ export const GUIDANCE_LAYER_ID = "navpilot-turn-arrows-layer";
 export const TURN_LINE_SOURCE_ID = "navpilot-turn-line-v3";
 export const TURN_LINE_GLOW_ID = "navpilot-turn-line-glow-v3";
 export const TURN_LINE_LAYER_ID = "navpilot-turn-line-layer-v3";
-const CHEVRON_IMAGE_ID = "navpilot-ground-chevron-blue-v10";
+const CHEVRON_IMAGE_ID = "navpilot-ground-chevron-blue-v11";
 const STALE_TURN_IDS = [
   "navpilot-turn-line",
   "navpilot-turn-line-glow",
@@ -29,11 +33,7 @@ function emptyCollection() {
 }
 
 function emptyLine() {
-  return {
-    type: "Feature" as const,
-    properties: {},
-    geometry: { type: "LineString" as const, coordinates: [] as [number, number][] },
-  };
+  return { type: "FeatureCollection" as const, features: [] };
 }
 
 function createChevronImage() {
@@ -54,10 +54,10 @@ function createChevronImage() {
     glow = false,
   ) => {
     ctx.beginPath();
-    // Tip at the origin, opening toward -X so line placement aims +X along the route.
-    ctx.moveTo(-length, -depth);
+    // Tip at the icon-anchor, opening toward +Y so icon-rotate bearing points along the route.
+    ctx.moveTo(-depth, length);
     ctx.lineTo(0, 0);
-    ctx.lineTo(-length, depth);
+    ctx.lineTo(depth, length);
     ctx.lineWidth = width;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
@@ -139,6 +139,8 @@ function ensureTurnLine(map: MapLibreMap) {
       lineMetrics: true,
       data: emptyLine(),
     });
+    // lineMetrics sources must keep valid FeatureCollections; empty LineString
+    // coordinates poison symbol/line rendering until the next style reload.
   }
   if (!map.getLayer(TURN_LINE_GLOW_ID)) {
     map.addLayer({
@@ -181,34 +183,27 @@ function chevronSize(): ExpressionSpecification {
     ["linear"],
     ["zoom"],
     14.2,
-    0.11,
+    ["*", ["get", "scale"], 0.12],
     16.2,
-    0.15,
+    ["*", ["get", "scale"], 0.17],
     17.4,
-    0.19,
+    ["*", ["get", "scale"], 0.22],
     18.6,
-    0.23,
+    ["*", ["get", "scale"], 0.26],
   ];
-}
-
-function chevronSpacing(): ExpressionSpecification {
-  return ["interpolate", ["linear"], ["zoom"], 14, 42, 16.5, 28, 19, 18];
 }
 
 function ensureChevronLayer(map: MapLibreMap) {
   const existing = map.getLayer(GUIDANCE_LAYER_ID);
-  if (existing && "source" in existing && existing.source !== TURN_LINE_SOURCE_ID) {
+  if (existing && "source" in existing && existing.source !== GUIDANCE_SOURCE_ID) {
     map.removeLayer(GUIDANCE_LAYER_ID);
   }
   const layout = {
-    "symbol-placement": "line" as const,
-    "symbol-spacing": chevronSpacing(),
-    "symbol-avoid-edges": false,
     "icon-image": CHEVRON_IMAGE_ID,
     "icon-size": chevronSize(),
     "icon-anchor": "center" as const,
     "icon-offset": [0, 0] as [number, number],
-    "icon-rotate": 0,
+    "icon-rotate": ["get", "bearing"] as ExpressionSpecification,
     "icon-rotation-alignment": "map" as const,
     "icon-pitch-alignment": "map" as const,
     "icon-keep-upright": false,
@@ -221,22 +216,21 @@ function ensureChevronLayer(map: MapLibreMap) {
     map.addLayer({
       id: GUIDANCE_LAYER_ID,
       type: "symbol",
-      source: TURN_LINE_SOURCE_ID,
+      source: GUIDANCE_SOURCE_ID,
       layout,
       paint: {
-        "icon-opacity": 0.92,
+        "icon-opacity": ["get", "opacity"],
       },
     });
     return;
   }
 
-  map.setLayoutProperty(GUIDANCE_LAYER_ID, "symbol-placement", "line");
-  map.setLayoutProperty(GUIDANCE_LAYER_ID, "symbol-spacing", chevronSpacing());
+  map.setLayoutProperty(GUIDANCE_LAYER_ID, "symbol-placement", "point");
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-image", CHEVRON_IMAGE_ID);
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-size", chevronSize());
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-anchor", "center");
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-offset", [0, 0]);
-  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-rotate", 0);
+  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-rotate", ["get", "bearing"]);
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-rotation-alignment", "map");
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-pitch-alignment", "map");
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-keep-upright", false);
@@ -260,9 +254,14 @@ function setTurnLine(map: MapLibreMap, line: [number, number][]) {
   const data =
     line.length >= 2
       ? {
-          type: "Feature" as const,
-          properties: {},
-          geometry: { type: "LineString" as const, coordinates: line },
+          type: "FeatureCollection" as const,
+          features: [
+            {
+              type: "Feature" as const,
+              properties: {},
+              geometry: { type: "LineString" as const, coordinates: line },
+            },
+          ],
         }
       : emptyLine();
   if (source?.type === "geojson") {
@@ -306,15 +305,39 @@ export function upsertGuidanceArrows(
           )
         : sliceRouteAhead(route, Math.max(0, routeMeters) + 8, 240)
       : [];
+  const arrows =
+    navigating && line.length >= 2
+      ? turnLive
+        ? turnMarqueeArrows(line, phase, distanceToNext)
+        : guidanceArrowsAlong(
+            line,
+            marqueeSpacingMeters(lineLengthMeters(line), 16.5, distanceToNext),
+            phase,
+            1,
+          )
+      : [];
+  const data = {
+    type: "FeatureCollection" as const,
+    features: arrows.map((arrow, index) => ({
+      type: "Feature" as const,
+      id: index,
+      properties: {
+        bearing: arrow.bearing,
+        opacity: arrow.opacity,
+        scale: arrow.scale,
+      },
+      geometry: {
+        type: "Point" as const,
+        coordinates: [arrow.lng, arrow.lat],
+      },
+    })),
+  };
 
   const source = map.getSource(GUIDANCE_SOURCE_ID);
   if (source?.type === "geojson") {
-    (source as GeoJSONSource).setData(emptyCollection());
+    (source as GeoJSONSource).setData(data);
   } else if (!source) {
-    map.addSource(GUIDANCE_SOURCE_ID, {
-      type: "geojson",
-      data: emptyCollection(),
-    });
+    map.addSource(GUIDANCE_SOURCE_ID, { type: "geojson", data });
   }
 
   setTurnLine(map, line);

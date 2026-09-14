@@ -245,6 +245,7 @@ export function DrivingApp() {
   const [followOrientation, setFollowOrientation] =
     useState<FollowOrientation>("heading-up");
   const [followVehicle, setFollowVehicle] = useState(false);
+  const [followSnapKey, setFollowSnapKey] = useState(0);
   const [userAdjustedMap, setUserAdjustedMap] = useState(false);
   const mapDisplayMode = useSyncExternalStore(
     subscribeMapDisplayMode,
@@ -1049,28 +1050,29 @@ export function DrivingApp() {
 
   const locate = useCallback(async () => {
     void requestDeviceCompassPermission();
-    const wasFollowing = followVehicle;
+    const alreadyGps = vehicleRef.current.source === "gps";
     if (navigating) {
       setFollowOrientation("heading-up");
-      setFollowVehicle(true);
-      setUserAdjustedMap(false);
-      panIntentRef.current = false;
-    } else if (wasFollowing) {
+    } else if (followVehicle && alreadyGps) {
       setFollowOrientation((current) =>
         current === "heading-up" ? "north-up" : "heading-up",
       );
+    }
+    setFollowVehicle(true);
+    setUserAdjustedMap(false);
+    panIntentRef.current = false;
+    setFollowSnapKey((value) => value + 1);
+    if (alreadyGps) {
+      setGpsStatus("active");
+    } else {
+      setGpsStatus("locating");
+    }
+    try {
+      await readDevicePosition();
       setFollowVehicle(true);
       setUserAdjustedMap(false);
       panIntentRef.current = false;
-    }
-    setGpsStatus("locating");
-    try {
-      await readDevicePosition();
-      if (!wasFollowing) {
-        setFollowVehicle(true);
-      }
-      setUserAdjustedMap(false);
-      panIntentRef.current = false;
+      setFollowSnapKey((value) => value + 1);
       setRefreshNonce((value) => value + 1);
     } catch (error) {
       const code = geoErrorCode(error);
@@ -1557,6 +1559,7 @@ export function DrivingApp() {
         cameraMode={cameraMode}
         followOrientation={followOrientation}
         followVehicle={followVehicle}
+        followSnapKey={followSnapKey}
         mapDisplayMode={pendingMapDisplayMode ?? mapDisplayMode}
         styleRevision={styleRevision}
         pickMode={pickMode}
