@@ -58,10 +58,13 @@ review 原因：未達導航門檻 39,978、僅縣市地址 16,466、明顯縣�
 ## Supabase
 
 - 此執行環境沒有已確認的 NavPilot 專用專案，也沒有 `SUPABASE_URL`／`SUPABASE_SERVICE_ROLE_KEY`
-- `npm run import:south-pois` 僅 dry-run：預計 upsert 236,645、公開 179,601、約 79 批
-- `SOUTH_POI_APPLY=1` 會停止並要求人工確認專案 ref
+- `npm run probe:south-pois`：checkpoint `dry-run`／upserted **0**；雲端未連線
+- `npm run import:south-pois` 預設 dry-run：預計 upsert 236,645、公開 179,601
+- 分批寫入已接 checkpoint：需 `SOUTH_POI_APPLY=1` + `NAVPILOT_SUPABASE_PROJECT_REF` 與 URL 主機名一致
+- 建議先 `SOUTH_POI_COUNTIES=雲林縣 SOUTH_POI_PUBLISHED_ONLY=1`
 - 拒絕寫入疑似 GVG／租屋雷達 URL
 - 未建立新的付費專案
+- 最新狀態：[`phase-5-3a-supabase-upload-status.md`](phase-5-3a-supabase-upload-status.md)
 - migration（additive only）：`supabase/migrations/20260913_phase53a_south_poi_cloud.sql`
   - 擴充 `taiwan_poi_index`：`main_category`、`nav_ready`、`publish_status`、`data_version` 等
   - 新表：`poi_import_runs`、`poi_import_rejects`（補欄）、`poi_data_versions`

@@ -121,7 +121,7 @@ Phase 4 災害說明：[`docs/PHASE-4-DISASTERS.md`](docs/PHASE-4-DISASTERS.md)�
 路線吸附與平滑跟隨、五秒內偏航重算、50 公尺路口黃卡、住家／公司、亮／暗／自動／衛星、2D／3D、兩段式定位、汽車／機車預覽、事件圖層聯動、台南停車 Open Data、YouTube 歌單授權。手勢與跟車：單指／雙指會立刻放開 Camera Follow，跟車用每幀 `jumpTo` 而不是每次 GPS `easeTo`，Raw GPS 與畫面插值分離。
 
 **Phase 5.3A：南部 POI 雲端試行（本階段）**
-雲林、嘉義、臺南、高雄、屏東的 nav-ready 店家可走 Supabase／PostGIS 範圍查詢；未設定雲端金鑰時用地圖本機索引後備。生活圈新增「生活」分類。門牌搜尋已做意圖分流與結構化評分，地址查詢不再被本機店家結果提前攔截。Dry Run：`npm run export:south-pois`。地址測試：`npm run test:address`。正式寫庫需人工確認 NavPilot 專案後才可 `SOUTH_POI_APPLY=1`。報告：[`docs/phase-5-3a-south-poi-report.md`](docs/phase-5-3a-south-poi-report.md)、[`docs/phase-5-3a-address-quality.md`](docs/phase-5-3a-address-quality.md)。本階段禁止 merge `main` 與 Production Deploy。
+雲林、嘉義、臺南、高雄、屏東的 nav-ready 店家可走 Supabase／PostGIS 範圍查詢；未設定雲端金鑰時用地圖本機索引後備。生活圈新增「生活」分類。門牌搜尋已做意圖分流與結構化評分，地址查詢不再被本機店家結果提前攔截。Dry Run：`npm run export:south-pois`。雲端狀態：`npm run probe:south-pois`。地址測試：`npm run test:address`。正式寫庫需人工確認 NavPilot 專案 ref 後才可 `SOUTH_POI_APPLY=1`；建議先 `SOUTH_POI_COUNTIES=雲林縣 SOUTH_POI_PUBLISHED_ONLY=1`。報告：[`docs/phase-5-3a-south-poi-report.md`](docs/phase-5-3a-south-poi-report.md)、[`docs/phase-5-3a-supabase-upload-status.md`](docs/phase-5-3a-supabase-upload-status.md)、[`docs/phase-5-3a-address-quality.md`](docs/phase-5-3a-address-quality.md)。本階段禁止 merge `main` 與 Production Deploy。
 
 **後續**
 機車路由供應商、TDX CCTV live、停車擴充至北中高與新北、離線底圖快取、南部試行通過後才擴大公開範圍。

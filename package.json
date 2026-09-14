@@ -21,6 +21,7 @@
     "sync:parking": "node scripts/sync-tainan-parking.mjs",
     "export:south-pois": "node scripts/export-south-pois.mjs",
     "import:south-pois": "node scripts/import-south-pois-supabase.mjs",
+    "probe:south-pois": "node scripts/probe-south-pois-supabase.mjs",
     "verify:south-pois": "node scripts/verify-south-pois.mjs",
     "test:south-pois": "node scripts/south-poi-selftest.mjs",
     "test:south-pois-api": "node scripts/test-south-poi-api.mjs",

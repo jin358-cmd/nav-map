@@ -257,11 +257,14 @@ function main() {
   console.log(JSON.stringify(report, null, 2));
 
   if (!dryRun && APPLY_CLOUD) {
-    if (!supabase) {
+    const ref = (process.env.NAVPILOT_SUPABASE_PROJECT_REF || "").trim();
+    if (!supabase || !ref) {
       console.error("DATASET NOT IMPORTED: NavPilot Supabase 未確認，拒絕寫入 taiwan_address_index。");
       process.exit(2);
     }
-    console.error("DATASET NOT IMPORTED: cloud apply is blocked until the project ref is confirmed in chat.");
+    console.error(
+      "DATASET NOT IMPORTED: 南部門牌仍是 NLSC 衍生 staging，不是各縣市合法門牌原始檔，拒絕寫入 taiwan_address_index。",
+    );
     process.exit(2);
   }
   if (!dryRun && officialCount === 0 && derivedCount === 0) {

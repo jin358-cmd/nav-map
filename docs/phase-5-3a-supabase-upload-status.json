@@ -1,0 +1,164 @@
+{
+  "checkedAt": "2026-09-14T03:54:18.375Z",
+  "dataVersion": "south-pilot-20260913-batch10",
+  "verdict": "NOT UPLOADED",
+  "headline": "沒有 NavPilot Supabase 金鑰，雲端列數為 0（未連線）。",
+  "wroteSupabase": false,
+  "supabase": {
+    "configured": false,
+    "hasServiceRole": false,
+    "projectRefPresent": false,
+    "projectConfirmed": false,
+    "blockedReason": "missing_credentials",
+    "hostKind": null
+  },
+  "local": {
+    "sourceIndex": "/tmp/phase53a-src/taiwan-poi-index.json.gz",
+    "sourceIndexMatched": true,
+    "sourceIndexSha256": "657c34315a8ea072f564722607ff4edcce146d76e2af41bcc330d6b0a2fc490f",
+    "actual": {
+      "candidates": 236645,
+      "located": 236645,
+      "gcisNavReady": 179717,
+      "navReady": 179601,
+      "review": 57044,
+      "reject": 0,
+      "published": 179601
+    },
+    "byCountyPublished": {
+      "雲林縣": 11515,
+      "嘉義市": 9781,
+      "嘉義縣": 4538,
+      "臺南市": 56452,
+      "高雄市": 78870,
+      "屏東縣": 18445
+    },
+    "checkpoint": {
+      "version": "south-pilot-20260913-batch10",
+      "jobId": null,
+      "counties": [
+        "雲林縣",
+        "嘉義市",
+        "嘉義縣",
+        "臺南市",
+        "高雄市",
+        "屏東縣"
+      ],
+      "publishedOnly": false,
+      "batchSize": 1000,
+      "batch": 0,
+      "upserted": 0,
+      "failed": 0,
+      "consecutiveFails": 0,
+      "byCounty": {},
+      "status": "dry-run",
+      "lastError": null,
+      "omitGeom": false,
+      "updatedAt": "2026-09-14T03:54:18.200Z"
+    },
+    "localAddressIndex": "src/data/south-address-index.json.gz",
+    "addressUnique": 181794,
+    "addressNotOfficial": true,
+    "migrations": [
+      {
+        "path": "supabase/migrations/20260905_taiwan_poi_index.sql",
+        "present": true
+      },
+      {
+        "path": "supabase/migrations/20260913_phase53a_south_poi_cloud.sql",
+        "present": true
+      },
+      {
+        "path": "supabase/migrations/20260904_taiwan_address_index.sql",
+        "present": true
+      },
+      {
+        "path": "supabase/migrations/20260913_phase53a_address_index.sql",
+        "present": true
+      }
+    ]
+  },
+  "cloud": {
+    "reachable": false,
+    "schemaReady": null,
+    "poiVersionCount": null,
+    "poiPublishedCount": null,
+    "addressCount": null,
+    "error": "missing_credentials"
+  },
+  "plan": {
+    "batchSize": 1000,
+    "recommendedFirstCounty": "雲林縣",
+    "applyMigrationsStep": 1,
+    "counties": [
+      {
+        "step": 2,
+        "county": "雲林縣",
+        "located": 20298,
+        "published": 11515,
+        "review": 8783,
+        "batchesPublished": 12,
+        "batchesLocated": 21
+      },
+      {
+        "step": 3,
+        "county": "嘉義市",
+        "located": 12030,
+        "published": 9781,
+        "review": 2249,
+        "batchesPublished": 10,
+        "batchesLocated": 13
+      },
+      {
+        "step": 4,
+        "county": "嘉義縣",
+        "located": 13616,
+        "published": 4538,
+        "review": 9078,
+        "batchesPublished": 5,
+        "batchesLocated": 14
+      },
+      {
+        "step": 5,
+        "county": "臺南市",
+        "located": 73098,
+        "published": 56452,
+        "review": 16646,
+        "batchesPublished": 57,
+        "batchesLocated": 74
+      },
+      {
+        "step": 6,
+        "county": "高雄市",
+        "located": 93591,
+        "published": 78870,
+        "review": 14721,
+        "batchesPublished": 79,
+        "batchesLocated": 94
+      },
+      {
+        "step": 7,
+        "county": "屏東縣",
+        "located": 24012,
+        "published": 18445,
+        "review": 5567,
+        "batchesPublished": 19,
+        "batchesLocated": 25
+      }
+    ],
+    "totals": {
+      "candidates": 236645,
+      "located": 236645,
+      "gcisNavReady": 179717,
+      "navReady": 179601,
+      "review": 57044,
+      "reject": 0,
+      "published": 179601
+    }
+  },
+  "address": {
+    "officialCountyFiles": 0,
+    "nlscDerivedOnly": true,
+    "willNotUploadUntilOfficialOrExplicitConfirm": true
+  }
+}

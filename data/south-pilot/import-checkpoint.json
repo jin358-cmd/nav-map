@@ -1,9 +1,23 @@
 {
   "version": "south-pilot-20260913-batch10",
+  "jobId": null,
+  "counties": [
+    "雲林縣",
+    "嘉義市",
+    "嘉義縣",
+    "臺南市",
+    "高雄市",
+    "屏東縣"
+  ],
+  "publishedOnly": false,
+  "batchSize": 1000,
   "batch": 0,
   "upserted": 0,
   "failed": 0,
   "consecutiveFails": 0,
+  "byCounty": {},
   "status": "dry-run",
-  "updatedAt": "2026-09-13T19:14:46.011Z"
+  "lastError": null,
+  "omitGeom": false,
+  "updatedAt": "2026-09-14T03:54:18.200Z"
 }

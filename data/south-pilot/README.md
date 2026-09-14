@@ -4,6 +4,7 @@
 
 ```bash
 npm run export:south-pois   # Dry Run，不連線寫庫
+npm run probe:south-pois    # 只讀：本機／雲端筆數
 npm run test:south-pois
 npm run verify:south-pois
 npm run import:south-pois   # 預設仍是 dry-run
@@ -13,9 +14,16 @@ npm run import:south-pois   # 預設仍是 dry-run
 
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
+- `NAVPILOT_SUPABASE_PROJECT_REF`（須與 URL 主機名一致）
 - `SOUTH_POI_APPLY=1`
 
-未確認專案前不得寫入，也不得自建可能產生費用的新專案。
+建議先單一縣市、只公開列：
+
+```bash
+SOUTH_POI_APPLY=1 SOUTH_POI_COUNTIES=雲林縣 SOUTH_POI_PUBLISHED_ONLY=1 npm run import:south-pois
+```
+
+中斷後同一組縣市／批次大小可續跑。`SOUTH_POI_RESET=1` 才會重頭。連續失敗 3 批會停。未確認專案前不得寫入，也不得自建可能產生費用的新專案。
 
 ## 門牌 staging
 

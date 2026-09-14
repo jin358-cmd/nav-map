@@ -358,6 +358,7 @@ export function classifyRow(row) {
     aliases: Array.isArray(row.aliases) ? row.aliases : [],
     brand: row.brand ?? null,
     branchName: row.branchName ?? row.branch_name ?? null,
+    originalCategory: String(row.category || row.subcategory || "other"),
     category: layer,
     subcategory: String(row.subcategory || row.category || ""),
     address,
@@ -381,4 +382,75 @@ export function classifyRow(row) {
     reasons,
     license: row.license ?? "OGDL-Taiwan-1.0",
   };
+}
+
+export function toSupabasePoiRow(row, now = new Date().toISOString()) {
+  const lat = Number(row.latitude);
+  const lng = Number(row.longitude);
+  const payload = {
+    id: row.id,
+    name: row.name,
+    name_normalized: row.nameNormalized,
+    aliases: Array.isArray(row.aliases) ? row.aliases : [],
+    category: row.originalCategory || row.subcategory || row.category || "other",
+    main_category: row.category,
+    subcategory: row.subcategory || null,
+    brand: row.brand,
+    branch_name: row.branchName,
+    address: row.address || "",
+    address_normalized: row.addressNormalized || "",
+    city: row.county,
+    county: row.county,
+    district: row.district,
+    latitude: lat,
+    longitude: lng,
+    source: row.source,
+    source_id: row.sourceId,
+    updated_at: now,
+    license: row.license || "OGDL-Taiwan-1.0",
+    confidence: Math.min(1, Math.max(0, Number(row.navScore || 0) / 100)),
+    is_active: row.isActive !== false,
+    phone: row.phone ?? null,
+    opening_hours: row.openingHours ?? null,
+    quality_grade: row.qualityGrade ?? null,
+    nav_score: Number.isFinite(Number(row.navScore)) ? Number(row.navScore) : 0,
+    nav_ready: Boolean(row.navReady),
+    publish_status: row.publishStatus,
+    data_version: row.dataVersion || DATA_VERSION,
+    source_updated_at: row.sourceUpdatedAt || now,
+    last_seen_at: now,
+  };
+  if (Number.isFinite(lat) && Number.isFinite(lng)) {
+    payload.geom = `SRID=4326;POINT(${lng} ${lat})`;
+  }
+  return payload;
+}
+
+export function resolveSouthPoiIndex(expectedSha = null) {
+  const candidates = [
+    process.env.NAVPILOT_POI_INDEX,
+    "/tmp/phase53a-src/taiwan-poi-index.json.gz",
+    "src/data/taiwan-poi-index.json.gz",
+  ].filter(Boolean);
+  const existing = candidates.filter((path) => existsSync(path));
+  if (expectedSha) {
+    const matched = existing.find((path) => sha256File(path) === expectedSha);
+    if (matched) return { path: matched, sha256: expectedSha, matched: true };
+  }
+  if (!existing.length) return { path: null, sha256: null, matched: false };
+  const path = existing[0];
+  return { path, sha256: sha256File(path), matched: expectedSha ? false : null };
+}
+
+export function parseCountyList(value) {
+  if (!value || !String(value).trim()) {
+    return { selected: [...SOUTH_PILOT_REGIONS], unknown: [], raw: [...SOUTH_PILOT_REGIONS] };
+  }
+  const counties = String(value)
+    .split(/[,，\s]+/)
+    .map((item) => normalizeCounty(item))
+    .filter(Boolean);
+  const unknown = counties.filter((county) => !SOUTH_PILOT_SET.has(county));
+  const selected = SOUTH_PILOT_REGIONS.filter((county) => counties.includes(county));
+  return { selected, unknown, raw: counties };
 }

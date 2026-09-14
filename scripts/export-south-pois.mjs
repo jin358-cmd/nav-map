@@ -14,14 +14,11 @@ import {
   SOUTH_PILOT_SET,
   classifyRow,
   loadPoiRows,
+  resolveSouthPoiIndex,
   sha256File,
 } from "./south-poi-shared.mjs";
 
-const INDEX =
-  process.env.NAVPILOT_POI_INDEX ||
-  (existsSync("src/data/taiwan-poi-index.json.gz")
-    ? "src/data/taiwan-poi-index.json.gz"
-    : "/tmp/phase53a-src/taiwan-poi-index.json.gz");
+const INDEX = resolveSouthPoiIndex().path;
 
 const OUT_DIR = "data/south-pilot";
 const DOCS = "docs/phase-5-3a-south-poi-dry-run.json";
