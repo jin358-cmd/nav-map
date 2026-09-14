@@ -344,7 +344,12 @@ function cameraOptions(
       lerp(vehicle.lng, junctionCue?.lng ?? vehicle.lng, towardCue),
       lerp(vehicle.lat, junctionCue?.lat ?? vehicle.lat, towardCue),
     ] as [number, number],
-    bearing: followMapBearing(followOrientation, vehicle, compassHeading),
+    bearing: followMapBearing(
+      followOrientation,
+      vehicle,
+      compassHeading,
+      navigating,
+    ),
     pitch: mode === "3d" ? lerp(cruisePitch, focusPitch, blend) : 0,
     zoom: navigating || mode === "3d" ? navZoom : OVERHEAD_ZOOM,
     padding: drivingPadding(height, width, mode, navigating, overlay),
@@ -563,6 +568,7 @@ export function DrivingMap({
   const acquiredGpsRef = useRef(bootGps != null);
   const snapFollowRef = useRef(false);
   const prevFollowVehicleRef = useRef(followVehicle);
+  const prevNavigatingRef = useRef(navigating);
   const lastViewportEmitRef = useRef(0);
   const lastEmittedZoomRef = useRef(0);
   const rafRef = useRef(0);
@@ -1391,6 +1397,13 @@ export function DrivingMap({
     followVehicleRef.current = followVehicle;
     if (followVehicle) userZoomRef.current = null;
   }, [followVehicle]);
+
+  useEffect(() => {
+    if (navigating && !prevNavigatingRef.current) {
+      snapFollowRef.current = true;
+    }
+    prevNavigatingRef.current = navigating;
+  }, [navigating]);
 
   useEffect(() => {
     const map = mapRef.current;

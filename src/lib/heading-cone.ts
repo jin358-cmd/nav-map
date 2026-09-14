@@ -62,8 +62,10 @@ export function followMapBearing(
   orientation: FollowOrientation,
   vehicle: Pick<VehiclePose, "heading" | "headingAvailable" | "speedMps">,
   compassHeading: number | null,
+  navigating = false,
 ) {
   if (orientation !== "heading-up") return 0;
+  if (navigating) return vehicle.heading;
   return coneHeadingTarget({
     gpsHeading: vehicle.heading,
     headingAvailable: vehicle.headingAvailable,

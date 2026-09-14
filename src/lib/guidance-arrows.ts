@@ -5,8 +5,8 @@ import type {
 } from "maplibre-gl";
 import {
   shouldShowGroundBow,
+  sliceRouteAhead,
   turnGuidanceLine,
-  turnMarqueeArrows,
 } from "@/lib/upcoming-route";
 import type { CameraMode } from "@/types/domain";
 
@@ -15,7 +15,7 @@ export const GUIDANCE_LAYER_ID = "navpilot-turn-arrows-layer";
 export const TURN_LINE_SOURCE_ID = "navpilot-turn-line-v3";
 export const TURN_LINE_GLOW_ID = "navpilot-turn-line-glow-v3";
 export const TURN_LINE_LAYER_ID = "navpilot-turn-line-layer-v3";
-const CHEVRON_IMAGE_ID = "navpilot-ground-chevron-blue-v9";
+const CHEVRON_IMAGE_ID = "navpilot-ground-chevron-blue-v10";
 const STALE_TURN_IDS = [
   "navpilot-turn-line",
   "navpilot-turn-line-glow",
@@ -54,10 +54,10 @@ function createChevronImage() {
     glow = false,
   ) => {
     ctx.beginPath();
-    // Tip sits on the icon-anchor so the head stays on the line center.
-    ctx.moveTo(-depth, length);
+    // Tip at the origin, opening toward -X so line placement aims +X along the route.
+    ctx.moveTo(-length, -depth);
     ctx.lineTo(0, 0);
-    ctx.lineTo(depth, length);
+    ctx.lineTo(-length, depth);
     ctx.lineWidth = width;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
@@ -181,25 +181,37 @@ function chevronSize(): ExpressionSpecification {
     ["linear"],
     ["zoom"],
     14.2,
-    ["*", ["get", "scale"], 0.11],
+    0.11,
     16.2,
-    ["*", ["get", "scale"], 0.15],
+    0.15,
     17.4,
-    ["*", ["get", "scale"], 0.19],
+    0.19,
     18.6,
-    ["*", ["get", "scale"], 0.23],
+    0.23,
   ];
 }
 
+function chevronSpacing(): ExpressionSpecification {
+  return ["interpolate", ["linear"], ["zoom"], 14, 42, 16.5, 28, 19, 18];
+}
+
 function ensureChevronLayer(map: MapLibreMap) {
+  const existing = map.getLayer(GUIDANCE_LAYER_ID);
+  if (existing && "source" in existing && existing.source !== TURN_LINE_SOURCE_ID) {
+    map.removeLayer(GUIDANCE_LAYER_ID);
+  }
   const layout = {
+    "symbol-placement": "line" as const,
+    "symbol-spacing": chevronSpacing(),
+    "symbol-avoid-edges": false,
     "icon-image": CHEVRON_IMAGE_ID,
     "icon-size": chevronSize(),
     "icon-anchor": "center" as const,
     "icon-offset": [0, 0] as [number, number],
-    "icon-rotate": ["get", "bearing"] as ExpressionSpecification,
+    "icon-rotate": 0,
     "icon-rotation-alignment": "map" as const,
     "icon-pitch-alignment": "map" as const,
+    "icon-keep-upright": false,
     "icon-allow-overlap": true,
     "icon-ignore-placement": true,
     "icon-padding": 0,
@@ -209,22 +221,25 @@ function ensureChevronLayer(map: MapLibreMap) {
     map.addLayer({
       id: GUIDANCE_LAYER_ID,
       type: "symbol",
-      source: GUIDANCE_SOURCE_ID,
+      source: TURN_LINE_SOURCE_ID,
       layout,
       paint: {
-        "icon-opacity": ["get", "opacity"],
+        "icon-opacity": 0.92,
       },
     });
     return;
   }
 
+  map.setLayoutProperty(GUIDANCE_LAYER_ID, "symbol-placement", "line");
+  map.setLayoutProperty(GUIDANCE_LAYER_ID, "symbol-spacing", chevronSpacing());
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-image", CHEVRON_IMAGE_ID);
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-size", chevronSize());
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-anchor", "center");
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-offset", [0, 0]);
-  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-rotate", ["get", "bearing"]);
+  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-rotate", 0);
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-rotation-alignment", "map");
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-pitch-alignment", "map");
+  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-keep-upright", false);
 }
 
 function stackGuidanceLayers(map: MapLibreMap) {
@@ -273,48 +288,33 @@ export function upsertGuidanceArrows(
   ensureImages(map);
   ensureTurnLine(map);
 
-  const live =
+  const turnLive =
     navigating &&
     options.isTurn === true &&
     shouldShowGroundBow(distanceToNext, showing);
-  showing = live;
+  showing = turnLive;
 
   const line =
-    live && route.length >= 2
-      ? turnGuidanceLine(
-          route,
-          routeMeters,
-          distanceToNext,
-          options.cueMeters,
-          true,
-        )
+    navigating && route.length >= 2
+      ? turnLive
+        ? turnGuidanceLine(
+            route,
+            routeMeters,
+            distanceToNext,
+            options.cueMeters,
+            true,
+          )
+        : sliceRouteAhead(route, Math.max(0, routeMeters) + 8, 240)
       : [];
-  const arrows = live
-    ? turnMarqueeArrows(line, phase, distanceToNext)
-    : [];
-
-  const data = {
-    type: "FeatureCollection" as const,
-    features: arrows.map((arrow, index) => ({
-      type: "Feature" as const,
-      id: index,
-      properties: {
-        bearing: arrow.bearing,
-        opacity: arrow.opacity,
-        scale: arrow.scale,
-      },
-      geometry: {
-        type: "Point" as const,
-        coordinates: [arrow.lng, arrow.lat],
-      },
-    })),
-  };
 
   const source = map.getSource(GUIDANCE_SOURCE_ID);
   if (source?.type === "geojson") {
-    (source as GeoJSONSource).setData(data);
+    (source as GeoJSONSource).setData(emptyCollection());
   } else if (!source) {
-    map.addSource(GUIDANCE_SOURCE_ID, { type: "geojson", data });
+    map.addSource(GUIDANCE_SOURCE_ID, {
+      type: "geojson",
+      data: emptyCollection(),
+    });
   }
 
   setTurnLine(map, line);

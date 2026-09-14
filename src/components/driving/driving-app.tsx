@@ -1050,7 +1050,12 @@ export function DrivingApp() {
   const locate = useCallback(async () => {
     void requestDeviceCompassPermission();
     const wasFollowing = followVehicle;
-    if (wasFollowing) {
+    if (navigating) {
+      setFollowOrientation("heading-up");
+      setFollowVehicle(true);
+      setUserAdjustedMap(false);
+      panIntentRef.current = false;
+    } else if (wasFollowing) {
       setFollowOrientation((current) =>
         current === "heading-up" ? "north-up" : "heading-up",
       );
@@ -1081,7 +1086,7 @@ export function DrivingApp() {
       }
       setGpsStatus("unavailable");
     }
-  }, [followVehicle, readDevicePosition]);
+  }, [followVehicle, navigating, readDevicePosition]);
 
   const startNavigation = useCallback(async () => {
     let pose = vehicleRef.current;
@@ -1125,6 +1130,7 @@ export function DrivingApp() {
     setToolsDrawerOpen(false);
     setPoiMenuOpen(false);
     setStyleMenuOpen(false);
+    setFollowOrientation("heading-up");
     setFollowVehicle(true);
     setUserAdjustedMap(false);
     panIntentRef.current = false;

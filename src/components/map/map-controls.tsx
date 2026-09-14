@@ -74,14 +74,17 @@ export function MapControls({
   onTogglePoiMenu,
 }: MapControlsProps) {
   const locating = gpsStatus === "locating";
-  const northUp = followVehicle && followOrientation === "north-up";
-  const locateLabel = !followVehicle
-    ? followOrientation === "heading-up"
-      ? "回到定位並對準車頭方向"
-      : "回到定位並北方朝上"
-    : northUp
-      ? "目前北方朝上。點擊切換車頭向上"
-      : "目前車頭向上，點擊切換北方朝上";
+  const northUp =
+    followVehicle && followOrientation === "north-up" && !navigating;
+  const locateLabel = navigating
+    ? "導航中保持車頭向上"
+    : !followVehicle
+      ? followOrientation === "heading-up"
+        ? "回到定位並對準車頭方向"
+        : "回到定位並北方朝上"
+      : northUp
+        ? "目前北方朝上。點擊切換車頭向上"
+        : "目前車頭向上，點擊切換北方朝上";
   const tone = mapControlTone(pendingMapDisplayMode ?? mapDisplayMode);
   const flyoutOpen = styleMenuOpen || toolsDrawerOpen || poiMenuOpen;
   const [wasNavigating, setWasNavigating] = useState(navigating);
