@@ -64,7 +64,7 @@ export const MANEUVER_APPROACH_EXIT_METERS = 118;
 export const MANEUVER_IMMINENT_METERS = 30;
 export const MANEUVER_AFTER_TURN_METERS = 48;
 export const MANEUVER_RECOVER_MS = 1800;
-/** 立體弓型導覽標示：轉彎前 150 公尺出現 */
+/** 路口強化距離：黃線／鏡頭拉近約 150 公尺開始；地面 V 標在導航全程都顯示。 */
 export const GUIDANCE_SIGN_APPROACH_METERS = 150;
 export const GUIDANCE_SIGN_EXIT_METERS = 168;
 /** 地面藍色弓型箭頭：約 200 公尺出現，釘在路面上，以流水燈引導 */

@@ -240,7 +240,9 @@ export function planNavGuidance(input: {
     isTurn,
     showLayerA,
     showGuidanceLine: showLayerA,
-    showChevrons: showLayerA && (near150 || isTurn),
+    // Always place V-chevrons while navigating. Gating to ≤150m / turns hid
+    // them on long straights; mobile 3D then looked like “no 路標”.
+    showChevrons: showLayerA,
     showTurnBow: showLayerA && isTurn && near200,
     near200,
     near150,

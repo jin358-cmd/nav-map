@@ -21,7 +21,8 @@ export const GUIDANCE_LAYER_ID = "navpilot-turn-arrows-layer";
 export const TURN_LINE_SOURCE_ID = "navpilot-turn-line-v3";
 export const TURN_LINE_GLOW_ID = "navpilot-turn-line-glow-v3";
 export const TURN_LINE_LAYER_ID = "navpilot-turn-line-layer-v3";
-const CHEVRON_IMAGE_ID = "navpilot-ground-chevron-blue-v11";
+const CHEVRON_IMAGE_ID = "navpilot-ground-chevron-blue-v12";
+const COMPACT_MAP_WIDTH = 640;
 const STALE_TURN_IDS = [
   "navpilot-turn-line",
   "navpilot-turn-line-glow",
@@ -38,6 +39,10 @@ function emptyLine() {
   return { type: "FeatureCollection" as const, features: [] };
 }
 
+function isCompactMap(map: MapLibreMap) {
+  return map.getContainer().clientWidth < COMPACT_MAP_WIDTH;
+}
+
 function createChevronImage() {
   const size = 128;
   const canvas = document.createElement("canvas");
@@ -48,36 +53,35 @@ function createChevronImage() {
   ctx.clearRect(0, 0, size, size);
   ctx.translate(size / 2, size / 2);
 
-  const strokeCaret = (
-    length: number,
-    depth: number,
-    width: number,
-    color: string,
-    glow = false,
-  ) => {
+  // Filled ^ with tip at the icon-anchor, opening toward +Y so icon-rotate
+  // bearing still points along the route. Stroke-only carets vanish at 50° pitch.
+  const chevronPath = () => {
     ctx.beginPath();
-    // Tip at the icon-anchor, opening toward +Y so icon-rotate bearing points along the route.
-    ctx.moveTo(-depth, length);
-    ctx.lineTo(0, 0);
-    ctx.lineTo(depth, length);
-    ctx.lineWidth = width;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.strokeStyle = color;
-    if (glow) {
-      ctx.shadowColor = "rgba(14, 165, 233, 0.7)";
-      ctx.shadowBlur = 8;
-    } else {
-      ctx.shadowBlur = 0;
-    }
-    ctx.stroke();
+    ctx.moveTo(0, -2);
+    ctx.lineTo(-40, 54);
+    ctx.lineTo(-18, 56);
+    ctx.lineTo(0, 22);
+    ctx.lineTo(18, 56);
+    ctx.lineTo(40, 54);
+    ctx.closePath();
   };
 
   ctx.save();
-  strokeCaret(34, 22, 9, "#0369a1", true);
+  ctx.shadowColor = "rgba(14, 165, 233, 0.9)";
+  ctx.shadowBlur = 16;
+  chevronPath();
+  ctx.fillStyle = "#075985";
+  ctx.fill();
   ctx.restore();
-  strokeCaret(32, 20, 6, "#38bdf8");
-  strokeCaret(28, 17, 3, "#f0f9ff");
+
+  chevronPath();
+  ctx.fillStyle = "#38bdf8";
+  ctx.fill();
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = "#f0f9ff";
+  ctx.stroke();
 
   return ctx.getImageData(0, 0, size, size);
 }
@@ -93,24 +97,28 @@ function ensureImages(map: MapLibreMap) {
   }
 }
 
-const TURN_GLOW_WIDTH: ExpressionSpecification = [
-  "interpolate",
-  ["linear"],
-  ["zoom"],
-  12,
-  6,
-  17,
-  12,
-];
-const TURN_LINE_WIDTH: ExpressionSpecification = [
-  "interpolate",
-  ["linear"],
-  ["zoom"],
-  12,
-  3,
-  17,
-  7.5,
-];
+function turnGlowWidth(compact: boolean): ExpressionSpecification {
+  return [
+    "interpolate",
+    ["linear"],
+    ["zoom"],
+    12,
+    compact ? 10 : 6,
+    17,
+    compact ? 20 : 12,
+  ];
+}
+function turnLineWidth(compact: boolean): ExpressionSpecification {
+  return [
+    "interpolate",
+    ["linear"],
+    ["zoom"],
+    12,
+    compact ? 5.5 : 3,
+    17,
+    compact ? 12 : 7.5,
+  ];
+}
 
 function flowGradient(phase: number): ExpressionSpecification {
   const p = 0.12 + (((phase % 1) + 1) % 1) * 0.76;
@@ -138,8 +146,10 @@ function stripStaleTurnLayers(map: MapLibreMap) {
   if (map.getSource("navpilot-turn-line")) map.removeSource("navpilot-turn-line");
 }
 
-function ensureTurnLine(map: MapLibreMap) {
+function ensureTurnLine(map: MapLibreMap, compact: boolean) {
   stripStaleTurnLayers(map);
+  const glowWidth = turnGlowWidth(compact);
+  const lineWidth = turnLineWidth(compact);
   if (!map.getSource(TURN_LINE_SOURCE_ID)) {
     map.addSource(TURN_LINE_SOURCE_ID, {
       type: "geojson",
@@ -156,15 +166,15 @@ function ensureTurnLine(map: MapLibreMap) {
       source: TURN_LINE_SOURCE_ID,
       paint: {
         "line-color": "#38bdf8",
-        "line-width": TURN_GLOW_WIDTH,
-        "line-opacity": 0.28,
-        "line-blur": 4,
+        "line-width": glowWidth,
+        "line-opacity": compact ? 0.4 : 0.28,
+        "line-blur": compact ? 5 : 4,
       },
       layout: { "line-cap": "round", "line-join": "round" },
     });
   } else {
-    map.setPaintProperty(TURN_LINE_GLOW_ID, "line-width", TURN_GLOW_WIDTH);
-    map.setPaintProperty(TURN_LINE_GLOW_ID, "line-opacity", 0.28);
+    map.setPaintProperty(TURN_LINE_GLOW_ID, "line-width", glowWidth);
+    map.setPaintProperty(TURN_LINE_GLOW_ID, "line-opacity", compact ? 0.4 : 0.28);
   }
   if (!map.getLayer(TURN_LINE_LAYER_ID)) {
     map.addLayer({
@@ -172,47 +182,49 @@ function ensureTurnLine(map: MapLibreMap) {
       type: "line",
       source: TURN_LINE_SOURCE_ID,
       paint: {
-        "line-width": TURN_LINE_WIDTH,
-        "line-opacity": 0.92,
+        "line-width": lineWidth,
+        "line-opacity": 0.95,
         "line-gradient": flowGradient(0),
       },
       layout: { "line-cap": "round", "line-join": "round" },
     });
   } else {
-    map.setPaintProperty(TURN_LINE_LAYER_ID, "line-width", TURN_LINE_WIDTH);
-    map.setPaintProperty(TURN_LINE_LAYER_ID, "line-opacity", 0.92);
+    map.setPaintProperty(TURN_LINE_LAYER_ID, "line-width", lineWidth);
+    map.setPaintProperty(TURN_LINE_LAYER_ID, "line-opacity", 0.95);
   }
 }
 
-function chevronSize(): ExpressionSpecification {
+function chevronSize(compact: boolean): ExpressionSpecification {
+  const boost = compact ? 1.55 : 1;
   return [
     "interpolate",
     ["linear"],
     ["zoom"],
     14.2,
-    ["*", ["get", "scale"], 0.12],
+    ["*", ["get", "scale"], 0.28 * boost],
     16.2,
-    ["*", ["get", "scale"], 0.17],
+    ["*", ["get", "scale"], 0.4 * boost],
     17.4,
-    ["*", ["get", "scale"], 0.22],
+    ["*", ["get", "scale"], 0.52 * boost],
     18.6,
-    ["*", ["get", "scale"], 0.26],
+    ["*", ["get", "scale"], 0.62 * boost],
   ];
 }
 
-function ensureChevronLayer(map: MapLibreMap) {
+function ensureChevronLayer(map: MapLibreMap, compact: boolean) {
   const existing = map.getLayer(GUIDANCE_LAYER_ID);
   if (existing && "source" in existing && existing.source !== GUIDANCE_SOURCE_ID) {
     map.removeLayer(GUIDANCE_LAYER_ID);
   }
   const layout = {
     "icon-image": CHEVRON_IMAGE_ID,
-    "icon-size": chevronSize(),
+    "icon-size": chevronSize(compact),
     "icon-anchor": "center" as const,
     "icon-offset": [0, 0] as [number, number],
     "icon-rotate": ["get", "bearing"] as ExpressionSpecification,
     "icon-rotation-alignment": "map" as const,
-    "icon-pitch-alignment": "map" as const,
+    // Billboard toward the camera so 3D pitch 50° does not flatten the V to a line.
+    "icon-pitch-alignment": "viewport" as const,
     "icon-keep-upright": false,
     "icon-allow-overlap": true,
     "icon-ignore-placement": true,
@@ -234,13 +246,15 @@ function ensureChevronLayer(map: MapLibreMap) {
 
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "symbol-placement", "point");
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-image", CHEVRON_IMAGE_ID);
-  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-size", chevronSize());
+  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-size", chevronSize(compact));
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-anchor", "center");
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-offset", [0, 0]);
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-rotate", ["get", "bearing"]);
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-rotation-alignment", "map");
-  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-pitch-alignment", "map");
+  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-pitch-alignment", "viewport");
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-keep-upright", false);
+  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-allow-overlap", true);
+  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-ignore-placement", true);
 }
 
 function stackGuidanceLayers(map: MapLibreMap) {
@@ -291,8 +305,10 @@ export function upsertGuidanceArrows(
   } = {},
 ) {
   if (!map.isStyleLoaded()) return;
+  const compact = isCompactMap(map);
+  const pitched = (options.cameraMode ?? "3d") === "3d";
   ensureImages(map);
-  ensureTurnLine(map);
+  ensureTurnLine(map, compact);
 
   const geometry = deriveGeometryTurn(route, routeMeters);
   const plan = planNavGuidance({
@@ -306,7 +322,8 @@ export function upsertGuidanceArrows(
     plan.showTurnBow && shouldShowGroundBow(distanceToNext, showing);
   showing = bow;
 
-  const cruiseAhead = plan.near200 || plan.showTurnBow ? 220 : 96;
+  const cruiseAhead =
+    plan.near200 || plan.showTurnBow ? 220 : compact || pitched ? 176 : 120;
   let line =
     plan.showGuidanceLine && route.length >= 2
       ? bow
@@ -319,6 +336,9 @@ export function upsertGuidanceArrows(
           )
         : sliceRouteAhead(route, Math.max(0, routeMeters) + 6, cruiseAhead)
       : [];
+  if (plan.showGuidanceLine && line.length < 2 && navigating && route.length >= 2) {
+    line = sliceRouteAhead(route, Math.max(0, routeMeters) + 4, cruiseAhead);
+  }
   const arrows =
     plan.showChevrons && line.length >= 2
       ? bow
@@ -327,12 +347,9 @@ export function upsertGuidanceArrows(
             line,
             marqueeSpacingMeters(lineLengthMeters(line), 16.5, distanceToNext),
             phase,
-            plan.near150 ? 1 : 0.72,
+            plan.near150 ? 1 : compact ? 0.92 : 0.82,
           )
       : [];
-  if (plan.showGuidanceLine && line.length < 2 && navigating && route.length >= 2) {
-    line = sliceRouteAhead(route, Math.max(0, routeMeters) + 4, 120);
-  }
 
   if (process.env.NODE_ENV !== "production") {
     console.debug("[NavGuidance]", {
@@ -344,6 +361,8 @@ export function upsertGuidanceArrows(
       routeMeters,
       cueMeters: options.cueMeters,
       routeLength: route.length,
+      compact,
+      pitched,
       arrowCount: arrows.length,
       linePoints: line.length,
     });
@@ -376,7 +395,7 @@ export function upsertGuidanceArrows(
   if (map.getLayer(TURN_LINE_LAYER_ID)) {
     map.setPaintProperty(TURN_LINE_LAYER_ID, "line-gradient", flowGradient(phase));
   }
-  ensureChevronLayer(map);
+  ensureChevronLayer(map, compact);
   stackGuidanceLayers(map);
 }
 

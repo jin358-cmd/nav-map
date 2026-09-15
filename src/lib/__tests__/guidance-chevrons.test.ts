@@ -88,7 +88,7 @@ function testGuidanceNotGatedOnOsrmTurn() {
     geometryTurn: false,
   });
   assert.equal(cruise.showGuidanceLine, true);
-  assert.equal(cruise.showChevrons, false);
+  assert.equal(cruise.showChevrons, true);
   const near = planNavGuidance({
     navigating: true,
     routeLength: 40,
