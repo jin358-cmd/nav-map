@@ -1112,6 +1112,7 @@ export function DrivingApp() {
         setGpsStatus(code === "permission_denied" ? "denied" : "unavailable");
         if (code === "permission_denied") setGpsPermission("denied");
         setRouteError(geoErrorMessage(code));
+        setLocateNotice(code);
         return;
       }
     }
