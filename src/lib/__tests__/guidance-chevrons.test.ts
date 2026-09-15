@@ -44,7 +44,7 @@ function testTurnMarqueeStaysOnLine() {
   const maxLat = Math.max(...line.map((point) => point[1]));
   for (const arrow of arrows) {
     assert.ok(arrow.lat >= minLat - 1e-6 && arrow.lat <= maxLat + 1e-6);
-    assert.ok(arrow.opacity > 0);
+    assert.ok(arrow.opacity >= 0.9);
   }
 }
 

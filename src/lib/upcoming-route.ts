@@ -327,8 +327,8 @@ export function guidanceArrowsAlong(
       kind,
       scale,
       opacity: Math.max(
-        0.38,
-        Math.min(1, intensity * (nearBase + pulse * 0.42)),
+        0.86,
+        Math.min(1, intensity * (nearBase + pulse * 0.22)),
       ),
     };
   });
@@ -483,9 +483,9 @@ export function turnGroundArrows({
       lng: point.lng,
       lat: point.lat,
       bearing: point.bearing,
-      opacity: 0.22 + pulse * 0.78,
+      opacity: 0.9 + pulse * 0.1,
       kind: "straight",
-      scale: 1,
+      scale: 1.18,
     });
   }
   return placed;
@@ -517,9 +517,9 @@ export function turnMarqueeArrows(
       lng: pose.lng,
       lat: pose.lat,
       bearing: pose.bearing,
-      opacity: 0.22 + pulse * 0.78,
+      opacity: 0.92 + pulse * 0.08,
       kind: "straight",
-      scale: 1,
+      scale: 1.18,
     });
   }
   return placed;

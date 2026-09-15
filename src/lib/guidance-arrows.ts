@@ -21,7 +21,7 @@ export const GUIDANCE_LAYER_ID = "navpilot-turn-arrows-layer";
 export const TURN_LINE_SOURCE_ID = "navpilot-turn-line-v3";
 export const TURN_LINE_GLOW_ID = "navpilot-turn-line-glow-v3";
 export const TURN_LINE_LAYER_ID = "navpilot-turn-line-layer-v3";
-const CHEVRON_IMAGE_ID = "navpilot-ground-chevron-blue-v12";
+const CHEVRON_IMAGE_ID = "navpilot-ground-chevron-white-v13";
 const COMPACT_MAP_WIDTH = 640;
 const STALE_TURN_IDS = [
   "navpilot-turn-line",
@@ -53,34 +53,33 @@ function createChevronImage() {
   ctx.clearRect(0, 0, size, size);
   ctx.translate(size / 2, size / 2);
 
-  // Filled ^ with tip at the icon-anchor, opening toward +Y so icon-rotate
-  // bearing still points along the route. Stroke-only carets vanish at 50° pitch.
+  // White filled ^ so chevrons read against the cyan route at 50° pitch.
   const chevronPath = () => {
     ctx.beginPath();
-    ctx.moveTo(0, -2);
-    ctx.lineTo(-40, 54);
-    ctx.lineTo(-18, 56);
-    ctx.lineTo(0, 22);
-    ctx.lineTo(18, 56);
-    ctx.lineTo(40, 54);
+    ctx.moveTo(0, -4);
+    ctx.lineTo(-44, 56);
+    ctx.lineTo(-18, 58);
+    ctx.lineTo(0, 20);
+    ctx.lineTo(18, 58);
+    ctx.lineTo(44, 56);
     ctx.closePath();
   };
 
   ctx.save();
-  ctx.shadowColor = "rgba(14, 165, 233, 0.9)";
-  ctx.shadowBlur = 16;
+  ctx.shadowColor = "rgba(8, 47, 73, 0.95)";
+  ctx.shadowBlur = 18;
   chevronPath();
-  ctx.fillStyle = "#075985";
+  ctx.fillStyle = "#082f49";
   ctx.fill();
   ctx.restore();
 
   chevronPath();
-  ctx.fillStyle = "#38bdf8";
+  ctx.fillStyle = "#f8fafc";
   ctx.fill();
   ctx.lineJoin = "round";
   ctx.lineCap = "round";
-  ctx.lineWidth = 6;
-  ctx.strokeStyle = "#f0f9ff";
+  ctx.lineWidth = 7;
+  ctx.strokeStyle = "#0369a1";
   ctx.stroke();
 
   return ctx.getImageData(0, 0, size, size);
@@ -201,13 +200,13 @@ function chevronSize(compact: boolean): ExpressionSpecification {
     ["linear"],
     ["zoom"],
     14.2,
-    ["*", ["get", "scale"], 0.28 * boost],
+    ["*", ["get", "scale"], 0.36 * boost],
     16.2,
-    ["*", ["get", "scale"], 0.4 * boost],
+    ["*", ["get", "scale"], 0.5 * boost],
     17.4,
-    ["*", ["get", "scale"], 0.52 * boost],
+    ["*", ["get", "scale"], 0.64 * boost],
     18.6,
-    ["*", ["get", "scale"], 0.62 * boost],
+    ["*", ["get", "scale"], 0.76 * boost],
   ];
 }
 
