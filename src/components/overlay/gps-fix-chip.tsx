@@ -1,5 +1,6 @@
 "use client";
 
+import { geoErrorMessage } from "@/services/geolocation";
 import type { GpsErrorCode, GpsPermissionState, GpsStatus, VehiclePose } from "@/types/domain";
 import { cn } from "@/lib/utils";
 
@@ -27,8 +28,8 @@ export function GpsFixChip({
       : status === "locating"
         ? "定位中"
         : error
-          ? "定位失敗"
-          : "GPS --";
+          ? geoErrorMessage(error).split("。")[0]
+          : "尚未定位";
   const retryable = Boolean(onRetry) && !live;
 
   return (

@@ -173,12 +173,13 @@ export function lineLengthMeters(line: [number, number][]) {
 
 const VEHICLE_CLEARANCE_M = 16;
 const TURN_THRESHOLD_DEG = 24;
+const GEOMETRY_TURN_DEG = 20;
 
 function signedHeadingDelta(from: number, to: number) {
   return ((to - from + 540) % 360) - 180;
 }
 
-function findManeuverTurn(line: [number, number][]) {
+function findManeuverTurn(line: [number, number][], thresholdDeg = TURN_THRESHOLD_DEG) {
   let meters = 0;
   let best: { meters: number; signed: number } | null = null;
   for (let index = 1; index < line.length; index += 1) {
@@ -194,7 +195,7 @@ function findManeuverTurn(line: [number, number][]) {
       const prevBearing = bearingDegrees(prev, from);
       const signed = signedHeadingDelta(prevBearing, bearing);
       if (
-        Math.abs(signed) >= TURN_THRESHOLD_DEG &&
+        Math.abs(signed) >= thresholdDeg &&
         (!best || Math.abs(signed) > Math.abs(best.signed))
       ) {
         best = { meters, signed };
@@ -203,6 +204,47 @@ function findManeuverTurn(line: [number, number][]) {
     meters += length;
   }
   return best;
+}
+
+export function deriveGeometryTurn(
+  route: [number, number][],
+  routeMeters = 0,
+  lookAheadMeters = 96,
+) {
+  if (route.length < 2) return { isTurn: false, signed: 0 };
+  const ahead = sliceRouteAhead(route, Math.max(0, routeMeters), lookAheadMeters);
+  const turn = findManeuverTurn(ahead, GEOMETRY_TURN_DEG);
+  if (!turn) return { isTurn: false, signed: 0 };
+  return {
+    isTurn: Math.abs(turn.signed) >= GEOMETRY_TURN_DEG,
+    signed: turn.signed,
+  };
+}
+
+export function planNavGuidance(input: {
+  navigating: boolean;
+  routeLength: number;
+  distanceToNext: number;
+  isTurnStep: boolean;
+  geometryTurn: boolean;
+}) {
+  const showLayerA = input.navigating && input.routeLength >= 2;
+  const isTurn = input.isTurnStep || input.geometryTurn;
+  const near200 =
+    Number.isFinite(input.distanceToNext) &&
+    input.distanceToNext <= GROUND_BOW_APPROACH_METERS;
+  const near150 =
+    Number.isFinite(input.distanceToNext) &&
+    input.distanceToNext <= GUIDANCE_SIGN_APPROACH_METERS;
+  return {
+    isTurn,
+    showLayerA,
+    showGuidanceLine: showLayerA,
+    showChevrons: showLayerA && (near150 || isTurn),
+    showTurnBow: showLayerA && isTurn && near200,
+    near200,
+    near150,
+  };
 }
 
 /** 前方連續可見約 8～14 個，避免堆疊。 */

@@ -9,7 +9,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
-import { ChevronLeft, LayoutGrid, LocateFixed, ShoppingCart } from "lucide-react";
+import { ChevronLeft, Compass, LayoutGrid, Loader2, LocateFixed, ShoppingCart } from "lucide-react";
 import { MapStyleMenu } from "@/components/overlay/map-style-menu";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,6 +45,7 @@ type MapControlsProps = {
   navigating?: boolean;
   toolsDrawer?: ReactNode;
   onLocate: () => void;
+  onToggleOrientation: () => void;
   onToggleCamera: () => void;
   onMapDisplayMode: (mode: MapDisplayMode) => void;
   onToggleStyleMenu: () => void;
@@ -67,6 +68,7 @@ export function MapControls({
   navigating = false,
   toolsDrawer = null,
   onLocate,
+  onToggleOrientation,
   onToggleCamera,
   onMapDisplayMode,
   onToggleStyleMenu,
@@ -74,17 +76,15 @@ export function MapControls({
   onTogglePoiMenu,
 }: MapControlsProps) {
   const locating = gpsStatus === "locating";
-  const northUp =
-    followVehicle && followOrientation === "north-up" && !navigating;
-  const locateLabel = navigating
-    ? "導航中保持車頭向上"
-    : !followVehicle
-      ? followOrientation === "heading-up"
-        ? "回到定位並對準車頭方向"
-        : "回到定位並北方朝上"
-      : northUp
-        ? "目前北方朝上。點擊切換車頭向上"
-        : "目前車頭向上，點擊切換北方朝上";
+  const northUp = followOrientation === "north-up";
+  const locateLabel = locating
+    ? "定位中"
+    : followVehicle
+      ? "重新定位到目前位置"
+      : "回到目前位置";
+  const orientationLabel = northUp
+    ? "目前北方朝上。點擊切換車頭向上"
+    : "目前車頭向上。點擊切換北方朝上";
   const tone = mapControlTone(pendingMapDisplayMode ?? mapDisplayMode);
   const flyoutOpen = styleMenuOpen || toolsDrawerOpen || poiMenuOpen;
   const [wasNavigating, setWasNavigating] = useState(navigating);
@@ -312,15 +312,30 @@ export function MapControls({
             bumpIdle();
             onLocate();
           }}
+          active={locating}
+          pressed={followVehicle && !locating}
+          tone={tone}
+          className={mapViewToggleClass(tone, followVehicle && !locating)}
+        >
+          {locating ? (
+            <Loader2 className="size-6 animate-spin" strokeWidth={2.5} />
+          ) : (
+            <LocateFixed className="size-6" strokeWidth={2.5} />
+          )}
+        </ControlButton>
+        <ControlButton
+          label={orientationLabel}
+          onClick={() => {
+            if (collapsed) expandRail();
+            bumpIdle();
+            onToggleOrientation();
+          }}
           active={false}
-          pressed={followVehicle}
+          pressed={northUp}
           tone={tone}
           className={mapViewToggleClass(tone, northUp)}
         >
-          <LocateFixed
-            className={cn("size-6", locating && "animate-pulse")}
-            strokeWidth={2.5}
-          />
+          <Compass className="size-6" strokeWidth={2.5} />
         </ControlButton>
       </div>
     </div>

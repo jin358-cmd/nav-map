@@ -4,9 +4,11 @@ import type {
   Map as MapLibreMap,
 } from "maplibre-gl";
 import {
+  deriveGeometryTurn,
   guidanceArrowsAlong,
   lineLengthMeters,
   marqueeSpacingMeters,
+  planNavGuidance,
   shouldShowGroundBow,
   sliceRouteAhead,
   turnGuidanceLine,
@@ -83,7 +85,12 @@ function createChevronImage() {
 function ensureImages(map: MapLibreMap) {
   if (map.hasImage(CHEVRON_IMAGE_ID)) return;
   const image = createChevronImage();
-  if (image) map.addImage(CHEVRON_IMAGE_ID, image, { pixelRatio: 2 });
+  if (!image) return;
+  try {
+    map.addImage(CHEVRON_IMAGE_ID, image, { pixelRatio: 2 });
+  } catch {
+    /* style swap may still hold the previous id for one frame */
+  }
 }
 
 const TURN_GLOW_WIDTH: ExpressionSpecification = [
@@ -287,15 +294,22 @@ export function upsertGuidanceArrows(
   ensureImages(map);
   ensureTurnLine(map);
 
-  const turnLive =
-    navigating &&
-    options.isTurn === true &&
-    shouldShowGroundBow(distanceToNext, showing);
-  showing = turnLive;
+  const geometry = deriveGeometryTurn(route, routeMeters);
+  const plan = planNavGuidance({
+    navigating,
+    routeLength: route.length,
+    distanceToNext,
+    isTurnStep: options.isTurn === true,
+    geometryTurn: geometry.isTurn,
+  });
+  const bow =
+    plan.showTurnBow && shouldShowGroundBow(distanceToNext, showing);
+  showing = bow;
 
-  const line =
-    navigating && route.length >= 2
-      ? turnLive
+  const cruiseAhead = plan.near200 || plan.showTurnBow ? 220 : 96;
+  let line =
+    plan.showGuidanceLine && route.length >= 2
+      ? bow
         ? turnGuidanceLine(
             route,
             routeMeters,
@@ -303,19 +317,37 @@ export function upsertGuidanceArrows(
             options.cueMeters,
             true,
           )
-        : sliceRouteAhead(route, Math.max(0, routeMeters) + 8, 240)
+        : sliceRouteAhead(route, Math.max(0, routeMeters) + 6, cruiseAhead)
       : [];
   const arrows =
-    navigating && line.length >= 2
-      ? turnLive
+    plan.showChevrons && line.length >= 2
+      ? bow
         ? turnMarqueeArrows(line, phase, distanceToNext)
         : guidanceArrowsAlong(
             line,
             marqueeSpacingMeters(lineLengthMeters(line), 16.5, distanceToNext),
             phase,
-            1,
+            plan.near150 ? 1 : 0.72,
           )
       : [];
+  if (plan.showGuidanceLine && line.length < 2 && navigating && route.length >= 2) {
+    line = sliceRouteAhead(route, Math.max(0, routeMeters) + 4, 120);
+  }
+
+  if (process.env.NODE_ENV !== "production") {
+    console.debug("[NavGuidance]", {
+      navigating,
+      isTurn: plan.isTurn,
+      isTurnStep: options.isTurn === true,
+      geometryTurn: geometry.isTurn,
+      distanceToNext,
+      routeMeters,
+      cueMeters: options.cueMeters,
+      routeLength: route.length,
+      arrowCount: arrows.length,
+      linePoints: line.length,
+    });
+  }
   const data = {
     type: "FeatureCollection" as const,
     features: arrows.map((arrow, index) => ({

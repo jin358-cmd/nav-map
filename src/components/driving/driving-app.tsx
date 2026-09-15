@@ -141,6 +141,7 @@ import {
   upsertSavedPlace,
 } from "@/lib/saved-places";
 import { GpsFixChip } from "@/components/overlay/gps-fix-chip";
+import { LocateStatusBanner } from "@/components/overlay/locate-status-banner";
 import { MapAttribution } from "@/components/overlay/map-attribution";
 import { SpeedHud, SpeedLimitBadge } from "@/components/overlay/speed-hud";
 import { SpeedCameraCaution } from "@/components/overlay/speed-camera-caution";
@@ -156,6 +157,7 @@ import {
 import {
   geoErrorCode,
   geoErrorMessage,
+  peekLastGpsFix,
   queryGeolocationPermission,
 } from "@/services/geolocation";
 import { fetchConstructionEvents } from "@/services/construction";
@@ -245,7 +247,8 @@ export function DrivingApp() {
   const [followOrientation, setFollowOrientation] =
     useState<FollowOrientation>("heading-up");
   const [followVehicle, setFollowVehicle] = useState(false);
-  const [followSnapKey, setFollowSnapKey] = useState(0);
+  const [locateEpoch, setLocateEpoch] = useState(0);
+  const [locateNotice, setLocateNotice] = useState<GpsErrorCode>(null);
   const [userAdjustedMap, setUserAdjustedMap] = useState(false);
   const mapDisplayMode = useSyncExternalStore(
     subscribeMapDisplayMode,
@@ -1050,45 +1053,53 @@ export function DrivingApp() {
 
   const locate = useCallback(async () => {
     void requestDeviceCompassPermission();
-    const alreadyGps = vehicleRef.current.source === "gps";
-    if (navigating) {
-      setFollowOrientation("heading-up");
-    } else if (followVehicle && alreadyGps) {
-      setFollowOrientation((current) =>
-        current === "heading-up" ? "north-up" : "heading-up",
-      );
-    }
+    setLocateNotice(null);
+    setGpsError(null);
+    setGpsStatus("locating");
     setFollowVehicle(true);
     setUserAdjustedMap(false);
     panIntentRef.current = false;
-    setFollowSnapKey((value) => value + 1);
-    if (alreadyGps) {
-      setGpsStatus("active");
-    } else {
-      setGpsStatus("locating");
+    const cached = peekLastGpsFix();
+    if (cached) {
+      vehicleLiveRef.current = cached;
+      vehicleRef.current = cached;
+      setVehicle(cached);
+      setLocateEpoch((value) => value + 1);
     }
     try {
-      await readDevicePosition();
+      const pose = await readDevicePosition();
+      vehicleLiveRef.current = pose;
+      vehicleRef.current = pose;
+      setVehicle(pose);
       setFollowVehicle(true);
       setUserAdjustedMap(false);
       panIntentRef.current = false;
-      setFollowSnapKey((value) => value + 1);
+      setLocateEpoch((value) => value + 1);
+      setGpsStatus("active");
       setRefreshNonce((value) => value + 1);
     } catch (error) {
       const code = geoErrorCode(error);
       setGpsError(code);
+      if (peekLastGpsFix()) {
+        setGpsStatus("active");
+        setLocateEpoch((value) => value + 1);
+        return;
+      }
+      setLocateNotice(code);
       if (code === "permission_denied") {
         setGpsStatus("denied");
         setGpsPermission("denied");
         return;
       }
-      if (vehicleRef.current.source === "gps") {
-        setGpsStatus("active");
-        return;
-      }
       setGpsStatus("unavailable");
     }
-  }, [followVehicle, navigating, readDevicePosition]);
+  }, [readDevicePosition]);
+
+  const toggleOrientation = useCallback(() => {
+    setFollowOrientation((current) =>
+      current === "heading-up" ? "north-up" : "heading-up",
+    );
+  }, []);
 
   const startNavigation = useCallback(async () => {
     let pose = vehicleRef.current;
@@ -1559,7 +1570,7 @@ export function DrivingApp() {
         cameraMode={cameraMode}
         followOrientation={followOrientation}
         followVehicle={followVehicle}
-        followSnapKey={followSnapKey}
+        locateEpoch={locateEpoch}
         mapDisplayMode={pendingMapDisplayMode ?? mapDisplayMode}
         styleRevision={styleRevision}
         pickMode={pickMode}
@@ -1694,6 +1705,11 @@ export function DrivingApp() {
           {styleHint}
         </p>
       ) : null}
+      <LocateStatusBanner
+        error={locateNotice}
+        onRetry={() => void locate()}
+        onDismiss={() => setLocateNotice(null)}
+      />
       {demoEnabled ? (
         <p className="pointer-events-none absolute top-[max(6.6rem,calc(env(safe-area-inset-top)+6.2rem))] left-1/2 z-30 -translate-x-1/2 rounded-full border border-amber-300/40 bg-amber-500/20 px-3 py-1 text-xs text-amber-100">
           示範資料
@@ -1989,6 +2005,7 @@ export function DrivingApp() {
           poiLayersProgress={poiLayersProgress}
           navigating={navigating}
           onLocate={() => void locate()}
+          onToggleOrientation={toggleOrientation}
           onToggleCamera={() =>
             setCameraMode((mode) => (mode === "3d" ? "2d" : "3d"))
           }

@@ -149,7 +149,7 @@ type DrivingMapProps = {
   cameraMode: CameraMode;
   followOrientation?: FollowOrientation;
   followVehicle: boolean;
-  followSnapKey?: number;
+  locateEpoch?: number;
   mapDisplayMode?: MapDisplayMode;
   styleRevision?: number;
   pickMode?: boolean;
@@ -430,7 +430,7 @@ export function DrivingMap({
   cameraMode,
   followOrientation = "heading-up",
   followVehicle,
-  followSnapKey = 0,
+  locateEpoch = 0,
   mapDisplayMode = "dark",
   styleRevision = 0,
   pickMode = false,
@@ -1408,8 +1408,8 @@ export function DrivingMap({
   }, [navigating]);
 
   useEffect(() => {
-    if (followSnapKey > 0) snapFollowRef.current = true;
-  }, [followSnapKey]);
+    if (locateEpoch > 0) snapFollowRef.current = true;
+  }, [locateEpoch]);
 
   useEffect(() => {
     const map = mapRef.current;

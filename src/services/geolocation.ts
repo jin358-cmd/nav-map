@@ -119,10 +119,13 @@ export function geoErrorCode(error: unknown): GpsErrorCode {
 }
 
 export function geoErrorMessage(code: GpsErrorCode): string {
-  if (code === "permission_denied") return "定位權限被拒，請在瀏覽器允許位置存取。";
-  if (code === "timeout") return "定位逾時，請點右上定位鍵再試一次。";
+  if (code === "permission_denied") {
+    return "定位權限未開啟。請確認瀏覽器位置權限與手機 GPS 已開啟。";
+  }
+  if (code === "timeout") return "定位逾時，請再試一次。";
   if (code === "unsupported") return "此瀏覽器不支援定位。";
-  return "目前無法取得位置。";
+  if (code === "position_unavailable") return "GPS 暫時無法取得。";
+  return "無法取得目前位置。";
 }
 
 export async function queryGeolocationPermission(): Promise<GpsPermissionState> {
