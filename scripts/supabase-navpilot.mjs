@@ -3,7 +3,7 @@
  * Never logs keys. Refuses GVG / rental project URLs.
  */
 
-const FORBIDDEN = /gvg|rent|rental|租屋/i;
+const FORBIDDEN = /gvg|rent|rental|租屋|qmptlkgseffmeqnarwnb/i;
 
 export function projectRefFromUrl(url) {
   try {

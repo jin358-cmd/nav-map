@@ -53,6 +53,7 @@ function main() {
     else mismatch += 1;
   }
 
+  const rowCount = Array.isArray(payload.rows) ? payload.rows.length : payload.count;
   const report = {
     mode: "local",
     supabaseAdvisors: supabase ? "blocked_until_project_confirmed" : "not_configured",
@@ -60,14 +61,19 @@ function main() {
     index: INDEX,
     source: payload.source,
     notOfficialCountyFile: payload.notOfficialCountyFile,
-    rows: payload.count,
+    rows: rowCount,
+    mergedRetryNav: payload.mergedRetryNav ?? 0,
     regionValidation: { ok, mismatch, noCounty },
     byAccuracy,
     districtBoxes: Object.values(boxes.districts || {}).reduce((n, group) => n + Object.keys(group).length, 0),
     countyBoxes: Object.keys(boxes.counties || {}).length,
     flags: [
       mismatch > 0 ? `${mismatch} 筆座標落在宣告縣市包箱外（仍保留，不刪列）` : "縣市包箱內",
+      payload.mergedRetryNav
+        ? `含後續重試併入 ${payload.mergedRetryNav} 筆，與 manifest uniqueAddresses 對齊`
+        : "官方多邊形未提供，district 包箱不得當成界線驗證完成",
       "官方多邊形未提供，district 包箱不得當成界線驗證完成",
+      "nlsc-derived 不是縣市官方門牌原始檔",
     ],
   };
   writeFileSync(OUT, `${JSON.stringify(report, null, 2)}\n`);

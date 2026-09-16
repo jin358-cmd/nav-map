@@ -5,23 +5,26 @@
   "index": "src/data/south-address-index.json.gz",
   "source": "nlsc-derived",
   "notOfficialCountyFile": true,
-  "rows": 181373,
+  "rows": 181794,
+  "mergedRetryNav": 421,
   "regionValidation": {
-    "ok": 180782,
-    "mismatch": 591,
+    "ok": 181170,
+    "mismatch": 624,
     "noCounty": 0
   },
   "byAccuracy": {
     "interpolated": 9606,
     "road-center": 3319,
     "lane-center": 138,
-    "exact-house": 168309,
+    "exact-house": 168730,
     "approximate": 1
   },
   "districtBoxes": 175,
   "countyBoxes": 22,
   "flags": [
-    "591 筆座標落在宣告縣市包箱外（仍保留，不刪列）",
-    "官方多邊形未提供，district 包箱不得當成界線驗證完成"
+    "624 筆座標落在宣告縣市包箱外（仍保留，不刪列）",
+    "含後續重試併入 421 筆，與 manifest uniqueAddresses 對齊",
+    "官方多邊形未提供，district 包箱不得當成界線驗證完成",
+    "nlsc-derived 不是縣市官方門牌原始檔"
   ]
 }

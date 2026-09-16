@@ -9,12 +9,20 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync } from "node:fs";
 import { basename, extname, join } from "node:path";
 import { spawnSync } from "node:child_process";
+import { gunzipSync } from "node:zlib";
 import { COUNTIES } from "./gcis-address.mjs";
+import {
+  EXPECTED_NAVPILOT_REF,
+  EXPECTED_NAVPILOT_URL,
+  SOUTH_ADDRESS_COUNTIES,
+  cloudWriteGate,
+  dedupeAddressRows,
+  toAddressIndexRow,
+} from "./address-import-shared.mjs";
+import { countTable, readSupabaseConfig, supabaseRest } from "./supabase-navpilot.mjs";
 
 const SOUTH = ["雲林縣", "嘉義市", "嘉義縣", "臺南市", "高雄市", "屏東縣"];
-const dryRun = !process.argv.includes("--apply");
 const DIR = process.env.ADDRESS_DOORPLATES_DIR || "";
-const APPLY_CLOUD = process.env.ADDRESS_INDEX_APPLY === "1";
 
 function officialName(value) {
   return String(value || "")
@@ -132,14 +140,67 @@ function scanOfficialDir(dir) {
   return found;
 }
 
-function supabaseConfig() {
-  const url = (process.env.SUPABASE_URL || "").replace(/\/$/, "");
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-  if (!url || !key) return null;
-  if (/gvg|rent|rental|租屋/i.test(url)) {
-    throw new Error("拒絕寫入疑似 GVG／租屋雷達專案。");
+const CHECKPOINT = "data/south-pilot/address-import-checkpoint.json";
+const BATCH = Math.max(500, Math.min(1000, Number(process.env.ADDRESS_INDEX_BATCH || 800)));
+const FAIL_STOP = 3;
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function loadSouthIndex() {
+  const path = existsSync("src/data/south-address-index.json.gz")
+    ? "src/data/south-address-index.json.gz"
+    : "data/south-pilot/address-index.json.gz";
+  if (!existsSync(path)) return null;
+  return JSON.parse(gunzipSync(readFileSync(path)).toString("utf8"));
+}
+
+function collectCloudRows(payload) {
+  const wanted = new Set(SOUTH_ADDRESS_COUNTIES);
+  const mapped = [];
+  for (const row of payload.rows || []) {
+    if (!wanted.has(row.c)) continue;
+    if (!Number.isFinite(row.lat) || !Number.isFinite(row.lng)) continue;
+    mapped.push(
+      toAddressIndexRow(row, {
+        version: payload.version,
+        license: payload.license,
+      }),
+    );
   }
-  return { url, key };
+  return dedupeAddressRows(mapped);
+}
+
+function emptyCheckpoint() {
+  return {
+    version: "address-nlsc-beta",
+    batch: 0,
+    upserted: 0,
+    failed: 0,
+    consecutiveFails: 0,
+    status: "idle",
+    lastError: null,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+function saveCheckpoint(row) {
+  mkdirSync("data/south-pilot", { recursive: true });
+  const next = { ...row, updatedAt: new Date().toISOString() };
+  writeFileSync(CHECKPOINT, `${JSON.stringify(next, null, 2)}\n`);
+  return next;
+}
+
+async function upsertAddressBatch(config, rows) {
+  return supabaseRest(config, "/rest/v1/taiwan_address_index?on_conflict=id", {
+    method: "POST",
+    headers: {
+      Prefer: "resolution=merge-duplicates,return=minimal",
+    },
+    body: JSON.stringify(rows),
+    timeoutMs: 60000,
+  });
 }
 
 function ensureDerivedIndex() {
@@ -153,7 +214,99 @@ function ensureDerivedIndex() {
   return { built: result.status === 0, ready: result.status === 0 };
 }
 
-function main() {
+async function importSouthAddresses(payload) {
+  const rows = collectCloudRows(payload);
+  const gate = cloudWriteGate({ source: payload.source || "nlsc-derived" });
+  const config = readSupabaseConfig();
+  if (!gate.ok) {
+    return {
+      wroteSupabase: false,
+      dryRun: true,
+      wouldUpsert: rows.length,
+      reason: gate.reason,
+      expectedUrl: EXPECTED_NAVPILOT_URL,
+      expectedRef: EXPECTED_NAVPILOT_REF,
+    };
+  }
+  if (!config.ok) {
+    return {
+      wroteSupabase: false,
+      dryRun: true,
+      wouldUpsert: rows.length,
+      reason: config.reason,
+    };
+  }
+
+  let checkpoint = existsSync(CHECKPOINT)
+    ? JSON.parse(readFileSync(CHECKPOINT, "utf8"))
+    : emptyCheckpoint();
+  if (process.env.ADDRESS_INDEX_RESET === "1" || checkpoint.status === "idle") {
+    checkpoint = emptyCheckpoint();
+  }
+  checkpoint.status = "running";
+  saveCheckpoint(checkpoint);
+
+  const start = checkpoint.upserted;
+  const pending = rows.slice(start);
+  let consecutiveFails = checkpoint.consecutiveFails || 0;
+  for (let offset = 0; offset < pending.length; offset += BATCH) {
+    const batch = pending.slice(offset, offset + BATCH);
+    const result = await upsertAddressBatch(config, batch);
+    if (!result.ok) {
+      consecutiveFails += 1;
+      checkpoint.failed += 1;
+      checkpoint.consecutiveFails = consecutiveFails;
+      checkpoint.lastError = result.text.slice(0, 240);
+      checkpoint.status = "failed";
+      saveCheckpoint(checkpoint);
+      if (consecutiveFails >= FAIL_STOP) {
+        return {
+          wroteSupabase: checkpoint.upserted > 0,
+          dryRun: false,
+          upserted: checkpoint.upserted,
+          failed: checkpoint.failed,
+          reason: "consecutive_batch_failures",
+          lastError: checkpoint.lastError,
+        };
+      }
+      continue;
+    }
+    consecutiveFails = 0;
+    checkpoint.consecutiveFails = 0;
+    checkpoint.upserted += batch.length;
+    checkpoint.batch += 1;
+    checkpoint.status = "running";
+    saveCheckpoint(checkpoint);
+    await sleep(80);
+  }
+
+  const published = await countTable(
+    config,
+    "taiwan_address_index",
+    "publish_status=eq.published",
+  );
+  const staging = await countTable(
+    config,
+    "taiwan_address_index",
+    "publish_status=eq.staging",
+  );
+  const total = await countTable(config, "taiwan_address_index");
+  checkpoint.status = "completed";
+  saveCheckpoint(checkpoint);
+  return {
+    wroteSupabase: true,
+    dryRun: false,
+    upserted: checkpoint.upserted,
+    failed: checkpoint.failed,
+    reconcile: {
+      total: total.count,
+      staging: staging.count,
+      published: published.count,
+    },
+  };
+}
+
+async function main() {
   mkdirSync("data/south-pilot", { recursive: true });
   const official = scanOfficialDir(DIR);
   let derived = { built: false, ready: existsSync("src/data/south-address-index.json.gz") };
@@ -210,7 +363,7 @@ function main() {
         withoutCoordinates: 0,
         duplicates: 0,
         failed: 0,
-        note: "本機 staging，不是各縣市合法門牌原始檔。",
+        note: "本機 staging／Beta，不是各縣市合法門牌原始檔。",
       };
     }
     return {
@@ -224,7 +377,12 @@ function main() {
     };
   });
 
-  const supabase = supabaseConfig();
+  const payload = loadSouthIndex();
+  const cloudRows = payload ? collectCloudRows(payload) : [];
+  const cloud = payload
+    ? await importSouthAddresses(payload)
+    : { wroteSupabase: false, dryRun: true, wouldUpsert: 0, reason: "missing_local_index" };
+
   const officialCount = counties.filter((row) => row.status === "official-county-file").length;
   const derivedCount = counties.filter((row) => row.status === "nlsc-derived").length;
   const missingCount = counties.filter((row) => row.status === "NOT CONFIGURED").length;
@@ -237,40 +395,32 @@ function main() {
         : officialCount || derivedCount
           ? "partial"
           : "NOT CONFIGURED",
-    dryRun,
+    dryRun: !cloud.wroteSupabase,
     addressDoorplatesDir: DIR || null,
     officialCounties: officialCount,
     nlscDerivedCounties: derivedCount,
     notConfiguredCounties: missingCount,
-    supabaseConfigured: Boolean(supabase),
-    wroteSupabase: false,
+    source: payload?.source || null,
+    notOfficialCountyFile: payload?.notOfficialCountyFile !== false,
+    wouldUpsert: cloud.wouldUpsert ?? cloudRows.length,
+    cloud,
+    wroteSupabase: Boolean(cloud.wroteSupabase),
     counties,
     notes: [
       "缺官方檔的縣市不會被其他縣市擋住。",
       "nlsc-derived 不得標成官方合法門牌。",
-      "未確認 NavPilot Supabase 前不寫 taiwan_address_index。",
+      "寫入需 ADDRESS_INDEX_APPLY=1、ADDRESS_INDEX_ALLOW_NLSC_DERIVED=1、NAVPILOT_SUPABASE_PROJECT_REF=rxzbsthsqlozxgctdoks。",
+      "第一階段雲端列預設 publish_status=staging。",
     ],
   };
 
-  writeFileSync("address-import-doorplates-report.json", `${JSON.stringify(report, null, 2)}\n`);
   writeFileSync("docs/address-import-doorplates-report.json", `${JSON.stringify(report, null, 2)}\n`);
   console.log(JSON.stringify(report, null, 2));
 
-  if (!dryRun && APPLY_CLOUD) {
-    const ref = (process.env.NAVPILOT_SUPABASE_PROJECT_REF || "").trim();
-    if (!supabase || !ref) {
-      console.error("DATASET NOT IMPORTED: NavPilot Supabase 未確認，拒絕寫入 taiwan_address_index。");
-      process.exit(2);
-    }
-    console.error(
-      "DATASET NOT IMPORTED: 南部門牌仍是 NLSC 衍生 staging，不是各縣市合法門牌原始檔，拒絕寫入 taiwan_address_index。",
-    );
-    process.exit(2);
-  }
-  if (!dryRun && officialCount === 0 && derivedCount === 0) {
-    console.error("DATASET NOT IMPORTED: no licensed county doorplate files configured.");
+  if (process.env.ADDRESS_INDEX_APPLY === "1" && !cloud.wroteSupabase) {
+    console.error(`DATASET NOT IMPORTED: ${cloud.reason || "cloud write blocked"}`);
     process.exit(2);
   }
 }
 
-main();
+void main();

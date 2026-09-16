@@ -47,6 +47,7 @@ src/data/south-poi-fallback.json.gz
 !data/south-pilot/README.md
 !data/south-pilot/.gitkeep
 /address-import-doorplates-report.json
+supabase/.temp/
 
 # vercel
 .vercel

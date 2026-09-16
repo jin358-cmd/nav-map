@@ -6,7 +6,17 @@
   "officialCounties": 0,
   "nlscDerivedCounties": 6,
   "notConfiguredCounties": 16,
-  "supabaseConfigured": false,
+  "source": "nlsc-derived",
+  "notOfficialCountyFile": true,
+  "wouldUpsert": 181794,
+  "cloud": {
+    "wroteSupabase": false,
+    "dryRun": true,
+    "wouldUpsert": 181794,
+    "reason": "dry_run",
+    "expectedUrl": "https://rxzbsthsqlozxgctdoks.supabase.co",
+    "expectedRef": "rxzbsthsqlozxgctdoks"
+  },
   "wroteSupabase": false,
   "counties": [
     {
@@ -54,7 +64,7 @@
       "withoutCoordinates": 0,
       "duplicates": 0,
       "failed": 0,
-      "note": "本機 staging，不是各縣市合法門牌原始檔。"
+      "note": "本機 staging／Beta，不是各縣市合法門牌原始檔。"
     },
     {
       "county": "高雄市",
@@ -65,7 +75,7 @@
       "withoutCoordinates": 0,
       "duplicates": 0,
       "failed": 0,
-      "note": "本機 staging，不是各縣市合法門牌原始檔。"
+      "note": "本機 staging／Beta，不是各縣市合法門牌原始檔。"
     },
     {
       "county": "基隆市",
@@ -130,7 +140,7 @@
       "withoutCoordinates": 0,
       "duplicates": 0,
       "failed": 0,
-      "note": "本機 staging，不是各縣市合法門牌原始檔。"
+      "note": "本機 staging／Beta，不是各縣市合法門牌原始檔。"
     },
     {
       "county": "嘉義市",
@@ -141,7 +151,7 @@
       "withoutCoordinates": 0,
       "duplicates": 0,
       "failed": 0,
-      "note": "本機 staging，不是各縣市合法門牌原始檔。"
+      "note": "本機 staging／Beta，不是各縣市合法門牌原始檔。"
     },
     {
       "county": "嘉義縣",
@@ -152,7 +162,7 @@
       "withoutCoordinates": 0,
       "duplicates": 0,
       "failed": 0,
-      "note": "本機 staging，不是各縣市合法門牌原始檔。"
+      "note": "本機 staging／Beta，不是各縣市合法門牌原始檔。"
     },
     {
       "county": "屏東縣",
@@ -163,7 +173,7 @@
       "withoutCoordinates": 0,
       "duplicates": 0,
       "failed": 0,
-      "note": "本機 staging，不是各縣市合法門牌原始檔。"
+      "note": "本機 staging／Beta，不是各縣市合法門牌原始檔。"
     },
     {
       "county": "宜蘭縣",
@@ -223,6 +233,7 @@
   "notes": [
     "缺官方檔的縣市不會被其他縣市擋住。",
     "nlsc-derived 不得標成官方合法門牌。",
-    "未確認 NavPilot Supabase 前不寫 taiwan_address_index。"
+    "寫入需 ADDRESS_INDEX_APPLY=1、ADDRESS_INDEX_ALLOW_NLSC_DERIVED=1、NAVPILOT_SUPABASE_PROJECT_REF=rxzbsthsqlozxgctdoks。",
+    "第一階段雲端列預設 publish_status=staging。"
   ]
 }

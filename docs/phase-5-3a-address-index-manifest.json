@@ -11,18 +11,18 @@
   "mergedRetryNav": 421,
   "southLocatedPois": 236645,
   "byCounty": {
-    "臺南市": 56756,
-    "嘉義市": 9913,
-    "嘉義縣": 4835,
-    "雲林縣": 12495,
-    "高雄市": 78063,
-    "屏東縣": 19311
+    "臺南市": 56959,
+    "嘉義市": 9957,
+    "嘉義縣": 4849,
+    "雲林縣": 12512,
+    "高雄市": 78174,
+    "屏東縣": 19343
   },
   "byAccuracy": {
     "interpolated": 9606,
     "road-center": 3319,
     "lane-center": 138,
-    "exact-house": 168309,
+    "exact-house": 168730,
     "approximate": 1
   },
   "derivedDistricts": 172,
