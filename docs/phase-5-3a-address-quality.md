@@ -9,7 +9,7 @@
 - 地址意圖不再被本機 POI 提前攔截；autocomplete 不呼叫 OSM。
 - 結構化評分：門牌／路／段／巷／弄／縣市／行政區；快取不加分；道路中心不可標精確門牌；錯縣市不得當 exact-house 第一名。
 - 搜尋結果分組：精確門牌／推估門牌／附近巷弄／店家。
-- Additive migration：`20260913_phase53a_address_index.sql`（未套用到任何雲端專案）。
+- Additive migration：`20260916085203_20260913_phase53a_address_index.sql`（NavPilot 遠端已套用；檔名對齊 `20260916085203`）。
 - 1,000 筆南部回歸集；`npm run test:address`。
 - **本機南部門牌 staging**：從已定位 POI／NLSC 配對去重，寫入 `src/data/south-address-index.json.gz`。搜尋在沒有 Supabase 時走此檔。**不是**各縣市合法門牌原始檔。
 - **行政區驗證**：22 縣市粗包箱；南部鄉鎮區包箱由已定位點衍生。沒有官方多邊形，不標完成界線驗證。

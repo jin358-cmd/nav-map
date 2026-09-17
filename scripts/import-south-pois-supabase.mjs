@@ -278,7 +278,7 @@ async function main() {
         stop: true,
         reason: "schema_missing",
         status: ping.status,
-        hint: "先在該專案 SQL editor 執行 supabase/migrations/20260905_taiwan_poi_index.sql 與 20260913_phase53a_south_poi_cloud.sql",
+        hint: "NavPilot schema 應對齊遠端 20260916085144…20260916085221；Advisor 修正 20260917234436 需人工確認後才 db push",
       }),
     );
     process.exit(2);

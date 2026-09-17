@@ -1,6 +1,6 @@
 # Phase 5.3A Supabase 上傳狀態
 
-檢查時間：2026-09-14T03:54:18.375Z
+檢查時間：2026-09-17T23:47:04.664Z
 資料版本：`south-pilot-20260913-batch10`
 
 ## 結論
@@ -35,11 +35,11 @@
 
 ## 下一步（確認 NavPilot 專案後）
 
-1. 在 SQL editor 依序執行 `supabase/migrations/20260905_taiwan_poi_index.sql` 與 `20260913_phase53a_south_poi_cloud.sql`（只 additive，不 TRUNCATE）。
-2. 設定 `SUPABASE_URL`、`SUPABASE_SERVICE_ROLE_KEY`、`NAVPILOT_SUPABASE_PROJECT_REF`（須與 URL 主機名一致）。
-3. 先 dry-run：`npm run import:south-pois`。
-4. 先上傳雲林：`SOUTH_POI_APPLY=1 SOUTH_POI_COUNTIES=雲林縣 SOUTH_POI_PUBLISHED_ONLY=1 npm run import:south-pois`。
-5. 對帳通過後再其餘五縣市；最後才考慮門牌（仍需官方檔才標 official）。
+1. NavPilot 遠端 5 份 schema migration 已套用；GitHub 檔名已對齊 `20260916085144`…`20260916085221`。
+2. Advisor 修正 `supabase/migrations/20260917234436_phase53a_advisor_remediation.sql` 需 Jin 確認後才 `supabase db push`（不得重跑舊 5 份）。
+3. 雲林 published dry-run：wouldUpsert=11515、wroteSupabase=false。未經確認不得 `SOUTH_POI_APPLY=1`。
+4. 確認寫入後才：`SOUTH_POI_APPLY=1 SOUTH_POI_COUNTIES=雲林縣 SOUTH_POI_PUBLISHED_ONLY=1 npm run import:south-pois`。
+5. 對帳通過後再其餘五縣市；門牌仍需官方檔或另一次明確確認。
 
 禁止寫入 GVG／租屋雷達專案。禁止自建未授權付費專案。禁止 `NEXT_PUBLIC_` 放 service role。
 

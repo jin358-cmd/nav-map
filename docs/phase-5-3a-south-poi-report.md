@@ -9,7 +9,16 @@ Checkpoint：`gcis-2026-09-13-7120bb79` batch 10／`completed`
 
 **CONDITIONAL PASS**
 
-程式、Dry Run 與本機驗收完成。尚未寫入 Supabase、尚未建立本分支 Vercel Preview、尚未做 Android 實機抽樣，因此不得 merge `main`，也不得 Production Deploy。
+程式、南部索引 Dry Run、雲林 published dry-run 與本機驗收完成。Advisor 修正 SQL 已入 Git、尚未套用。尚未寫入 Supabase、尚未建立本分支 Vercel Preview、尚未做 Android 實機抽樣，因此不得 merge `main`，也不得 Production Deploy。
+
+```text
+CONDITIONAL PASS
+CLOUD SCHEMA APPLIED
+YUNLIN DRY-RUN PASS
+NOT CLOUD SECURITY PASS
+NOT CLOUD PILOT PASS
+NOT PRODUCTION READY
+```
 
 ## Git
 
@@ -60,12 +69,13 @@ review 原因：未達導航門檻 39,978、僅縣市地址 16,466、明顯縣�
 - 此執行環境沒有已確認的 NavPilot 專用專案，也沒有 `SUPABASE_URL`／`SUPABASE_SERVICE_ROLE_KEY`
 - `npm run probe:south-pois`：checkpoint `dry-run`／upserted **0**；雲端未連線
 - `npm run import:south-pois` 預設 dry-run：預計 upsert 236,645、公開 179,601
+- 雲林 published dry-run（2026-09-17）：wouldUpsert **11,515**、wouldPublish **11,515**、wroteSupabase **false**
 - 分批寫入已接 checkpoint：需 `SOUTH_POI_APPLY=1` + `NAVPILOT_SUPABASE_PROJECT_REF` 與 URL 主機名一致
-- 建議先 `SOUTH_POI_COUNTIES=雲林縣 SOUTH_POI_PUBLISHED_ONLY=1`
+- 未經 Jin 確認不得 `SOUTH_POI_APPLY=1`
 - 拒絕寫入疑似 GVG／租屋雷達 URL
 - 未建立新的付費專案
 - 最新狀態：[`phase-5-3a-supabase-upload-status.md`](phase-5-3a-supabase-upload-status.md)
-- migration（additive only）：`supabase/migrations/20260913_phase53a_south_poi_cloud.sql`
+- migration 檔名已對齊遠端 history：`20260916085144`…`20260916085221`；Advisor SQL `20260917234436_phase53a_advisor_remediation.sql` 已入 Git、尚未 db push
   - 擴充 `taiwan_poi_index`：`main_category`、`nav_ready`、`publish_status`、`data_version` 等
   - 新表：`poi_import_runs`、`poi_import_rejects`（補欄）、`poi_data_versions`
   - RLS：anon 只能讀 `published + nav_ready + is_active` 且縣市在南部白名單
@@ -83,7 +93,7 @@ review 原因：未達導航門檻 39,978、僅縣市地址 16,466、明顯縣�
 
 ## 驗證
 
-見同目錄 `phase-5-3a-south-poi-dry-run.json` 與 `data/south-pilot/`。
+見同目錄 `phase-5-3a-south-poi-dry-run.json`、`phase-5-3a-yunlin-dry-run.json` 與 `data/south-pilot/`。
 
 自動檢查：`npm run test:south-pois`、`npm run verify:south-pois`、lint／typecheck／build。
 

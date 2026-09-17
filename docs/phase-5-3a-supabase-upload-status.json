@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-09-14T03:54:18.375Z",
+  "checkedAt": "2026-09-17T23:47:04.664Z",
   "dataVersion": "south-pilot-20260913-batch10",
   "verdict": "NOT UPLOADED",
   "headline": "沒有 NavPilot Supabase 金鑰，雲端列數為 0（未連線）。",
@@ -37,14 +37,9 @@
       "version": "south-pilot-20260913-batch10",
       "jobId": null,
       "counties": [
-        "雲林縣",
-        "嘉義市",
-        "嘉義縣",
-        "臺南市",
-        "高雄市",
-        "屏東縣"
+        "雲林縣"
       ],
-      "publishedOnly": false,
+      "publishedOnly": true,
       "batchSize": 1000,
       "batch": 0,
       "upserted": 0,
@@ -54,26 +49,34 @@
       "status": "dry-run",
       "lastError": null,
       "omitGeom": false,
-      "updatedAt": "2026-09-14T03:54:18.200Z"
+      "updatedAt": "2026-09-17T23:46:18.983Z"
     },
     "localAddressIndex": "src/data/south-address-index.json.gz",
     "addressUnique": 181794,
     "addressNotOfficial": true,
     "migrations": [
       {
-        "path": "supabase/migrations/20260905_taiwan_poi_index.sql",
+        "path": "supabase/migrations/20260916085144_20260904_taiwan_address_index.sql",
         "present": true
       },
       {
-        "path": "supabase/migrations/20260913_phase53a_south_poi_cloud.sql",
+        "path": "supabase/migrations/20260916085154_20260905_taiwan_poi_index.sql",
         "present": true
       },
       {
-        "path": "supabase/migrations/20260904_taiwan_address_index.sql",
+        "path": "supabase/migrations/20260916085203_20260913_phase53a_address_index.sql",
         "present": true
       },
       {
-        "path": "supabase/migrations/20260913_phase53a_address_index.sql",
+        "path": "supabase/migrations/20260916085212_20260913_phase53a_south_poi_cloud.sql",
+        "present": true
+      },
+      {
+        "path": "supabase/migrations/20260916085221_20260916073635_phase53a_cloud_hardening.sql",
+        "present": true
+      },
+      {
+        "path": "supabase/migrations/20260917234436_phase53a_advisor_remediation.sql",
         "present": true
       }
     ]
