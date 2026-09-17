@@ -226,6 +226,7 @@ async function main() {
         return sum + (PUBLISHED_ONLY ? row.published || 0 : row.located || 0);
       }, 0),
       wouldPublish: counties.reduce((sum, county) => sum + (summary.byCounty?.[county]?.published || 0), 0),
+      wroteSupabase: false,
       batchSize: BATCH,
       estimatedBatches: null,
       supabaseConfigured: supabase.ok,
@@ -367,6 +368,7 @@ async function main() {
         counties,
         publishedOnly: PUBLISHED_ONLY,
         rows: rows.length,
+        wroteSupabase: true,
         checkpoint,
         expectedPublish,
       },
