@@ -25,6 +25,7 @@ import {
   INTERSECTION_ZOOM,
   INTERSECTION_ZOOM_MOBILE,
   INTERSECTION_ZOOM_PORTRAIT,
+  MANEUVER_RECOVER_DELAY_MS,
   MANEUVER_RECOVER_MS,
   NAVIGATION_PITCH,
   NAVIGATION_PITCH_PORTRAIT,
@@ -104,7 +105,7 @@ import {
   upsertHeadingCone,
 } from "@/lib/heading-cone";
 import { easeToRouteOverview } from "@/lib/route-overview";
-import { createRouteProgressModel } from "@/lib/route-progress";
+import { createRouteProgressModel, pointAtRouteMeters } from "@/lib/route-progress";
 import {
   createVehicleDisplayState,
   presentationFollowTau,
@@ -295,15 +296,17 @@ function cameraOptions(
   followOrientation: FollowOrientation = "heading-up",
   recoverBlend = 0,
   compassHeading: number | null = null,
+  routeBearing: number | null = null,
 ) {
   const height = map.getContainer().clientHeight;
   const width = map.getContainer().clientWidth;
   const compact = isCompactViewport(width);
   const portrait = height > width;
   const portrait2dNav = navigating && mode === "2d" && portrait;
-  const approachBlend = navigating
-    ? approachCameraProgress(distanceToNext, portrait)
+  const rawApproach = navigating
+    ? approachCameraProgress(distanceToNext, portrait2dNav)
     : 0;
+  const approachBlend = mode === "3d" ? rawApproach * 0.38 : rawApproach;
   const blend = Math.max(approachBlend, recoverBlend);
   const cruiseZoom =
     mode === "3d"
@@ -350,6 +353,7 @@ function cameraOptions(
       vehicle,
       compassHeading,
       navigating,
+      routeBearing,
     ),
     pitch: mode === "3d" ? lerp(cruisePitch, focusPitch, blend) : 0,
     zoom: navigating || mode === "3d" ? navZoom : OVERHEAD_ZOOM,
@@ -360,8 +364,10 @@ function cameraOptions(
 
 function recoverBlendAt(now: number, until: number, from: number) {
   if (until <= now || from <= 0) return 0;
-  const remaining = Math.max(0, Math.min(1, (until - now) / MANEUVER_RECOVER_MS));
-  return from * remaining * remaining;
+  const remaining = until - now;
+  if (remaining > MANEUVER_RECOVER_MS) return from;
+  const t = remaining / MANEUVER_RECOVER_MS;
+  return from * t * t;
 }
 
 function currentManeuverOverlay() {
@@ -564,6 +570,7 @@ export function DrivingMap({
   const userZoomRef = useRef<number | null>(null);
   const overlayPaddingRef = useRef(overlayPadding);
   const lastArrowUpdateRef = useRef(0);
+  const lastNavDebugRef = useRef(0);
   const readyRef = useRef(false);
   const lastFrameRef = useRef(0);
   const markerRotationRef = useRef((bootGps ?? vehicle).heading);
@@ -894,7 +901,8 @@ export function DrivingMap({
           if (consecutive) {
             recoverUntilRef.current = 0;
           } else if (lastBlendRef.current > 0.05) {
-            recoverUntilRef.current = now + MANEUVER_RECOVER_MS;
+            recoverUntilRef.current =
+              now + MANEUVER_RECOVER_DELAY_MS + MANEUVER_RECOVER_MS;
             recoverFromRef.current = lastBlendRef.current;
           }
           lastStepIdRef.current = stepId;
@@ -976,6 +984,12 @@ export function DrivingMap({
           recoverUntilRef.current,
           recoverFromRef.current,
         );
+        const model = routeModelRef.current;
+        const along =
+          navigatingNow && model
+            ? pointAtRouteMeters(model, routeMetersRef.current)
+            : null;
+        const routeBearing = along?.heading ?? null;
         const northUp = !headingUp;
         const wanted = cameraOptions(
           mapNow,
@@ -989,6 +1003,7 @@ export function DrivingMap({
           followOrientationRef.current,
           recoverBlend,
           deviceCompassRef.current,
+          routeBearing,
         );
         lastBlendRef.current = wanted.blend;
         const center = mapNow.getCenter();
@@ -1000,9 +1015,26 @@ export function DrivingMap({
         const zoomT = pinchingRef.current ? 0 : snapCamera ? 1 : damp(dt, followTau.zoomTau);
         const currentBearing = mapNow.getBearing();
         const still = (raw.speedMps ?? 0) < COMPASS_SPEED_MPS;
-        const bearingTau = northUp ? 0.07 : still ? 0.09 : followTau.bearingTau;
-        const bearingHoldDeg = northUp ? 2.2 : still ? 0.8 : followTau.bearingHoldDeg;
+        const bearingTau = northUp
+          ? 0.07
+          : navigatingNow
+            ? still
+              ? 0.42
+              : Math.max(0.22, followTau.bearingTau)
+            : still
+              ? 0.18
+              : followTau.bearingTau;
+        const bearingHoldDeg = northUp
+          ? 2.2
+          : navigatingNow
+            ? still
+              ? 4.8
+              : Math.max(4, followTau.bearingHoldDeg)
+            : still
+              ? 3.2
+              : followTau.bearingHoldDeg;
         const bearingGap = headingDelta(currentBearing, wanted.bearing);
+        const largeJump = navigatingNow && bearingGap > 28;
         const nextBearing =
           snapCamera
             ? wanted.bearing
@@ -1011,7 +1043,7 @@ export function DrivingMap({
               : lerpAngle(
                   currentBearing,
                   wanted.bearing,
-                  damp(dt, bearingTau),
+                  damp(dt, largeJump ? 0.38 : bearingTau),
                 );
         try {
           mapNow.jumpTo({
@@ -1030,6 +1062,29 @@ export function DrivingMap({
           });
         } catch {
           /* style may still be swapping */
+        }
+        if (
+          process.env.NODE_ENV !== "production" &&
+          navigatingNow &&
+          now - lastNavDebugRef.current > 250
+        ) {
+          lastNavDebugRef.current = now;
+          console.debug("[NavCamera]", {
+            cameraUpdateReason: snapCamera
+              ? "USER_RECENTER"
+              : wanted.blend > 0.02
+                ? "AUTO_ZOOM"
+                : "ROUTE_PROGRESS",
+            rawGPS: { lng: raw.lng, lat: raw.lat },
+            snappedGPS: { lng: display.lng, lat: display.lat },
+            gpsHeading: raw.heading,
+            routeBearing,
+            cameraBearing: nextBearing,
+            gpsAccuracy: raw.accuracy,
+            speed: raw.speedMps,
+            distanceToManeuver: distanceToNextRef.current,
+            currentManeuverIndex: stepIdRef.current,
+          });
         }
         emitViewport();
       }

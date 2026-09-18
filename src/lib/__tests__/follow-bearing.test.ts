@@ -25,6 +25,19 @@ function testNavigateUsesRouteHeadingNotCompass() {
   );
 }
 
+function testNavigatePrefersRouteBearing() {
+  assert.equal(
+    followMapBearing(
+      "heading-up",
+      { heading: 12, headingAvailable: true, speedMps: 8 },
+      90,
+      true,
+      184,
+    ),
+    184,
+  );
+}
+
 function testIdleUsesCompassWhenStill() {
   assert.equal(
     followMapBearing(
@@ -39,5 +52,6 @@ function testIdleUsesCompassWhenStill() {
 
 testNorthUpIsZero();
 testNavigateUsesRouteHeadingNotCompass();
+testNavigatePrefersRouteBearing();
 testIdleUsesCompassWhenStill();
-console.log(JSON.stringify({ ok: true, suite: "follow-bearing", tests: 3 }));
+console.log(JSON.stringify({ ok: true, suite: "follow-bearing", tests: 4 }));

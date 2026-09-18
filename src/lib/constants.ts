@@ -34,13 +34,13 @@ export const OVERVIEW_PITCH = 0;
 export const DRIVING_ZOOM = 17.72;
 export const DRIVING_ZOOM_MOBILE = 17.46;
 export const OVERHEAD_ZOOM = 15.4;
-/** 2D 導航 cruise：再近一級，仍留出路口預判距離。 */
-export const OVERHEAD_NAV_ZOOM = 16.95;
-export const OVERHEAD_NAV_ZOOM_MOBILE = 16.75;
-export const OVERHEAD_TURN_ZOOM = 17.55;
-export const OVERHEAD_TURN_ZOOM_MOBILE = 17.35;
+/** 2D 導航 cruise：略遠，讓路口 Zoom-in 對比更明顯。 */
+export const OVERHEAD_NAV_ZOOM = 16.72;
+export const OVERHEAD_NAV_ZOOM_MOBILE = 16.52;
+export const OVERHEAD_TURN_ZOOM = 17.92;
+export const OVERHEAD_TURN_ZOOM_MOBILE = 17.72;
 /** 直立 2D 路口：再拉近，讓路標落在畫面中下。 */
-export const OVERHEAD_TURN_ZOOM_PORTRAIT = 18.08;
+export const OVERHEAD_TURN_ZOOM_PORTRAIT = 18.22;
 /** 路口近距離上限，避免無限放大。 */
 export const INTERSECTION_ZOOM = 18.28;
 export const INTERSECTION_ZOOM_MOBILE = 18.05;
@@ -63,7 +63,9 @@ export const MANEUVER_APPROACH_METERS = 100;
 export const MANEUVER_APPROACH_EXIT_METERS = 118;
 export const MANEUVER_IMMINENT_METERS = 30;
 export const MANEUVER_AFTER_TURN_METERS = 48;
-export const MANEUVER_RECOVER_MS = 1800;
+/** 轉彎完成後先停 0.7s，再花 1s 回到 cruise 視角。 */
+export const MANEUVER_RECOVER_DELAY_MS = 700;
+export const MANEUVER_RECOVER_MS = 1000;
 /** 路口強化距離：黃線／鏡頭拉近約 150 公尺開始；地面 V 標在導航全程都顯示。 */
 export const GUIDANCE_SIGN_APPROACH_METERS = 150;
 export const GUIDANCE_SIGN_EXIT_METERS = 168;

@@ -1996,7 +1996,11 @@ export function DrivingApp() {
           followOrientation={followOrientation}
           followVehicle={followVehicle}
           gpsStatus={gpsStatus}
-          heading={vehicle.heading}
+          heading={
+            navigating && displayVehicle?.snapped
+              ? displayVehicle.heading
+              : vehicle.heading
+          }
           mapDisplayMode={mapDisplayMode}
           pendingMapDisplayMode={pendingMapDisplayMode}
           styleMenuOpen={styleMenuOpen}

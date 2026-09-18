@@ -6,6 +6,15 @@ import { SUGGEST_DEBOUNCE_MS, SUGGEST_MIN_CHARS } from "@/lib/search-constants";
 import { searchAddresses } from "@/services/routing";
 import type { GeocodeHit, LngLat } from "@/types/domain";
 
+function hitMatchesNeedle(hit: GeocodeHit, needle: string) {
+  return hit.name.includes(needle) || hit.address.includes(needle);
+}
+
+function prefixHits(hits: GeocodeHit[], needle: string) {
+  if (!needle) return [];
+  return hits.filter((hit) => hitMatchesNeedle(hit, needle));
+}
+
 export function useAddressSearch(
   query: string,
   bias: LngLat | null,
@@ -151,8 +160,12 @@ export function useAddressSearch(
     [biasLat, biasLng, locatedCity, locatedTown],
   );
 
-  const hitsForNeedle = suggestFor === needle ? suggestHits : [];
-  const settledForNeedle = needle.length < SUGGEST_MIN_CHARS || (suggestFor === needle && suggestSettled);
+  const hitsForNeedle =
+    suggestFor === needle
+      ? suggestHits
+      : prefixHits(suggestHits, needle);
+  const settledForNeedle =
+    needle.length < SUGGEST_MIN_CHARS || (suggestFor === needle && suggestSettled);
 
   return {
     suggestHits: needle.length < SUGGEST_MIN_CHARS ? [] : hitsForNeedle,

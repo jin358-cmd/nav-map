@@ -41,9 +41,9 @@ export function presentationFollowTau(speedMps: number, approachBlend: number) {
   else posTau = 0.1;
   return {
     posTau,
-    zoomTau: approachBlend > 0.02 ? 0.07 : posTau,
-    bearingTau: kmh < 8 ? 0.52 : kmh < 25 ? 0.28 : Math.min(posTau, 0.14),
-    bearingHoldDeg: kmh < 8 ? 4.2 : kmh < 25 ? 2.4 : 1.4,
+    zoomTau: approachBlend > 0.02 ? 0.09 : posTau,
+    bearingTau: kmh < 8 ? 0.62 : kmh < 25 ? 0.32 : Math.min(posTau, 0.16),
+    bearingHoldDeg: kmh < 8 ? 5 : kmh < 25 ? 3.2 : 1.8,
   };
 }
 

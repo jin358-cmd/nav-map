@@ -6,7 +6,6 @@ import {
   INTERSECTION_APPROACH_METERS,
   MANEUVER_AFTER_TURN_METERS,
   MANEUVER_APPROACH_METERS,
-  MANEUVER_IMMINENT_METERS,
   PORTRAIT_APPROACH_ZOOM_FULL_METERS,
   PORTRAIT_APPROACH_ZOOM_START_METERS,
   PREPARE_ZOOM_METERS,
@@ -307,7 +306,7 @@ export function guidanceArrowsAlong(
   const wave = cycle * count;
   return placed.map((arrow, index) => {
     const t = count === 1 ? 0 : index / (count - 1);
-    const scale = 1.18 - t * 0.58;
+    const scale = 1.42 - t * 0.52;
     const nearBase = 0.46 + 0.34 * (1 - t);
     const dist = index - wave;
     const pulse = dist >= -0.25 && dist <= 1.15 ? 1 - Math.abs(dist) * 0.42 : 0;
@@ -363,17 +362,17 @@ export function approachCameraProgress(
     );
   }
   if (distanceToNext > PREPARE_ZOOM_METERS) return 0;
-  if (distanceToNext <= MANEUVER_IMMINENT_METERS) return 1;
+  if (distanceToNext <= TURN_VIEW_METERS) return 1;
   if (distanceToNext <= MANEUVER_APPROACH_METERS) {
     return (
-      0.62 +
-      0.38 *
+      0.48 +
+      0.52 *
         ((MANEUVER_APPROACH_METERS - distanceToNext) /
-          (MANEUVER_APPROACH_METERS - MANEUVER_IMMINENT_METERS))
+          (MANEUVER_APPROACH_METERS - TURN_VIEW_METERS))
     );
   }
   return (
-    0.62 *
+    0.48 *
     ((PREPARE_ZOOM_METERS - distanceToNext) /
       (PREPARE_ZOOM_METERS - MANEUVER_APPROACH_METERS))
   );
@@ -485,7 +484,7 @@ export function turnGroundArrows({
       bearing: point.bearing,
       opacity: 0.9 + pulse * 0.1,
       kind: "straight",
-      scale: 1.18,
+      scale: 1.42,
     });
   }
   return placed;
@@ -519,7 +518,7 @@ export function turnMarqueeArrows(
       bearing: pose.bearing,
       opacity: 0.92 + pulse * 0.08,
       kind: "straight",
-      scale: 1.18,
+      scale: 1.42,
     });
   }
   return placed;

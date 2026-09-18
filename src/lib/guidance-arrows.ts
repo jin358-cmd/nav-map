@@ -21,7 +21,7 @@ export const GUIDANCE_LAYER_ID = "navpilot-turn-arrows-layer";
 export const TURN_LINE_SOURCE_ID = "navpilot-turn-line-v3";
 export const TURN_LINE_GLOW_ID = "navpilot-turn-line-glow-v3";
 export const TURN_LINE_LAYER_ID = "navpilot-turn-line-layer-v3";
-const CHEVRON_IMAGE_ID = "navpilot-ground-chevron-white-v13";
+const CHEVRON_IMAGE_ID = "navpilot-ground-chevron-yellow-v14";
 const COMPACT_MAP_WIDTH = 640;
 const STALE_TURN_IDS = [
   "navpilot-turn-line",
@@ -53,7 +53,7 @@ function createChevronImage() {
   ctx.clearRect(0, 0, size, size);
   ctx.translate(size / 2, size / 2);
 
-  // White filled ^ so chevrons read against the cyan route at 50° pitch.
+  // Yellow filled ^ on the cyan route; 3D uses map pitch so it sits on the road.
   const chevronPath = () => {
     ctx.beginPath();
     ctx.moveTo(0, -4);
@@ -66,20 +66,20 @@ function createChevronImage() {
   };
 
   ctx.save();
-  ctx.shadowColor = "rgba(8, 47, 73, 0.95)";
+  ctx.shadowColor = "rgba(69, 26, 3, 0.92)";
   ctx.shadowBlur = 18;
   chevronPath();
-  ctx.fillStyle = "#082f49";
+  ctx.fillStyle = "#713f12";
   ctx.fill();
   ctx.restore();
 
   chevronPath();
-  ctx.fillStyle = "#f8fafc";
+  ctx.fillStyle = "#facc15";
   ctx.fill();
   ctx.lineJoin = "round";
   ctx.lineCap = "round";
   ctx.lineWidth = 7;
-  ctx.strokeStyle = "#0369a1";
+  ctx.strokeStyle = "#a16207";
   ctx.stroke();
 
   return ctx.getImageData(0, 0, size, size);
@@ -130,9 +130,9 @@ function flowGradient(phase: number): ExpressionSpecification {
     p - 0.1,
     "rgba(56, 189, 233, 0.2)",
     p,
-    "#f8fafc",
+    "#facc15",
     p + 0.1,
-    "rgba(125, 211, 252, 0.55)",
+    "rgba(250, 204, 21, 0.55)",
     1,
     "rgba(56, 189, 233, 0.16)",
   ];
@@ -193,8 +193,8 @@ function ensureTurnLine(map: MapLibreMap, compact: boolean) {
   }
 }
 
-function chevronSize(compact: boolean): ExpressionSpecification {
-  const boost = compact ? 1.55 : 1;
+function chevronSize(compact: boolean, pitched: boolean): ExpressionSpecification {
+  const boost = (compact ? 1.55 : 1) * (pitched ? 2 : 1.28);
   return [
     "interpolate",
     ["linear"],
@@ -210,20 +210,19 @@ function chevronSize(compact: boolean): ExpressionSpecification {
   ];
 }
 
-function ensureChevronLayer(map: MapLibreMap, compact: boolean) {
+function ensureChevronLayer(map: MapLibreMap, compact: boolean, pitched: boolean) {
   const existing = map.getLayer(GUIDANCE_LAYER_ID);
   if (existing && "source" in existing && existing.source !== GUIDANCE_SOURCE_ID) {
     map.removeLayer(GUIDANCE_LAYER_ID);
   }
   const layout = {
     "icon-image": CHEVRON_IMAGE_ID,
-    "icon-size": chevronSize(compact),
+    "icon-size": chevronSize(compact, pitched),
     "icon-anchor": "center" as const,
     "icon-offset": [0, 0] as [number, number],
     "icon-rotate": ["get", "bearing"] as ExpressionSpecification,
     "icon-rotation-alignment": "map" as const,
-    // Billboard toward the camera so 3D pitch 50° does not flatten the V to a line.
-    "icon-pitch-alignment": "viewport" as const,
+    "icon-pitch-alignment": "map" as const,
     "icon-keep-upright": false,
     "icon-allow-overlap": true,
     "icon-ignore-placement": true,
@@ -245,12 +244,12 @@ function ensureChevronLayer(map: MapLibreMap, compact: boolean) {
 
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "symbol-placement", "point");
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-image", CHEVRON_IMAGE_ID);
-  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-size", chevronSize(compact));
+  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-size", chevronSize(compact, pitched));
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-anchor", "center");
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-offset", [0, 0]);
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-rotate", ["get", "bearing"]);
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-rotation-alignment", "map");
-  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-pitch-alignment", "viewport");
+  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-pitch-alignment", "map");
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-keep-upright", false);
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-allow-overlap", true);
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-ignore-placement", true);
@@ -394,7 +393,7 @@ export function upsertGuidanceArrows(
   if (map.getLayer(TURN_LINE_LAYER_ID)) {
     map.setPaintProperty(TURN_LINE_LAYER_ID, "line-gradient", flowGradient(phase));
   }
-  ensureChevronLayer(map, compact);
+  ensureChevronLayer(map, compact, pitched);
   stackGuidanceLayers(map);
 }
 
