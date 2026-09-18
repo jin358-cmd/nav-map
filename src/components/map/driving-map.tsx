@@ -990,7 +990,7 @@ export function DrivingMap({
             ? pointAtRouteMeters(model, routeMetersRef.current)
             : null;
         const routeBearing = along?.heading ?? null;
-        const northUp = !headingUp;
+        const northUp = !headingUp && !navigatingNow;
         const wanted = cameraOptions(
           mapNow,
           displayPose,
@@ -1089,7 +1089,13 @@ export function DrivingMap({
         emitViewport();
       }
 
-      if (coneHeadingForMarker != null) {
+      if (navigatingNow) {
+        marker.setRotationAlignment("viewport");
+        marker.setPitchAlignment("viewport");
+        markerRotationRef.current = 0;
+      } else if (coneHeadingForMarker != null) {
+        marker.setRotationAlignment("map");
+        marker.setPitchAlignment("map");
         const markerHeading = Math.round(coneHeadingForMarker);
         const markerGap = headingDelta(markerRotationRef.current, markerHeading);
         markerRotationRef.current =
@@ -1097,10 +1103,9 @@ export function DrivingMap({
             ? markerRotationRef.current
             : markerHeading;
       } else {
-        const rotationTarget =
-          headingUp && followVehicleRef.current
-            ? mapNow.getBearing()
-            : display.heading;
+        marker.setRotationAlignment("map");
+        marker.setPitchAlignment("map");
+        const rotationTarget = display.heading;
         const markerGap = headingDelta(markerRotationRef.current, rotationTarget);
         markerRotationRef.current =
           markerGap < 2.2

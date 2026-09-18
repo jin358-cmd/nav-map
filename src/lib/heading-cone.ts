@@ -65,11 +65,11 @@ export function followMapBearing(
   navigating = false,
   routeBearing: number | null = null,
 ) {
-  if (orientation !== "heading-up") return 0;
   if (navigating) {
     if (routeBearing != null && Number.isFinite(routeBearing)) return routeBearing;
     return vehicle.heading;
   }
+  if (orientation !== "heading-up") return 0;
   return coneHeadingTarget({
     gpsHeading: vehicle.heading,
     headingAvailable: vehicle.headingAvailable,

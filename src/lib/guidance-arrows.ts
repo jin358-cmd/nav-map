@@ -210,19 +210,28 @@ function chevronSize(compact: boolean, pitched: boolean): ExpressionSpecificatio
   ];
 }
 
-function ensureChevronLayer(map: MapLibreMap, compact: boolean, pitched: boolean) {
+function ensureChevronLayer(
+  map: MapLibreMap,
+  compact: boolean,
+  pitched: boolean,
+  screenUp: boolean,
+) {
   const existing = map.getLayer(GUIDANCE_LAYER_ID);
   if (existing && "source" in existing && existing.source !== GUIDANCE_SOURCE_ID) {
     map.removeLayer(GUIDANCE_LAYER_ID);
   }
+  const rotate = screenUp
+    ? 0
+    : (["get", "bearing"] as ExpressionSpecification);
+  const alignment = screenUp ? ("viewport" as const) : ("map" as const);
   const layout = {
     "icon-image": CHEVRON_IMAGE_ID,
     "icon-size": chevronSize(compact, pitched),
     "icon-anchor": "center" as const,
     "icon-offset": [0, 0] as [number, number],
-    "icon-rotate": ["get", "bearing"] as ExpressionSpecification,
-    "icon-rotation-alignment": "map" as const,
-    "icon-pitch-alignment": "map" as const,
+    "icon-rotate": rotate,
+    "icon-rotation-alignment": alignment,
+    "icon-pitch-alignment": alignment,
     "icon-keep-upright": false,
     "icon-allow-overlap": true,
     "icon-ignore-placement": true,
@@ -247,9 +256,9 @@ function ensureChevronLayer(map: MapLibreMap, compact: boolean, pitched: boolean
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-size", chevronSize(compact, pitched));
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-anchor", "center");
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-offset", [0, 0]);
-  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-rotate", ["get", "bearing"]);
-  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-rotation-alignment", "map");
-  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-pitch-alignment", "map");
+  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-rotate", rotate);
+  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-rotation-alignment", alignment);
+  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-pitch-alignment", alignment);
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-keep-upright", false);
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-allow-overlap", true);
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-ignore-placement", true);
@@ -393,7 +402,7 @@ export function upsertGuidanceArrows(
   if (map.getLayer(TURN_LINE_LAYER_ID)) {
     map.setPaintProperty(TURN_LINE_LAYER_ID, "line-gradient", flowGradient(phase));
   }
-  ensureChevronLayer(map, compact, pitched);
+  ensureChevronLayer(map, compact, pitched, navigating);
   stackGuidanceLayers(map);
 }
 
