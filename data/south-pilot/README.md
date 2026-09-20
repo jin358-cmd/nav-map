@@ -2,6 +2,14 @@
 
 此目錄只提交說明與摘要。完整列檔（ndjson／gzip）留在本機，不進 GitHub。
 
+## 資料版本狀態
+
+- 舊版 `south-pilot-20260913-batch10` 的來源 binary 已遺失，只保留稽核報告，禁止匯入。
+- 新版規劃為 `south-pilot-20260920-rebuild1`，目前狀態是 `awaiting-source-snapshot`。
+- 重建狀態與硬性閘門：[`rebuild-manifest.json`](rebuild-manifest.json)。
+- 完整流程：[`../../docs/phase-5-3a-data-rebuild-plan.md`](../../docs/phase-5-3a-data-rebuild-plan.md)。
+- 新來源必須先保存到持久化儲存並記錄 SHA-256；`/tmp` 不得作為唯一副本。
+
 ```bash
 npm run export:south-pois   # Dry Run，不連線寫庫
 npm run probe:south-pois    # 只讀：本機／雲端筆數

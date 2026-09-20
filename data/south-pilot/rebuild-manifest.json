@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-09-20",
+  "status": "planned",
+  "legacyVersion": {
+    "version": "south-pilot-20260913-batch10",
+    "sourceSha256": "657c34315a8ea072f564722607ff4edcce146d76e2af41bcc330d6b0a2fc490f",
+    "sourceCount": 812257,
+    "recoveryStatus": "source-unavailable",
+    "importAllowed": false,
+    "reason": "The source binary existed only in an ephemeral /tmp directory and is absent from the workspace, Git history, GitHub branches, releases, tags, and Actions artifacts."
+  },
+  "rebuildVersion": {
+    "version": "south-pilot-20260920-rebuild1",
+    "sourceSnapshotCreatedAt": null,
+    "sourceSha256": null,
+    "sourceCount": null,
+    "publishedIdHash": null,
+    "status": "awaiting-source-snapshot"
+  },
+  "sources": [
+    {
+      "name": "MOEA GCIS company and business registration open data",
+      "license": "OGDL-Taiwan-1.0",
+      "snapshotRequired": true
+    },
+    {
+      "name": "NLSC TextQueryMap geocoding results",
+      "snapshotRequired": true
+    },
+    {
+      "name": "Existing OSM and chain-store POI base",
+      "snapshotRequired": true
+    }
+  ],
+  "artifacts": {
+    "sourceIndex": "src/data/taiwan-poi-index.json.gz",
+    "persistentArchive": null,
+    "persistentArchiveRequired": true,
+    "temporaryDirectoryIsArchive": false
+  },
+  "gates": {
+    "sourceSnapshotArchived": false,
+    "sourceSha256Recorded": false,
+    "fullDatasetValidationPassed": false,
+    "southSummaryRegenerated": false,
+    "yunlinDryRunPassed": false,
+    "supabaseApplyAuthorized": false,
+    "cloudReconciliationPassed": false
+  },
+  "supabase": {
+    "projectRef": "rxzbsthsqlozxgctdoks",
+    "forbiddenProjectRef": "qmptlkgseffmeqnarwnb",
+    "applyEnvironmentVariable": "SOUTH_POI_APPLY",
+    "applyAuthorized": false
+  },
+  "notes": [
+    "Do not overwrite the legacy reports or reuse their counts for the rebuild.",
+    "Do not set SOUTH_POI_APPLY=1 until every pre-apply gate passes and explicit authorization is recorded.",
+    "Address staging remains excluded from cloud upload until an official county source is available."
+  ]
+}
