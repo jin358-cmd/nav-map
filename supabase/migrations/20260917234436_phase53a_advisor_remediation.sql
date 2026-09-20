@@ -45,18 +45,7 @@ drop index if exists public.taiwan_poi_index_name_trgm;
 drop index if exists public.taiwan_poi_index_geom_gist;
 drop index if exists public.taiwan_poi_index_source_source_id_uidx;
 
--- PostGIS reference data is readable but never writable by app roles.
-alter table public.spatial_ref_sys enable row level security;
-
-drop policy if exists spatial_ref_sys_public_read
-on public.spatial_ref_sys;
-
-create policy spatial_ref_sys_public_read
-on public.spatial_ref_sys
-for select
-to anon, authenticated
-using (true);
-
-revoke insert, update, delete, truncate
-on table public.spatial_ref_sys
-from anon, authenticated;
+-- `public.spatial_ref_sys` is owned by Supabase's `supabase_admin` role, so
+-- project migrations cannot enable RLS or reliably revoke its grants. Moving
+-- PostGIS out of `public` requires a separately planned extension migration or
+-- Supabase Support and must not be attempted as part of this remediation.
