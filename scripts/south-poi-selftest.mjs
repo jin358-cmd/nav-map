@@ -1,11 +1,18 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   SOUTH_PILOT_SET,
+  SouthPoiSourceError,
   classifyRow,
+  collectSouthPoiRows,
   countyFromText,
   normalizeCounty,
   parseCountyList,
+  resolveSouthPoiIndex,
   toSupabasePoiRow,
 } from "./south-poi-shared.mjs";
 import { applyBlockedReason, readSupabaseConfig } from "./supabase-navpilot.mjs";
@@ -163,10 +170,65 @@ function testForbiddenProject() {
   else process.env.NAVPILOT_SUPABASE_PROJECT_REF = prev.ref;
 }
 
+function testSourceIntegrityAndActualCounts() {
+  const directory = mkdtempSync(join(tmpdir(), "south-poi-selftest-"));
+  const fixture = join(directory, "fixture.json");
+  const bytes = Buffer.from('[{"id":"one"}]');
+  writeFileSync(fixture, bytes);
+  const expectedSha = createHash("sha256").update(bytes).digest("hex");
+  const previous = process.env.NAVPILOT_POI_INDEX;
+  process.env.NAVPILOT_POI_INDEX = fixture;
+  try {
+    const resolved = resolveSouthPoiIndex(expectedSha);
+    assert.equal(resolved.path, fixture);
+    assert.equal(resolved.matched, true);
+    assert.throws(
+      () => resolveSouthPoiIndex("0".repeat(64)),
+      (error) => error instanceof SouthPoiSourceError && error.code === "source_sha_mismatch",
+    );
+
+    const rawRows = [
+      {
+        id: "yunlin-published",
+        name: "雲林便利商店",
+        source: "gov",
+        sourceId: "1",
+        category: "convenience",
+        address: "雲林縣斗六市中正路1號",
+        county: "雲林縣",
+        latitude: 23.7,
+        longitude: 120.54,
+        matchQuality: "A",
+        navEligibilityScore: 90,
+      },
+      {
+        id: "yunlin-review",
+        name: "診所",
+        source: "gov",
+        sourceId: "2",
+        category: "clinic",
+        address: "雲林縣",
+        county: "雲林縣",
+        latitude: 23.7,
+        longitude: 120.54,
+        matchQuality: "B",
+        navEligibilityScore: 70,
+      },
+    ];
+    assert.equal(collectSouthPoiRows(rawRows, ["雲林縣"]).length, 2);
+    assert.equal(collectSouthPoiRows(rawRows, ["雲林縣"], { publishedOnly: true }).length, 1);
+  } finally {
+    if (previous == null) delete process.env.NAVPILOT_POI_INDEX;
+    else process.env.NAVPILOT_POI_INDEX = previous;
+    rmSync(directory, { recursive: true, force: true });
+  }
+}
+
 testCountyNormalize();
 testDedupAndPublish();
 testBoundsReject();
 testPingdongNotConflict();
 testSupabaseRowAndCounties();
 testForbiddenProject();
-console.log(JSON.stringify({ ok: true, tests: 6 }));
+testSourceIntegrityAndActualCounts();
+console.log(JSON.stringify({ ok: true, tests: 7 }));

@@ -294,6 +294,15 @@ export function sha256File(filePath) {
   return createHash("sha256").update(readFileSync(filePath)).digest("hex");
 }
 
+export class SouthPoiSourceError extends Error {
+  constructor(code, details) {
+    super(code);
+    this.name = "SouthPoiSourceError";
+    this.code = code;
+    this.details = details;
+  }
+}
+
 export function classifyRow(row) {
   const lat = Number(row.latitude);
   const lng = Number(row.longitude);
@@ -426,6 +435,29 @@ export function toSupabasePoiRow(row, now = new Date().toISOString()) {
   return payload;
 }
 
+export function collectSouthPoiRows(rawRows, counties, { publishedOnly = false } = {}) {
+  const wanted = new Set(counties);
+  const seen = new Set();
+  const collected = [];
+  for (const raw of rawRows) {
+    const classified = classifyRow(raw);
+    if (!wanted.has(classified.county) || !SOUTH_PILOT_SET.has(classified.county)) continue;
+    if (!classified.located) continue;
+    if (publishedOnly && classified.publishStatus !== "published") continue;
+    const key = `${classified.source}:${classified.sourceId}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    collected.push(classified);
+  }
+  const rank = (row) => {
+    const countyRank = counties.indexOf(row.county);
+    const publishedRank = row.publishStatus === "published" ? 0 : 1;
+    return countyRank * 10 + publishedRank;
+  };
+  collected.sort((a, b) => rank(a) - rank(b) || a.id.localeCompare(b.id));
+  return collected;
+}
+
 export function resolveSouthPoiIndex(expectedSha = null) {
   const candidates = [
     process.env.NAVPILOT_POI_INDEX,
@@ -434,8 +466,13 @@ export function resolveSouthPoiIndex(expectedSha = null) {
   ].filter(Boolean);
   const existing = candidates.filter((path) => existsSync(path));
   if (expectedSha) {
-    const matched = existing.find((path) => sha256File(path) === expectedSha);
-    if (matched) return { path: matched, sha256: expectedSha, matched: true };
+    const inspected = existing.map((path) => ({ path, sha256: sha256File(path) }));
+    const matched = inspected.find((candidate) => candidate.sha256 === expectedSha);
+    if (matched) return { ...matched, matched: true };
+    throw new SouthPoiSourceError(existing.length ? "source_sha_mismatch" : "missing_source_index", {
+      expectedSha,
+      candidates: inspected,
+    });
   }
   if (!existing.length) return { path: null, sha256: null, matched: false };
   const path = existing[0];

@@ -13,8 +13,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import {
   DATA_VERSION,
   SOUTH_PILOT_REGIONS,
-  SOUTH_PILOT_SET,
-  classifyRow,
+  collectSouthPoiRows,
   loadPoiRows,
   parseCountyList,
   resolveSouthPoiIndex,
@@ -35,10 +34,6 @@ const MAX_BATCHES = Math.max(0, Number(process.env.SOUTH_POI_MAX_BATCHES || 0));
 const PUBLISHED_ONLY = process.env.SOUTH_POI_PUBLISHED_ONLY === "1";
 const SLEEP_MS = Math.max(0, Number(process.env.SOUTH_POI_SLEEP_MS || 120));
 const FAIL_STOP = Math.max(1, Number(process.env.SOUTH_POI_FAIL_STOP || 3));
-function sourceIndexPath(summary) {
-  const resolved = resolveSouthPoiIndex(summary?.sourceSha256 || null);
-  return resolved.path;
-}
 
 function loadSummary() {
   const path = "data/south-pilot/summary.json";
@@ -89,30 +84,6 @@ function loadCheckpoint(counties) {
     (prev.status === "running" || prev.status === "paused" || prev.status === "failed");
   if (sameJob && process.env.SOUTH_POI_RESET !== "1") return prev;
   return emptyCheckpoint({ counties });
-}
-
-function collectRows(counties, indexPath) {
-  const wanted = new Set(counties);
-  const rows = loadPoiRows(indexPath);
-  const seen = new Set();
-  const collected = [];
-  for (const raw of rows) {
-    const classified = classifyRow(raw);
-    if (!wanted.has(classified.county) || !SOUTH_PILOT_SET.has(classified.county)) continue;
-    if (!classified.located) continue;
-    if (PUBLISHED_ONLY && classified.publishStatus !== "published") continue;
-    const key = `${classified.source}:${classified.sourceId}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    collected.push(classified);
-  }
-  const rank = (row) => {
-    const countyRank = counties.indexOf(row.county);
-    const pub = row.publishStatus === "published" ? 0 : 1;
-    return countyRank * 10 + pub;
-  };
-  collected.sort((a, b) => rank(a) - rank(b) || a.id.localeCompare(b.id));
-  return collected;
 }
 
 async function upsertBatch(config, rows, omitGeom) {
@@ -203,7 +174,8 @@ async function reconcile(config, expectedPublished) {
 
 async function main() {
   const summary = loadSummary();
-  const INDEX = sourceIndexPath(summary);
+  const source = resolveSouthPoiIndex(summary?.sourceSha256 || null);
+  const INDEX = source.path;
   const countyArg = process.argv.find((item) => item.startsWith("--county="))?.slice("--county=".length);
   const parsed = parseCountyList(process.env.SOUTH_POI_COUNTIES || countyArg || "");
   if (parsed.unknown.length) {
@@ -215,17 +187,59 @@ async function main() {
   mkdirSync("data/south-pilot", { recursive: true });
   const prev = loadCheckpoint(counties);
 
+  if (!INDEX) {
+    console.error(JSON.stringify({ stop: true, reason: "missing_source_index", expectedSha: summary.sourceSha256 }));
+    process.exit(2);
+  }
+
+  const allRows = collectSouthPoiRows(loadPoiRows(INDEX), counties);
+  const rows = PUBLISHED_ONLY
+    ? allRows.filter((row) => row.publishStatus === "published")
+    : allRows;
+  const actualByCounty = Object.fromEntries(
+    counties.map((county) => {
+      const countyRows = allRows.filter((row) => row.county === county);
+      return [
+        county,
+        {
+          located: countyRows.length,
+          published: countyRows.filter((row) => row.publishStatus === "published").length,
+          review: countyRows.filter((row) => row.publishStatus === "review").length,
+        },
+      ];
+    }),
+  );
+  const summaryByCounty = Object.fromEntries(
+    counties.map((county) => [
+      county,
+      {
+        located: Number(summary.byCounty?.[county]?.located || 0),
+        published: Number(summary.byCounty?.[county]?.published || 0),
+        review: Number(summary.byCounty?.[county]?.review || 0),
+      },
+    ]),
+  );
+  const summaryMatches = counties.every(
+    (county) =>
+      actualByCounty[county].located === summaryByCounty[county].located &&
+      actualByCounty[county].published === summaryByCounty[county].published &&
+      actualByCounty[county].review === summaryByCounty[county].review,
+  );
+
   if (!APPLY) {
     const report = {
       mode: "dry-run",
       dataVersion: DATA_VERSION,
       regions: counties,
       publishedOnly: PUBLISHED_ONLY,
-      wouldUpsert: counties.reduce((sum, county) => {
-        const row = summary.byCounty?.[county] || {};
-        return sum + (PUBLISHED_ONLY ? row.published || 0 : row.located || 0);
-      }, 0),
-      wouldPublish: counties.reduce((sum, county) => sum + (summary.byCounty?.[county]?.published || 0), 0),
+      sourcePath: INDEX,
+      sourceSha256: source.sha256,
+      sourceMatched: source.matched,
+      wouldUpsert: rows.length,
+      wouldPublish: rows.filter((row) => row.publishStatus === "published").length,
+      byCounty: actualByCounty,
+      summaryByCounty,
+      summaryMatches,
       wroteSupabase: false,
       batchSize: BATCH,
       estimatedBatches: null,
@@ -239,6 +253,18 @@ async function main() {
     saveCheckpoint({ ...prev, status: "dry-run", counties });
     console.log(JSON.stringify(report, null, 2));
     return;
+  }
+
+  if (!summaryMatches) {
+    console.error(
+      JSON.stringify({
+        stop: true,
+        reason: "source_count_mismatch",
+        actualByCounty,
+        summaryByCounty,
+      }),
+    );
+    process.exit(2);
   }
 
   const blocked = applyBlockedReason(supabase);
@@ -261,16 +287,7 @@ async function main() {
     process.exit(2);
   }
 
-  if (!existsSync(INDEX) || !INDEX) {
-    console.error(JSON.stringify({ stop: true, reason: "missing_source_index", looked: INDEX, expectedSha: summary.sourceSha256 }));
-    process.exit(2);
-  }
-
-  const rows = collectRows(counties, INDEX);
-  const expectedPublish = counties.reduce(
-    (sum, county) => sum + (summary.byCounty?.[county]?.published || 0),
-    0,
-  );
+  const expectedPublish = allRows.filter((row) => row.publishStatus === "published").length;
   const ping = await countTable(supabase, "taiwan_poi_index");
   if (ping.status === 404 || ping.status === 0) {
     console.error(
@@ -379,6 +396,13 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(JSON.stringify({ stop: true, reason: "import_crash", error: error instanceof Error ? error.message : String(error) }));
+  console.error(
+    JSON.stringify({
+      stop: true,
+      reason: error?.code || "import_crash",
+      error: error instanceof Error ? error.message : String(error),
+      details: error?.details,
+    }),
+  );
   process.exit(1);
 });
