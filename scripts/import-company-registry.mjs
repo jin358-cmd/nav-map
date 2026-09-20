@@ -10,6 +10,7 @@
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync } from "node:fs";
 import { gunzipSync, gzipSync } from "node:zlib";
+import { dirname } from "node:path";
 import {
   COUNTIES,
   cacheKey,
@@ -37,23 +38,27 @@ import { yellowPagesLayerFromTags } from "./yellow-pages.mjs";
 const USER_AGENT = "NavPilot/0.1 (https://github.com/jin358-cmd/nav-map; POI ingest)";
 const CATALOG_URL = "https://data.gcis.nat.gov.tw/od/datacategory";
 const NLSC_MAP = "https://api.nlsc.gov.tw/idc/TextQueryMap";
-const OUT = "src/data/taiwan-poi-index.json";
-const GZ = "src/data/taiwan-poi-index.json.gz";
-const MANIFEST = "src/data/poi-ingest-manifest.json";
-const REPORT = "docs/gcis-company-ingest-report.json";
-const REPORT_MD = "docs/gcis-company-ingest-report.md";
-const FILE_MAP = "src/data/gcis-dataset-files.json";
-const GEO_CACHE = "src/data/gcis-geocode-cache.json";
-const CHECKPOINT = "src/data/gcis-ingest-checkpoint.json";
-const BATCHES = "src/data/gcis-ingest-batches.json";
-const REJECTS = "src/data/gcis-import-rejects.jsonl";
-const CACHE_DIR = "/tmp/gcis-open-data";
+const OUT = process.env.GCIS_OUT || "src/data/taiwan-poi-index.json";
+const GZ = process.env.GCIS_GZ || "src/data/taiwan-poi-index.json.gz";
+const INPUT_GZ = process.env.GCIS_INPUT_GZ || GZ;
+const MANIFEST = process.env.GCIS_MANIFEST || "src/data/poi-ingest-manifest.json";
+const REPORT = process.env.GCIS_REPORT || "docs/gcis-company-ingest-report.json";
+const REPORT_MD = process.env.GCIS_REPORT_MD || "docs/gcis-company-ingest-report.md";
+const FILE_MAP = process.env.GCIS_FILE_MAP || "src/data/gcis-dataset-files.json";
+const GEO_CACHE = process.env.GCIS_GEO_CACHE || "src/data/gcis-geocode-cache.json";
+const CHECKPOINT = process.env.GCIS_CHECKPOINT || "src/data/gcis-ingest-checkpoint.json";
+const BATCHES = process.env.GCIS_BATCHES || "src/data/gcis-ingest-batches.json";
+const REJECTS = process.env.GCIS_REJECTS || "src/data/gcis-import-rejects.jsonl";
+const NLSC_PROVENANCE = process.env.GCIS_NLSC_PROVENANCE || "src/data/gcis-nlsc-provenance.jsonl";
+const CACHE_DIR = process.env.GCIS_CACHE_DIR || "/tmp/gcis-open-data";
+const CATALOG_PATH = process.env.GCIS_CATALOG_PATH || "";
 
 const CITY_FILTER = (process.env.GCIS_CITY || "").replaceAll("台", "臺").trim();
 const NLSC_LIMIT = Number(process.env.GCIS_NLSC_LIMIT ?? 1000);
 const CONCURRENCY = Math.max(1, Number(process.env.GCIS_NLSC_CONCURRENCY ?? 4));
 const DELAY_MS = Number(process.env.GCIS_NLSC_DELAY_MS ?? 60);
 const RETRY_MISS = process.env.GCIS_RETRY_MISS === "1";
+const FRESH_REBUILD = process.env.GCIS_FRESH_REBUILD === "1";
 
 const ACTIVE_STATUS = /核准設立|核准認許|核准登記/;
 const DEAD_STATUS = /解散|廢止|歇業|撤銷|停業|遷他縣市/;
@@ -138,8 +143,8 @@ function loadJson(path, fallback) {
 }
 
 function loadPoiRows() {
-  if (existsSync(GZ)) {
-    return JSON.parse(gunzipSync(readFileSync(GZ)).toString("utf8"));
+  if (existsSync(INPUT_GZ)) {
+    return JSON.parse(gunzipSync(readFileSync(INPUT_GZ)).toString("utf8"));
   }
   if (existsSync(OUT)) return JSON.parse(readFileSync(OUT, "utf8"));
   return [];
@@ -385,6 +390,10 @@ function appendReject(row) {
   appendFileSync(REJECTS, `${JSON.stringify(row)}\n`);
 }
 
+function appendNlscProvenance(row) {
+  appendFileSync(NLSC_PROVENANCE, `${JSON.stringify(row)}\n`);
+}
+
 function coverageEmpty() {
   const byCounty = {};
   for (const county of COUNTIES) {
@@ -423,7 +432,20 @@ function coverageEmpty() {
 
 async function main() {
   mkdirSync(CACHE_DIR, { recursive: true });
-  mkdirSync("docs", { recursive: true });
+  for (const path of [
+    OUT,
+    GZ,
+    MANIFEST,
+    REPORT,
+    REPORT_MD,
+    GEO_CACHE,
+    CHECKPOINT,
+    BATCHES,
+    REJECTS,
+    NLSC_PROVENANCE,
+  ]) {
+    mkdirSync(dirname(path), { recursive: true });
+  }
   const started = Date.now();
   const now = new Date().toISOString();
   const rejectsThisRun = [];
@@ -433,8 +455,10 @@ async function main() {
     appendReject(record);
   };
 
-  console.log("[gcis] fetch catalog");
-  const catalogPage = await fetchText(CATALOG_URL);
+  console.log(CATALOG_PATH ? `[gcis] read catalog ${CATALOG_PATH}` : "[gcis] fetch catalog");
+  const catalogPage = CATALOG_PATH
+    ? { ok: true, status: 200, text: readFileSync(CATALOG_PATH, "utf8") }
+    : await fetchText(CATALOG_URL);
   if (!catalogPage.ok) throw new Error(`catalog HTTP ${catalogPage.status}`);
   const catalog = parseCatalog(catalogPage.text);
   const wantedTitles = new Set(STOREFRONT_INDUSTRIES.map((item) => item.title));
@@ -550,7 +574,8 @@ async function main() {
     addressCounts.set(key, (addressCounts.get(key) ?? 0) + 1);
   }
 
-  const existing = loadPoiRows();
+  const inputRows = loadPoiRows();
+  const existing = FRESH_REBUILD ? inputRows.filter((row) => row.source !== "gov") : inputRows;
   const existingGov = new Map();
   const byAddress = new Map();
   const osmGrid = new Map();
@@ -617,7 +642,9 @@ async function main() {
   }
 
   const unmatchedSorted = [...needGeocode].sort((a, b) => a.taxId.localeCompare(b.taxId));
-  const sourceVersion = `gcis-catalog-${datasets.length}-files-${Object.keys(fileMap).length}`;
+  const sourceVersion =
+    process.env.GCIS_SOURCE_VERSION ||
+    `gcis-catalog-${datasets.length}-files-${Object.keys(fileMap).length}`;
   const prevCheckpoint = loadJson(CHECKPOINT, emptyCheckpoint());
   const job = beginJob(prevCheckpoint, sourceVersion, now);
   const slice = sliceUnmatchedQueue(unmatchedSorted, job, NLSC_LIMIT);
@@ -644,7 +671,19 @@ async function main() {
       if (prev?.address && prev.address !== shop.address) extras.previousAddress = prev.address;
       try {
         nlscRequests += 1;
+        const requestedAt = new Date().toISOString();
         const result = await geocodeNlsc(shop.address, shop.city);
+        appendNlscProvenance({
+          sourceVersion,
+          registryId: shop.taxId,
+          address: shop.address,
+          query: nlscQuery(shop.address),
+          requestedAt,
+          completedAt: new Date().toISOString(),
+          httpError: Boolean(result.httpError),
+          retries: result.retries || 0,
+          hit: result.hit || null,
+        });
         retryCount += result.retries || 0;
         await sleep(DELAY_MS);
         if (result.httpError) nlscErrors += 1;
@@ -692,6 +731,14 @@ async function main() {
           console.log(`[gcis] geocoded ${geocoded} fail ${geoFail}`);
         }
       } catch (error) {
+        appendNlscProvenance({
+          sourceVersion,
+          registryId: shop.taxId,
+          address: shop.address,
+          query: nlscQuery(shop.address),
+          completedAt: new Date().toISOString(),
+          error: error instanceof Error ? error.message : String(error),
+        });
         geoFail += 1;
         nlscErrors += 1;
         pushReject({
