@@ -4,7 +4,8 @@
 **用途：** 交給 Codex 接續執行。本文件是現況快照與閘門，不是授權書。  
 **Repository：** `https://github.com/jin358-cmd/nav-map`  
 **工作分支：** `cursor/phase-5-3a-south-poi-cloud-pilot-5225`  
-**HEAD：** `fad74a4822b02081916c9f212c78c52307374e01`  
+**功能 HEAD：** `fad74a4822b02081916c9f212c78c52307374e01`  
+**本文件：** 最新 `docs: add Codex handoff` commit（在功能 HEAD 之上）  
 **GitHub `main`：** `c57777b`（舊 Production；**尚未**合併本分支）
 
 ---
