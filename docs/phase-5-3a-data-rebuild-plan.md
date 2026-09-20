@@ -30,3 +30,9 @@ Stop without writing to Supabase when any of these conditions is true:
 - A batch fails reconciliation or reaches the consecutive-failure limit.
 
 The machine-readable status and gates are in `data/south-pilot/rebuild-manifest.json`.
+
+## Current progress
+
+The GCIS input snapshot and existing POI base were archived under `data/source-snapshots/south-pilot-20260920-rebuild1` on 2026-09-20. All 56 selected GCIS files passed SHA-256 verification (472,637,691 bytes total). The snapshot manifest SHA-256 is `a40b935abcdff35ef9787754ba0a3a5e8f20a6bceec853db1c47105c444e3a80`.
+
+`sourceSnapshotArchived` remains false until the NLSC geocoding results and checkpoints are also preserved. No rebuilt POI source has been generated and no Supabase data write has occurred.

@@ -39,6 +39,7 @@ src/data/taiwan-poi-index.json
 src/data/poi-chain-ingest-checkpoint.json
 
 # Phase 5.3A south extracts stay local — only summaries/checksums go in git
+data/source-snapshots/
 data/south-pilot/*.ndjson
 data/south-pilot/*.json.gz
 data/south-pilot/*.jsonl

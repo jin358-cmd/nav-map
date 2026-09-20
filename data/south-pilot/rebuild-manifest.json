@@ -12,11 +12,11 @@
   },
   "rebuildVersion": {
     "version": "south-pilot-20260920-rebuild1",
-    "sourceSnapshotCreatedAt": null,
+    "sourceSnapshotCreatedAt": "2026-09-20T10:25:04.830Z",
     "sourceSha256": null,
     "sourceCount": null,
     "publishedIdHash": null,
-    "status": "awaiting-source-snapshot"
+    "status": "gcis-snapshot-complete-awaiting-nlsc"
   },
   "sources": [
     {
@@ -35,7 +35,9 @@
   ],
   "artifacts": {
     "sourceIndex": "src/data/taiwan-poi-index.json.gz",
-    "persistentArchive": null,
+    "persistentArchive": "data/source-snapshots/south-pilot-20260920-rebuild1",
+    "sourceSnapshotManifest": "data/source-snapshots/south-pilot-20260920-rebuild1/source-snapshot-manifest.json",
+    "sourceSnapshotManifestSha256": "a40b935abcdff35ef9787754ba0a3a5e8f20a6bceec853db1c47105c444e3a80",
     "persistentArchiveRequired": true,
     "temporaryDirectoryIsArchive": false
   },
