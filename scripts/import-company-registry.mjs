@@ -661,7 +661,29 @@ async function main() {
   let nlscRequests = 0;
   let nlscErrors = 0;
   let retryCount = 0;
+  let processed = 0;
   const batchT0 = Date.now();
+  const persistProgress = (shop) => {
+    processed += 1;
+    if (CONCURRENCY !== 1 || processed % 100 !== 0) return;
+    writeFileSync(GEO_CACHE, `${JSON.stringify(geoCache)}\n`);
+    writeFileSync(
+      CHECKPOINT,
+      `${JSON.stringify(
+        {
+          ...job,
+          last_successful_offset: slice.start_offset + processed,
+          last_successful_registry_id: shop.taxId,
+          status: "running",
+          updated_at: new Date().toISOString(),
+          failed_reason: null,
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    console.log(`[gcis] processed ${processed}/${queued.length} geocoded ${geocoded} fail ${geoFail}`);
+  };
   if (NLSC_LIMIT !== 0 && queued.length) {
     await mapPool(queued, CONCURRENCY, async (shop) => {
       const addrKey = cacheKey(shop.address);
@@ -726,10 +748,6 @@ async function main() {
         }
         located.push(recordFromShop(shop, result.hit, now, { ...extras, matchQuality: quality }));
         geocoded += 1;
-        if (geocoded % 100 === 0) {
-          writeFileSync(GEO_CACHE, `${JSON.stringify(geoCache)}\n`);
-          console.log(`[gcis] geocoded ${geocoded} fail ${geoFail}`);
-        }
       } catch (error) {
         appendNlscProvenance({
           sourceVersion,
@@ -748,6 +766,8 @@ async function main() {
           reason: "no_coordinate",
           raw_data: { error: error instanceof Error ? error.message : String(error) },
         });
+      } finally {
+        persistProgress(shop);
       }
     });
   }
