@@ -4,6 +4,7 @@ import { isDemoDataEnabled } from "@/lib/runtime-demo";
 import {
   TRAFFIC_LIVE_CACHE_MS,
   TRAFFIC_SHAPE_CACHE_MS,
+  TRAFFIC_STALE_AFTER_MS,
 } from "@/lib/traffic-constants";
 import {
   finalizeTrafficSegment,
@@ -40,6 +41,7 @@ type ShapeBundle = {
 
 let liveCache: TrafficCatalog | null = null;
 let liveCacheAt = 0;
+let lastGoodLive: TrafficCatalog | null = null;
 let shapeCache: ShapeBundle | null = null;
 
 export async function loadTainanTraffic(
@@ -57,7 +59,17 @@ export async function loadTainanTraffic(
   if (live) {
     liveCache = live;
     liveCacheAt = Date.now();
+    lastGoodLive = live;
     return live;
+  }
+  if (lastGoodLive) {
+    const stale: TrafficCatalog = {
+      ...lastGoodLive,
+      stale: true,
+    };
+    liveCache = stale;
+    liveCacheAt = Date.now();
+    return stale;
   }
   if (isDemoDataEnabled()) {
     const catalog = fromMock();
@@ -113,11 +125,23 @@ async function fromTdxLive(force: boolean): Promise<TrafficCatalog | null> {
     if (!segments.length) return null;
 
     const fetchedAt = new Date().toISOString();
+    const sourceUpdatedTimes = segments
+      .map((segment) => segment.updatedAt)
+      .filter((value): value is string => Boolean(value))
+      .map((value) => new Date(value).getTime())
+      .filter(Number.isFinite);
+    const sourceUpdatedAt = sourceUpdatedTimes.length
+      ? new Date(Math.max(...sourceUpdatedTimes)).toISOString()
+      : fetchedAt;
     return {
       origin: "tdx-live",
       segments,
       fetchedAt,
-      ...catalogMeta("tdx-live", fetchedAt),
+      ...catalogMeta(
+        "tdx-live",
+        sourceUpdatedAt,
+        Date.now() - new Date(sourceUpdatedAt).getTime() > TRAFFIC_STALE_AFTER_MS,
+      ),
     };
   } catch (error) {
     console.warn(

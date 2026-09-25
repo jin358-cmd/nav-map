@@ -5,6 +5,7 @@ import {
   CITY_TRAFFIC_MOVE_REFRESH_KM,
   CITY_TRAFFIC_ZOOM_REFRESH_DELTA,
   TRAFFIC_LIVE_CACHE_MS,
+  TRAFFIC_STALE_AFTER_MS,
 } from "@/lib/traffic-constants";
 import { mapVisibleTraffic, scoreTraffic } from "@/lib/traffic-query";
 import type {
@@ -57,7 +58,8 @@ async function fetchTrafficCatalog(
     const stale =
       Boolean(data.stale) ||
       (origin !== "unavailable" &&
-        Date.now() - new Date(fetchedAt).getTime() > 8 * 60 * 1000);
+        Date.now() - new Date(data.updatedAt ?? fetchedAt).getTime() >
+          TRAFFIC_STALE_AFTER_MS);
     return {
       origin,
       segments: data.segments ?? data.traffic ?? [],
@@ -139,12 +141,8 @@ export function useTrafficView({
       })
       .catch(() => {
         if (controller.signal.aborted) return;
-        setCatalog([]);
-        setOrigin("unavailable");
-        setSource("unavailable");
-        setUpdatedAt(null);
-        setStale(false);
-        setError("資料暫時無法取得");
+        setStale(true);
+        setError("即時路況更新失敗，仍顯示上次資料。");
       })
       .finally(() => {
         inflightKeys.delete(requestKey);
@@ -201,12 +199,8 @@ export function useTrafficView({
     void fetchTrafficCatalog(true)
       .then(applyCatalog)
       .catch(() => {
-        setCatalog([]);
-        setOrigin("unavailable");
-        setSource("unavailable");
-        setUpdatedAt(null);
-        setStale(false);
-        setError("資料暫時無法取得");
+        setStale(true);
+        setError("即時路況更新失敗，仍顯示上次資料。");
       });
   }, [applyCatalog]);
 

@@ -44,6 +44,7 @@ data/south-pilot/*.ndjson
 data/south-pilot/*.json.gz
 data/south-pilot/*.jsonl
 data/south-pilot/rows/
+data/tdx-south/
 src/data/south-poi-fallback.json.gz
 !data/south-pilot/README.md
 !data/south-pilot/.gitkeep

@@ -30,6 +30,7 @@ const AVAIL_CACHE_MS = 90 * 1000;
 
 type CachedRows = {
   rows: Record<string, unknown>[];
+  fetchedAt: number;
   expiresAt: number;
 };
 
@@ -48,9 +49,15 @@ async function cachedCityRows(
 ) {
   const hit = cache.get(key);
   if (hit && hit.expiresAt > Date.now()) return hit.rows;
-  const rows = await load();
-  cache.set(key, { rows, expiresAt: Date.now() + ttlMs });
-  return rows;
+  try {
+    const rows = await load();
+    cache.set(key, { rows, fetchedAt: Date.now(), expiresAt: Date.now() + ttlMs });
+    return rows;
+  } catch (error) {
+    // Keep the last valid snapshot on transient government API failures.
+    if (hit) return hit.rows;
+    throw error;
+  }
 }
 
 function spacesFromAvailabilities(list: unknown) {

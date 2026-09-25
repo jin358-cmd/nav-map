@@ -1,0 +1,23 @@
+{
+  "YunlinCounty": [],
+  "ChiayiCounty": [],
+  "Chiayi": [],
+  "Tainan": [
+    {
+      "CarParkID": "fixture-tn-001",
+      "CarParkName": { "Zh_tw": "TDX 南區測試停車場" },
+      "Address": "臺南市中西區測試路 1 號",
+      "CarParkPosition": { "PositionLat": 22.9948, "PositionLon": 120.1965 },
+      "TotalSpaces": 120,
+      "ServiceTime": "24H",
+      "UpdateTime": "2026-09-25T10:00:00+08:00"
+    },
+    {
+      "CarParkID": "fixture-invalid-coordinate",
+      "CarParkName": { "Zh_tw": "座標異常測試" },
+      "CarParkPosition": { "PositionLat": 35, "PositionLon": 140 }
+    }
+  ],
+  "Kaohsiung": [],
+  "PingtungCounty": []
+}

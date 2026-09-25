@@ -1,4 +1,5 @@
 import { loadTainanTraffic } from "@/services/traffic";
+import { TRAFFIC_STALE_AFTER_MS } from "@/lib/traffic-constants";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -8,7 +9,7 @@ export async function GET(request: Request) {
     const catalog = await loadTainanTraffic(fresh);
     const stale =
       catalog.origin !== "unavailable" &&
-      Date.now() - new Date(catalog.fetchedAt).getTime() > 8 * 60 * 1000;
+      Date.now() - new Date(catalog.updatedAt).getTime() > TRAFFIC_STALE_AFTER_MS;
     return Response.json(
       {
         source: catalog.source,
@@ -23,7 +24,7 @@ export async function GET(request: Request) {
         headers: {
           "Cache-Control": fresh
             ? "no-store"
-            : "private, max-age=30, stale-while-revalidate=60",
+            : "public, s-maxage=30, stale-while-revalidate=300",
         },
       },
     );
