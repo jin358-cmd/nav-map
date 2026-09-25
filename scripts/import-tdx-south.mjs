@@ -19,10 +19,21 @@ const batchSize = Math.max(1, Math.min(Number(process.env.TDX_BATCH_SIZE) || 250
 const apply = process.env.TDX_SOUTH_APPLY === "1" && !process.argv.includes("--dry-run");
 const fixtureArg = process.argv.find((value) => value.startsWith("--fixture="));
 const fixturePath = fixtureArg ? path.resolve(fixtureArg.slice("--fixture=".length)) : null;
-const stateDir = path.join(process.cwd(), "data", "tdx-south");
+const stateDirArg = process.argv.find((value) => value.startsWith("--state-dir="));
+if (stateDirArg && !fixturePath) {
+  throw new Error("--state-dir is only allowed with --fixture");
+}
+const stateDir = stateDirArg
+  ? path.resolve(stateDirArg.slice("--state-dir=".length))
+  : path.join(process.cwd(), "data", "tdx-south");
 const checkpointPath = path.join(stateDir, "checkpoint.json");
 const rejectsPath = path.join(stateDir, "rejects.jsonl");
 const reportPath = path.join(stateDir, "last-report.json");
+const stagingPath = path.join(stateDir, "staging.json");
+const testDelayArg = process.argv.find((value) => value.startsWith("--test-delay-ms="));
+const testDelayMs = fixturePath && testDelayArg
+  ? Math.max(0, Math.min(Number(testDelayArg.slice("--test-delay-ms=".length)) || 0, 10_000))
+  : 0;
 
 if (apply && (!process.env.SUPABASE_URL?.trim() || !process.env.SUPABASE_SERVICE_ROLE_KEY?.trim())) {
   throw new Error("Supabase server credentials are required when TDX_SOUTH_APPLY=1");
@@ -54,11 +65,11 @@ const report = {
   regions: regions.map(([id]) => id),
   batch_size: batchSize,
   apply,
-  fetched: 0,
-  accepted: 0,
-  rejected: 0,
-  duplicates: 0,
-  failures: 0,
+  fetched: resuming ? previous?.fetched || 0 : 0,
+  accepted: resuming ? previous?.success_count || 0 : 0,
+  rejected: resuming ? previous?.failed_count || 0 : 0,
+  duplicates: resuming ? previous?.duplicates || 0 : 0,
+  failures: resuming ? previous?.failures || 0 : 0,
   processed_count: resuming ? previous?.processed_count || 0 : 0,
   success_count: resuming ? previous?.success_count || 0 : 0,
   failed_count: resuming ? previous?.failed_count || 0 : 0,
@@ -67,11 +78,16 @@ const report = {
   updated_at: new Date().toISOString(),
   completed_at: null,
   status: "running",
+  region_stats: resuming ? previous?.region_stats || {} : {},
 };
 
 let token = null;
 let fixture = null;
 if (fixturePath) fixture = await readJson(fixturePath, {});
+if (!resuming && !apply) {
+  await writeJsonAtomic(stagingPath, []);
+  await fs.writeFile(rejectsPath, "", "utf8");
+}
 
 try {
   await persistCheckpoint();
@@ -81,7 +97,6 @@ try {
   for (let regionIndex = resumeRegionIndex; regionIndex < regions.length; regionIndex += 1) {
     const [region, city] = regions[regionIndex];
     const rawRows = fixture ? fixture[region] || [] : await fetchAllParking(region);
-    report.fetched += rawRows.length;
     const normalized = rawRows.map((row) =>
       normalizeParkingRow(row, {
         region,
@@ -91,29 +106,34 @@ try {
       }),
     );
     const unique = deduplicate(normalized);
-    report.duplicates += unique.duplicates;
+    if (!report.region_stats[region]) {
+      report.region_stats[region] = {
+        fetched: rawRows.length,
+        unique: unique.records.length,
+        duplicates: unique.duplicates,
+      };
+      refreshSourceStats();
+      report.region = region;
+      report.region_offset = 0;
+      await persistCheckpoint();
+    }
     const start = resuming && previous?.region === region ? previous.region_offset || 0 : 0;
     for (let offset = start; offset < unique.records.length; offset += batchSize) {
       const page = unique.records.slice(offset, offset + batchSize);
       const accepted = page.filter((row) => row.normalization_status === "accepted");
       const rejected = page.filter((row) => row.normalization_status === "rejected");
-      report.accepted += accepted.length;
-      report.rejected += rejected.length;
-      if (rejected.length) {
-        await fs.appendFile(
-          rejectsPath,
-          `${rejected.map((row) => JSON.stringify({ job_id: jobId, ...row })).join("\n")}\n`,
-          "utf8",
-        );
-      }
       if (apply) await stageBatch(page);
+      else await writeLocalStaging(page);
       report.processed_count += page.length;
       report.success_count += accepted.length;
       report.failed_count += rejected.length;
+      report.accepted = report.success_count;
+      report.rejected = report.failed_count;
       report.last_checkpoint += 1;
       report.region = region;
       report.region_offset = offset + page.length;
       await persistCheckpoint();
+      if (testDelayMs) await new Promise((resolve) => setTimeout(resolve, testDelayMs));
     }
     report.region_offset = 0;
   }
@@ -279,6 +299,42 @@ async function upsertJob(baseUrl, serviceKey) {
 async function persistCheckpoint() {
   report.updated_at = new Date().toISOString();
   await fs.writeFile(checkpointPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
+}
+
+function refreshSourceStats() {
+  const stats = Object.values(report.region_stats);
+  report.fetched = stats.reduce((sum, item) => sum + item.fetched, 0);
+  report.duplicates = stats.reduce((sum, item) => sum + item.duplicates, 0);
+}
+
+async function writeLocalStaging(rows) {
+  const current = await readJson(stagingPath, []);
+  const byKey = new Map(
+    current.map((row) => [
+      `${row.source}:${row.dataset}:${row.region}:${row.source_id}`,
+      row,
+    ]),
+  );
+  for (const row of rows) {
+    byKey.set(`${row.source}:${row.dataset}:${row.region}:${row.source_id}`, {
+      job_id: jobId,
+      ...row,
+    });
+  }
+  const staged = [...byKey.values()];
+  await writeJsonAtomic(stagingPath, staged);
+  const rejects = staged.filter((row) => row.normalization_status === "rejected");
+  await fs.writeFile(
+    rejectsPath,
+    rejects.length ? `${rejects.map((row) => JSON.stringify(row)).join("\n")}\n` : "",
+    "utf8",
+  );
+}
+
+async function writeJsonAtomic(file, value) {
+  const temporary = `${file}.${process.pid}.tmp`;
+  await fs.writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`, "utf8");
+  await fs.rename(temporary, file);
 }
 
 async function readJson(file, fallback) {

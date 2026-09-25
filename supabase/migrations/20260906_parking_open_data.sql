@@ -76,6 +76,7 @@ create index if not exists parking_sync_logs_source_idx
 create or replace function public.parking_lots_set_geom()
 returns trigger
 language plpgsql
+set search_path = public
 as $$
 begin
   new.geom := st_setsrid(st_makepoint(new.longitude, new.latitude), 4326)::geography;
@@ -131,6 +132,7 @@ returns table (
 )
 language sql
 stable
+set search_path = public
 as $$
   select
     lot.id,
@@ -194,3 +196,36 @@ alter table public.parking_lots enable row level security;
 alter table public.parking_availability enable row level security;
 alter table public.parking_rates enable row level security;
 alter table public.parking_sync_logs enable row level security;
+
+grant select, insert, update, delete on table
+  public.parking_lots,
+  public.parking_availability,
+  public.parking_rates,
+  public.parking_sync_logs
+to service_role;
+
+revoke all on function public.parking_lots_set_geom() from public;
+revoke all on function public.search_nearby_parking_lots(
+  double precision,
+  double precision,
+  double precision,
+  integer
+) from public;
+revoke all on function public.search_nearby_parking_lots(
+  double precision,
+  double precision,
+  double precision,
+  integer
+) from anon;
+revoke all on function public.search_nearby_parking_lots(
+  double precision,
+  double precision,
+  double precision,
+  integer
+) from authenticated;
+grant execute on function public.search_nearby_parking_lots(
+  double precision,
+  double precision,
+  double precision,
+  integer
+) to service_role;

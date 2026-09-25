@@ -100,6 +100,14 @@ alter table public.tdx_failed_records enable row level security;
 alter table public.traffic_segments enable row level security;
 alter table public.traffic_status enable row level security;
 
+grant select, insert, update, delete on table
+  public.tdx_import_jobs,
+  public.tdx_staging_records,
+  public.tdx_failed_records,
+  public.traffic_segments,
+  public.traffic_status
+to service_role;
+
 alter table public.parking_lots
   add column if not exists source_url text,
   add column if not exists source_updated_at timestamptz,

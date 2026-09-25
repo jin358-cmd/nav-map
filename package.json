@@ -22,6 +22,7 @@
     "sync:parking": "node scripts/sync-tainan-parking.mjs",
     "import:tdx:south": "node scripts/import-tdx-south.mjs",
     "test:tdx": "node scripts/tdx-phase1-selftest.mjs",
+    "test:tdx:resume": "node scripts/tdx-resume-interruption-test.mjs",
     "export:south-pois": "node scripts/export-south-pois.mjs",
     "import:south-pois": "node scripts/import-south-pois-supabase.mjs",
     "probe:south-pois": "node scripts/probe-south-pois-supabase.mjs",
