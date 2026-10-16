@@ -228,6 +228,67 @@
   pointer-events: none;
 }
 
+.volunteer-marker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 48px;
+  min-height: 48px;
+  padding: 4px 9px 4px 4px;
+  border: 2px dashed rgba(165, 243, 252, 0.78);
+  border-radius: 999px;
+  background: rgba(5, 22, 30, 0.94);
+  color: #cffafe;
+  cursor: pointer;
+  box-shadow:
+    0 0 0 7px rgba(34, 211, 238, 0.12),
+    0 10px 24px rgba(0, 0, 0, 0.5);
+  transform-origin: 50% 100%;
+  transition: transform 160ms ease, border-color 160ms ease;
+}
+
+.volunteer-marker:hover,
+.volunteer-marker.is-selected {
+  transform: scale(1.1);
+  border-color: #67e8f9;
+  box-shadow:
+    0 0 0 9px rgba(34, 211, 238, 0.2),
+    0 10px 28px rgba(0, 0, 0, 0.55);
+}
+
+.volunteer-marker__icon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(34, 211, 238, 0.16);
+  font-size: 21px;
+}
+
+.volunteer-marker__label {
+  max-width: 8.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.volunteer-list {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(103, 232, 249, 0.35) transparent;
+}
+
+.volunteer-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.volunteer-list::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(103, 232, 249, 0.35);
+}
+
 .destination-pin {
   position: relative;
   width: 120px;

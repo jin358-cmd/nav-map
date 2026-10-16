@@ -18,7 +18,10 @@ import { DisasterDetailCard } from "@/components/overlay/disaster-detail-card";
 import { NextIntersectionHud } from "@/components/overlay/navigation-banner";
 import { RoadInformationCard } from "@/components/overlay/road-information-card";
 import { RouteConfirmBar } from "@/components/overlay/route-preview";
+import { VolunteerDetailCard } from "@/components/overlay/volunteer-detail-card";
+import { VolunteerLayerPanel } from "@/components/overlay/volunteer-layer-panel";
 import { YouTubeMusicPlayer } from "@/components/overlay/youtube-music-player";
+import { DEMO_VOLUNTEERS } from "@/data/demo-volunteers";
 import { useCctvView } from "@/hooks/use-cctv-view";
 import { useDisasterView } from "@/hooks/use-disaster-view";
 import { useGoogleAccount } from "@/hooks/use-google-account";
@@ -80,6 +83,7 @@ import type {
   RouteDestination,
   RouteStep,
   VehiclePose,
+  VolunteerMapPoint,
 } from "@/types/domain";
 
 const DrivingMap = dynamic(
@@ -120,6 +124,10 @@ export function DrivingApp() {
   const [selectedDisaster, setSelectedDisaster] = useState<DisasterAlert | null>(
     null,
   );
+  const [volunteerLayerEnabled, setVolunteerLayerEnabled] = useState(false);
+  const [volunteerDistrict, setVolunteerDistrict] = useState("永康區");
+  const [selectedVolunteer, setSelectedVolunteer] =
+    useState<VolunteerMapPoint | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [navigating, setNavigating] = useState(false);
   const [intelCollapse, setIntelCollapse] = useState(0);
@@ -316,6 +324,14 @@ export function DrivingApp() {
     [selectedCctv, visible],
   );
 
+  const mapVolunteers = useMemo(() => {
+    if (!volunteerLayerEnabled) return [];
+    if (volunteerDistrict === "全部行政區") return DEMO_VOLUNTEERS;
+    return DEMO_VOLUNTEERS.filter(
+      (volunteer) => volunteer.district === volunteerDistrict,
+    );
+  }, [volunteerDistrict, volunteerLayerEnabled]);
+
   const intel = useMemo(() => {
     const cameras = roadIntelFromCameras(visible);
     const trafficItem = deriveTrafficIntel(
@@ -362,6 +378,7 @@ export function DrivingApp() {
           ? { lng: vehicle.lng, lat: vehicle.lat }
           : (viewport?.center ?? { lng: vehicle.lng, lat: vehicle.lat });
       setSelectedDisaster(null);
+      setSelectedVolunteer(null);
       setSelectedCctv({
         ...camera,
         distanceKm: camera.distanceKm ?? distanceKm(center, camera.location),
@@ -463,6 +480,7 @@ export function DrivingApp() {
     setFollowVehicle(true);
     setSelectedCctv(null);
     setSelectedDisaster(null);
+    setSelectedVolunteer(null);
     setIntelCollapse((value) => value + 1);
   }, [routeProgressModel, routeSteps, vehicle]);
 
@@ -535,11 +553,13 @@ export function DrivingApp() {
         navigating={navigating}
         selectedCctvId={selectedCctv?.id ?? null}
         selectedDisasterId={selectedDisaster?.id ?? null}
+        selectedVolunteerId={selectedVolunteer?.id ?? null}
         cameras={mapCameras}
         speedEnforcement={speedEnforcement}
         traffic={traffic}
         disasters={visibleDisasters}
         accidents={visibleAccidents}
+        volunteers={navigating ? [] : mapVolunteers}
         route={route}
         routeMeters={navigationProgress?.routeMeters ?? 0}
         distanceToNextMeters={distanceToNextMeters}
@@ -549,8 +569,17 @@ export function DrivingApp() {
         onCctvSelect={selectCamera}
         onDisasterSelect={(id) => {
           setSelectedCctv(null);
+          setSelectedVolunteer(null);
           setMusicMode((mode) => (mode === "open" ? "mini" : mode));
           setSelectedDisaster(disasters.find((alert) => alert.id === id) ?? null);
+        }}
+        onVolunteerSelect={(id) => {
+          setSelectedCctv(null);
+          setSelectedDisaster(null);
+          setMusicMode((mode) => (mode === "open" ? "mini" : mode));
+          setSelectedVolunteer(
+            DEMO_VOLUNTEERS.find((volunteer) => volunteer.id === id) ?? null,
+          );
         }}
         onUserPan={() => {
           setFollowVehicle(false);
@@ -630,12 +659,48 @@ export function DrivingApp() {
       </div>
 
       {!navigating ? (
+        <div className="pointer-events-auto absolute top-[4.6rem] left-3 z-20 sm:top-[4.8rem]">
+          <VolunteerLayerPanel
+            enabled={volunteerLayerEnabled}
+            volunteers={DEMO_VOLUNTEERS}
+            selectedId={selectedVolunteer?.id ?? null}
+            district={volunteerDistrict}
+            onDistrictChange={(district) => {
+              setVolunteerDistrict(district);
+              setSelectedVolunteer(null);
+            }}
+            onEnabledChange={(enabled) => {
+              setVolunteerLayerEnabled(enabled);
+              if (!enabled) setSelectedVolunteer(null);
+            }}
+            onSelect={(volunteer) => {
+              setVolunteerLayerEnabled(true);
+              setVolunteerDistrict(
+                volunteerDistrict === "全部行政區"
+                  ? "全部行政區"
+                  : volunteer.district,
+              );
+              setSelectedCctv(null);
+              setSelectedDisaster(null);
+              setSelectedVolunteer(volunteer);
+            }}
+          />
+        </div>
+      ) : null}
+
+      {!navigating ? (
         <div className="pointer-events-none absolute bottom-28 left-2 z-10 hidden max-w-[11rem] sm:bottom-36 sm:left-3 sm:block">
           <Legend />
         </div>
       ) : null}
 
       <footer className="absolute inset-x-0 bottom-0 z-10 flex flex-col items-center gap-2 px-2 pb-[max(0.45rem,env(safe-area-inset-bottom))] sm:p-4 sm:pt-0">
+        {selectedVolunteer ? (
+          <VolunteerDetailCard
+            volunteer={selectedVolunteer}
+            onClose={() => setSelectedVolunteer(null)}
+          />
+        ) : null}
         {selectedCctv ? (
           <CctvDetailCard
             key={selectedCctv.id}

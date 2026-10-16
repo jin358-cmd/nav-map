@@ -3,6 +3,30 @@ export type LngLat = {
   lat: number;
 };
 
+export type VolunteerGeocodeStatus =
+  | "VERIFIED_ADDRESS_POINT"
+  | "APPROX_DISTRICT"
+  | "PENDING_ADDRESS"
+  | "REVIEW_REQUIRED";
+
+export type VolunteerAssignmentStatus =
+  | "unassigned"
+  | "assigned"
+  | "completed";
+
+export type VolunteerMapPoint = {
+  id: string;
+  displayName: string;
+  district: string;
+  addressLabel: string;
+  contactLabel: string;
+  assignedGroup: string;
+  assignmentStatus: VolunteerAssignmentStatus;
+  geocodeStatus: VolunteerGeocodeStatus;
+  location: LngLat;
+  synthetic: true;
+};
+
 export type VehiclePose = LngLat & {
   heading: number;
   accuracy?: number;

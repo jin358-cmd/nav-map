@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LngLatBounds, Map as MapLibreMap, Marker } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import {
@@ -39,6 +39,7 @@ import type {
   SpeedEnforcementPoint,
   TrafficSegment,
   VehiclePose,
+  VolunteerMapPoint,
 } from "@/types/domain";
 
 type DrivingMapProps = {
@@ -48,11 +49,13 @@ type DrivingMapProps = {
   navigating: boolean;
   selectedCctvId: string | null;
   selectedDisasterId: string | null;
+  selectedVolunteerId: string | null;
   cameras: CctvCamera[];
   speedEnforcement: SpeedEnforcementPoint[];
   traffic: TrafficSegment[];
   disasters: DisasterAlert[];
   accidents: AccidentReport[];
+  volunteers: VolunteerMapPoint[];
   route: [number, number][];
   routeMeters: number;
   distanceToNextMeters: number;
@@ -61,6 +64,7 @@ type DrivingMapProps = {
   fitRouteKey: number;
   onCctvSelect: (cameraId: string) => void;
   onDisasterSelect: (alertId: string) => void;
+  onVolunteerSelect: (volunteerId: string) => void;
   onUserPan: () => void;
   onViewportChange: (viewport: MapViewport) => void;
   onLongPress?: (location: { lng: number; lat: number }) => void;
@@ -175,6 +179,27 @@ function createDestinationPin(label: string): HTMLDivElement {
   return el;
 }
 
+function createVolunteerMarker(
+  volunteer: VolunteerMapPoint,
+  selected: boolean,
+  onSelect: () => void,
+): HTMLButtonElement {
+  const el = document.createElement("button");
+  el.type = "button";
+  el.className = `volunteer-marker${selected ? " is-selected" : ""}`;
+  el.title = `${volunteer.displayName} · ${volunteer.addressLabel}`;
+  el.setAttribute("aria-label", `查看 ${volunteer.displayName}`);
+  el.innerHTML = `<span class="volunteer-marker__icon" aria-hidden="true">👤</span><span class="volunteer-marker__label"></span>`;
+  const label = el.querySelector<HTMLSpanElement>(".volunteer-marker__label");
+  if (label) label.textContent = volunteer.displayName;
+  el.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    onSelect();
+  });
+  return el;
+}
+
 function readViewport(map: MapLibreMap): MapViewport {
   const center = map.getCenter();
   const bounds = map.getBounds();
@@ -197,11 +222,13 @@ export function DrivingMap({
   navigating,
   selectedCctvId,
   selectedDisasterId,
+  selectedVolunteerId,
   cameras,
   speedEnforcement,
   traffic,
   disasters,
   accidents,
+  volunteers,
   route,
   routeMeters,
   distanceToNextMeters,
@@ -210,17 +237,21 @@ export function DrivingMap({
   fitRouteKey,
   onCctvSelect,
   onDisasterSelect,
+  onVolunteerSelect,
   onUserPan,
   onViewportChange,
   onLongPress,
 }: DrivingMapProps) {
+  const [mapLoaded, setMapLoaded] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const vehicleMarkerRef = useRef<Marker | null>(null);
   const intelMarkersRef = useRef<Marker[]>([]);
   const destMarkerRef = useRef<Marker | null>(null);
+  const volunteerMarkersRef = useRef<Marker[]>([]);
   const onCctvSelectRef = useRef(onCctvSelect);
   const onDisasterSelectRef = useRef(onDisasterSelect);
+  const onVolunteerSelectRef = useRef(onVolunteerSelect);
   const onUserPanRef = useRef(onUserPan);
   const onViewportChangeRef = useRef(onViewportChange);
   const onLongPressRef = useRef(onLongPress);
@@ -250,6 +281,7 @@ export function DrivingMap({
   useEffect(() => {
     onCctvSelectRef.current = onCctvSelect;
     onDisasterSelectRef.current = onDisasterSelect;
+    onVolunteerSelectRef.current = onVolunteerSelect;
     onUserPanRef.current = onUserPan;
     onViewportChangeRef.current = onViewportChange;
     onLongPressRef.current = onLongPress;
@@ -269,6 +301,7 @@ export function DrivingMap({
   }, [
     onCctvSelect,
     onDisasterSelect,
+    onVolunteerSelect,
     onUserPan,
     onViewportChange,
     onLongPress,
@@ -427,6 +460,7 @@ export function DrivingMap({
         console.error("CCTV layer skipped", error);
       }
       readyRef.current = true;
+      setMapLoaded(true);
       map.jumpTo(
         cameraOptions(
           map,
@@ -589,6 +623,8 @@ export function DrivingMap({
       destMarkerRef.current = null;
       for (const marker of intelMarkersRef.current) marker.remove();
       intelMarkersRef.current = [];
+      for (const marker of volunteerMarkersRef.current) marker.remove();
+      volunteerMarkersRef.current = [];
       map.remove();
       mapRef.current = null;
     };
@@ -648,6 +684,41 @@ export function DrivingMap({
     }
 
   }, [accidents]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded) return;
+    for (const marker of volunteerMarkersRef.current) marker.remove();
+    volunteerMarkersRef.current = volunteers.map((volunteer) =>
+      new Marker({
+        element: createVolunteerMarker(
+          volunteer,
+          volunteer.id === selectedVolunteerId,
+          () => onVolunteerSelectRef.current(volunteer.id),
+        ),
+        anchor: "bottom",
+      })
+        .setLngLat([volunteer.location.lng, volunteer.location.lat])
+        .addTo(map),
+    );
+
+    const selected = volunteers.find((item) => item.id === selectedVolunteerId);
+    if (selected) {
+      map.easeTo({
+        center: [selected.location.lng, selected.location.lat],
+        zoom: Math.max(map.getZoom(), 14.6),
+        pitch: 0,
+        bearing: 0,
+        duration: 650,
+        essential: true,
+      });
+    }
+
+    return () => {
+      for (const marker of volunteerMarkersRef.current) marker.remove();
+      volunteerMarkersRef.current = [];
+    };
+  }, [mapLoaded, selectedVolunteerId, volunteers]);
 
   useEffect(() => {
     const map = mapRef.current;
