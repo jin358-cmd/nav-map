@@ -6,6 +6,7 @@ import {
   voicePhaseForDistance,
   type VoicePhase,
 } from "@/lib/nav-voice";
+import { VERIFIED_ROADWORK_VOICE } from "@/lib/roadwork/proximity.mjs";
 import type { RouteStep } from "@/types/domain";
 
 async function speakWithChatGpt(text: string) {
@@ -62,6 +63,7 @@ export function useNavigationVoice({
   distanceMeters,
   offRoute,
   destinationLabel,
+  roadworkAlertId = null,
 }: {
   enabled: boolean;
   navigating: boolean;
@@ -69,10 +71,12 @@ export function useNavigationVoice({
   distanceMeters: number;
   offRoute: boolean;
   destinationLabel: string;
+  roadworkAlertId?: string | null;
 }) {
   const lastKeyRef = useRef("");
   const speakingRef = useRef(false);
   const startedRef = useRef(false);
+  const announcedRoadworkRef = useRef(new Set<string>());
 
   useEffect(() => {
     if (!enabled || !navigating) {
@@ -129,4 +133,24 @@ export function useNavigationVoice({
     offRoute,
     step,
   ]);
+
+  useEffect(() => {
+    if (!enabled || !navigating) {
+      announcedRoadworkRef.current.clear();
+      return;
+    }
+    if (!roadworkAlertId || announcedRoadworkRef.current.has(roadworkAlertId)) return;
+    if (speakingRef.current) return;
+    announcedRoadworkRef.current.add(roadworkAlertId);
+    speakingRef.current = true;
+    void (async () => {
+      try {
+        await speakWithChatGpt(VERIFIED_ROADWORK_VOICE);
+      } catch {
+        await speakWithSystem(VERIFIED_ROADWORK_VOICE);
+      } finally {
+        speakingRef.current = false;
+      }
+    })();
+  }, [enabled, navigating, roadworkAlertId]);
 }

@@ -28,7 +28,9 @@ import { upsertIntelligenceLayers } from "@/lib/map-layers";
 import { configureMapLibreWorker } from "@/lib/maplibre-worker";
 import { applyDarkDrivingTheme } from "@/lib/map-style";
 import { damp, distanceKm, lerp, lerpAngle } from "@/lib/geo";
+import { bindRoadworkLayerClicks, upsertRoadworkLayer } from "@/lib/roadwork-layer";
 import { upsertSpeedEnforcementLayer } from "@/lib/speed-enforcement-layer";
+import type { RoadworkEvent } from "@/lib/roadwork/public";
 import type {
   AccidentReport,
   CameraMode,
@@ -52,6 +54,7 @@ type DrivingMapProps = {
   speedEnforcement: SpeedEnforcementPoint[];
   traffic: TrafficSegment[];
   disasters: DisasterAlert[];
+  roadwork: RoadworkEvent[];
   accidents: AccidentReport[];
   route: [number, number][];
   routeMeters: number;
@@ -61,6 +64,8 @@ type DrivingMapProps = {
   fitRouteKey: number;
   onCctvSelect: (cameraId: string) => void;
   onDisasterSelect: (alertId: string) => void;
+  selectedRoadworkId: string | null;
+  onRoadworkSelect: (eventId: string) => void;
   onUserPan: () => void;
   onViewportChange: (viewport: MapViewport) => void;
   onLongPress?: (location: { lng: number; lat: number }) => void;
@@ -201,6 +206,7 @@ export function DrivingMap({
   speedEnforcement,
   traffic,
   disasters,
+  roadwork,
   accidents,
   route,
   routeMeters,
@@ -210,6 +216,8 @@ export function DrivingMap({
   fitRouteKey,
   onCctvSelect,
   onDisasterSelect,
+  selectedRoadworkId,
+  onRoadworkSelect,
   onUserPan,
   onViewportChange,
   onLongPress,
@@ -232,7 +240,10 @@ export function DrivingMap({
   const speedEnforcementRef = useRef(speedEnforcement);
   const selectedRef = useRef(selectedCctvId);
   const disastersRef = useRef(disasters);
+  const roadworkRef = useRef(roadwork);
   const selectedDisasterRef = useRef(selectedDisasterId);
+  const selectedRoadworkRef = useRef(selectedRoadworkId);
+  const onRoadworkSelectRef = useRef(onRoadworkSelect);
   const followVehicleRef = useRef(followVehicle);
   const navigatingRef = useRef(navigating);
   const approachingRef = useRef(approachingIntersection);
@@ -250,6 +261,7 @@ export function DrivingMap({
   useEffect(() => {
     onCctvSelectRef.current = onCctvSelect;
     onDisasterSelectRef.current = onDisasterSelect;
+    onRoadworkSelectRef.current = onRoadworkSelect;
     onUserPanRef.current = onUserPan;
     onViewportChangeRef.current = onViewportChange;
     onLongPressRef.current = onLongPress;
@@ -261,7 +273,9 @@ export function DrivingMap({
     speedEnforcementRef.current = speedEnforcement;
     selectedRef.current = selectedCctvId;
     disastersRef.current = disasters;
+    roadworkRef.current = roadwork;
     selectedDisasterRef.current = selectedDisasterId;
+    selectedRoadworkRef.current = selectedRoadworkId;
     navigatingRef.current = navigating;
     approachingRef.current = approachingIntersection;
     routeMetersRef.current = routeMeters;
@@ -269,6 +283,7 @@ export function DrivingMap({
   }, [
     onCctvSelect,
     onDisasterSelect,
+    onRoadworkSelect,
     onUserPan,
     onViewportChange,
     onLongPress,
@@ -280,7 +295,9 @@ export function DrivingMap({
     speedEnforcement,
     selectedCctvId,
     selectedDisasterId,
+    selectedRoadworkId,
     disasters,
+    roadwork,
     navigating,
     approachingIntersection,
     routeMeters,
@@ -423,6 +440,8 @@ export function DrivingMap({
         bindCctvLayerClicks(map, (id) => onCctvSelectRef.current(id));
         upsertDisasterLayer(map, disastersRef.current, selectedDisasterRef.current);
         bindDisasterLayerClicks(map, (id) => onDisasterSelectRef.current(id));
+        upsertRoadworkLayer(map, roadworkRef.current, selectedRoadworkRef.current);
+        bindRoadworkLayerClicks(map, (id) => onRoadworkSelectRef.current(id));
       } catch (error) {
         console.error("CCTV layer skipped", error);
       }
@@ -624,6 +643,12 @@ export function DrivingMap({
     if (!map || !readyRef.current) return;
     upsertDisasterLayer(map, disasters, selectedDisasterId);
   }, [disasters, selectedDisasterId]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !readyRef.current) return;
+    upsertRoadworkLayer(map, roadwork, selectedRoadworkId);
+  }, [roadwork, selectedRoadworkId]);
 
   useEffect(() => {
     const map = mapRef.current;

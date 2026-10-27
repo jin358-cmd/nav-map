@@ -17,6 +17,7 @@ import { CctvDetailCard } from "@/components/overlay/cctv-detail-card";
 import { DisasterDetailCard } from "@/components/overlay/disaster-detail-card";
 import { NextIntersectionHud } from "@/components/overlay/navigation-banner";
 import { RoadInformationCard } from "@/components/overlay/road-information-card";
+import { RoadworkDetailCard, RoadworkPanel } from "@/components/overlay/roadwork-panel";
 import { RouteConfirmBar } from "@/components/overlay/route-preview";
 import { YouTubeMusicPlayer } from "@/components/overlay/youtube-music-player";
 import { useCctvView } from "@/hooks/use-cctv-view";
@@ -25,6 +26,7 @@ import { useGoogleAccount } from "@/hooks/use-google-account";
 import { useLandscape } from "@/hooks/use-landscape";
 import { useYoutubeLibrary } from "@/hooks/use-youtube-library";
 import { useNavigationVoice } from "@/hooks/use-navigation-voice";
+import { useRoadworkView } from "@/hooks/use-roadwork-view";
 import { useSpeedEnforcementView } from "@/hooks/use-speed-enforcement-view";
 import { useTrafficView } from "@/hooks/use-traffic-view";
 import { roadIntelFromCameras } from "@/lib/cctv-intel";
@@ -41,6 +43,7 @@ import {
   subscribeFavorites,
 } from "@/lib/favorites";
 import { pinSelected } from "@/lib/map-visibility";
+import { nextVoiceAlert } from "@/lib/roadwork/proximity.mjs";
 import { destinationToHit } from "@/lib/poi-search";
 import { CITY_TRAFFIC_FOCUS_KM } from "@/lib/traffic-constants";
 import {
@@ -120,6 +123,8 @@ export function DrivingApp() {
   const [selectedDisaster, setSelectedDisaster] = useState<DisasterAlert | null>(
     null,
   );
+  const [roadworkOpen, setRoadworkOpen] = useState(false);
+  const [selectedRoadworkId, setSelectedRoadworkId] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [navigating, setNavigating] = useState(false);
   const [intelCollapse, setIntelCollapse] = useState(0);
@@ -179,6 +184,32 @@ export function DrivingApp() {
   const approachingIntersection =
     navigating && distanceToNextMeters <= INTERSECTION_APPROACH_METERS;
 
+  const {
+    alerts: disasters,
+    origin: disasterOrigin,
+    error: disasterError,
+    reload: reloadDisasters,
+  } = useDisasterView(refreshNonce);
+  const roadworkView = useRoadworkView(refreshNonce);
+  const selectedRoadwork = useMemo(
+    () => roadworkView.events.find((event) => event.id === selectedRoadworkId) ?? null,
+    [roadworkView.events, selectedRoadworkId],
+  );
+  const roadworkAlertId = useMemo(() => {
+    if (!navigating || !voiceEnabled) return null;
+    return nextVoiceAlert(
+      roadworkView.catalog.mapEvents,
+      { lng: vehicle.lng, lat: vehicle.lat },
+      new Set(),
+    );
+  }, [
+    navigating,
+    roadworkView.catalog.mapEvents,
+    vehicle.lat,
+    vehicle.lng,
+    voiceEnabled,
+  ]);
+
   useNavigationVoice({
     enabled: voiceEnabled,
     navigating,
@@ -186,6 +217,7 @@ export function DrivingApp() {
     distanceMeters: distanceToNextMeters,
     offRoute: navigationProgress?.offRoute ?? false,
     destinationLabel: destination?.label ?? "",
+    roadworkAlertId,
   });
 
   const {
@@ -226,13 +258,6 @@ export function DrivingApp() {
     viewport,
     refreshNonce,
   });
-
-  const {
-    alerts: disasters,
-    origin: disasterOrigin,
-    error: disasterError,
-    reload: reloadDisasters,
-  } = useDisasterView(refreshNonce);
 
   useEffect(() => {
     let cancelled = false;
@@ -539,6 +564,7 @@ export function DrivingApp() {
         speedEnforcement={speedEnforcement}
         traffic={traffic}
         disasters={visibleDisasters}
+        roadwork={roadworkView.catalog.mapEvents}
         accidents={visibleAccidents}
         route={route}
         routeMeters={navigationProgress?.routeMeters ?? 0}
@@ -549,8 +575,16 @@ export function DrivingApp() {
         onCctvSelect={selectCamera}
         onDisasterSelect={(id) => {
           setSelectedCctv(null);
+          setSelectedRoadworkId(null);
           setMusicMode((mode) => (mode === "open" ? "mini" : mode));
           setSelectedDisaster(disasters.find((alert) => alert.id === id) ?? null);
+        }}
+        selectedRoadworkId={selectedRoadworkId}
+        onRoadworkSelect={(id) => {
+          setSelectedCctv(null);
+          setSelectedDisaster(null);
+          setRoadworkOpen(true);
+          setSelectedRoadworkId(id);
         }}
         onUserPan={() => {
           setFollowVehicle(false);
@@ -622,12 +656,34 @@ export function DrivingApp() {
         <MapControls
           cameraMode={cameraMode}
           gpsStatus={gpsStatus}
+          roadworkOpen={roadworkOpen}
           onLocate={() => void locate()}
           onToggleCamera={() =>
             setCameraMode((mode) => (mode === "3d" ? "2d" : "3d"))
           }
+          onToggleRoadwork={() => {
+            setRoadworkOpen((open) => !open);
+            setSelectedRoadworkId(null);
+          }}
         />
       </div>
+
+      {roadworkOpen ? (
+        <div className="absolute top-24 left-3 z-30 sm:top-28">
+          <RoadworkPanel
+            catalog={roadworkView.catalog}
+            sampleActive={roadworkView.sample === "structural"}
+            onShowSample={roadworkView.showStructuralSample}
+            onClearSample={roadworkView.clearSample}
+            onClose={() => setRoadworkOpen(false)}
+            onSelect={(event) => {
+              setSelectedCctv(null);
+              setSelectedDisaster(null);
+              setSelectedRoadworkId(event.id);
+            }}
+          />
+        </div>
+      ) : null}
 
       {!navigating ? (
         <div className="pointer-events-none absolute bottom-28 left-2 z-10 hidden max-w-[11rem] sm:bottom-36 sm:left-3 sm:block">
@@ -648,6 +704,12 @@ export function DrivingApp() {
             alert={selectedDisaster}
             origin={disasterOrigin}
             onClose={() => setSelectedDisaster(null)}
+          />
+        ) : null}
+        {selectedRoadwork ? (
+          <RoadworkDetailCard
+            event={selectedRoadwork}
+            onClose={() => setSelectedRoadworkId(null)}
           />
         ) : null}
         {musicMode !== "off" ? (
@@ -723,9 +785,9 @@ export function DrivingApp() {
           {loadError}
         </div>
       ) : null}
-      {cctvError || trafficError || speedEnforcementError || disasterError ? (
+      {cctvError || trafficError || speedEnforcementError || disasterError || roadworkView.error ? (
         <div className="pointer-events-none absolute top-[max(11rem,calc(env(safe-area-inset-top)+10rem))] left-1/2 z-20 -translate-x-1/2 rounded-xl border border-amber-300/25 bg-black/65 px-3 py-2 text-xs text-amber-100">
-          {cctvError ?? trafficError ?? speedEnforcementError ?? disasterError}
+          {cctvError ?? trafficError ?? speedEnforcementError ?? disasterError ?? roadworkView.error}
         </div>
       ) : null}
     </div>
@@ -744,6 +806,7 @@ function Legend() {
     { color: "bg-[#fbbf24]", label: "測速執法" },
     { color: "bg-[#ff3b3b]", label: "事故" },
     { color: "bg-[#ff9f1c]", label: "災害" },
+    { color: "bg-[#93c5fd]", label: "已確認施工" },
   ];
 
   return (

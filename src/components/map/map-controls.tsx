@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { LocateFixed } from "lucide-react";
+import { Construction, LocateFixed } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { CameraMode, GpsStatus } from "@/types/domain";
@@ -9,15 +9,19 @@ import type { CameraMode, GpsStatus } from "@/types/domain";
 type MapControlsProps = {
   cameraMode: CameraMode;
   gpsStatus: GpsStatus;
+  roadworkOpen: boolean;
   onLocate: () => void;
   onToggleCamera: () => void;
+  onToggleRoadwork: () => void;
 };
 
 export function MapControls({
   cameraMode,
   gpsStatus,
+  roadworkOpen,
   onLocate,
   onToggleCamera,
+  onToggleRoadwork,
 }: MapControlsProps) {
   const locating = gpsStatus === "locating";
 
@@ -38,6 +42,13 @@ export function MapControls({
         <span className="text-[13px] font-bold leading-none tracking-tight">
           {cameraMode === "3d" ? "3D" : "2"}
         </span>
+      </ControlButton>
+      <ControlButton
+        label={roadworkOpen ? "關閉道路施工" : "道路施工"}
+        onClick={onToggleRoadwork}
+        active={roadworkOpen}
+      >
+        <Construction className="size-5" />
       </ControlButton>
     </div>
   );
