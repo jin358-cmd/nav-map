@@ -31,6 +31,7 @@ import { ParkingPanel } from "@/components/overlay/parking-panel";
 import { PlaceInfoCard } from "@/components/overlay/place-info-card";
 import { NextIntersectionHud } from "@/components/overlay/navigation-banner";
 import { RoadInformationCard } from "@/components/overlay/road-information-card";
+import { RoadworkDetailCard, RoadworkPanel } from "@/components/overlay/roadwork-panel";
 import { RouteConfirmBar } from "@/components/overlay/route-preview";
 import { YouTubeMusicPlayer } from "@/components/overlay/youtube-music-player";
 import { useCctvView } from "@/hooks/use-cctv-view";
@@ -39,6 +40,7 @@ import { useGoogleAccount } from "@/hooks/use-google-account";
 import { useLandscape } from "@/hooks/use-landscape";
 import { useYoutubeLibrary } from "@/hooks/use-youtube-library";
 import { useNavigationVoice } from "@/hooks/use-navigation-voice";
+import { useRoadworkView } from "@/hooks/use-roadwork-view";
 import { useSpeedEnforcementView } from "@/hooks/use-speed-enforcement-view";
 import { useMapPois } from "@/hooks/use-map-pois";
 import { useLocatedRegion } from "@/hooks/use-located-region";
@@ -54,6 +56,7 @@ import { mapVisibleDisasters } from "@/lib/disaster-query";
 import { isDemoDataEnabled } from "@/lib/runtime-demo";
 import { rememberAddress } from "@/lib/address-history";
 import { segmentAnchor } from "@/lib/traffic-query";
+import { nextVoiceAlert } from "@/lib/roadwork/proximity.mjs";
 import {
   DEFAULT_POI_LAYER_VISIBILITY,
   activePoiLayerIds,
@@ -296,6 +299,8 @@ export function DrivingApp() {
   const [poiMenuOpen, setPoiMenuOpen] = useState(false);
   const [poiReadFocus, setPoiReadFocus] = useState<PoiMainLayerId | null>(null);
   const [focusTarget, setFocusTarget] = useState<MapFocusTarget | null>(null);
+  const [roadworkOpen, setRoadworkOpen] = useState(false);
+  const [selectedRoadworkId, setSelectedRoadworkId] = useState<string | null>(null);
   const [parkingOpen, setParkingOpen] = useState(false);
   const [parkingMinimized, setParkingMinimized] = useState(false);
   const [parkingSort, setParkingSort] = useState<ParkingSort>("distance");
@@ -455,6 +460,26 @@ export function DrivingApp() {
     isTurnManeuver(followingStep) ? followingStep?.distanceMeters : undefined,
   );
   const approachingIntersection = maneuverAlertActive(nextAlertPhase);
+  const roadworkView = useRoadworkView(refreshNonce);
+  const selectedRoadwork = useMemo(
+    () => roadworkView.events.find((event) => event.id === selectedRoadworkId) ?? null,
+    [roadworkView.events, selectedRoadworkId],
+  );
+  const roadworkAlertId = useMemo(() => {
+    if (!voiceEnabled || !navigating || vehicle.source !== "gps") return null;
+    return nextVoiceAlert(
+      roadworkView.catalog.mapEvents,
+      { lng: vehicle.lng, lat: vehicle.lat },
+      new Set(),
+    );
+  }, [
+    voiceEnabled,
+    navigating,
+    vehicle.source,
+    vehicle.lng,
+    vehicle.lat,
+    roadworkView.catalog.mapEvents,
+  ]);
 
   useNavigationVoice({
     enabled: voiceEnabled,
@@ -464,6 +489,7 @@ export function DrivingApp() {
     offRoute: navigationProgress?.offRoute ?? false,
     destinationLabel: destination?.label ?? "",
     routeGeneration: routeEpoch,
+    roadworkAlertId,
   });
 
   const queryOrigin = useMemo(
@@ -1585,8 +1611,10 @@ export function DrivingApp() {
         disasters={visibleDisasters}
         accidents={visibleAccidents}
         constructions={visibleConstructions}
+        roadwork={roadworkView.catalog.mapEvents}
         selectedAccidentId={selectedAccident?.id ?? null}
         selectedConstructionId={selectedConstruction?.id ?? null}
+        selectedRoadworkId={selectedRoadworkId}
         layerVisibility={mapLayerVisibility}
         focusTarget={focusTarget}
         parkingLots={parkingLots}
@@ -1594,6 +1622,12 @@ export function DrivingApp() {
         parkingVisible={parkingOpen}
         mapPois={visibleMapPois}
         selectedPoiId={selectedMapPlace?.kind === "poi" ? selectedMapPlace.id : null}
+        onRoadworkSelect={(id) => {
+          setSelectedRoadworkId(id);
+          setRoadworkOpen(true);
+          setSelectedEvent(null);
+          setSelectedCctv(null);
+        }}
         onParkingSelect={(id) => {
           const found = parkingLots.find((lot) => lot.id === id) ?? null;
           setSelectedParking(found);
@@ -1993,6 +2027,7 @@ export function DrivingApp() {
         </div>
         <MapControls
           cameraMode={cameraMode}
+          roadworkOpen={roadworkOpen}
           followOrientation={followOrientation}
           followVehicle={followVehicle}
           gpsStatus={gpsStatus}
@@ -2019,6 +2054,13 @@ export function DrivingApp() {
             setStyleMenuOpen(false);
             setToolsDrawerOpen(false);
             setFavoritesOpen(false);
+          }}
+          onToggleRoadwork={() => {
+            setRoadworkOpen((open) => !open);
+            setSelectedRoadworkId(null);
+            setPoiMenuOpen(false);
+            setStyleMenuOpen(false);
+            setToolsDrawerOpen(false);
           }}
           onToggleToolsDrawer={() => {
             setStyleMenuOpen(false);
@@ -2099,6 +2141,24 @@ export function DrivingApp() {
           }
         />
       </div>
+
+      {roadworkOpen ? (
+        <div id="navpilot-roadwork-panel" className="pointer-events-auto absolute top-[max(5rem,env(safe-area-inset-top))] left-3 z-[55]">
+          <RoadworkPanel
+            catalog={roadworkView.catalog}
+            sampleActive={roadworkView.sample === "structural"}
+            onShowSample={roadworkView.showStructuralSample}
+            onClearSample={roadworkView.clearSample}
+            onClose={() => setRoadworkOpen(false)}
+            onSelect={(event) => {
+              setSelectedRoadworkId(event.id);
+              setSelectedEvent(null);
+              setSelectedCctv(null);
+              setSelectedMapPlace(null);
+            }}
+          />
+        </div>
+      ) : null}
 
       {!navigating ? (
         <div className="pointer-events-none absolute bottom-28 left-2 z-10 hidden max-w-[11rem] sm:bottom-36 sm:left-3 sm:block">
@@ -2294,6 +2354,12 @@ export function DrivingApp() {
             onClose={() => setSelectedMapPlace(null)}
           />
         ) : null}
+        {selectedRoadwork ? (
+          <RoadworkDetailCard
+            event={selectedRoadwork}
+            onClose={() => setSelectedRoadworkId(null)}
+          />
+        ) : null}
         {eventListKind ? (
           <EventListPanel
             kind={eventListKind}
@@ -2356,9 +2422,9 @@ export function DrivingApp() {
         </div>
       </footer>
 
-      {cctvError || speedEnforcementError || disasterError || parkingError ? (
+      {cctvError || speedEnforcementError || disasterError || parkingError || roadworkView.error ? (
         <div className="pointer-events-none absolute top-[max(11rem,calc(env(safe-area-inset-top)+10rem))] left-1/2 z-20 -translate-x-1/2 rounded-xl border border-amber-300/25 bg-black/65 px-3 py-2 text-xs text-amber-100">
-          {cctvError ?? speedEnforcementError ?? disasterError ?? parkingError}
+          {cctvError ?? speedEnforcementError ?? disasterError ?? parkingError ?? roadworkView.error}
         </div>
       ) : null}
     </div>

@@ -7,6 +7,7 @@ import {
   type ManeuverVoiceFlags,
 } from "@/lib/maneuver-guidance";
 import { spokenInstruction, type VoicePhase } from "@/lib/nav-voice";
+import { VERIFIED_ROADWORK_VOICE } from "@/lib/roadwork/proximity.mjs";
 import type { RouteStep } from "@/types/domain";
 
 async function speakWithChatGpt(text: string, signal: AbortSignal) {
@@ -78,6 +79,7 @@ export function useNavigationVoice({
   offRoute,
   destinationLabel,
   routeGeneration,
+  roadworkAlertId = null,
 }: {
   enabled: boolean;
   navigating: boolean;
@@ -86,8 +88,10 @@ export function useNavigationVoice({
   offRoute: boolean;
   destinationLabel: string;
   routeGeneration?: number;
+  roadworkAlertId?: string | null;
 }) {
   const flagsRef = useRef<ManeuverVoiceFlags | null>(null);
+  const announcedRoadworkRef = useRef(new Set<string>());
   const speakingRef = useRef(false);
   const startedRef = useRef(false);
   const arrivePlayedRef = useRef(false);
@@ -141,6 +145,7 @@ export function useNavigationVoice({
       arrivePlayedRef.current = false;
       offRoutePlayedRef.current = false;
       pendingRef.current = null;
+      announcedRoadworkRef.current.clear();
     }
 
     if (!enabled || !navigating) {
@@ -149,6 +154,7 @@ export function useNavigationVoice({
       arrivePlayedRef.current = false;
       offRoutePlayedRef.current = false;
       pendingRef.current = null;
+      announcedRoadworkRef.current.clear();
       abortRef.current?.abort();
       if (typeof window !== "undefined") window.speechSynthesis?.cancel();
       return;
@@ -205,4 +211,12 @@ export function useNavigationVoice({
     routeGeneration,
     step,
   ]);
+
+  useEffect(() => {
+    if (!enabled || !navigating || !roadworkAlertId) return;
+    if (announcedRoadworkRef.current.has(roadworkAlertId)) return;
+    announcedRoadworkRef.current.add(roadworkAlertId);
+    // The shared voice queue avoids interrupting an active maneuver instruction.
+    playRef.current({ phase: "offroute", text: VERIFIED_ROADWORK_VOICE });
+  }, [enabled, navigating, roadworkAlertId]);
 }

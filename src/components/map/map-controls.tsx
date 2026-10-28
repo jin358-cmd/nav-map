@@ -9,7 +9,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
-import { ChevronLeft, Compass, LayoutGrid, Loader2, LocateFixed, ShoppingCart } from "lucide-react";
+import { ChevronLeft, Compass, Construction, LayoutGrid, Loader2, LocateFixed, ShoppingCart } from "lucide-react";
 import { MapStyleMenu } from "@/components/overlay/map-style-menu";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,6 +40,7 @@ type MapControlsProps = {
   styleMenuOpen: boolean;
   toolsDrawerOpen?: boolean;
   poiMenuOpen?: boolean;
+  roadworkOpen?: boolean;
   poiLayersLoading?: boolean;
   poiLayersProgress?: number;
   navigating?: boolean;
@@ -51,6 +52,7 @@ type MapControlsProps = {
   onToggleStyleMenu: () => void;
   onToggleToolsDrawer?: () => void;
   onTogglePoiMenu?: () => void;
+  onToggleRoadwork?: () => void;
 };
 
 export function MapControls({
@@ -63,6 +65,7 @@ export function MapControls({
   styleMenuOpen,
   toolsDrawerOpen = false,
   poiMenuOpen = false,
+  roadworkOpen = false,
   poiLayersLoading = false,
   poiLayersProgress = 0,
   navigating = false,
@@ -74,6 +77,7 @@ export function MapControls({
   onToggleStyleMenu,
   onToggleToolsDrawer,
   onTogglePoiMenu,
+  onToggleRoadwork,
 }: MapControlsProps) {
   const locating = gpsStatus === "locating";
   const northUp = followOrientation === "north-up";
@@ -86,7 +90,7 @@ export function MapControls({
     ? "目前北方朝上。點擊切換車頭向上"
     : "目前車頭向上。點擊切換北方朝上";
   const tone = mapControlTone(pendingMapDisplayMode ?? mapDisplayMode);
-  const flyoutOpen = styleMenuOpen || toolsDrawerOpen || poiMenuOpen;
+  const flyoutOpen = styleMenuOpen || toolsDrawerOpen || poiMenuOpen || roadworkOpen;
   const [wasNavigating, setWasNavigating] = useState(navigating);
   const [railRevealed, setRailRevealed] = useState(false);
   const [idleToken, setIdleToken] = useState(0);
@@ -265,6 +269,18 @@ export function MapControls({
           {cameraMode === "3d" ? "3D" : "2D"}
         </span>
       </ControlButton>
+      {onToggleRoadwork ? (
+        <ControlButton
+          label={roadworkOpen ? "關閉道路施工公告" : "開啟道路施工公告"}
+          onClick={onToggleRoadwork}
+          active={roadworkOpen}
+          expanded={roadworkOpen}
+          controls="navpilot-roadwork-panel"
+          tone={tone}
+        >
+          <Construction className="size-6" strokeWidth={2.5} />
+        </ControlButton>
+      ) : null}
       <MapStyleMenu
         mode={mapDisplayMode}
         pendingMode={pendingMapDisplayMode}
