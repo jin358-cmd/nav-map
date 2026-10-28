@@ -65,7 +65,10 @@ export async function GET(request: Request) {
   const lng = readNumber(url.searchParams.get("lng"));
   const lat = readNumber(url.searchParams.get("lat"));
   const radius = readNumber(url.searchParams.get("radius")) ?? 2600;
-  const limit = readNumber(url.searchParams.get("limit")) ?? 80;
+  // Explicit caller limits must be honored; keep historical default map density otherwise.
+  const requestedLimit = readNumber(url.searchParams.get("limit"));
+  const limit = Math.max(1, Math.min(240, Math.floor(requestedLimit ?? 80)));
+  const explicitLimit = url.searchParams.has("limit");
   const requested = readLayers(url.searchParams.get("layers"));
   const categories = readCategories(url.searchParams.get("categories"));
   const layers = requested ?? [...POI_MAIN_LAYER_IDS];
@@ -107,10 +110,11 @@ export async function GET(request: Request) {
       restaurantKind,
       hotelKind,
     );
+    const selected = explicitLimit ? rows.slice(0, Math.min(limit, 24)) : rows;
     return Response.json(
       {
-        pois: rows.map(serializePoi),
-        count: rows.length,
+        pois: selected.map(serializePoi),
+        count: selected.length,
         ...southPoiMeta("local-index"),
       },
       {
@@ -143,10 +147,11 @@ export async function GET(request: Request) {
     limit: Math.min(limit, 240),
   });
   const rows = live?.pois ?? poisInBounds({ west, south, east, north }, origin, limit, layers);
+  const selected = explicitLimit ? rows.slice(0, limit) : rows;
   return Response.json(
     {
-      pois: rows.map(serializePoi),
-      count: rows.length,
+      pois: selected.map(serializePoi),
+      count: selected.length,
       ...southPoiMeta(live ? "supabase" : "local-index"),
     },
     {
