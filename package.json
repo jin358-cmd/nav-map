@@ -37,7 +37,9 @@
     "advise:address": "node scripts/advise-address-index.mjs",
     "classify:geo-fail": "node scripts/classify-gcis-geo-failures.mjs",
     "reconstruct:nlsc-fails": "node scripts/reconstruct-nlsc-fails.mjs",
-    "retry:nlsc-fails": "node scripts/retry-nlsc-fails.mjs"
+    "retry:nlsc-fails": "node scripts/retry-nlsc-fails.mjs",
+    "preflight:tdx": "node scripts/tdx-env-preflight.mjs",
+    "test:tdx:env": "node --test scripts/tdx-env-preflight.test.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
