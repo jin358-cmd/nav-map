@@ -10,6 +10,8 @@ import {
 
 function formatWhen(value: string | null) {
   if (!value) return "尚未確認";
+  const dateOnly = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (dateOnly) return `${Number(dateOnly[1])}/${Number(dateOnly[2])}/${Number(dateOnly[3])}`;
   const time = new Date(value);
   if (Number.isNaN(time.getTime())) return "尚未確認";
   return new Intl.DateTimeFormat("zh-TW", {
@@ -65,9 +67,9 @@ export function RoadworkPanel({
             {catalog.previewLabel}
           </p>
         ) : null}
-        {catalog.origin === "degraded" && catalog.degradedReason === "unconfigured" ? (
+        {catalog.origin === "degraded" && catalog.notices.length === 0 && catalog.mapEvents.length === 0 ? (
           <p className="text-xs leading-5 text-zinc-300">
-            沒有 TDX 憑證，也沒有官方公告樣本。地圖維持空白，不顯示施工標記。
+            施工資料暫時無法載入。地圖維持空白，不顯示施工標記。
           </p>
         ) : null}
         {catalog.origin === "empty" ? (
@@ -85,6 +87,7 @@ export function RoadworkPanel({
           >
             <span className="text-[10px] text-sky-200">{ROADWORK_CLASS_LABEL[event.display_class]}</span>
             <span className="mt-0.5 block text-sm font-medium">{roadworkField(event.road_name)}</span>
+            <span className="mt-1 block text-[11px] leading-4 text-zinc-300">{roadworkField(event.segment_text)}</span>
             <span className="mt-1 block text-[11px] leading-4 text-zinc-400">
               {formatWhen(event.scheduled_start)} – {formatWhen(event.scheduled_end)}
             </span>
@@ -96,7 +99,7 @@ export function RoadworkPanel({
             onClick={sampleActive ? onClearSample : onShowSample}
             className="w-full rounded-xl border border-white/15 px-3 py-2 text-left text-[11px] text-zinc-300 hover:bg-white/10"
           >
-            {sampleActive ? "回到空白施工資料" : "檢視結構測試公告（非官方，含一筆重複來源）"}
+            {sampleActive ? "回到官方公告樣本" : "檢視結構測試公告（非官方，含一筆重複來源）"}
           </button>
         ) : null}
       </div>

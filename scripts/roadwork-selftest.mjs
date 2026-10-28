@@ -3,6 +3,8 @@ import {
   buildCatalog,
   degradeTdxStatus,
   gateCaseCatalog,
+  officialSampleCatalog,
+  officialSampleRaw,
   parseGeometry,
   structuralCatalog,
   tdxFetchPlan,
@@ -110,6 +112,43 @@ assert.equal(tdx.events[0].display_class, "official_notice");
 
 const empty = buildCatalog(tdxPayloadToRaw([]), NOW);
 assert.equal(empty.counts.unique, 0);
+
+const official = officialSampleCatalog(NOW);
+const officialRaw = officialSampleRaw();
+assert.equal(officialRaw.declaredCount, 11);
+assert.equal(officialRaw.extractedOn, "2026-10-19");
+assert.equal(official.counts.input, 11);
+assert.equal(official.counts.unique, 11);
+assert.equal(official.counts.mapVisible, 0);
+assert.equal(official.mapEvents.length, 0);
+assert.equal(official.events.filter((event) => event.source_agency === "交通部公路局").length, 10);
+assert.equal(official.events.filter((event) => event.source_agency === "臺南市政府交通局").length, 1);
+assert.ok(official.events.every((event) => event.geometry == null));
+assert.ok(official.events.every((event) => event.geometry_confidence === "none"));
+assert.ok(official.events.every((event) => event.map_visible === false));
+assert.ok(official.events.every((event) => event.voice_eligible === false));
+assert.ok(official.events.every((event) => event.closure_avoidance_eligible === false));
+assert.ok(official.events.every((event) => event.display_class === "stale_or_unknown"));
+assert.ok(official.events.every((event) => event.closure_status === "unknown"));
+assert.ok(official.events.every((event) => event.related_ids.length === 0));
+const tainan = official.events.find((event) => event.source_id === "TNN-20261016-SAMPLE-01");
+assert.equal(tainan.road_name, "健康三街");
+assert.equal(tainan.segment_text, "健康路三段至府平路口 · 臺南市安平區");
+assert.equal(tainan.direction, null);
+assert.equal(tainan.scheduled_start, "2026-10-22");
+assert.equal(tainan.scheduled_end, null);
+assert.equal(tainan.published_at, "2026-10-16");
+assert.equal(
+  tainan.source_url,
+  "https://traffic.tainan.gov.tw/Announcement/trafficcontrol?PageType=1&id=e39820c7-087a-4227-879a-7706bc3b6192&pageIndex=1",
+);
+const highway = official.events.find((event) => event.source_id === "THB-20261019-SAMPLE-01");
+assert.equal(highway.road_name, "台1線");
+assert.equal(highway.direction, "雙向");
+assert.equal(highway.affected_lane, "外側車道");
+assert.equal(highway.scheduled_start, null);
+assert.equal(highway.published_at, "2026-10-19");
+assert.equal(official.events.filter((event) => event.road_name === "台21線").length, 5);
 
 console.log("roadwork-selftest PASS");
 console.log(

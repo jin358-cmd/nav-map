@@ -2,6 +2,8 @@ import "server-only";
 import {
   buildCatalog,
   degradeTdxStatus,
+  officialSampleCatalog,
+  officialSampleRaw,
   structuralCatalog,
   tdxFetchPlan,
   tdxPayloadToRaw,
@@ -51,6 +53,20 @@ function publish(
   };
 }
 
+const OFFICIAL_SAMPLE_LABEL =
+  "2026-10-19 公開網頁公告樣本：公路局 10 筆、臺南市 1 筆。沒有座標，不代表正在施工或封路。";
+
+export function officialRoadworkCatalog(now = new Date()): RoadworkCatalogResponse {
+  const fetchedAt = now.toISOString();
+  return publish(
+    officialSampleCatalog(fetchedAt),
+    "official-sample",
+    null,
+    fetchedAt,
+    OFFICIAL_SAMPLE_LABEL,
+  );
+}
+
 export function structuralRoadworkCatalog(now = new Date()): RoadworkCatalogResponse {
   const fetchedAt = now.toISOString();
   return publish(
@@ -64,10 +80,9 @@ export function structuralRoadworkCatalog(now = new Date()): RoadworkCatalogResp
 
 export async function loadRoadworkCatalog(now = new Date()): Promise<RoadworkCatalogResponse> {
   const fetchedAt = now.toISOString();
+  const official = officialSampleRaw().records;
   const plan = tdxFetchPlan(isTdxConfigured());
-  if (!plan.fetch) {
-    return publish(buildCatalog([], fetchedAt), "degraded", "unconfigured", fetchedAt, null);
-  }
+  if (!plan.fetch) return officialRoadworkCatalog(now);
 
   if (liveCache && liveCache.expiresAt > Date.now()) return liveCache.body;
 
@@ -75,27 +90,32 @@ export async function loadRoadworkCatalog(now = new Date()): Promise<RoadworkCat
     const payloads = await fetchTdxRoadEventPayloads();
     if (!payloads.ok) {
       const body = publish(
-        buildCatalog([], fetchedAt),
+        buildCatalog(official, fetchedAt),
         "degraded",
         degradeTdxStatus(payloads.status, payloads.timedOut),
         fetchedAt,
-        null,
+        OFFICIAL_SAMPLE_LABEL,
       );
       return body;
     }
     const raw = payloads.bodies.flatMap((body) => tdxPayloadToRaw(body));
-    const catalog = buildCatalog(raw, fetchedAt);
-    const origin = catalog.events.length === 0 ? "empty" : "tdx";
+    const catalog = buildCatalog([...official, ...raw], fetchedAt);
     const body = publish(
       catalog,
-      origin,
-      catalog.events.length === 0 ? "empty" : null,
-      fetchedAt,
+      raw.length === 0 ? "official-sample" : "tdx",
       null,
+      fetchedAt,
+      OFFICIAL_SAMPLE_LABEL,
     );
     liveCache = { expiresAt: Date.now() + CACHE_MS, body };
     return body;
   } catch {
-    return publish(buildCatalog([], fetchedAt), "degraded", "upstream", fetchedAt, null);
+    return publish(
+      buildCatalog(officialSampleRaw().records, fetchedAt),
+      "degraded",
+      "upstream",
+      fetchedAt,
+      OFFICIAL_SAMPLE_LABEL,
+    );
   }
 }

@@ -8,7 +8,10 @@ const nextConfig: NextConfig = {
       "./node_modules/maplibre-gl/dist/maplibre-gl-worker.mjs",
       "./node_modules/maplibre-gl/dist/maplibre-gl-shared.mjs",
     ],
-    "/api/roadwork": ["./fixtures/roadwork/structural-notices.json"],
+    "/api/roadwork": [
+      "./fixtures/roadwork/official-sample.json",
+      "./fixtures/roadwork/structural-notices.json",
+    ],
   },
 };
 

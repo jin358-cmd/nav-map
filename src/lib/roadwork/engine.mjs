@@ -219,6 +219,46 @@ export function readJsonFixture(name) {
   return JSON.parse(readFileSync(path, "utf8"));
 }
 
+export function officialRecordToRaw(record) {
+  const segment = textOrNull(record?.segment);
+  const area = textOrNull(record?.area_description);
+  const status = textOrNull(record?.operational_status);
+  return {
+    source_id: textOrNull(record?.id),
+    source_agency: textOrNull(record?.source_agency),
+    source_url: textOrNull(record?.source_url),
+    source_type: "official_notice",
+    road_class: textOrNull(record?.road_class),
+    road_name: textOrNull(record?.road_name),
+    segment_text: [segment, area].filter(Boolean).join(" · ") || null,
+    direction: textOrNull(record?.direction),
+    affected_lane: textOrNull(record?.affected_lane),
+    description: textOrNull(record?.work_description),
+    published_at: textOrNull(record?.published_at),
+    scheduled_start: textOrNull(record?.scheduled_start),
+    scheduled_end: textOrNull(record?.scheduled_end),
+    updated_at: null,
+    geometry: record?.geometry ?? null,
+    geometry_confidence: status === "verified" ? "verified" : "none",
+    closure_claim: null,
+    last_verified_at: null,
+  };
+}
+
+export function officialSampleRaw() {
+  const file = readJsonFixture("official-sample.json");
+  const records = Array.isArray(file?.records) ? file.records : [];
+  return {
+    extractedOn: textOrNull(file?.extracted_on),
+    declaredCount: Number(file?.record_count ?? records.length),
+    records: records.map(officialRecordToRaw),
+  };
+}
+
+export function officialSampleCatalog(nowIso) {
+  return buildCatalog(officialSampleRaw().records, nowIso);
+}
+
 export function structuralCatalog(nowIso) {
   return buildCatalog(readJsonFixture("structural-notices.json"), nowIso);
 }

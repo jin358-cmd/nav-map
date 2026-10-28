@@ -40,6 +40,7 @@ export type RoadworkEvent = {
 
 export type RoadworkOrigin =
   | "empty"
+  | "official-sample"
   | "structural-fixture"
   | "tdx"
   | "degraded";
