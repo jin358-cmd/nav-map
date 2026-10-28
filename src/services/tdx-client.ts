@@ -144,6 +144,25 @@ async function fetchTdxPaged(path: string): Promise<Record<string, unknown>[]> {
   return rows;
 }
 
+export async function fetchTdxRaw(
+  path: string,
+  top = 30,
+): Promise<{ ok: boolean; status: number; body: unknown | null; timedOut: boolean }> {
+  const url = new URL(`${TDX_API_BASE}${path}`);
+  url.searchParams.set("$format", "JSON");
+  url.searchParams.set("$top", String(top));
+  try {
+    const response = await authorizedFetch(url);
+    if (!response.ok) {
+      return { ok: false, status: response.status, body: null, timedOut: false };
+    }
+    return { ok: true, status: response.status, body: await response.json(), timedOut: false };
+  } catch (error) {
+    const timedOut = error instanceof Error && error.name === "AbortError";
+    return { ok: false, status: 0, body: null, timedOut };
+  }
+}
+
 async function fetchTdxJson(
   path: string,
   options?: { top?: number; skip?: number; filter?: string; select?: string },
