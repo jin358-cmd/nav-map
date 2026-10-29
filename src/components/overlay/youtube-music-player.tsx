@@ -114,12 +114,14 @@ export function YouTubeMusicPlayer({
         if (cancelled || !hostRef.current) return;
         const mix = [...(initial.videoIds ?? [])];
         if (!mix[0]) return;
+        const tried = new Set<string>();
         const player = new Player(hostRef.current, {
-          width: "100%",
-          height: "100%",
+          host: "https://www.youtube-nocookie.com",
+          width: 320,
+          height: 180,
           videoId: mix[0],
           playerVars: {
-            autoplay: 1,
+            autoplay: 0,
             controls: 0,
             disablekb: 1,
             fs: 0,
@@ -128,7 +130,6 @@ export function YouTubeMusicPlayer({
             playsinline: 1,
             rel: 0,
             playlist: mix.slice(1).join(","),
-            origin: window.location.origin,
             enablejsapi: 1,
           },
           events: {
@@ -136,11 +137,6 @@ export function YouTubeMusicPlayer({
               if (cancelled) return;
               setReady(true);
               setError(null);
-              try {
-                event.target.playVideo();
-              } catch {
-                /* 瀏覽器可能擋住自動播放，使用者再按播放即可 */
-              }
               const meta = readTrackMeta(event.target);
               if (meta) {
                 setTitle(meta.title);
@@ -161,9 +157,22 @@ export function YouTubeMusicPlayer({
                 }
               }
             },
-            onError: () => {
+            onError: (event) => {
               if (cancelled) return;
-              setError("無法在小窗播放，請改開 YouTube Music。");
+              const fallbacks = ["5qap5aO4i9A", "DWcJFNfaw9c", "jfKfPfyJRdk", "4xDzrJKXOOY"];
+              const current = event.target.getVideoData?.().video_id;
+              if (current) tried.add(current);
+              const next = fallbacks.find((id) => !tried.has(id));
+              if (next) {
+                tried.add(next);
+                try {
+                  event.target.loadVideoById(next);
+                  return;
+                } catch {
+                  /* 改播下一首失敗時顯示說明 */
+                }
+              }
+              setError("這首無法嵌入播放，請換清單或改開 YouTube Music。");
               setReady(true);
             },
           },
@@ -187,6 +196,14 @@ export function YouTubeMusicPlayer({
       playerRef.current = null;
     };
   }, []);
+
+  const mixKey = `${playlist.id}:${playlist.youtubeListId ?? ""}:${(playlist.videoIds ?? []).join(",")}`;
+  useEffect(() => {
+    const player = playerRef.current;
+    if (!player || !ready) return;
+    loadMix(player, playlist);
+    setError(null);
+  }, [mixKey, playlist, ready]);
 
   function togglePlay() {
     const player = playerRef.current;
@@ -222,18 +239,25 @@ export function YouTubeMusicPlayer({
           ? "pointer-events-none invisible absolute h-px w-px overflow-hidden opacity-0"
           : compact
             ? "pointer-events-auto w-fit max-w-[15.25rem] overflow-hidden rounded-2xl border border-red-400/20 bg-black/78 shadow-[0_12px_40px_rgba(0,0,0,0.5)] backdrop-blur-xl"
-            : "pointer-events-auto w-fit max-w-[20rem] overflow-hidden rounded-2xl border border-red-400/20 bg-black/78 shadow-[0_12px_40px_rgba(0,0,0,0.5)] backdrop-blur-xl",
+            : "pointer-events-auto w-[22.5rem] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-2xl border border-red-400/20 bg-black/78 shadow-[0_12px_40px_rgba(0,0,0,0.5)] backdrop-blur-xl",
       )}
     >
-      <div className={compact ? "flex items-center gap-2 px-2 py-1.5" : "flex items-start gap-2.5 px-2.5 py-2"}>
+      <div className={compact ? "flex items-center gap-2 px-2 py-1.5" : "flex flex-col gap-2 px-2.5 py-2"}>
         <div
           className={
             compact
               ? "yt-music-mini relative size-9 shrink-0 overflow-hidden rounded-lg bg-zinc-900"
-              : "yt-music-mini relative size-[3.5rem] shrink-0 overflow-hidden rounded-xl bg-zinc-900"
+              : "yt-music-stage relative h-[180px] w-[320px] max-w-full overflow-hidden rounded-xl bg-black"
           }
         >
-          <div ref={hostRef} className="h-full w-full" />
+          <div
+            ref={hostRef}
+            className={
+              compact
+                ? "pointer-events-none h-[180px] w-[320px] origin-top-left scale-[0.11]"
+                : "h-[180px] w-[320px]"
+            }
+          />
           {!ready ? (
             <div className="absolute inset-0 grid place-items-center bg-black/50">
               <Loader2 className="size-4 animate-spin text-red-300" />

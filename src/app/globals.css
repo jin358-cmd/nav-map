@@ -605,16 +605,14 @@
   filter: drop-shadow(0 2px 3px rgba(15, 23, 42, 0.4));
 }
 
-.vehicle-marker--nav .vehicle-marker__body {
-  filter: drop-shadow(0 0 7px rgba(250, 204, 21, 0.42));
+.vehicle-marker--nav {
+  width: 28px;
+  height: 58px;
 }
 
-@media (orientation: portrait) {
-  .vehicle-marker--nav .vehicle-marker__body {
-    transform: perspective(140px) rotateX(15deg) scale(1.5);
-    transform-origin: 50% 70%;
-    filter: drop-shadow(0 0 8px rgba(250, 204, 21, 0.45));
-  }
+.vehicle-marker--nav .vehicle-marker__body {
+  transform: none;
+  filter: drop-shadow(0 1px 2px rgba(15, 23, 42, 0.55));
 }
 
 .intel-marker {
@@ -1335,18 +1333,18 @@
   justify-content: center;
   width: 100%;
   height: 100%;
-  border-radius: 0.9rem;
-  background: #16a34a;
+  border-radius: 0.95rem;
+  background: #0f172a;
   color: #fff;
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.2),
+    0 0 0 1px rgba(255, 255, 255, 0.16),
     0 2px 8px rgba(0, 0, 0, 0.22);
   transform: translateZ(0);
 }
 
 .maneuverIconArrow {
-  width: 78%;
-  height: 78%;
+  width: 94%;
+  height: 94%;
   color: #fff;
 }
 
@@ -1355,10 +1353,10 @@
 }
 
 .maneuverIconBadge--alert {
-  background: #15803d;
+  background: #0f172a;
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.28),
-    0 0 10px 2px rgba(74, 222, 128, 0.45);
+    0 0 0 2px #ffffff,
+    0 0 10px 2px rgba(255, 255, 255, 0.35);
 }
 
 .navigation-turn-icon--signal {

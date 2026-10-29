@@ -1,11 +1,10 @@
+import type { ComponentType } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   Backpack,
   BatteryCharging,
-  BedDouble,
   Briefcase,
   Car,
-  Fuel,
   Hotel,
   Leaf,
   Package,
@@ -13,12 +12,17 @@ import {
   PlugZap,
   Sandwich,
   ShoppingBag,
+  Store,
   ShoppingBasket,
   Soup,
-  Store,
-  UtensilsCrossed,
   Zap,
 } from "lucide-react";
+import {
+  ConvenienceIcon,
+  FuelPumpIcon,
+  HotelIcon,
+  RestaurantIcon,
+} from "@/components/overlay/life-shortcut-icons";
 import type { ConvenienceKind } from "@/lib/poi/convenience-kind";
 import type { EnergyKind } from "@/lib/poi/energy-kind";
 import type { HotelKind } from "@/lib/poi/hotel-kind";
@@ -38,7 +42,7 @@ export type SearchShortcut = {
   id: SearchShortcutId;
   label: string;
   hint: string;
-  icon: LucideIcon;
+  icon: ComponentType<{ className?: string; strokeWidth?: number }>;
   color: string;
   categories: PoiCategory[];
 };
@@ -48,7 +52,7 @@ export const SEARCH_SHORTCUTS: SearchShortcut[] = [
     id: "fuel",
     label: "加油站",
     hint: "汽柴油站；點入後可看 Gogoro、Tesla 超充與電車充電站",
-    icon: Fuel,
+    icon: FuelPumpIcon,
     color: "#f59e0b",
     categories: ["fuel"],
   },
@@ -56,7 +60,7 @@ export const SEARCH_SHORTCUTS: SearchShortcut[] = [
     id: "convenience",
     label: "超商",
     hint: "便利商店；點入後可看統一、全家、萊爾富／OK 與蝦皮店到店",
-    icon: Store,
+    icon: ConvenienceIcon,
     color: "#34d399",
     categories: ["convenience"],
   },
@@ -64,7 +68,7 @@ export const SEARCH_SHORTCUTS: SearchShortcut[] = [
     id: "restaurant",
     label: "餐廳",
     hint: "附近餐廳；點入後可看速食、中餐、西餐與素食",
-    icon: UtensilsCrossed,
+    icon: RestaurantIcon,
     color: "#fb923c",
     categories: ["restaurant"],
   },
@@ -72,7 +76,7 @@ export const SEARCH_SHORTCUTS: SearchShortcut[] = [
     id: "hotel",
     label: "飯店住宿",
     hint: "住宿；點入後可看青年旅館、商旅、飯店與汽車旅館",
-    icon: BedDouble,
+    icon: HotelIcon,
     color: "#60a5fa",
     categories: ["hotel"],
   },

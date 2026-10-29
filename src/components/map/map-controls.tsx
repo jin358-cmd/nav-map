@@ -9,7 +9,8 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
-import { ChevronLeft, Compass, LayoutGrid, Loader2, LocateFixed, ShoppingCart } from "lucide-react";
+import { ChevronLeft, Compass, LayoutGrid, Loader2, LocateFixed } from "lucide-react";
+import { LifeLayerIcon } from "@/components/overlay/life-shortcut-icons";
 import { MapStyleMenu } from "@/components/overlay/map-style-menu";
 import { Button } from "@/components/ui/button";
 import {
@@ -239,7 +240,7 @@ export function MapControls({
         >
           {poiLayersLoading ? (
             <span className="relative inline-flex size-6 items-center justify-center">
-              <ShoppingCart className="size-6" strokeWidth={2.5} />
+              <LifeLayerIcon className="size-6" />
               <span
                 className="poi-layer-read-pie poi-layer-read-pie--icon-ring"
                 style={
@@ -249,7 +250,7 @@ export function MapControls({
               />
             </span>
           ) : (
-            <ShoppingCart className="size-6" strokeWidth={2.5} />
+            <LifeLayerIcon className="size-6" />
           )}
         </ControlButton>
       ) : null}

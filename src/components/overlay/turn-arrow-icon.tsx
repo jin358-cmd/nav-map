@@ -259,8 +259,8 @@ function SmoothFork({
 function SmoothStraight({ className }: { className?: string }) {
   return (
     <ArrowFrame className={className}>
-      <path d="M32 56 V22" {...lineProps()} />
-      <path d="M16 34 L32 14 L48 34" {...lineProps()} />
+      <path d="M32 62 V8" {...lineProps()} />
+      <path d="M22 20 L32 4 L42 20" {...lineProps()} />
     </ArrowFrame>
   );
 }
@@ -283,7 +283,7 @@ function SmoothRoundabout({ className }: { className?: string }) {
         r="12"
         fill="none"
         stroke="currentColor"
-        strokeWidth="8"
+        strokeWidth="2.6"
       />
       <path d="M32 56 V48" {...lineProps()} />
       <path d="M18 22 L32 8 L46 22" {...lineProps()} />
@@ -309,7 +309,7 @@ function shaftProps() {
   return {
     fill: "none" as const,
     stroke: "currentColor",
-    strokeWidth: 10,
+    strokeWidth: 2.6,
     strokeLinecap: "round" as const,
     strokeLinejoin: "round" as const,
   };
@@ -319,7 +319,7 @@ function lineProps() {
   return {
     fill: "none" as const,
     stroke: "currentColor",
-    strokeWidth: 10,
+    strokeWidth: 2.6,
     strokeLinecap: "round" as const,
     strokeLinejoin: "round" as const,
   };

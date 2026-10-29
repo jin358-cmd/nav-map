@@ -117,93 +117,128 @@ export function useGoogleAccount() {
     writeStoredAccount(next);
   }, []);
 
-  const requestGoogleAccess = useCallback((
+  const openGoogleConsent = useCallback((
     scope: string,
-    prompt: "" | "consent" | "select_account" = "consent",
+    prompt: "" | "consent" | "select_account",
   ) => {
-    return resolveGoogleClientId().then((oauthClientId) => {
-      if (!oauthClientId) {
-        return { token: null, scopes: "", reason: "unconfigured" as const };
-      }
-      return loadGoogleIdentityScript().then(
-      () =>
-        new Promise<{
-          token: string | null;
-          scopes: string;
-          reason: GoogleTokenReason;
-        }>((resolve) => {
-          const oauth = window.google?.accounts?.oauth2;
-          if (!oauth) {
-            resolve({ token: null, scopes: "", reason: "error" });
+    const oauthClientId = getGoogleClientId();
+    const oauth = window.google?.accounts?.oauth2;
+    if (!oauthClientId) {
+      return Promise.resolve({
+        token: null as string | null,
+        scopes: "",
+        reason: "unconfigured" as const,
+        expiresIn: 3600,
+      });
+    }
+    if (!oauth) {
+      return Promise.resolve({
+        token: null as string | null,
+        scopes: "",
+        reason: "error" as const,
+        expiresIn: 3600,
+      });
+    }
+    return new Promise<{
+      token: string | null;
+      scopes: string;
+      reason: GoogleTokenReason;
+      expiresIn: number;
+    }>((resolve) => {
+      let settled = false;
+      const finish = (value: {
+        token: string | null;
+        scopes: string;
+        reason: GoogleTokenReason;
+        expiresIn: number;
+      }) => {
+        if (settled) return;
+        settled = true;
+        resolve(value);
+      };
+      const client = oauth.initTokenClient({
+        client_id: oauthClientId,
+        scope,
+        include_granted_scopes: true,
+        hint: accountRef.current?.email,
+        callback: (response) => {
+          if (response.error || !response.access_token) {
+            finish({ token: null, scopes: "", reason: "error", expiresIn: 3600 });
             return;
           }
-          const client = oauth.initTokenClient({
-            client_id: oauthClientId,
-            scope,
-            include_granted_scopes: true,
-            hint: accountRef.current?.email,
-            callback: (response) => {
-              if (response.error || !response.access_token) {
-                resolve({ token: null, scopes: "", reason: "error" });
-                return;
-              }
-              const scopes = response.scope || scope;
-              const access: ScopedAccess = {
-                accessToken: response.access_token,
-                exp: Date.now() + (response.expires_in ?? 3600) * 1000,
-                scopes,
-              };
-              writeGoogleAccess(access);
-              if (hasScope(scopes, YOUTUBE_READONLY_SCOPE)) {
-                writeYoutubeAccess(access);
-              }
-              resolve({ token: response.access_token, scopes, reason: "ok" });
-            },
-            error_callback: (error) => {
-              const type = `${error.type ?? ""} ${error.message ?? ""}`.toLowerCase();
-              if (type.includes("popup_closed") || type.includes("popup_failed")) {
-                resolve({ token: null, scopes: "", reason: "popup" });
-                return;
-              }
-              if (type.includes("origin")) {
-                resolve({ token: null, scopes: "", reason: "origin" });
-                return;
-              }
-              if (type.includes("popup") || type.includes("closed")) {
-                resolve({ token: null, scopes: "", reason: "cancel" });
-                return;
-              }
-              resolve({ token: null, scopes: "", reason: "error" });
-            },
+          const scopes = response.scope || scope;
+          const expiresIn = response.expires_in ?? 3600;
+          const access: ScopedAccess = {
+            accessToken: response.access_token,
+            exp: Date.now() + expiresIn * 1000,
+            scopes,
+          };
+          writeGoogleAccess(access);
+          if (hasScope(scopes, YOUTUBE_READONLY_SCOPE)) {
+            writeYoutubeAccess(access);
+          }
+          finish({
+            token: response.access_token,
+            scopes,
+            reason: "ok",
+            expiresIn,
           });
-          client.requestAccessToken({ prompt });
-        }),
-      );
+        },
+        error_callback: (error) => {
+          const type = `${error.type ?? ""} ${error.message ?? ""}`.toLowerCase();
+          if (type.includes("popup_closed") || type.includes("popup_failed")) {
+            finish({ token: null, scopes: "", reason: "popup", expiresIn: 3600 });
+            return;
+          }
+          if (type.includes("origin")) {
+            finish({ token: null, scopes: "", reason: "origin", expiresIn: 3600 });
+            return;
+          }
+          if (type.includes("popup") || type.includes("closed")) {
+            finish({ token: null, scopes: "", reason: "cancel", expiresIn: 3600 });
+            return;
+          }
+          finish({ token: null, scopes: "", reason: "error", expiresIn: 3600 });
+        },
+      });
+      try {
+        client.requestAccessToken({ prompt });
+      } catch {
+        finish({ token: null, scopes: "", reason: "popup", expiresIn: 3600 });
+      }
     });
   }, []);
 
+  const explainTokenFailure = useCallback((reason: GoogleTokenReason) => {
+    if (reason === "cancel" || reason === "popup") return "已取消登入。若沒有看到 Google 視窗，請再按一次。";
+    if (reason === "origin") return "登入網域尚未加入 Google Authorized Origins。";
+    if (reason === "unconfigured") return "Google 登入尚未完成設定";
+    return "登入沒有完成，請再試一次。";
+  }, []);
+
   const signIn = useCallback(() => {
+    const oauthClientId = getGoogleClientId();
+    if (!oauthClientId) {
+      setHint("Google 登入尚未完成設定");
+      return;
+    }
+    if (!window.google?.accounts?.oauth2) {
+      setHint("登入元件還在載入，請再按一次。");
+      void loadGoogleIdentityScript().then(
+        () => setSdkStatus("ready"),
+        () => setSdkStatus("error"),
+      );
+      return;
+    }
     setBusy(true);
     setHint(null);
-    void resolveGoogleClientId()
-      .then(async (id) => {
-        if (!id) {
-          setHint("Google 登入尚未完成設定");
-          return;
-        }
-        if (sdkStatus === "error") {
-          setHint("目前無法連線 Google 登入，請稍後再試。");
-          return;
-        }
-        const { token, reason } = await requestGoogleAccess(GOOGLE_LOGIN_SCOPES, "consent");
+    void openGoogleConsent(GOOGLE_LOGIN_SCOPES, "select_account")
+      .then(async ({ token, reason, expiresIn }) => {
         if (!token) {
-          if (reason === "cancel" || reason === "popup") setHint("已取消登入。");
-          else if (reason === "origin") setHint("登入網域尚未加入 Google Authorized Origins。");
-          else if (reason === "unconfigured") setHint("Google 登入尚未完成設定");
-          else setHint("登入沒有完成，請再試一次。");
+          setHint(explainTokenFailure(reason));
           return;
         }
-        const profile = await fetchGoogleProfile(token);
+        const profile = await fetchGoogleProfile(token, expiresIn);
         if (!profile) {
           setHint("無法確認 Google 帳號，請再試一次。");
           return;
@@ -216,42 +251,49 @@ export function useGoogleAccount() {
         setHint("目前無法連線 Google 登入，請稍後再試。");
       })
       .finally(() => setBusy(false));
-  }, [applyAccount, requestGoogleAccess, sdkStatus]);
+  }, [applyAccount, explainTokenFailure, openGoogleConsent]);
 
-  const connectYoutube = useCallback(async () => {
-    const id = await resolveGoogleClientId();
-    if (!id) {
+  const connectYoutube = useCallback(() => {
+    const oauthClientId = getGoogleClientId();
+    if (!oauthClientId) {
       setHint("Google 登入尚未完成設定");
-      return null;
+      return Promise.resolve(null);
     }
-    if (!accountRef.current) {
-      setHint("請先登入 Google 帳號，再授權 YouTube 歌單。");
-      signIn();
-      return null;
+    if (!window.google?.accounts?.oauth2) {
+      setHint("登入元件還在載入，請再按一次。");
+      void loadGoogleIdentityScript();
+      return Promise.resolve(null);
     }
     const existing = readYoutubeAccess();
-    if (existing?.accessToken) return existing.accessToken;
+    if (existing?.accessToken && accountRef.current) return Promise.resolve(existing.accessToken);
+    const scope = accountRef.current
+      ? YOUTUBE_SCOPES
+      : `${GOOGLE_LOGIN_SCOPES} ${YOUTUBE_SCOPES}`;
     setBusy(true);
-    const { token, scopes, reason } = await requestGoogleAccess(
-      YOUTUBE_SCOPES,
-      "consent",
-    );
-    setBusy(false);
-    if (!token) {
-      if (reason === "cancel" || reason === "popup") setHint("已取消 YouTube 授權。");
-      else if (reason === "origin") setHint("登入網域尚未加入 Google Authorized Origins。");
-      else if (reason === "unconfigured") setHint("Google 登入尚未完成設定");
-      else setHint("無法取得 YouTube 授權，請再試一次。");
-      return null;
-    }
-    if (!hasScope(scopes, YOUTUBE_READONLY_SCOPE)) {
-      setHint("這個帳號尚未授權 YouTube 播放清單權限。");
-      writeYoutubeAccess(null);
-      return null;
-    }
     setHint(null);
-    return token;
-  }, [requestGoogleAccess, signIn]);
+    return openGoogleConsent(scope, "consent").then(async ({ token, scopes, reason, expiresIn }) => {
+      setBusy(false);
+      if (!token) {
+        setHint(
+          reason === "cancel" || reason === "popup"
+            ? "已取消 YouTube 授權。若沒有看到 Google 視窗，請再按一次。"
+            : explainTokenFailure(reason),
+        );
+        return null;
+      }
+      if (!accountRef.current) {
+        const profile = await fetchGoogleProfile(token, expiresIn);
+        if (profile) applyAccount(profile);
+      }
+      if (!hasScope(scopes, YOUTUBE_READONLY_SCOPE)) {
+        setHint("這個帳號尚未授權 YouTube 播放清單權限。");
+        writeYoutubeAccess(null);
+        return null;
+      }
+      setHint("已接上 YouTube，正在載入可播放的清單。");
+      return token;
+    });
+  }, [applyAccount, explainTokenFailure, openGoogleConsent]);
 
   useEffect(() => {
     if (!account) return;

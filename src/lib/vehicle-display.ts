@@ -1,4 +1,11 @@
-import { damp, distanceKm, headingDelta, lerp, lerpAngle } from "@/lib/geo";
+import {
+  damp,
+  destinationPoint,
+  distanceKm,
+  headingDelta,
+  lerp,
+  lerpAngle,
+} from "@/lib/geo";
 import { pointAtRouteMeters, type RouteProgressModel } from "@/lib/route-progress";
 import type { DisplayPose, VehiclePose } from "@/types/domain";
 
@@ -11,11 +18,9 @@ export type VehicleDisplayState = {
   holdLat: number;
 };
 
-const MAX_PREDICT_METERS = 5;
-const STATIONARY_SPEED_MPS = 0.85;
-const STATIONARY_HOLD_METERS = 6.5;
-const HEADING_HOLD_DEG = 8;
-const HEADING_HOLD_SLOW_DEG = 14;
+const HOLD_SPEED_MPS = 0.45;
+const HOLD_METERS = 4.5;
+const TELEPORT_METERS = 90;
 
 export function createVehicleDisplayState(
   pose: Pick<VehiclePose, "lng" | "lat" | "heading">,
@@ -47,30 +52,35 @@ export function presentationFollowTau(speedMps: number, approachBlend: number) {
   };
 }
 
-function positionTau(speedMps: number, jumpMeters: number) {
-  const kmh = speedMps * 3.6;
-  if (jumpMeters > 45) return 0.12;
-  if (kmh >= 90) return 0.14;
-  if (kmh >= 55) return 0.18;
-  if (kmh >= 25) return 0.22;
-  if (kmh >= 8) return 0.28;
-  return 0.36;
+function glideHeading(current: number, desired: number, dtSeconds: number) {
+  const jump = headingDelta(current, desired);
+  if (jump < 0.6) return desired;
+  return lerpAngle(current, desired, damp(dtSeconds, jump > 40 ? 0.05 : 0.07));
 }
 
-function headingTau(speedMps: number, headingJump: number) {
-  if (headingJump > 50) return 0.22;
-  if (speedMps < 0.8) return 0.72;
-  if (speedMps < 4) return 0.48;
-  return 0.32;
-}
-
-function isNoisyFix(accuracy: number | undefined, jumpMeters: number, speedMps: number) {
-  if (accuracy == null || accuracy <= 24) return false;
-  return jumpMeters < Math.min(accuracy * 0.6, 20) && speedMps < 3;
+function travelSpeed(
+  raw: VehiclePose,
+  target: DisplayPose | VehiclePose,
+  current: VehicleDisplayState,
+  elapsedSinceFixSeconds: number,
+) {
+  const reported = Math.max(0, raw.speedMps ?? 0);
+  if (reported >= HOLD_SPEED_MPS) return reported;
+  const gpsMeters = "routeMeters" in target ? target.routeMeters : null;
+  const behindGps = gpsMeters == null || gpsMeters + 0.5 >= current.predictedMeters;
+  if (!behindGps || elapsedSinceFixSeconds <= 0.05 || elapsedSinceFixSeconds > 1.3) {
+    return reported;
+  }
+  const jump = distanceKm(current, target) * 1000;
+  if (jump < 8) return reported;
+  const implied = jump / elapsedSinceFixSeconds;
+  if (implied >= 0.8 && implied <= 42) return implied;
+  return reported;
 }
 
 /**
- * Presentation-only interpolation. GPS / snap / route progress stay on Raw GPS.
+ * Presentation pose. Raw GPS and route progress are not written back.
+ * Between fixes the marker keeps moving at road speed so it does not hop.
  */
 export function stepVehicleDisplay({
   current,
@@ -89,99 +99,87 @@ export function stepVehicleDisplay({
   dtSeconds: number;
   elapsedSinceFixSeconds: number;
 }): VehicleDisplayState {
-  const snapped = "snapped" in target ? target.snapped : false;
-  const confidence = "snapConfidence" in target ? target.snapConfidence : 0;
-  const speedMps = raw.speedMps ?? 0;
-  const here = { lng: current.lng, lat: current.lat };
+  const dt = Math.min(0.05, Math.max(0, dtSeconds));
+  const elapsed = Math.max(0, elapsedSinceFixSeconds);
+  const speed = travelSpeed(raw, target, current, elapsed);
   const incoming = { lng: target.lng, lat: target.lat };
-  const incomingJump = distanceKm(here, incoming) * 1000;
-  const noisy = isNoisyFix(raw.accuracy, incomingJump, speedMps);
-  const goal = noisy
-    ? { lng: current.holdLng, lat: current.holdLat }
-    : incoming;
-  const jumpMeters = distanceKm(here, goal) * 1000;
-  const stationary =
-    speedMps < STATIONARY_SPEED_MPS && jumpMeters < STATIONARY_HOLD_METERS;
+  const jump = distanceKm(current, incoming) * 1000;
 
-  if (stationary) {
-    const holdLimit = speedMps < 0.35 ? HEADING_HOLD_SLOW_DEG : HEADING_HOLD_DEG;
-    const holdHeading =
-      headingDelta(current.heading, target.heading) < holdLimit
-        ? current.heading
-        : lerpAngle(current.heading, target.heading, damp(dtSeconds, 0.55));
+  if (jump > TELEPORT_METERS) {
+    const meters = "routeMeters" in target ? target.routeMeters : 0;
     return {
-      ...current,
-      heading: holdHeading,
-      predictedMeters: 0,
-      holdLng: noisy ? current.holdLng : goal.lng,
-      holdLat: noisy ? current.holdLat : goal.lat,
+      lng: incoming.lng,
+      lat: incoming.lat,
+      heading: target.heading,
+      predictedMeters: meters,
+      holdLng: incoming.lng,
+      holdLat: incoming.lat,
     };
   }
 
-  let desired = goal;
-  let desiredHeading = target.heading;
-  let predictedMeters = current.predictedMeters;
+  if (speed < HOLD_SPEED_MPS && jump < HOLD_METERS) {
+    return {
+      ...current,
+      heading: glideHeading(current.heading, target.heading, dt),
+      holdLng: current.lng,
+      holdLat: current.lat,
+    };
+  }
 
+  const snapped = "snapped" in target ? target.snapped : false;
+  const confidence = "snapConfidence" in target ? target.snapConfidence : 0;
   if (
     navigating &&
     snapped &&
-    confidence >= 0.48 &&
+    confidence >= 0.35 &&
     model &&
-    speedMps > 1 &&
     "routeMeters" in target
   ) {
-    predictedMeters = Math.min(
-      MAX_PREDICT_METERS,
-      current.predictedMeters * 0.72 + speedMps * elapsedSinceFixSeconds * 0.28,
-    );
-    const along = pointAtRouteMeters(model, target.routeMeters + predictedMeters);
-    if (along) {
-      const drift = distanceKm(raw, along.point) * 1000;
-      if (drift <= 40) {
-        desired = along.point;
-        desiredHeading = along.heading;
-      }
+    const gpsMeters = Math.max(0, target.routeMeters);
+    let along = current.predictedMeters;
+    if ((along <= 0 && gpsMeters > 1) || Math.abs(along - gpsMeters) > 70) {
+      along = gpsMeters;
     }
-  } else {
-    predictedMeters = 0;
+    along += speed * dt;
+    const lead = Math.min(34, Math.max(3, speed * 1.15));
+    if (along > gpsMeters + lead) along = gpsMeters + lead;
+    if (along < gpsMeters) {
+      const gap = gpsMeters - along;
+      along += Math.min(gap, Math.max(speed * dt, gap * damp(dt, 0.035)));
+    }
+    along = Math.max(0, Math.min(model.totalMeters, along));
+    const placed = pointAtRouteMeters(model, along);
+    if (placed) {
+      return {
+        lng: placed.point.lng,
+        lat: placed.point.lat,
+        heading: glideHeading(current.heading, placed.heading, dt),
+        predictedMeters: along,
+        holdLng: placed.point.lng,
+        holdLat: placed.point.lat,
+      };
+    }
   }
 
-  const holdLng = noisy ? current.holdLng : desired.lng;
-  const holdLat = noisy ? current.holdLat : desired.lat;
-
-  if (jumpMeters > 80) {
-    return {
-      lng: desired.lng,
-      lat: desired.lat,
-      heading: lerpAngle(
-        current.heading,
-        desiredHeading,
-        damp(dtSeconds, 0.12),
-      ),
-      predictedMeters: 0,
-      holdLng,
-      holdLat,
-    };
-  }
-
-  const headingJump = headingDelta(current.heading, desiredHeading);
-  const holdLimit = speedMps < 2 ? HEADING_HOLD_SLOW_DEG : HEADING_HOLD_DEG;
-  const nextHeading =
-    headingJump < holdLimit
-      ? current.heading
-      : lerpAngle(
-          current.heading,
-          desiredHeading,
-          damp(dtSeconds, headingTau(speedMps, headingJump)),
-        );
-  const posT = damp(dtSeconds, positionTau(speedMps, jumpMeters));
-
+  const coastMeters = Math.min(40, speed * Math.min(elapsed, 1.15));
+  const goal =
+    speed >= HOLD_SPEED_MPS
+      ? destinationPoint(incoming, coastMeters, target.heading || current.heading)
+      : incoming;
+  const gap = distanceKm(current, goal) * 1000;
+  const step =
+    gap < 0.05
+      ? gap
+      : Math.min(gap, Math.max(speed * dt, gap * damp(dt, 0.04)));
+  const t = gap <= 0.05 ? 1 : step / gap;
+  const lng = lerp(current.lng, goal.lng, t);
+  const lat = lerp(current.lat, goal.lat, t);
   return {
-    lng: lerp(current.lng, desired.lng, posT),
-    lat: lerp(current.lat, desired.lat, posT),
-    heading: nextHeading,
-    predictedMeters,
-    holdLng,
-    holdLat,
+    lng,
+    lat,
+    heading: glideHeading(current.heading, target.heading, dt),
+    predictedMeters: 0,
+    holdLng: lng,
+    holdLat: lat,
   };
 }

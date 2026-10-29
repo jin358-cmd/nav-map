@@ -3,6 +3,7 @@ type YouTubePlayerCtor = new (
   options: {
     width?: number | string;
     height?: number | string;
+    host?: string;
     videoId?: string;
     playerVars?: Record<string, string | number>;
     events?: {
@@ -18,6 +19,7 @@ export type YouTubePlayer = {
   pauseVideo: () => void;
   nextVideo: () => void;
   previousVideo: () => void;
+  loadVideoById: (videoId: string) => void;
   loadPlaylist: (
     playlist:
       | string

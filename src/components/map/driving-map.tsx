@@ -1050,7 +1050,8 @@ export function DrivingMap({
           ? mapNow.getZoom()
           : (userZoomRef.current ?? wanted.zoom);
         const followTau = presentationFollowTau(raw.speedMps ?? 0, wanted.blend);
-        const posT = snapCamera ? 1 : damp(dt, followTau.posTau);
+        const posTau = navigatingNow ? 0.04 : followTau.posTau;
+        const posT = snapCamera ? 1 : damp(dt, posTau);
         const zoomT = pinchingRef.current ? 0 : snapCamera ? 1 : damp(dt, followTau.zoomTau);
         const currentBearing = mapNow.getBearing();
         const still = (raw.speedMps ?? 0) < COMPASS_SPEED_MPS;
@@ -1058,8 +1059,8 @@ export function DrivingMap({
           ? 0.07
           : navigatingNow
             ? still
-              ? 0.42
-              : Math.max(0.22, followTau.bearingTau)
+              ? 0.12
+              : 0.05
             : still
               ? 0.18
               : followTau.bearingTau;
@@ -1067,8 +1068,8 @@ export function DrivingMap({
           ? 2.2
           : navigatingNow
             ? still
-              ? 4.8
-              : Math.max(4, followTau.bearingHoldDeg)
+              ? 1.2
+              : 0.25
             : still
               ? 3.2
               : followTau.bearingHoldDeg;
@@ -1082,7 +1083,7 @@ export function DrivingMap({
               : lerpAngle(
                   currentBearing,
                   wanted.bearing,
-                  damp(dt, largeJump ? 0.38 : bearingTau),
+                  damp(dt, largeJump ? 0.08 : bearingTau),
                 );
         try {
           mapNow.jumpTo({
@@ -1147,12 +1148,12 @@ export function DrivingMap({
         const rotationTarget = display.heading;
         const markerGap = headingDelta(markerRotationRef.current, rotationTarget);
         markerRotationRef.current =
-          markerGap < 2.2
-            ? markerRotationRef.current
+          markerGap < 0.4
+            ? rotationTarget
             : lerpAngle(
                 markerRotationRef.current,
                 rotationTarget,
-                damp(dt, 0.24),
+                damp(dt, 0.06),
               );
       }
       marker.setRotation(markerRotationRef.current);

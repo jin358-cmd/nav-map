@@ -6,13 +6,10 @@ import type {
 import {
   deriveGeometryTurn,
   guidanceArrowsAlong,
-  lineLengthMeters,
-  marqueeSpacingMeters,
   planNavGuidance,
   shouldShowGroundBow,
   sliceRouteAhead,
   turnGuidanceLine,
-  turnMarqueeArrows,
 } from "@/lib/upcoming-route";
 import type { CameraMode } from "@/types/domain";
 
@@ -130,9 +127,9 @@ function flowGradient(phase: number): ExpressionSpecification {
     p - 0.1,
     "rgba(56, 189, 233, 0.2)",
     p,
-    "#facc15",
+    "#e0f2fe",
     p + 0.1,
-    "rgba(250, 204, 21, 0.55)",
+    "rgba(224, 242, 254, 0.55)",
     1,
     "rgba(56, 189, 233, 0.16)",
   ];
@@ -346,17 +343,9 @@ export function upsertGuidanceArrows(
   if (plan.showGuidanceLine && line.length < 2 && navigating && route.length >= 2) {
     line = sliceRouteAhead(route, Math.max(0, routeMeters) + 4, cruiseAhead);
   }
-  const arrows =
-    plan.showChevrons && line.length >= 2
-      ? bow
-        ? turnMarqueeArrows(line, phase, distanceToNext)
-        : guidanceArrowsAlong(
-            line,
-            marqueeSpacingMeters(lineLengthMeters(line), 16.5, distanceToNext),
-            phase,
-            plan.near150 ? 1 : compact ? 0.92 : 0.82,
-          )
-      : [];
+  // Ground chevrons were the large yellow arrows on the route. The cyan
+  // route line remains; maneuver direction stays on the guidance card.
+  const arrows: ReturnType<typeof guidanceArrowsAlong> = [];
 
   if (process.env.NODE_ENV !== "production") {
     console.debug("[NavGuidance]", {
