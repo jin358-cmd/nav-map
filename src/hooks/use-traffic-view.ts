@@ -122,7 +122,7 @@ export function useTrafficView({
     setStale(result.stale);
     setError(
       result.origin === "unavailable"
-        ? "即時路況暫時無法取得"
+        ? "路況資料暫時無法取得"
         : result.stale
           ? "路況資料偏舊，仍顯示上次可靠資料"
           : null,
@@ -142,7 +142,7 @@ export function useTrafficView({
       .catch(() => {
         if (controller.signal.aborted) return;
         setStale(true);
-        setError("即時路況更新失敗，仍顯示上次資料。");
+        setError("路況資料暫時無法取得");
       })
       .finally(() => {
         inflightKeys.delete(requestKey);
@@ -164,7 +164,7 @@ export function useTrafficView({
         })
         .catch(() => {
           if (!controller.signal.aborted) {
-            setError("即時路況更新失敗，仍顯示上次資料。");
+            setError("路況資料暫時無法取得");
           }
         })
         .finally(() => {
@@ -200,7 +200,7 @@ export function useTrafficView({
       .then(applyCatalog)
       .catch(() => {
         setStale(true);
-        setError("即時路況更新失敗，仍顯示上次資料。");
+        setError("路況資料暫時無法取得");
       });
   }, [applyCatalog]);
 

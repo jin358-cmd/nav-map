@@ -43,6 +43,11 @@ const nextConfig: NextConfig = {
     "/api/geocode": ["./src/data/taiwan-poi-index.json.gz", "./src/data/taiwan-poi-index.json"],
     "/api/pois": ["./src/data/taiwan-poi-index.json.gz", "./src/data/taiwan-poi-index.json"],
     "/api/pois/sync": ["./src/data/taiwan-poi-index.json.gz", "./src/data/taiwan-poi-index.json"],
+    "/api/roadwork": [
+      "./fixtures/roadwork/official-sample.json",
+      "./fixtures/roadwork/structural-notices.json",
+    ],
+    "/api/traffic-signals": ["./fixtures/traffic-signals/tainan-110-signals.json"],
   },
 };
 

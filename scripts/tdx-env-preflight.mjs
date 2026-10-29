@@ -1,5 +1,6 @@
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 
 /** EIPP: inspect environment variable NAMES ONLY, never credential values. */
 export function auditTdxEnvironmentNames(names) {
@@ -23,6 +24,29 @@ export function auditTdxEnvironmentNames(names) {
     credentialValuesRead: false,
     liveTdxRequestPerformed: false,
   };
+}
+
+const SECRET_NAME = "NEXT_PUBLIC_TDX_CLIENT_SECRET";
+const PUBLIC_ID_NAME = "NEXT_PUBLIC_TDX_CLIENT_ID";
+
+export function auditTdxSourceExposure(root) {
+  const hits = [];
+  const walk = (dir) => {
+    for (const entry of readdirSync(dir)) {
+      const path = join(dir, entry);
+      const stat = statSync(path);
+      if (stat.isDirectory()) {
+        if (entry === "node_modules" || entry === ".next") continue;
+        walk(path);
+        continue;
+      }
+      if (!/\.(ts|tsx|js|mjs|jsx)$/.test(entry)) continue;
+      const text = readFileSync(path, "utf8");
+      if (text.includes(SECRET_NAME) || text.includes(PUBLIC_ID_NAME)) hits.push(path);
+    }
+  };
+  walk(root);
+  return { publicPrefixInAppSource: hits.length > 0, files: hits, credentialValuesRead: false };
 }
 
 const invokedDirectly =

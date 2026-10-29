@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { auditTdxEnvironmentNames } from "./tdx-env-preflight.mjs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { auditTdxEnvironmentNames, auditTdxSourceExposure } from "./tdx-env-preflight.mjs";
 
 test("missing server-only names block a live probe", () => {
   const r = auditTdxEnvironmentNames(new Set());
@@ -16,6 +18,13 @@ test("legacy public secret blocks even with server names", () => {
 test("legacy public client ID name blocks", () => {
   const r = auditTdxEnvironmentNames(new Set(["NEXT_PUBLIC_TDX_CLIENT_ID"]));
   assert.equal(r.status, "BLOCKED_PUBLIC_PREFIX");
+});
+test("app source does not reference public TDX credential names", () => {
+  const root = join(dirname(fileURLToPath(import.meta.url)), "..", "src");
+  const report = auditTdxSourceExposure(root);
+  assert.equal(report.publicPrefixInAppSource, false);
+  assert.deepEqual(report.files, []);
+  assert.equal(report.credentialValuesRead, false);
 });
 test("server-only names alone do not prove credentials work", () => {
   const r = auditTdxEnvironmentNames(["TDX_CLIENT_ID", "TDX_CLIENT_SECRET"]);

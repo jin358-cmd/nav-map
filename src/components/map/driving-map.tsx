@@ -114,6 +114,8 @@ import {
 } from "@/lib/vehicle-display";
 import { upsertSpeedEnforcementLayer } from "@/lib/speed-enforcement-layer";
 import { bindRoadworkLayerClicks, upsertRoadworkLayer, ROADWORK_HIT_LAYER_ID, ROADWORK_POINT_LAYER_ID, ROADWORK_LINE_LAYER_ID } from "@/lib/roadwork-layer";
+import { bindTrafficSignalClicks, upsertTrafficSignalLayer, SIGNAL_LAYER_ID } from "@/lib/traffic-signal-layer";
+import type { TrafficSignalView } from "@/components/overlay/traffic-signal-card";
 import type { RoadworkEvent } from "@/lib/roadwork/public";
 import { peekLastGpsFix } from "@/services/geolocation";
 import type {
@@ -170,6 +172,9 @@ type DrivingMapProps = {
   constructions?: ConstructionEvent[];
   roadwork?: RoadworkEvent[];
   selectedRoadworkId?: string | null;
+  trafficSignals?: TrafficSignalView[];
+  selectedSignalId?: string | null;
+  signalsVisible?: boolean;
   parkingLots?: ParkingLot[];
   selectedParkingId?: string | null;
   parkingVisible?: boolean;
@@ -199,6 +204,7 @@ type DrivingMapProps = {
   onAccidentSelect?: (accidentId: string) => void;
   onConstructionSelect?: (constructionId: string) => void;
   onRoadworkSelect?: (eventId: string) => void;
+  onSignalSelect?: (signalId: string) => void;
   onParkingSelect?: (parkingId: string) => void;
   onPoiSelect?: (poiId: string) => void;
   onEmptyMapClick?: (location: { lng: number; lat: number }) => void;
@@ -459,6 +465,9 @@ export function DrivingMap({
   constructions = [],
   roadwork = [],
   selectedRoadworkId = null,
+  trafficSignals = [],
+  selectedSignalId = null,
+  signalsVisible = true,
   parkingLots = [],
   selectedParkingId = null,
   parkingVisible = false,
@@ -483,6 +492,7 @@ export function DrivingMap({
   onAccidentSelect,
   onConstructionSelect,
   onRoadworkSelect,
+  onSignalSelect,
   onParkingSelect,
   onPoiSelect,
   onEmptyMapClick,
@@ -542,6 +552,10 @@ export function DrivingMap({
   const constructionsRef = useRef(constructions);
   const roadworkRef = useRef(roadwork);
   const selectedRoadworkRef = useRef(selectedRoadworkId);
+  const trafficSignalsRef = useRef(trafficSignals);
+  const selectedSignalRef = useRef(selectedSignalId);
+  const signalsVisibleRef = useRef(signalsVisible);
+  const onSignalSelectRef = useRef(onSignalSelect);
   const parkingLotsRef = useRef(parkingLots);
   const selectedParkingRef = useRef(selectedParkingId);
   const parkingVisibleRef = useRef(parkingVisible);
@@ -607,6 +621,7 @@ export function DrivingMap({
     onAccidentSelectRef.current = onAccidentSelect;
     onConstructionSelectRef.current = onConstructionSelect;
     onRoadworkSelectRef.current = onRoadworkSelect;
+    onSignalSelectRef.current = onSignalSelect;
     onParkingSelectRef.current = onParkingSelect;
     onPoiSelectRef.current = onPoiSelect;
     onEmptyMapClickRef.current = onEmptyMapClick;
@@ -657,6 +672,9 @@ export function DrivingMap({
     constructionsRef.current = constructions;
     roadworkRef.current = roadwork;
     selectedRoadworkRef.current = selectedRoadworkId;
+    trafficSignalsRef.current = trafficSignals;
+    selectedSignalRef.current = selectedSignalId;
+    signalsVisibleRef.current = signalsVisible;
     parkingLotsRef.current = parkingLots;
     selectedParkingRef.current = selectedParkingId;
     parkingVisibleRef.current = parkingVisible;
@@ -687,6 +705,7 @@ export function DrivingMap({
     onAccidentSelect,
     onConstructionSelect,
     onRoadworkSelect,
+    onSignalSelect,
     onParkingSelect,
     onPoiSelect,
     onEmptyMapClick,
@@ -711,6 +730,9 @@ export function DrivingMap({
     selectedAccidentId,
     selectedConstructionId,
     selectedRoadworkId,
+    trafficSignals,
+    selectedSignalId,
+    signalsVisible,
     disasters,
     accidents,
     constructions,
@@ -1178,6 +1200,13 @@ export function DrivingMap({
         bindPoiLayerClicks(map, (id) => onPoiSelectRef.current?.(id));
         upsertRoadworkLayer(map, roadworkRef.current, selectedRoadworkRef.current);
         bindRoadworkLayerClicks(map, (id) => onRoadworkSelectRef.current?.(id));
+        upsertTrafficSignalLayer(
+          map,
+          trafficSignalsRef.current,
+          selectedSignalRef.current,
+          signalsVisibleRef.current,
+        );
+        bindTrafficSignalClicks(map, (id) => onSignalSelectRef.current?.(id));
         upsertGuidanceArrows(
           map,
           routeRef.current,
@@ -1243,6 +1272,7 @@ export function DrivingMap({
       const candidateLayers = [
         PARKING_HIT_LAYER_ID,
         ROADWORK_HIT_LAYER_ID,
+        SIGNAL_LAYER_ID,
         ROADWORK_POINT_LAYER_ID,
         ROADWORK_LINE_LAYER_ID,
         PARKING_LAYER_ID,
@@ -1480,6 +1510,28 @@ export function DrivingMap({
   }, [roadwork, selectedRoadworkId]);
 
   useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    let drawn = "";
+    const draw = () => {
+      if (!isStyleReady(map)) return;
+      const key = `${signalsVisible}:${selectedSignalId ?? ""}:${trafficSignals.length}:${trafficSignals[0]?.intersectionId ?? ""}`;
+      if (drawn === key && map.getLayer(SIGNAL_LAYER_ID)) return;
+      try {
+        upsertTrafficSignalLayer(map, trafficSignals, selectedSignalId, signalsVisible);
+        drawn = key;
+      } catch (error) {
+        console.error("Traffic signal layer update skipped", error);
+      }
+    };
+    draw();
+    map.on("idle", draw);
+    return () => {
+      map.off("idle", draw);
+    };
+  }, [selectedSignalId, signalsVisible, trafficSignals]);
+
+  useEffect(() => {
     if (followVehicle && !prevFollowVehicleRef.current) {
       snapFollowRef.current = true;
     }
@@ -1606,6 +1658,13 @@ export function DrivingMap({
         bindPoiLayerClicks(map, (id) => onPoiSelectRef.current?.(id));
         upsertRoadworkLayer(map, roadworkRef.current, selectedRoadworkRef.current);
         bindRoadworkLayerClicks(map, (id) => onRoadworkSelectRef.current?.(id));
+        upsertTrafficSignalLayer(
+          map,
+          trafficSignalsRef.current,
+          selectedSignalRef.current,
+          signalsVisibleRef.current,
+        );
+        bindTrafficSignalClicks(map, (id) => onSignalSelectRef.current?.(id));
         upsertGuidanceArrows(
           map,
           routeRef.current,
