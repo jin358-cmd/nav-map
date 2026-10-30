@@ -85,6 +85,20 @@ function testJunctionHighlightsTheExit() {
   assert.ok(bare.labels.some((label) => label.text === "民生路" || label.text === "文賢路"));
   assert.equal(bare.arrow.length, 3);
   assert.ok(bare.blocks.length >= 1);
+  assert.ok(bare.lines.filter((line) => line.kind === "major" || line.kind === "context").length >= 4);
+  for (const label of bare.labels) {
+    assert.ok(label.at.x > 8 && label.at.x < bare.width - 8);
+    assert.ok(label.at.y > 8 && label.at.y < bare.height - 8);
+  }
+  for (let i = 0; i < bare.labels.length; i += 1) {
+    for (let j = i + 1; j < bare.labels.length; j += 1) {
+      const gap = Math.hypot(
+        bare.labels[i].at.x - bare.labels[j].at.x,
+        bare.labels[i].at.y - bare.labels[j].at.y,
+      );
+      assert.ok(gap > 16, `labels overlap: ${bare.labels[i].text} ${bare.labels[j].text}`);
+    }
+  }
   const overview = buildOverviewScene(route, apex - 40, [
     {
       line: [

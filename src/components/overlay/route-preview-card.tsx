@@ -16,6 +16,29 @@ import {
 } from "@/lib/route-preview-geometry";
 import type { RouteStep } from "@/types/domain";
 
+function roadRibbon(
+  points: { x: number; y: number }[],
+  nearWidth: number,
+  farWidth: number,
+) {
+  if (points.length < 2) return "";
+  const left: string[] = [];
+  const right: string[] = [];
+  for (let index = 0; index < points.length; index += 1) {
+    const t = index / (points.length - 1);
+    const width = (nearWidth + (farWidth - nearWidth) * t) / 2;
+    const prev = points[Math.max(0, index - 1)];
+    const next = points[Math.min(points.length - 1, index + 1)];
+    const angle = Math.atan2(next.y - prev.y, next.x - prev.x);
+    const nx = Math.sin(angle);
+    const ny = -Math.cos(angle);
+    const point = points[index];
+    left.push(`${(point.x + nx * width).toFixed(1)},${(point.y + ny * width).toFixed(1)}`);
+    right.push(`${(point.x - nx * width).toFixed(1)},${(point.y - ny * width).toFixed(1)}`);
+  }
+  return `M${left.join(" L")} L${right.reverse().join(" L")} Z`;
+}
+
 function lineClass(kind: PreviewPolyline["kind"]) {
   if (kind === "depart") return "route-preview-card__depart";
   if (kind === "major") return "route-preview-card__major";
@@ -153,13 +176,21 @@ export function RoutePreviewCard({
             d={pointsToPath(line.points)}
           />
         ))}
-        {scene.lines.map((line, index) => (
-          <path
-            key={`${line.kind}-${index}`}
-            className={junction ? "junction-diagram__asphalt" : lineClass(line.kind)}
-            d={pointsToPath(line.points)}
-          />
-        ))}
+        {scene.lines.map((line, index) =>
+          junction && line.kind === "approach" ? (
+            <path
+              key={`${line.kind}-${index}`}
+              className="junction-diagram__asphalt junction-diagram__asphalt--approach"
+              d={roadRibbon(line.points, 40, 24)}
+            />
+          ) : (
+            <path
+              key={`${line.kind}-${index}`}
+              className={junction ? `junction-diagram__asphalt junction-diagram__asphalt--${line.kind}` : lineClass(line.kind)}
+              d={pointsToPath(line.points)}
+            />
+          ),
+        )}
         {junction
           ? scene.lines.map((line, index) => (
               <path
@@ -175,8 +206,16 @@ export function RoutePreviewCard({
               .map((line, index) => (
                 <path
                   key={`route-${index}`}
-                  className="junction-diagram__route"
-                  d={pointsToPath(line.points)}
+                  className={
+                    line.kind === "approach"
+                      ? "junction-diagram__route junction-diagram__route--fill"
+                      : "junction-diagram__route"
+                  }
+                  d={
+                    line.kind === "approach"
+                      ? roadRibbon(line.points, 16, 11)
+                      : pointsToPath(line.points)
+                  }
                 />
               ))
           : null}

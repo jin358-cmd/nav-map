@@ -178,7 +178,9 @@ function sceneFrom(
     .flat()
     .concat(localMarkers.map((marker) => marker.at))
     .concat(localLabels.map((label) => label.at));
-  const project = fitTransform(cloud, VIEW_W, VIEW_H, PAD);
+  const width = mode === "junction" ? 200 : VIEW_W;
+  const height = mode === "junction" ? 200 : VIEW_H;
+  const project = fitTransform(cloud, width, height, PAD);
   const epsilon = mode === "overview" ? 18 : 3;
   const north = spin({ x: 0, y: 1 });
   const northDeg = (Math.atan2(north.x, north.y) * 180) / Math.PI;
@@ -189,8 +191,8 @@ function sceneFrom(
   const depart = drawn.find((line) => line.kind === "depart");
   return {
     mode,
-    width: VIEW_W,
-    height: VIEW_H,
+    width,
+    height,
     lines: drawn,
     blocks: localBlocks.map((ring) => douglasPeucker(ring, 6).map(project)),
     markers: localMarkers.map((marker) => ({
@@ -198,13 +200,47 @@ function sceneFrom(
       at: project(marker.at),
       heading: marker.kind === "position" ? 0 : undefined,
     })),
-    labels: localLabels.map((label) => ({
-      text: label.text,
-      at: project(label.at),
-    })),
+    labels: placeLabels(
+      localLabels.map((label) => ({
+        text: label.text,
+        at: project(label.at),
+      })),
+      width,
+      height,
+    ),
     arrow: arrowHead(depart?.points ?? []),
     northDeg,
   };
+}
+
+function placeLabels(labels: PreviewLabel[], width: number, height: number): PreviewLabel[] {
+  const kept: Array<{ label: PreviewLabel; left: number; right: number; top: number; bottom: number }> = [];
+  const inset = 14;
+  for (const label of labels) {
+    const textWidth = Math.max(22, label.text.length * 9);
+    const textHeight = 14;
+    let x = label.at.x;
+    let y = label.at.y - 12;
+    x = Math.min(width - inset - textWidth / 2, Math.max(inset + textWidth / 2, x));
+    y = Math.min(height - inset, Math.max(inset + textHeight, y));
+    const box = {
+      left: x - textWidth / 2,
+      right: x + textWidth / 2,
+      top: y - textHeight,
+      bottom: y + 2,
+    };
+    if (box.left < 6 || box.right > width - 6 || box.top < 6 || box.bottom > height - 6) continue;
+    const hits = kept.some(
+      (item) =>
+        box.left < item.right + 4 &&
+        box.right > item.left - 4 &&
+        box.top < item.bottom + 4 &&
+        box.bottom > item.top - 4,
+    );
+    if (hits) continue;
+    kept.push({ label: { text: label.text, at: { x, y } }, ...box });
+  }
+  return kept.map((item) => item.label);
 }
 
 function arrowHead(points: LocalPoint[]): LocalPoint[] {
@@ -212,10 +248,10 @@ function arrowHead(points: LocalPoint[]): LocalPoint[] {
   const tip = points[points.length - 1];
   const prev = points[points.length - 2];
   const angle = Math.atan2(tip.y - prev.y, tip.x - prev.x);
-  const back = 9;
-  const wing = 5;
-  const left = angle + Math.PI - 0.55;
-  const right = angle + Math.PI + 0.55;
+  const back = 18;
+  const wing = 8;
+  const left = angle + Math.PI - 0.7;
+  const right = angle + Math.PI + 0.7;
   return [
     tip,
     { x: tip.x + Math.cos(left) * back + Math.cos(angle + Math.PI / 2) * wing * 0.15, y: tip.y + Math.sin(left) * back },
@@ -274,18 +310,42 @@ export function fallbackJunctionRoads(
   const approachPose = pointAlongRoute(route, Math.max(0, apexMeters - 24));
   const bearing = approachPose?.bearing ?? apex.bearing;
   const center = { lng: apex.lng, lat: apex.lat };
-  const left = destinationPoint(center, 42, bearing - 90);
-  const right = destinationPoint(center, 42, bearing + 90);
+  const arm = (
+    distance: number,
+    angle: number,
+    name: string,
+    rank: "major" | "minor",
+  ) => {
+    const head = destinationPoint(center, distance, angle);
+    const tail = destinationPoint(center, distance, angle + 180);
+    return {
+      line: [
+        [tail.lng, tail.lat],
+        [center.lng, center.lat],
+        [head.lng, head.lat],
+      ] as [number, number][],
+      name,
+      rank,
+    };
+  };
+  const side = destinationPoint(center, 46, bearing + 100);
+  const sideFar = destinationPoint(side, 72, bearing);
+  const sideNear = destinationPoint(side, 72, bearing + 180);
   return [
+    arm(86, bearing - 90, "", "major"),
+    arm(78, bearing + 90, "", "major"),
     {
       line: [
-        [left.lng, left.lat],
-        [apex.lng, apex.lat],
-        [right.lng, right.lat],
+        [sideNear.lng, sideNear.lat],
+        [side.lng, side.lat],
+        [sideFar.lng, sideFar.lat],
       ],
-      name: names.exit || names.approach || "",
-      rank: "major",
+      name: "",
+      rank: "minor" as const,
     },
+    arm(70, bearing + 45, "", "minor"),
+    arm(66, bearing - 135, "", "minor"),
+    arm(60, bearing + 150, "", "minor"),
   ];
 }
 
@@ -325,11 +385,8 @@ export function buildJunctionScene(
   const maneuver = asLng(pointAlongRoute(route, Math.max(0, Math.min(total, apexMeters))));
   const approachPose = pointAlongRoute(route, Math.max(0, apexMeters - 12));
   const roads = context.map(asSketch).filter((road) => road.line.length >= 2);
-  const sketches = roads.length
-    ? roads
-    : maneuver
-      ? fallbackJunctionRoads(route, apexMeters, names)
-      : [];
+  const stubs = maneuver ? fallbackJunctionRoads(route, apexMeters, names) : [];
+  const sketches = [...roads, ...stubs];
   const packed: Array<{ line: [number, number][]; kind: PreviewPolyline["kind"] }> = [
     ...sketches.map((road) => ({
       line: simplifyLngLat(road.line, 4),
