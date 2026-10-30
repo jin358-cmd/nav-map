@@ -39,13 +39,15 @@ import {
   TAIWAN_OVERVIEW_ZOOM,
 } from "@/lib/constants";
 import type { GuidanceArrowMode } from "@/lib/guidance-arrow-mode";
+import { nearbyRoadLines } from "@/lib/junction-roads";
 import {
   emptyNavAutoZoomState,
   stepNavAutoZoom,
+  type NavAutoZoomPhase,
   type NavAutoZoomState,
 } from "@/lib/nav-auto-zoom";
 import { type ManeuverAlertPhase } from "@/lib/maneuver-guidance";
-import { approachCameraProgress } from "@/lib/upcoming-route";
+import { approachCameraProgress, pointAlongRoute } from "@/lib/upcoming-route";
 import { bindCctvLayerClicks, upsertCctvLayer } from "@/lib/cctv-layer";
 import {
   bindConstructionLayerClicks,
@@ -192,6 +194,8 @@ type DrivingMapProps = {
   offRoute?: boolean;
   autoZoomEnabled?: boolean;
   turnCueMeters?: number[];
+  onJunctionRoads?: (lines: [number, number][][]) => void;
+  onPreviewPhase?: (phase: NavAutoZoomPhase) => void;
   destination: RouteDestination | null;
   overlayPadding?: {
     top: number;
@@ -500,6 +504,8 @@ export function DrivingMap({
   offRoute = false,
   autoZoomEnabled = true,
   turnCueMeters = [],
+  onJunctionRoads,
+  onPreviewPhase,
   destination,
   overlayPadding = null,
   fitRouteKey,
@@ -588,6 +594,10 @@ export function DrivingMap({
   const autoZoomEnabledRef = useRef(autoZoomEnabled);
   const turnCuesRef = useRef(turnCueMeters);
   const autoZoomStateRef = useRef<NavAutoZoomState>(emptyNavAutoZoomState());
+  const onJunctionRoadsRef = useRef(onJunctionRoads);
+  const onPreviewPhaseRef = useRef(onPreviewPhase);
+  const previewPhaseRef = useRef<NavAutoZoomPhase>("cruise");
+  const lastRoadQueryRef = useRef(0);
   const alertPhaseRef = useRef(maneuverAlertPhase);
   const recoverUntilRef = useRef(0);
   const recoverFromRef = useRef(0);
@@ -641,6 +651,8 @@ export function DrivingMap({
     onPickLocationRef.current = onPickLocation;
     onStyleAppliedRef.current = onStyleApplied;
     onStyleFallbackRef.current = onStyleFallback;
+    onJunctionRoadsRef.current = onJunctionRoads;
+    onPreviewPhaseRef.current = onPreviewPhase;
     modeRef.current = cameraMode;
     followOrientationRef.current = followOrientation;
     pickModeRef.current = pickMode;
@@ -725,6 +737,8 @@ export function DrivingMap({
     onPickLocation,
     onStyleApplied,
     onStyleFallback,
+    onJunctionRoads,
+    onPreviewPhase,
     cameraMode,
     followOrientation,
     pickMode,
@@ -1051,7 +1065,7 @@ export function DrivingMap({
           navigatingNow,
         );
         const autoZoomOn = navigatingNow && autoZoomEnabledRef.current;
-        const autoZoom = autoZoomOn
+        const autoZoom = navigatingNow
           ? stepNavAutoZoom({
               previous: autoZoomStateRef.current,
               nowMs: now,
@@ -1067,7 +1081,13 @@ export function DrivingMap({
               focusZoom: zoomRange.focus,
             })
           : null;
-        if (autoZoom) autoZoomStateRef.current = autoZoom.state;
+        if (autoZoom) {
+          autoZoomStateRef.current = autoZoom.state;
+          if (autoZoom.phase !== previewPhaseRef.current) {
+            previewPhaseRef.current = autoZoom.phase;
+            onPreviewPhaseRef.current?.(autoZoom.phase);
+          }
+        }
         const wanted = cameraOptions(
           mapNow,
           displayPose,
@@ -1081,7 +1101,9 @@ export function DrivingMap({
           recoverBlend,
           deviceCompassRef.current,
           routeBearing,
-          autoZoom ? { zoom: autoZoom.zoom, tightness: autoZoom.tightness } : null,
+          autoZoomOn && autoZoom
+            ? { zoom: autoZoom.zoom, tightness: autoZoom.tightness }
+            : null,
         );
         lastBlendRef.current = wanted.blend;
         const center = mapNow.getCenter();
@@ -1170,6 +1192,23 @@ export function DrivingMap({
           });
         }
         emitViewport();
+      }
+
+      if (
+        navigatingNow &&
+        onJunctionRoadsRef.current &&
+        now - lastRoadQueryRef.current > 800
+      ) {
+        const nextCue = turnCuesRef.current.find(
+          (meters) => meters >= routeMetersRef.current - 20,
+        );
+        if (nextCue != null && nextCue - routeMetersRef.current <= 220) {
+          const pose = pointAlongRoute(routeRef.current, nextCue);
+          if (pose) {
+            lastRoadQueryRef.current = now;
+            onJunctionRoadsRef.current(nearbyRoadLines(mapNow, pose));
+          }
+        }
       }
 
       if (navigatingNow) {

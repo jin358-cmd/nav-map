@@ -137,6 +137,7 @@ import {
   subscribeGuidanceArrowMode,
   writeGuidanceArrowMode,
 } from "@/lib/guidance-arrow-mode";
+import { type NavAutoZoomPhase } from "@/lib/nav-auto-zoom";
 import {
   getServerNavAutoZoomSnapshot,
   readNavAutoZoomEnabled,
@@ -144,6 +145,7 @@ import {
   writeNavAutoZoomEnabled,
 } from "@/lib/nav-auto-zoom-setting";
 import { GuidanceArrowToggle } from "@/components/overlay/guidance-arrow-toggle";
+import { RoutePreviewCard } from "@/components/overlay/route-preview-card";
 import {
   deleteSavedPlace,
   findSavedCustomPlace,
@@ -279,6 +281,8 @@ export function DrivingApp() {
     readNavAutoZoomEnabled,
     getServerNavAutoZoomSnapshot,
   );
+  const [previewPhase, setPreviewPhase] = useState<NavAutoZoomPhase>("cruise");
+  const [junctionRoads, setJunctionRoads] = useState<[number, number][][]>([]);
   const [pendingMapDisplayMode, setPendingMapDisplayMode] =
     useState<MapDisplayMode | null>(null);
   const [styleMenuOpen, setStyleMenuOpen] = useState(false);
@@ -469,6 +473,8 @@ export function DrivingApp() {
       ? activeNavigationStep.cueMeters
       : (maneuver?.distanceMeters ?? activeNavigationStep?.distanceMeters ?? 0);
   const turnManeuver = isTurnManeuver(activeNavigationStep);
+  const previewRouteMeters = navigationProgress?.routeMeters ?? 0;
+
   const turnCueMeters = useMemo(() => {
     if (!routeProgressModel) return [] as number[];
     const cues: number[] = [];
@@ -479,6 +485,7 @@ export function DrivingApp() {
     });
     return cues;
   }, [routeProgressModel, routeSteps]);
+
   const followingStep = navigationProgress
     ? (routeSteps[navigationProgress.stepIndex + 1] ?? null)
     : (routeSteps[1] ?? null);
@@ -1663,6 +1670,8 @@ export function DrivingApp() {
         offRoute={navigationProgress?.offRoute ?? false}
         autoZoomEnabled={autoZoomEnabled}
         turnCueMeters={turnCueMeters}
+        onJunctionRoads={setJunctionRoads}
+        onPreviewPhase={setPreviewPhase}
         destination={destination}
         overlayPadding={navigating ? overlayPadding : null}
         fitRouteKey={fitRouteKey}
@@ -1827,6 +1836,15 @@ export function DrivingApp() {
           />
         </div>
       ) : null}
+
+      <RoutePreviewCard
+        navigating={navigating}
+        phase={previewPhase}
+        route={route}
+        routeMeters={previewRouteMeters}
+        turnCueMeters={turnCueMeters}
+        roads={junctionRoads}
+      />
 
       {navigating ? (
         <div className="hud-anchor-arrow-mode">

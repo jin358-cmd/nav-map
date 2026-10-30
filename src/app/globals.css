@@ -1045,6 +1045,125 @@
   color: #f8fafc;
 }
 
+.route-preview-card,
+.route-preview-restore {
+  position: absolute;
+  z-index: 27;
+  pointer-events: auto;
+}
+
+.route-preview-card {
+  top: max(8.4rem, calc(env(safe-area-inset-top) + 7.8rem));
+  right: max(0.45rem, env(safe-area-inset-right));
+  width: 9.6rem;
+  padding: 0.3rem 0.35rem 0.4rem;
+  border-radius: 0.9rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(15, 23, 42, 0.9);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
+  color: #f8fafc;
+}
+
+.route-preview-card__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 1.4rem;
+  padding-left: 0.25rem;
+}
+
+.route-preview-card__bar p {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.route-preview-card__svg {
+  display: block;
+  width: 100%;
+  height: 6.4rem;
+}
+
+.route-preview-card__context {
+  fill: none;
+  stroke: rgba(148, 163, 184, 0.7);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.route-preview-card__route,
+.route-preview-card__approach {
+  fill: none;
+  stroke: #38bdf8;
+  stroke-width: 3.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.route-preview-card__depart {
+  fill: none;
+  stroke: #f8fafc;
+  stroke-width: 4.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.route-preview-card__position {
+  fill: #facc15;
+  stroke: #422006;
+  stroke-width: 1.2;
+}
+
+.route-preview-card__maneuver {
+  fill: #ffffff;
+  stroke: #0e7490;
+  stroke-width: 1.4;
+}
+
+.route-preview-card__destination {
+  fill: #22d3ee;
+  stroke: #083344;
+  stroke-width: 1.2;
+}
+
+.route-preview-restore {
+  top: max(8.4rem, calc(env(safe-area-inset-top) + 7.8rem));
+  right: max(0.45rem, env(safe-area-inset-right));
+  height: 1.8rem;
+  padding: 0 0.7rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.88);
+  color: #f8fafc;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+@media (orientation: landscape) {
+  .route-preview-card,
+  .route-preview-restore {
+    top: max(7.3rem, calc(env(safe-area-inset-top) + 6.6rem));
+    right: auto;
+    left: max(0.5rem, env(safe-area-inset-left));
+  }
+
+  .route-preview-card {
+    width: min(18rem, 36vw);
+  }
+
+  .route-preview-card__svg {
+    height: min(11rem, 34vh);
+  }
+
+  .hud-anchor-arrow-mode {
+    left: auto;
+    right: max(4.6rem, calc(env(safe-area-inset-right) + 4rem));
+    top: 42%;
+  }
+}
+
 .guidance-arrow-toggle {
   display: flex;
   padding: 0.15rem;
