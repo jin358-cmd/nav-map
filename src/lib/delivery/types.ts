@@ -68,6 +68,17 @@ export type CourierPresence = {
   location: (GeoPoint & { heading: number | null; updatedAt: string }) | null;
 };
 
+export type CourierRatingSummary = {
+  average: number | null;
+  count: number;
+  completedDeliveries: number;
+};
+
+export type OrderRating = {
+  stars: number;
+  comment: string | null;
+};
+
 export type CourierCandidate = {
   id: string;
   online: boolean;
@@ -76,6 +87,9 @@ export type CourierCandidate = {
   updatedAtMs: number;
   activeOrderId: string | null;
   pendingOfferOrderId: string | null;
+  completedDeliveries: number;
+  ratingAverage: number | null;
+  ratingCount: number;
 };
 
 export type CustomerOrderView = {
@@ -84,7 +98,9 @@ export type CustomerOrderView = {
     id: string;
     displayName: string;
     location: (GeoPoint & { updatedAt: string }) | null;
+    rating: CourierRatingSummary;
   };
+  myRating: OrderRating | null;
   statusLabel: string;
 };
 
@@ -93,6 +109,7 @@ export type CourierOrderView = {
   distanceMeters: number | null;
   statusLabel: string;
   offerExpiresAt: string | null;
+  courierRating: CourierRatingSummary;
 };
 
 export type PublicOrder = Omit<

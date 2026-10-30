@@ -3,11 +3,13 @@ import type {
   ClaimReason,
   CourierOrderView,
   CourierPresence,
+  CourierRatingSummary,
   CreateOrderInput,
   CustomerOrderView,
   DeliveryOrder,
   DeliveryStore,
   MenuItem,
+  OrderRating,
 } from "@/lib/delivery/types";
 
 /**
@@ -57,5 +59,13 @@ export interface DeliveryProvider {
     courierId: string,
     orderId: string,
   ): Promise<{ ok: true; order: DeliveryOrder } | { ok: false; reason: ClaimReason }>;
+  rateOrder(
+    customerId: string,
+    orderId: string,
+    input: { stars: number; comment: string | null },
+  ): Promise<
+    | { ok: true; rating: OrderRating; summary: CourierRatingSummary }
+    | { ok: false; reason: "not_found" | "invalid_state" | "duplicate" }
+  >;
   advanceDispatch(): Promise<void>;
 }

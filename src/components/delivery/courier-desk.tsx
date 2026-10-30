@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { DeliveryMap } from "@/components/delivery/delivery-map";
+import { StarReadout } from "@/components/delivery/star-rating";
 import { Button } from "@/components/ui/button";
 import { TAINAN_CENTER } from "@/lib/constants";
 import {
@@ -222,6 +223,7 @@ export function CourierDesk() {
               <h2 className="text-sm font-semibold">
                 {offer.order.dispatchMode === "grab" ? "搶單" : "指派給你"} · {offer.order.storeName}
               </h2>
+              <StarReadout rating={offer.courierRating} />
               <p className="text-[12px] text-zinc-300">
                 {offer.distanceMeters == null ? "距離計算中" : `約 ${Math.round(offer.distanceMeters)} 公尺`}
                 {offer.offerExpiresAt ? ` · ${offer.offerExpiresAt.slice(11, 19)} 前` : ""}

@@ -194,6 +194,18 @@ export function fetchCourierWork(actorId: string) {
   );
 }
 
+export function rateCourier(
+  actorId: string,
+  orderId: string,
+  body: { stars: number; comment?: string },
+  googleIdToken?: string | null,
+) {
+  return request<{ ok: true; rating: { stars: number; comment: string | null } } | Failure>(
+    `/api/delivery/orders/${encodeURIComponent(orderId)}/rating`,
+    { role: "customer", actorId, googleIdToken, body },
+  );
+}
+
 export function courierAction(
   actorId: string,
   orderId: string,

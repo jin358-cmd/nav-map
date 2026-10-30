@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { Bike } from "lucide-react";
+import { StarPicker, StarReadout } from "@/components/delivery/star-rating";
 import { HudCloseButton } from "@/components/overlay/hud-close-button";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +13,7 @@ import {
   fetchOrder,
   fetchStores,
   placeOrder,
+  rateCourier,
   readActiveOrderId,
   sendCustomerLocation,
   subscribeActiveOrder,
@@ -68,6 +70,8 @@ export function DeliverySession({
   const [view, setView] = useState<CustomerOrderView | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [stars, setStars] = useState(0);
+  const [comment, setComment] = useState("");
 
   const pins = useMemo(() => pinsFrom(view), [view]);
 
@@ -169,6 +173,19 @@ export function DeliverySession({
     setMessage(null);
   }
 
+  async function submitRating() {
+    if (!orderId || stars < 1) return;
+    setBusy(true);
+    const result = await rateCourier(actorId, orderId, { stars, comment }, token);
+    setBusy(false);
+    if (isFailure(result)) {
+      setMessage(result.message ?? "評分失敗。");
+      return;
+    }
+    setMessage(null);
+    await refresh(orderId);
+  }
+
   async function cancel() {
     if (!orderId) return;
     setBusy(true);
@@ -215,12 +232,19 @@ export function DeliverySession({
           <StatusBlock
             view={view}
             busy={busy}
+            stars={stars}
+            comment={comment}
             cancellable={cancellable}
+            onStars={setStars}
+            onComment={setComment}
+            onRate={() => void submitRating()}
             onCancel={() => void cancel()}
             onNewOrder={() => {
               writeActiveOrderId(null);
               setView(null);
               setStore(null);
+              setStars(0);
+              setComment("");
             }}
           />
         ) : orderId ? (
@@ -337,13 +361,23 @@ function ModeButton({
 function StatusBlock({
   view,
   busy,
+  stars,
+  comment,
   cancellable,
+  onStars,
+  onComment,
+  onRate,
   onCancel,
   onNewOrder,
 }: {
   view: CustomerOrderView;
   busy: boolean;
+  stars: number;
+  comment: string;
   cancellable: boolean;
+  onStars: (stars: number) => void;
+  onComment: (comment: string) => void;
+  onRate: () => void;
   onCancel: () => void;
   onNewOrder: () => void;
 }) {
@@ -351,6 +385,36 @@ function StatusBlock({
     <div data-testid="delivery-status" className="space-y-2">
       <p className="text-base font-semibold">{view.statusLabel}</p>
       <p className="text-sm">{view.order.storeName}</p>
+      <p className="text-sm">
+        {view.courier
+          ? `${view.courier.displayName}${view.courier.location ? " · 位置更新中" : ""}`
+          : "尚未有外送員接單"}
+      </p>
+      {view.courier ? <StarReadout rating={view.courier.rating} /> : null}
+      {view.order.status === "delivered" && !view.myRating ? (
+        <div className="space-y-2 rounded-xl border border-amber-300/30 p-2" data-testid="rating-prompt">
+          <p className="text-sm">請替這次外送評分</p>
+          <StarPicker value={stars} onChange={onStars} />
+          <input
+            aria-label="短評"
+            data-testid="rate-comment"
+            maxLength={80}
+            value={comment}
+            placeholder="短評，可不填"
+            className="w-full rounded-lg border border-white/15 bg-transparent px-2 py-1.5 text-sm"
+            onChange={(event) => onComment(event.target.value)}
+          />
+          <Button type="button" data-testid="rate-submit" disabled={busy || stars < 1} onClick={onRate}>
+            送出評價
+          </Button>
+        </div>
+      ) : null}
+      {view.myRating ? (
+        <p className="text-sm text-amber-200" data-testid="my-rating">
+          你給了 {view.myRating.stars} 顆星
+          {view.myRating.comment ? `：${view.myRating.comment}` : ""}
+        </p>
+      ) : null}
       <ul className="text-[12px] text-zinc-300">
         {view.order.lines.map((line) => (
           <li key={line.menuItemId}>
@@ -360,11 +424,6 @@ function StatusBlock({
       </ul>
       <p className="text-[11px] text-zinc-400">
         {view.order.dispatchMode === "grab" ? "搶單" : "最近外送員"} · 金額 0 · 付款已略過
-      </p>
-      <p className="text-sm">
-        {view.courier
-          ? `${view.courier.displayName}${view.courier.location ? " · 位置更新中" : ""}`
-          : "尚未有外送員接單"}
       </p>
       <p className="text-[11px] text-zinc-500">地圖：送＝外送員，收＝送達，店＝店家，客＝顧客</p>
       {cancellable ? (

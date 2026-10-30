@@ -171,4 +171,20 @@ export class DeliveryGateway {
     if (!result.ok) return claimFailure(result.reason);
     return { ok: true as const, order: toPublicOrder(result.order), statusLabel: statusLabel(result.order.status) };
   }
+
+  async rateOrder(customerId: string, orderId: string, input: { stars: number; comment?: string | null }) {
+    if (!Number.isInteger(input.stars) || input.stars < 1 || input.stars > 5) {
+      return failure("invalid", "請給 1 到 5 顆星。");
+    }
+    const comment = input.comment?.trim() ?? "";
+    if (comment.length > 80) return failure("invalid", "短評最多 80 個字。");
+    const result = await this.provider.rateOrder(customerId, orderId, {
+      stars: input.stars,
+      comment: comment || null,
+    });
+    if (!result.ok && result.reason === "not_found") return failure("not_found", "找不到這筆訂單。");
+    if (!result.ok && result.reason === "duplicate") return failure("conflict", "這筆訂單已經評過了。");
+    if (!result.ok) return failure("invalid", "送達之後才能評分。");
+    return { ok: true as const, rating: result.rating, summary: result.summary };
+  }
 }

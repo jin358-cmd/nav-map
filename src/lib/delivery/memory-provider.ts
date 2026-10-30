@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { grabDistanceMeters, planNearestDispatch } from "@/lib/delivery/dispatch";
+import { grabDistanceMeters, planNearestDispatch, toRatingSummary } from "@/lib/delivery/dispatch";
 import { DELIVERY_STORES, menuForStore } from "@/lib/delivery/fixtures";
 import { statusLabel } from "@/lib/delivery/labels";
 import { toPublicOrder } from "@/lib/delivery/present";
@@ -12,9 +12,11 @@ import type {
   CourierCandidate,
   CourierOrderView,
   CourierPresence,
+  CourierRatingSummary,
   CreateOrderInput,
   CustomerOrderView,
   DeliveryOrder,
+  OrderRating,
 } from "@/lib/delivery/types";
 
 type StoredCourier = {
@@ -39,6 +41,7 @@ export class MemoryDeliveryProvider implements DeliveryProvider {
   readonly settings: DispatchSettings;
   private readonly orders = new Map<string, DeliveryOrder>();
   private readonly couriers = new Map<string, StoredCourier>();
+  private readonly ratings: Array<OrderRating & { orderId: string; courierId: string; customerId: string }> = [];
   private tail: Promise<void> = Promise.resolve();
   private readonly now: () => number;
 
@@ -210,7 +213,11 @@ export class MemoryDeliveryProvider implements DeliveryProvider {
         ) {
           offers.push(this.courierView(order, candidate));
         }
-        if (order.dispatchMode === "grab" && grabDistanceMeters(order, candidate, this.settings, this.now()) != null) {
+        if (
+          order.dispatchMode === "grab" &&
+          !order.declinedCourierIds.includes(courierId) &&
+          grabDistanceMeters(order, candidate, this.settings, this.now()) != null
+        ) {
           offers.push(this.courierView(order, candidate));
         }
       }
@@ -265,6 +272,27 @@ export class MemoryDeliveryProvider implements DeliveryProvider {
     return this.transitionCourier(courierId, orderId, "delivered");
   }
 
+  async rateOrder(customerId: string, orderId: string, input: { stars: number; comment: string | null }) {
+    return this.exclusive(() => {
+      const order = this.orders.get(orderId);
+      if (!order || order.customerId !== customerId) return { ok: false as const, reason: "not_found" as const };
+      if (order.status !== "delivered" || !order.courierId) {
+        return { ok: false as const, reason: "invalid_state" as const };
+      }
+      if (this.ratings.some((rating) => rating.orderId === orderId)) {
+        return { ok: false as const, reason: "duplicate" as const };
+      }
+      const rating = { stars: input.stars, comment: input.comment };
+      this.ratings.push({
+        ...rating,
+        orderId,
+        courierId: order.courierId,
+        customerId,
+      });
+      return { ok: true as const, rating, summary: this.summaryFor(order.courierId) };
+    });
+  }
+
   async advanceDispatch() {
     return this.exclusive(() => {
       this.applyDispatch();
@@ -302,12 +330,26 @@ export class MemoryDeliveryProvider implements DeliveryProvider {
         nowMs,
       });
       if (plan.kind === "keep" || plan.kind === "wait") continue;
+      if (plan.kind === "grab_fallback") {
+        order.dispatchMode = "grab";
+        order.offeredCourierId = null;
+        order.offerExpiresAt = null;
+        order.updatedAt = new Date(nowMs).toISOString();
+        this.refreshPendingOffers(couriers);
+        continue;
+      }
       if (plan.kind === "expire") {
         if (!order.declinedCourierIds.includes(plan.expiredCourierId)) {
           order.declinedCourierIds.push(plan.expiredCourierId);
         }
         order.offeredCourierId = null;
         order.offerExpiresAt = null;
+        if (plan.grabFallback) {
+          order.dispatchMode = "grab";
+          order.updatedAt = new Date(nowMs).toISOString();
+          this.refreshPendingOffers(couriers);
+          continue;
+        }
       }
       const ranked = plan.kind === "expire" && plan.nextCourierId
         ? [plan.nextCourierId]
@@ -366,6 +408,7 @@ export class MemoryDeliveryProvider implements DeliveryProvider {
 
   private candidate(courier: StoredCourier): CourierCandidate | null {
     if (courier.lng == null || courier.lat == null || !courier.updatedAt) return null;
+    const summary = this.summaryFor(courier.id);
     return {
       id: courier.id,
       online: courier.online,
@@ -374,7 +417,26 @@ export class MemoryDeliveryProvider implements DeliveryProvider {
       updatedAtMs: Date.parse(courier.updatedAt),
       activeOrderId: this.courierActiveOrderId(courier.id),
       pendingOfferOrderId: null,
+      completedDeliveries: summary.completedDeliveries,
+      ratingAverage: summary.average,
+      ratingCount: summary.count,
     };
+  }
+
+  private summaryFor(courierId: string): CourierRatingSummary {
+    let completedDeliveries = 0;
+    for (const order of this.orders.values()) {
+      if (order.courierId === courierId && order.status === "delivered") completedDeliveries += 1;
+    }
+    const mine = this.ratings.filter((rating) => rating.courierId === courierId);
+    const count = mine.length;
+    const average = count === 0 ? null : mine.reduce((sum, rating) => sum + rating.stars, 0) / count;
+    return { average, count, completedDeliveries };
+  }
+
+  private ratingFor(orderId: string): OrderRating | null {
+    const found = this.ratings.find((rating) => rating.orderId === orderId);
+    return found ? { stars: found.stars, comment: found.comment } : null;
   }
 
   private customerView(order: DeliveryOrder): CustomerOrderView {
@@ -385,17 +447,20 @@ export class MemoryDeliveryProvider implements DeliveryProvider {
       courier.lng != null &&
       courier.lat != null &&
       courier.updatedAt;
+    const summary = order.courierId ? this.summaryFor(order.courierId) : null;
     return {
       order: toPublicOrder(order),
       statusLabel: statusLabel(order.status),
+      myRating: this.ratingFor(order.id),
       courier:
-        courier && order.courierId
+        courier && order.courierId && summary
           ? {
               id: courier.id,
               displayName: courier.displayName,
               location: showLocation
                 ? { lng: courier.lng!, lat: courier.lat!, updatedAt: courier.updatedAt! }
                 : null,
+              rating: summary,
             }
           : null,
     };
@@ -410,6 +475,9 @@ export class MemoryDeliveryProvider implements DeliveryProvider {
       distanceMeters: meters,
       statusLabel: statusLabel(order.status),
       offerExpiresAt: order.offerExpiresAt,
+      courierRating: courier
+        ? toRatingSummary(courier)
+        : { average: null, count: 0, completedDeliveries: 0 },
     };
   }
 

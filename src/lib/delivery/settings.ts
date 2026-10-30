@@ -6,6 +6,12 @@ export type DispatchSettings = {
   grabRadiusMeters: number;
   zoneRadiusMeters: number;
   locationStaleMs: number;
+  /** Completed deliveries below this count receive a distance bonus. */
+  newCourierCompletedThreshold: number;
+  /** Largest virtual distance reduction, in meters, for a courier with zero deliveries. */
+  newCourierMaxBonusMeters: number;
+  /** Weighted distances inside this band are a tie, then rating decides. */
+  distanceTieMeters: number;
 };
 
 function clamped(value: number, fallback: number, min: number, max: number) {
@@ -23,6 +29,9 @@ export function readDispatchSettings(
     grabRadiusMeters: clamped(Number(env.DELIVERY_GRAB_RADIUS_METERS), 3_000, 200, 50_000),
     zoneRadiusMeters: clamped(Number(env.DELIVERY_ZONE_RADIUS_METERS), 5_000, 200, 50_000),
     locationStaleMs: clamped(Number(env.DELIVERY_COURIER_STALE_SECONDS) * 1000, 90_000, 10_000, 600_000),
+    newCourierCompletedThreshold: clamped(Number(env.DELIVERY_NEW_COURIER_THRESHOLD), 10, 1, 100),
+    newCourierMaxBonusMeters: clamped(Number(env.DELIVERY_NEW_COURIER_BONUS_METERS), 800, 0, 5_000),
+    distanceTieMeters: clamped(Number(env.DELIVERY_DISTANCE_TIE_METERS), 25, 0, 500),
   };
 }
 

@@ -1,7 +1,7 @@
 import "server-only";
 
 import { grabClaimQuery, nearestClaimQuery, nearestOfferQuery } from "@/lib/delivery/claims";
-import { grabDistanceMeters, planNearestDispatch } from "@/lib/delivery/dispatch";
+import { EMPTY_RATING, grabDistanceMeters, planNearestDispatch, toRatingSummary } from "@/lib/delivery/dispatch";
 import { DeliverySchemaMissingError, DeliveryUnavailableError } from "@/lib/delivery/errors";
 import { statusLabel } from "@/lib/delivery/labels";
 import { toPublicOrder } from "@/lib/delivery/present";
@@ -16,6 +16,7 @@ import type {
   CourierCandidate,
   CourierOrderView,
   CourierPresence,
+  CourierRatingSummary,
   CreateOrderInput,
   CustomerOrderView,
   DeliveryOrder,
@@ -23,6 +24,7 @@ import type {
   DispatchMode,
   MenuItem,
   OrderLine,
+  OrderRating,
   OrderStatus,
 } from "@/lib/delivery/types";
 
@@ -305,6 +307,7 @@ export class SupabaseDeliveryProvider implements DeliveryProvider {
       offers.push(this.courierView(await this.hydrate(row), courier));
     }
     for (const row of grabRows) {
+      if ((row.declined_courier_ids ?? []).includes(courierId)) continue;
       const order = await this.hydrate(row);
       if (!courier || grabDistanceMeters(order, courier, this.settings, Date.now()) == null) continue;
       offers.push(this.courierView(order, courier));
@@ -389,6 +392,10 @@ export class SupabaseDeliveryProvider implements DeliveryProvider {
       const order = await this.hydrate(row);
       const plan = planNearestDispatch({ order, couriers, settings: this.settings, nowMs });
       if (plan.kind === "keep" || plan.kind === "wait") continue;
+      if (plan.kind === "grab_fallback") {
+        await this.switchToGrab(order.id);
+        continue;
+      }
       if (plan.kind === "expire") {
         const cleared = await this.mutate<OrderRow[]>(
           `/rest/v1/delivery_orders?id=eq.${encodeURIComponent(order.id)}&status=eq.awaiting_dispatch&offered_courier_id=eq.${encodeURIComponent(plan.expiredCourierId)}`,
@@ -401,12 +408,58 @@ export class SupabaseDeliveryProvider implements DeliveryProvider {
             updated_at: new Date(nowMs).toISOString(),
           },
         );
-        if (!cleared.data[0] || !plan.nextCourierId || !plan.expiresAt) continue;
+        if (!cleared.data[0]) continue;
+        if (plan.grabFallback) {
+          await this.switchToGrab(order.id);
+          continue;
+        }
+        if (!plan.nextCourierId || !plan.expiresAt) continue;
         await this.offerTo(order.id, plan.nextCourierId, plan.expiresAt);
         continue;
       }
       await this.offerTo(order.id, plan.courierId, plan.expiresAt);
     }
+  }
+
+  private async switchToGrab(orderId: string) {
+    const rows = await this.mutate<OrderRow[]>(
+      `/rest/v1/delivery_orders?id=eq.${encodeURIComponent(orderId)}&status=eq.awaiting_dispatch&dispatch_mode=eq.nearest`,
+      {
+        dispatch_mode: "grab",
+        offered_courier_id: null,
+        offer_expires_at: null,
+        updated_at: new Date().toISOString(),
+      },
+    );
+    if (rows.data[0]) await this.addEvent(orderId, "grab_fallback", "system", null, {});
+  }
+
+  async rateOrder(customerId: string, orderId: string, input: { stars: number; comment: string | null }) {
+    const rows = await this.rest<OrderRow[]>(
+      `/rest/v1/delivery_orders?select=*&id=eq.${encodeURIComponent(orderId)}&customer_id=eq.${encodeURIComponent(customerId)}&limit=1`,
+    );
+    const row = rows[0];
+    if (!row) return { ok: false as const, reason: "not_found" as const };
+    if (row.status !== "delivered" || !row.courier_id) {
+      return { ok: false as const, reason: "invalid_state" as const };
+    }
+    const existing = await this.rest<Array<{ id: string }>>(
+      `/rest/v1/delivery_courier_ratings?select=id&order_id=eq.${encodeURIComponent(orderId)}&limit=1`,
+    );
+    if (existing[0]) return { ok: false as const, reason: "duplicate" as const };
+    const inserted = await this.insertRating({
+      order_id: orderId,
+      courier_id: row.courier_id,
+      customer_id: customerId,
+      stars: input.stars,
+      comment: input.comment,
+    });
+    if (inserted === "duplicate") return { ok: false as const, reason: "duplicate" as const };
+    return {
+      ok: true as const,
+      rating: { stars: input.stars, comment: input.comment },
+      summary: await this.statsForCourier(row.courier_id),
+    };
   }
 
   private async offerTo(orderId: string, courierId: string, expiresAt: string) {
@@ -438,8 +491,9 @@ export class SupabaseDeliveryProvider implements DeliveryProvider {
   }
 
   private async customerView(order: DeliveryOrder): Promise<CustomerOrderView> {
+    const myRating = await this.ratingForOrder(order.id);
     if (!order.courierId || (order.status !== "assigned" && order.status !== "picked_up" && order.status !== "delivered")) {
-      return { order: toPublicOrder(order), courier: null, statusLabel: statusLabel(order.status) };
+      return { order: toPublicOrder(order), courier: null, myRating, statusLabel: statusLabel(order.status) };
     }
     const couriers = await this.rest<CourierRow[]>(
       `/rest/v1/delivery_couriers?select=id,display_name,online,updated_at&id=eq.${encodeURIComponent(order.courierId)}&limit=1`,
@@ -454,12 +508,14 @@ export class SupabaseDeliveryProvider implements DeliveryProvider {
     return {
       order: toPublicOrder(order),
       statusLabel: statusLabel(order.status),
+      myRating,
       courier: {
         id: order.courierId,
         displayName: couriers[0]?.display_name || "外送員",
         location: location
           ? { lng: location.lng, lat: location.lat, updatedAt: location.updated_at }
           : null,
+        rating: await this.statsForCourier(order.courierId),
       },
     };
   }
@@ -472,6 +528,7 @@ export class SupabaseDeliveryProvider implements DeliveryProvider {
       distanceMeters: courier
         ? distanceKm(order.pickup, { lng: courier.lng, lat: courier.lat }) * 1000
         : null,
+      courierRating: courier ? toRatingSummary(courier) : EMPTY_RATING,
     };
   }
 
@@ -501,19 +558,12 @@ export class SupabaseDeliveryProvider implements DeliveryProvider {
     const locationById = new Map(locations.map((row) => [row.courier_id, row]));
     const activeByCourier = new Map(active.map((row) => [row.courier_id, row.id]));
     const offerByCourier = new Map(offers.map((row) => [row.offered_courier_id, row.id]));
+    const stats = await this.loadStats();
     const candidates: CourierCandidate[] = [];
     for (const courier of couriers) {
       const location = locationById.get(courier.id);
       if (!location) continue;
-      candidates.push({
-        id: courier.id,
-        online: courier.online,
-        lng: location.lng,
-        lat: location.lat,
-        updatedAtMs: Date.parse(location.updated_at),
-        activeOrderId: activeByCourier.get(courier.id) ?? null,
-        pendingOfferOrderId: offerByCourier.get(courier.id) ?? null,
-      });
+      candidates.push(this.candidateFrom(courier.id, courier.online, location, activeByCourier.get(courier.id) ?? null, offerByCourier.get(courier.id) ?? null, stats));
     }
     return candidates;
   }
@@ -534,15 +584,101 @@ export class SupabaseDeliveryProvider implements DeliveryProvider {
     const active = await this.rest<Array<{ id: string }>>(
       `/rest/v1/delivery_orders?select=id&courier_id=eq.${encodeURIComponent(courierId)}&status=in.(assigned,picked_up)&limit=1`,
     );
+    const stats = await this.loadStats();
+    return this.candidateFrom(courierId, rows[0].online, location, active[0]?.id ?? null, null, stats);
+  }
+
+  private candidateFrom(
+    id: string,
+    online: boolean,
+    location: LocationRow,
+    activeOrderId: string | null,
+    pendingOfferOrderId: string | null,
+    stats: Map<string, { completed: number; sum: number; count: number }>,
+  ): CourierCandidate {
+    const row = stats.get(id);
     return {
-      id: courierId,
-      online: rows[0].online,
+      id,
+      online,
       lng: location.lng,
       lat: location.lat,
       updatedAtMs: Date.parse(location.updated_at),
-      activeOrderId: active[0]?.id ?? null,
-      pendingOfferOrderId: null,
-    } satisfies CourierCandidate;
+      activeOrderId,
+      pendingOfferOrderId,
+      completedDeliveries: row?.completed ?? 0,
+      ratingAverage: row && row.count > 0 ? row.sum / row.count : null,
+      ratingCount: row?.count ?? 0,
+    };
+  }
+
+  private async statsForCourier(courierId: string): Promise<CourierRatingSummary> {
+    const row = (await this.loadStats()).get(courierId);
+    if (!row || row.count === 0) {
+      return { average: null, count: 0, completedDeliveries: row?.completed ?? 0 };
+    }
+    return { average: row.sum / row.count, count: row.count, completedDeliveries: row.completed };
+  }
+
+  private async loadStats() {
+    const delivered = await this.rest<Array<{ courier_id: string | null }>>(
+      "/rest/v1/delivery_orders?select=courier_id&status=eq.delivered&courier_id=not.is.null&limit=1000",
+    );
+    const stats = new Map<string, { completed: number; sum: number; count: number }>();
+    for (const row of delivered) {
+      if (!row.courier_id) continue;
+      const current = stats.get(row.courier_id) ?? { completed: 0, sum: 0, count: 0 };
+      current.completed += 1;
+      stats.set(row.courier_id, current);
+    }
+    try {
+      const ratings = await this.rest<Array<{ courier_id: string; stars: number }>>(
+        "/rest/v1/delivery_courier_ratings?select=courier_id,stars&limit=1000",
+      );
+      for (const row of ratings) {
+        const current = stats.get(row.courier_id) ?? { completed: 0, sum: 0, count: 0 };
+        current.sum += row.stars;
+        current.count += 1;
+        stats.set(row.courier_id, current);
+      }
+    } catch (error) {
+      if (!(error instanceof DeliverySchemaMissingError)) throw error;
+    }
+    return stats;
+  }
+
+  private async ratingForOrder(orderId: string): Promise<OrderRating | null> {
+    try {
+      const rows = await this.rest<Array<{ stars: number; comment: string | null }>>(
+        `/rest/v1/delivery_courier_ratings?select=stars,comment&order_id=eq.${encodeURIComponent(orderId)}&limit=1`,
+      );
+      const row = rows[0];
+      return row ? { stars: row.stars, comment: row.comment } : null;
+    } catch (error) {
+      if (error instanceof DeliverySchemaMissingError) return null;
+      throw error;
+    }
+  }
+
+  private async insertRating(body: {
+    order_id: string;
+    courier_id: string;
+    customer_id: string;
+    stars: number;
+    comment: string | null;
+  }) {
+    const config = this.config();
+    const response = await fetch(`${config.url}/rest/v1/delivery_courier_ratings`, {
+      method: "POST",
+      headers: supabaseHeaders(config, { Prefer: "return=minimal" }),
+      body: JSON.stringify(body),
+      cache: "no-store",
+    });
+    if (response.status === 409) return "duplicate" as const;
+    const text = await response.text();
+    const parsed = text ? safeJson(text) : null;
+    if (codeOf(parsed) === "23505") return "duplicate" as const;
+    if (!response.ok) this.raise(response.status, parsed);
+    return "ok" as const;
   }
 
   private async addEvent(

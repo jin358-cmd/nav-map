@@ -51,13 +51,17 @@ DeliveryProvider
 
 ### 最近外送員（nearest）
 
-1. 以取餐點為圓心，半徑 `DELIVERY_ZONE_RADIUS_METERS`（預設 5000）。
+1. 以取餐點為圓心，半徑 `DELIVERY_ZONE_RADIUS_METERS`（預設 5000）。實際距離超出這個圓的人不會進名單。
 2. 候選人必須上線、位置未過期、沒有進行中的訂單、沒有別筆未過期的指派，而且不在這筆訂單的婉拒名單。
-3. 用 haversine 挑最近的一位，寫入 `offered_courier_id` 與 `offer_expires_at`。
-4. 逾時或婉拒就把該員放進婉拒名單，改指下一位。
-5. 範圍內沒有人時，訂單留在 `awaiting_dispatch`。
+3. 排名先看加權距離。完成送達少於 `DELIVERY_NEW_COURIER_THRESHOLD`（預設 10）次的外送員，排名距離會減少，最多 `DELIVERY_NEW_COURIER_BONUS_METERS`（預設 800 公尺）。0 次拿滿額，滿 10 次歸零，中間按比例。所以新外送員可以比稍遠一點的熟手優先，但遠超過這段優惠的人不會贏過近的熟手。
+4. 加權距離差距在 `DELIVERY_DISTANCE_TIE_METERS`（預設 25 公尺）以內視為平手，評分高的優先。沒有任何評價的人不會被當成低分，評分不把他和別人分開。
+5. 距離和評分都分不出唯一一位時，這筆訂單改成搶單，先接受者得標。
+6. 有唯一一位時寫入 `offered_courier_id` 與 `offer_expires_at`。逾時預設 45 秒。逾時或婉拒就改派下一位；下一位如果又是平手，同樣改搶單。
+7. 範圍內沒有人時，訂單留在 `awaiting_dispatch`。
 
 OSRM 車程之後再換。現在的距離不是路網時間。
+
+送達後，這筆訂單的顧客可以給 1 到 5 顆星和最多 80 字的短評，一筆訂單只能評一次。平均與則數由 `delivery_courier_ratings` 即時算出，不改既有的外送員表。
 
 同一位外送員同時只能有一筆進行中的訂單，也只能有一筆未過期的指派。資料庫用部分唯一索引擋住並發。
 

@@ -11,6 +11,9 @@ const settings: DispatchSettings = {
   grabRadiusMeters: 3_000,
   zoneRadiusMeters: 5_000,
   locationStaleMs: 60_000,
+  newCourierCompletedThreshold: 10,
+  newCourierMaxBonusMeters: 800,
+  distanceTieMeters: 25,
 };
 
 function courier(partial: Partial<CourierCandidate> & Pick<CourierCandidate, "id" | "lng" | "lat">): CourierCandidate {
@@ -19,6 +22,9 @@ function courier(partial: Partial<CourierCandidate> & Pick<CourierCandidate, "id
     updatedAtMs: 1_000,
     activeOrderId: null,
     pendingOfferOrderId: null,
+    completedDeliveries: 10,
+    ratingAverage: null,
+    ratingCount: 0,
     ...partial,
   };
 }
@@ -62,6 +68,7 @@ function testNearestRanksByDistance() {
     radiusMeters: 5_000,
     nowMs: 1_000,
     staleMs: 60_000,
+    settings,
   });
   assert.deepEqual(ranked.map((item) => item.id), ["near", "far"]);
   assert.ok(ranked[0].meters < ranked[1].meters);
