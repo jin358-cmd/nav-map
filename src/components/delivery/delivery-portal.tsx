@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { Bike } from "lucide-react";
+import { DeliveryScooterIcon } from "@/components/overlay/status-icons";
 import { StarPicker, StarReadout } from "@/components/delivery/star-rating";
 import { HudCloseButton } from "@/components/overlay/hud-close-button";
 import { Button } from "@/components/ui/button";
@@ -218,7 +218,7 @@ export function DeliverySession({
       >
         <div className="mb-2 flex items-center justify-between gap-2">
           <h2 className="flex items-center gap-1.5 text-sm font-semibold">
-            <Bike className="size-4 text-emerald-300" aria-hidden />
+            <DeliveryScooterIcon className="size-4 text-emerald-300" />
             外送
           </h2>
           <HudCloseButton label="關閉外送" size="sm" onClick={onClose} />

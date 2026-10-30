@@ -65,6 +65,22 @@ export function AccidentTriangleIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+/** Side-view scooter with a delivery box on the rear rack. */
+export function DeliveryScooterIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...svgProps(props)} aria-hidden>
+      <rect x="1.7" y="6.6" width="6.2" height="4.8" rx="0.9" />
+      <path d="M1.7 8.9h6.2" />
+      <circle cx="5.8" cy="17.8" r="2.45" />
+      <circle cx="18.2" cy="17.8" r="2.45" />
+      <path d="M8.2 17.8h7.2" />
+      <path d="M5.8 15.3V12.2H13l4.6 5.6" />
+      <path d="M13 12.2l2.5-3.8H20.4" />
+      <path d="M8.4 11.4h3.5" />
+    </svg>
+  );
+}
+
 export function DisasterWarningIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg {...svgProps(props)} aria-hidden>

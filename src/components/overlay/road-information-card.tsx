@@ -1,12 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Heart, Bike } from "lucide-react";
+import { Heart } from "lucide-react";
 import {
   AccidentTriangleIcon,
   CctvLensIcon,
   CongestionCarsIcon,
   ConstructionBarrierIcon,
+  DeliveryScooterIcon,
   DisasterWarningIcon,
 } from "@/components/overlay/status-icons";
 import { AccountChip } from "@/components/overlay/account-chip";
@@ -257,7 +258,7 @@ export function RoadInformationCard({
                   : "border-emerald-400/40 bg-emerald-500/15 text-emerald-200",
               )}
             >
-              <Bike className="function-chip__icon" strokeWidth={1.75} />
+              <DeliveryScooterIcon className="function-chip__icon" />
               <span className="function-chip__label">外送</span>
             </button>
           ) : null}
