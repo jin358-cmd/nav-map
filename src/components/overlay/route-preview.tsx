@@ -92,11 +92,12 @@ export function RouteConfirmBar({
               {` · ${formatCoords(destination.location)}`}
             </p>
           </div>
-          <div className="flex gap-1.5">
+          <div className="flex gap-1.5" role="group" aria-label="路線模式">
             {(["car", "motorcycle"] as const).map((mode) => (
               <button
                 key={mode}
                 type="button"
+                aria-pressed={travelMode === mode}
                 onClick={() => onTravelMode(mode)}
                 className={cn(
                   "h-9 rounded-full px-3 text-sm",

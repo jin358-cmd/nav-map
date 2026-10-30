@@ -51,6 +51,10 @@ src/data/south-poi-fallback.json.gz
 /address-import-doorplates-report.json
 supabase/.temp/
 
+# OSRM extracts and MLD graphs. Rebuild with osrm/scripts/build-taiwan.sh
+/osrm/data/*
+!/osrm/data/.gitkeep
+
 # vercel
 .vercel
 

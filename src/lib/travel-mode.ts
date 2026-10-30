@@ -1,11 +1,20 @@
 import type { TravelMode } from "@/types/domain";
 
-export const CAR_ROUTING_PROVIDER = "OSRM public driving (router.project-osrm.org)";
+export const CAR_ROUTING_PROVIDER =
+  "OSRM car (OSRM_CAR_URL, or the public driving demo when unset)";
 export const MOTORCYCLE_ROUTING_PROVIDER =
-  "Valhalla motorcycle (avoid highways / expressways)";
+  "OSRM motorcycle (OSRM_MOTORCYCLE_URL, Taiwan scooter profile)";
 
-export function motorcycleRoutingConfigured() {
-  return true;
+export function directionsModeQuery(mode: TravelMode): TravelMode {
+  return mode === "motorcycle" ? "motorcycle" : "car";
+}
+
+/** Route-preview toggle: a chosen destination is replanned in the new mode. */
+export function travelModeSwitch(next: TravelMode, hasDestination: boolean) {
+  return {
+    mode: directionsModeQuery(next),
+    replan: hasDestination,
+  };
 }
 
 export function formatEtaClock(durationSeconds: number, now = new Date()) {

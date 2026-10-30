@@ -124,7 +124,7 @@ Phase 4 災害說明：[`docs/PHASE-4-DISASTERS.md`](docs/PHASE-4-DISASTERS.md)�
 雲林、嘉義、臺南、高雄、屏東的 nav-ready 店家可走 Supabase／PostGIS 範圍查詢；未設定雲端金鑰時用地圖本機索引後備。生活圈新增「生活」分類。門牌搜尋已做意圖分流與結構化評分，地址查詢不再被本機店家結果提前攔截。Dry Run：`npm run export:south-pois`。雲林 published dry-run：`SOUTH_POI_COUNTIES=雲林縣 SOUTH_POI_PUBLISHED_ONLY=1 npm run import:south-pois`（wouldUpsert=11515，未寫庫）。雲端狀態：`npm run probe:south-pois`。地址測試：`npm run test:address`。正式寫庫需 Jin 確認後才可 `SOUTH_POI_APPLY=1`。報告：[`docs/phase-5-3a-south-poi-report.md`](docs/phase-5-3a-south-poi-report.md)、[`docs/phase-5-3a-yunlin-dry-run.json`](docs/phase-5-3a-yunlin-dry-run.json)、[`docs/phase-5-3a-supabase-upload-status.md`](docs/phase-5-3a-supabase-upload-status.md)、[`docs/phase-5-3a-address-quality.md`](docs/phase-5-3a-address-quality.md)。本階段禁止 merge `main` 與 Production Deploy。
 
 **後續**
-機車路由供應商、TDX CCTV live、停車擴充至北中高與新北、離線底圖快取、南部試行通過後才擴大公開範圍。
+機車圖需自架 OSRM（`docs/osrm-motorcycle.md`；正式環境的 `OSRM_MOTORCYCLE_URL` 先留空）、TDX CCTV live、停車擴充至北中高與新北、離線底圖快取、南部試行通過後才擴大公開範圍。
 
 ## Vercel 部署
 
@@ -133,7 +133,7 @@ Phase 4 災害說明：[`docs/PHASE-4-DISASTERS.md`](docs/PHASE-4-DISASTERS.md)�
 - Framework Preset：Next.js
 - Build Command：`npm run build`
 - Output：Next.js 預設
-- 環境變數：正式路況用 `TDX_CLIENT_ID` / `TDX_CLIENT_SECRET`；正式戶政門牌定位用 `TGOS_APP_ID` / `TGOS_API_KEY`；測速公開資料不需金鑰，TGOS 主題 API 可選填 `TGOS_THEME_API_KEY`；NCDR 示警免金鑰，會員資料可選填 `NCDR_API_KEY`；Google 登入與 Drive 書籤、YouTube Music 歌單可選填 `NEXT_PUBLIC_GOOGLE_CLIENT_ID`（需啟用 Drive API 與 YouTube Data API v3）
+- 環境變數：正式路況用 `TDX_CLIENT_ID` / `TDX_CLIENT_SECRET`；正式戶政門牌定位用 `TGOS_APP_ID` / `TGOS_API_KEY`；測速公開資料不需金鑰，TGOS 主題 API 可選填 `TGOS_THEME_API_KEY`；NCDR 示警免金鑰，會員資料可選填 `NCDR_API_KEY`；Google 登入與 Drive 書籤、YouTube Music 歌單可選填 `NEXT_PUBLIC_GOOGLE_CLIENT_ID`（需啟用 Drive API 與 YouTube Data API v3）。汽車路線可選 `OSRM_CAR_URL`（空白則用公開 OSRM driving）。機車路線用 `OSRM_MOTORCYCLE_URL`，正式環境留空；Vercel 不能代管 `osrm-routed`，見 [`docs/osrm-motorcycle.md`](docs/osrm-motorcycle.md)
 
 MapLibre worker 由 `src/app/maplibre/[file]/route.ts` 提供，`next.config.ts` 已列入 tracing，避免 serverless 漏檔。
 

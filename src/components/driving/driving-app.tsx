@@ -115,6 +115,7 @@ import {
 import { distanceKm } from "@/lib/geo";
 import { requestDeviceCompassPermission } from "@/lib/device-compass";
 import { nextIntersectionStep } from "@/lib/osrm-maneuver";
+import { travelModeSwitch } from "@/lib/travel-mode";
 import {
   createRouteProgressModel,
   updateNavigationProgress,
@@ -1845,9 +1846,10 @@ export function DrivingApp() {
                 else addFavorite(currentPlace);
               }}
               onTravelMode={(mode) => {
-                setTravelMode(mode);
+                const next = travelModeSwitch(mode, Boolean(lastRouteHitRef.current));
+                setTravelMode(next.mode);
                 const hit = lastRouteHitRef.current;
-                if (hit) void applyRoute(hit, mode);
+                if (next.replan && hit) void applyRoute(hit, next.mode);
               }}
               onStartNav={startNavigation}
               onClear={clearRoute}
