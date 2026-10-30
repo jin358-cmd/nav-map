@@ -146,7 +146,15 @@ import {
   writeNavAutoZoomEnabled,
 } from "@/lib/nav-auto-zoom-setting";
 import { GuidanceArrowToggle } from "@/components/overlay/guidance-arrow-toggle";
+import { ElevatedGroundChoice } from "@/components/overlay/elevated-ground-choice";
 import { RoutePreviewCard } from "@/components/overlay/route-preview-card";
+import type { RoadRibbon } from "@/lib/elevated-ground/types";
+import {
+  elevatedGroundChoiceEnabled,
+  elevatedGroundFixtureMode,
+} from "@/lib/elevated-ground/flag";
+import { buildJianguoFixture, type JianguoFixture } from "@/lib/elevated-ground/fixture";
+import { useElevatedGroundChoice } from "@/hooks/use-elevated-ground-choice";
 import type { RoadSketch } from "@/lib/junction-roads";
 import {
   deleteSavedPlace,
@@ -202,6 +210,7 @@ import type {
   ParkingLot,
   ParkingSort,
   RouteDestination,
+  RoutePlan,
   RouteStep,
   SavedPlaceType,
   SelectedMapEvent,
@@ -286,6 +295,9 @@ export function DrivingApp() {
   const [previewPhase, setPreviewPhase] = useState<NavAutoZoomPhase>("cruise");
   const [junctionRoads, setJunctionRoads] = useState<RoadSketch[]>([]);
   const [junctionBlocks, setJunctionBlocks] = useState<[number, number][][]>([]);
+  const [roadRibbons, setRoadRibbons] = useState<RoadRibbon[]>([]);
+  const [forkFixture, setForkFixture] = useState<JianguoFixture | null>(null);
+  const fixtureLockRef = useRef(false);
   const [pendingMapDisplayMode, setPendingMapDisplayMode] =
     useState<MapDisplayMode | null>(null);
   const [styleMenuOpen, setStyleMenuOpen] = useState(false);
@@ -510,6 +522,113 @@ export function DrivingApp() {
     routeGeneration: routeEpoch,
   });
 
+  const forkPreset = useMemo(
+    () =>
+      forkFixture
+        ? {
+            fork: forkFixture.fork,
+            elevatedPlan: forkFixture.elevatedPlan,
+            groundPlan: forkFixture.groundPlan,
+            dismissMs: forkFixture.dismissMs,
+          }
+        : null,
+    [forkFixture],
+  );
+  const applyForkRoute = useCallback((plan: RoutePlan) => {
+    const steps = plan.steps ?? [];
+    const model = createRouteProgressModel(plan.coordinates, steps);
+    const pose = vehicleLiveRef.current ?? vehicleRef.current;
+    setRoute(plan.coordinates);
+    setManeuver(plan.maneuver);
+    setRouteSteps(steps);
+    setRouteDurationSeconds(plan.durationSeconds);
+    setRouteDistanceMeters(plan.distanceMeters);
+    setRouteError(null);
+    const next = model
+      ? updateNavigationProgress({
+          model,
+          steps,
+          vehicle: pose,
+          previous: null,
+        })
+      : null;
+    navigationTrackerRef.current = next;
+    setNavigationProgress(next);
+    const snapped = model
+      ? snapVehicleToRoute({
+          raw: pose,
+          model,
+          previousRouteMeters: next?.routeMeters,
+          wasSnapped: true,
+        })
+      : null;
+    displayVehicleLiveRef.current = snapped;
+    setDisplayVehicle(snapped);
+  }, []);
+  const elevatedGround = useElevatedGroundChoice({
+    enabled: elevatedGroundChoiceEnabled(),
+    navigating,
+    offRoute: navigationProgress?.offRoute ?? false,
+    route,
+    routeMeters: navigationProgress?.routeMeters ?? 0,
+    origin: vehicle,
+    destinationLabel: destination?.label ?? "",
+    destination: destination?.location ?? null,
+    travelMode,
+    ribbons: forkFixture?.ribbons ?? roadRibbons,
+    preset: forkPreset,
+    onSwap: applyForkRoute,
+  });
+
+  useEffect(() => {
+    if (!elevatedGroundChoiceEnabled()) return;
+    const mode = elevatedGroundFixtureMode(window.location.search);
+    if (!mode) return;
+    fixtureLockRef.current = true;
+    const built = buildJianguoFixture(mode);
+    if (!built) return;
+    const timer = window.setTimeout(() => {
+      const model = createRouteProgressModel(built.route, built.steps);
+      const next = model
+        ? updateNavigationProgress({
+            model,
+            steps: built.steps,
+            vehicle: built.vehicle,
+            previous: null,
+          })
+        : null;
+      const snapped = model
+        ? snapVehicleToRoute({
+            raw: built.vehicle,
+            model,
+            previousRouteMeters: next?.routeMeters,
+            wasSnapped: true,
+          })
+        : null;
+      vehicleRef.current = built.vehicle;
+      vehicleLiveRef.current = built.vehicle;
+      displayVehicleLiveRef.current = snapped;
+      navigationTrackerRef.current = next;
+      setForkFixture(built);
+      setVehicle(built.vehicle);
+      setDisplayVehicle(snapped);
+      setRoute(built.route);
+      setRouteSteps(built.steps);
+      setManeuver(built.plan.maneuver);
+      setDestination(built.plan.destination);
+      setRouteDurationSeconds(built.plan.durationSeconds);
+      setRouteDistanceMeters(built.plan.distanceMeters);
+      setNavigationProgress(next);
+      setNavigating(true);
+      setFollowVehicle(true);
+      setFollowOrientation("heading-up");
+      setUserAdjustedMap(false);
+      panIntentRef.current = false;
+      setLocateEpoch((value) => value + 1);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+
   const queryOrigin = useMemo(
     () =>
       resolveMapQueryOrigin({
@@ -641,8 +760,10 @@ export function DrivingApp() {
         setAccidentOrigin(accidentCatalog.origin);
         setConstructions(constructionCatalog.items);
         setConstructionOrigin(constructionCatalog.origin);
-        setRoute([]);
-        setManeuver(null);
+        if (!fixtureLockRef.current) {
+          setRoute([]);
+          setManeuver(null);
+        }
         setBaseIntel([]);
       } catch {
         if (!cancelled) {
@@ -1678,6 +1799,7 @@ export function DrivingApp() {
         turnCueMeters={turnCueMeters}
         onJunctionRoads={setJunctionRoads}
         onJunctionBlocks={setJunctionBlocks}
+        onRoadRibbons={setRoadRibbons}
         onPreviewPhase={setPreviewPhase}
         destination={destination}
         overlayPadding={navigating ? overlayPadding : null}
@@ -2308,6 +2430,16 @@ export function DrivingApp() {
         <div className="pointer-events-none absolute left-1/2 top-[max(1.1rem,calc(env(safe-area-inset-top)+0.6rem))] z-[70] -translate-x-1/2 rounded-full border border-emerald-300/35 bg-black/55 px-4 py-2 text-sm font-semibold text-emerald-100 shadow-lg backdrop-blur-md">
           {arrivalNotice}
         </div>
+      ) : null}
+
+      {elevatedGround.prompt ? (
+        <ElevatedGroundChoice
+          active={elevatedGround.prompt.active}
+          elevated={elevatedGround.prompt.elevated}
+          ground={elevatedGround.prompt.ground}
+          dismissMs={elevatedGround.prompt.dismissMs}
+          onChoose={elevatedGround.choose}
+        />
       ) : null}
 
       <footer className="hud-anchor-interactive absolute inset-x-0 bottom-0 z-50 flex max-w-[100vw] flex-col items-center gap-1.5 overflow-visible px-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))] pb-[max(0.45rem,env(safe-area-inset-bottom))] sm:p-4 sm:pt-0">

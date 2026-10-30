@@ -63,14 +63,26 @@ export function resolveOsrmBaseUrl(
   return { ok: true, baseUrl: raw };
 }
 
+export type OsrmRouteRequest = {
+  alternatives?: boolean;
+  via?: { lng: number; lat: number }[];
+  viaRadiusMeters?: number;
+};
+
 export function buildOsrmRouteUrl(
   baseUrl: string,
   fromLng: number,
   fromLat: number,
   toLng: number,
   toLat: number,
+  request: OsrmRouteRequest = {},
 ) {
-  const path = `${fromLng},${fromLat};${toLng},${toLat}`;
+  const via = request.via ?? [];
+  const path = [
+    `${fromLng},${fromLat}`,
+    ...via.map((point) => `${point.lng},${point.lat}`),
+    `${toLng},${toLat}`,
+  ].join(";");
   const endpoint = new URL(
     baseUrl.includes("{path}")
       ? baseUrl.replace("{path}", path)
@@ -79,6 +91,13 @@ export function buildOsrmRouteUrl(
   endpoint.searchParams.set("overview", "full");
   endpoint.searchParams.set("geometries", "geojson");
   endpoint.searchParams.set("steps", "true");
-  endpoint.searchParams.set("alternatives", "false");
+  endpoint.searchParams.set("alternatives", request.alternatives ? "true" : "false");
+  if (via.length > 0) {
+    const radius = String(request.viaRadiusMeters ?? 30);
+    endpoint.searchParams.set(
+      "radiuses",
+      ["unlimited", ...via.map(() => radius), "unlimited"].join(";"),
+    );
+  }
   return endpoint;
 }

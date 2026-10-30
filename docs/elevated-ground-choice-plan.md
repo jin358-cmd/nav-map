@@ -67,7 +67,7 @@ OSM 若把高架和橋下畫在同一條中心線上，兩邊中位數都會接�
 
 `NEXT_PUBLIC_ELEVATED_GROUND_CHOICE`。`next.config.ts` 在建置時寫入：有明確設定就用設定；否則 `VERCEL_ENV=production` 為關，preview 與本機開發為開。客戶端沒讀到 `VERCEL_ENV` 時才需要這層。旗標關閉時不查 OSRM、不渲染面板。
 
-開發用 `?egFixture=near|far` 只在 `NODE_ENV !== "production"` 生效，把車放在建國高架分岔前 120 公尺或 400 公尺，路線與橋線是上面那組實測幾何。正式與 preview 建置不會啟用這個查詢參數。
+開發用 `?egFixture=near|far` 只在 `NODE_ENV !== "production"` 生效，把車放在建國高架分岔前 120 公尺或 400 公尺，路線與橋線是上面那組實測幾何。這個參數把自動消失拉長到 90 秒，方便截圖；行車中的邏輯仍是 12 秒。正式與 preview 建置不會啟用這個查詢參數。
 
 ## 會改的檔案
 

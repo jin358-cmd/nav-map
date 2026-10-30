@@ -74,6 +74,32 @@ function testRouteUrlCarriesCoordinates() {
   assert.equal(endpoint.searchParams.get("geometries"), "geojson");
   assert.equal(endpoint.searchParams.get("steps"), "true");
   assert.equal(endpoint.searchParams.get("overview"), "full");
+  assert.equal(endpoint.searchParams.get("alternatives"), "false");
+  assert.equal(endpoint.searchParams.get("radiuses"), null);
+}
+
+function testForkUrlUsesAlternativesOrVia() {
+  const alternatives = buildOsrmRouteUrl(
+    "https://router.project-osrm.org/route/v1/driving",
+    121.53,
+    25.06,
+    121.54,
+    25.03,
+    { alternatives: true },
+  );
+  assert.equal(alternatives.searchParams.get("alternatives"), "true");
+  assert.equal(alternatives.searchParams.get("radiuses"), null);
+  const via = buildOsrmRouteUrl(
+    "https://router.project-osrm.org/route/v1/driving",
+    121.53,
+    25.06,
+    121.54,
+    25.03,
+    { via: [{ lng: 121.5368, lat: 25.05 }], viaRadiusMeters: 30 },
+  );
+  assert.match(via.pathname, /121\.53,25\.06;121\.5368,25\.05;121\.54,25\.03$/);
+  assert.equal(via.searchParams.get("alternatives"), "false");
+  assert.equal(via.searchParams.get("radiuses"), "unlimited;30;unlimited");
 }
 
 function testModeSwitchReplansOnlyWithDestination() {
@@ -96,5 +122,6 @@ testMotorcycleUnsetIsNotConfigured();
 testMotorcycleRejectsPublicCarDemo();
 testMotorcycleUsesLocalRouter();
 testRouteUrlCarriesCoordinates();
+testForkUrlUsesAlternativesOrVia();
 testModeSwitchReplansOnlyWithDestination();
-console.log(JSON.stringify({ ok: true, suite: "osrm-routing", tests: 8 }));
+console.log(JSON.stringify({ ok: true, suite: "osrm-routing", tests: 9 }));

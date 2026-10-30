@@ -39,6 +39,8 @@ import {
   TAIWAN_OVERVIEW_ZOOM,
 } from "@/lib/constants";
 import type { GuidanceArrowMode } from "@/lib/guidance-arrow-mode";
+import { collectRoadRibbons } from "@/lib/elevated-ground/bridges";
+import type { RoadRibbon } from "@/lib/elevated-ground/types";
 import { nearbyBlockRings, nearbyRoadSketches, type RoadSketch } from "@/lib/junction-roads";
 import {
   emptyNavAutoZoomState,
@@ -197,6 +199,7 @@ type DrivingMapProps = {
   turnCueMeters?: number[];
   onJunctionRoads?: (lines: RoadSketch[]) => void;
   onJunctionBlocks?: (blocks: [number, number][][]) => void;
+  onRoadRibbons?: (ribbons: RoadRibbon[]) => void;
   onPreviewPhase?: (phase: NavAutoZoomPhase) => void;
   destination: RouteDestination | null;
   overlayPadding?: {
@@ -508,6 +511,7 @@ export function DrivingMap({
   turnCueMeters = [],
   onJunctionRoads,
   onJunctionBlocks,
+  onRoadRibbons,
   onPreviewPhase,
   destination,
   overlayPadding = null,
@@ -599,9 +603,11 @@ export function DrivingMap({
   const autoZoomStateRef = useRef<NavAutoZoomState>(emptyNavAutoZoomState());
   const onJunctionRoadsRef = useRef(onJunctionRoads);
   const onJunctionBlocksRef = useRef(onJunctionBlocks);
+  const onRoadRibbonsRef = useRef(onRoadRibbons);
   const onPreviewPhaseRef = useRef(onPreviewPhase);
   const previewPhaseRef = useRef<NavAutoZoomPhase>("cruise");
   const lastRoadQueryRef = useRef(0);
+  const lastRibbonQueryRef = useRef(0);
   const alertPhaseRef = useRef(maneuverAlertPhase);
   const recoverUntilRef = useRef(0);
   const recoverFromRef = useRef(0);
@@ -657,6 +663,7 @@ export function DrivingMap({
     onStyleFallbackRef.current = onStyleFallback;
     onJunctionRoadsRef.current = onJunctionRoads;
     onJunctionBlocksRef.current = onJunctionBlocks;
+    onRoadRibbonsRef.current = onRoadRibbons;
     onPreviewPhaseRef.current = onPreviewPhase;
     modeRef.current = cameraMode;
     followOrientationRef.current = followOrientation;
@@ -744,6 +751,7 @@ export function DrivingMap({
     onStyleFallback,
     onJunctionRoads,
     onJunctionBlocks,
+    onRoadRibbons,
     onPreviewPhase,
     cameraMode,
     followOrientation,
@@ -1210,6 +1218,26 @@ export function DrivingMap({
           lastRoadQueryRef.current = now;
           onJunctionRoadsRef.current(nearbyRoadSketches(mapNow, pose, 160));
           onJunctionBlocksRef.current?.(nearbyBlockRings(mapNow, pose, 140));
+        }
+      }
+
+      if (
+        navigatingNow &&
+        onRoadRibbonsRef.current &&
+        now - lastRibbonQueryRef.current > 2500
+      ) {
+        lastRibbonQueryRef.current = now;
+        try {
+          if (!mapNow.getSource("openmaptiles")) {
+            onRoadRibbonsRef.current([]);
+          } else {
+            const features = mapNow.querySourceFeatures("openmaptiles", {
+              sourceLayer: "transportation",
+            });
+            onRoadRibbonsRef.current(collectRoadRibbons(features));
+          }
+        } catch {
+          onRoadRibbonsRef.current([]);
         }
       }
 

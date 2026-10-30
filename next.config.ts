@@ -1,6 +1,13 @@
 import type { NextConfig } from "next";
 
+const elevatedGroundChoice =
+  process.env.NEXT_PUBLIC_ELEVATED_GROUND_CHOICE ??
+  (process.env.VERCEL_ENV === "production" ? "0" : "1");
+
 const nextConfig: NextConfig = {
+  env: {
+    NEXT_PUBLIC_ELEVATED_GROUND_CHOICE: elevatedGroundChoice,
+  },
   reactStrictMode: true,
   allowedDevOrigins: ["127.0.0.1", "localhost"],
   async headers() {
