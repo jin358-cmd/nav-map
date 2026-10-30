@@ -77,11 +77,21 @@ function testJunctionHighlightsTheExit() {
   assert.ok(position && maneuver);
   assert.ok(position.at.x > 0 && position.at.x < scene.width);
   assert.ok(maneuver.at.y > 0 && maneuver.at.y < scene.height);
-  const overview = buildOverviewScene(route, apex - 40);
+  const overview = buildOverviewScene(route, apex - 40, [
+    {
+      line: [
+        [120.543, 23.708],
+        [120.548, 23.708],
+      ],
+      name: "中正路",
+    },
+  ]);
   assert.equal(overview.mode, "overview");
   assert.ok(overview.markers.some((marker) => marker.kind === "destination"));
+  assert.ok(overview.markers.some((marker) => marker.kind === "position"));
+  assert.ok(overview.lines.some((line) => line.kind === "context"));
+  assert.ok(overview.labels.some((label) => label.text === "中正路"));
   assert.ok(overview.lines[0].points.length >= 2);
-  assert.ok(overview.lines[0].points.length <= route.length);
 }
 
 function testYunlinPreviewSwitchesWithCloseTurns() {

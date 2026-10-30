@@ -26,33 +26,30 @@ function wideHead(ctx: CanvasRenderingContext2D) {
   ctx.closePath();
 }
 
-/** Wide head for the flat ribbon. The shaft is the route line, not this sprite. */
-export function paintFlatArrow(): ImageData | null {
-  const ctx = canvasOf(128);
-  if (!ctx) return null;
-  ctx.shadowColor = "rgba(186, 230, 253, 0.9)";
-  ctx.shadowBlur = 16;
-  wideHead(ctx);
-  ctx.fillStyle = "#e0f2fe";
-  ctx.fill();
-  ctx.shadowColor = "transparent";
+function fillHead(ctx: CanvasRenderingContext2D) {
   wideHead(ctx);
   const face = ctx.createLinearGradient(0, -46, 0, 18);
-  face.addColorStop(0, "#ffffff");
-  face.addColorStop(1, "#7dd3fc");
+  face.addColorStop(0, "#fbbf24");
+  face.addColorStop(1, "#f59e0b");
   ctx.fillStyle = face;
   ctx.fill();
   ctx.lineJoin = "round";
-  ctx.lineWidth = 6;
-  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 7;
+  ctx.strokeStyle = "#1f2937";
   ctx.stroke();
+}
+
+/** Wide amber head. The shaft is the route line, not this sprite. */
+export function paintFlatArrow(): ImageData | null {
+  const ctx = canvasOf(128);
+  if (!ctx) return null;
+  fillHead(ctx);
   return ctx.getImageData(0, 0, 128, 128);
 }
 
 /**
- * Raised head for the floating ribbon. The bend itself is the route line.
- * `phase` is accepted so callers can keep a stable signature; the moving
- * highlight is painted on that line.
+ * Same amber head as the flat arrow, with a faint dark shadow under it.
+ * The bend itself stays on the route line.
  */
 export function paintFloatArrow(
   _side: ArrowPaintSide,
@@ -61,30 +58,11 @@ export function paintFloatArrow(
   const ctx = canvasOf(128);
   if (!ctx) return null;
   ctx.save();
-  ctx.shadowColor = "rgba(15, 23, 42, 0.55)";
-  ctx.shadowBlur = 18;
-  ctx.shadowOffsetY = 12;
-  ctx.translate(0, 8);
-  wideHead(ctx);
-  ctx.fillStyle = "#0c4a6e";
-  ctx.fill();
+  ctx.shadowColor = "rgba(15, 23, 42, 0.45)";
+  ctx.shadowBlur = 10;
+  ctx.shadowOffsetY = 8;
+  fillHead(ctx);
   ctx.restore();
-
-  ctx.translate(0, 7);
-  wideHead(ctx);
-  ctx.fillStyle = "#075985";
-  ctx.fill();
-  ctx.translate(0, -7);
-  wideHead(ctx);
-  const face = ctx.createLinearGradient(0, -46, 0, 20);
-  face.addColorStop(0, "#ffffff");
-  face.addColorStop(0.45, "#7dd3fc");
-  face.addColorStop(1, "#0284c7");
-  ctx.fillStyle = face;
-  ctx.fill();
-  ctx.lineJoin = "round";
-  ctx.lineWidth = 6;
-  ctx.strokeStyle = "#ffffff";
-  ctx.stroke();
+  fillHead(ctx);
   return ctx.getImageData(0, 0, 128, 128);
 }

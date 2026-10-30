@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { HudCloseButton } from "@/components/overlay/hud-close-button";
+import type { RoadSketch } from "@/lib/junction-roads";
 import type { NavAutoZoomPhase } from "@/lib/nav-auto-zoom";
 import {
   activeTurnApex,
@@ -32,7 +33,7 @@ export function RoutePreviewCard({
   route: [number, number][];
   routeMeters: number;
   turnCueMeters: number[];
-  roads: [number, number][][];
+  roads: RoadSketch[];
 }) {
   const [minimised, setMinimised] = useState(false);
   if (!navigating || route.length < 2) return null;
@@ -41,8 +42,13 @@ export function RoutePreviewCard({
   const apex = activeTurnApex(turnCueMeters, routeMeters);
   const scene =
     mode === "junction" && apex != null
-      ? buildJunctionScene(route, routeMeters, apex, roads)
-      : buildOverviewScene(route, routeMeters);
+      ? buildJunctionScene(
+          route,
+          routeMeters,
+          apex,
+          roads.map((road) => road.line),
+        )
+      : buildOverviewScene(route, routeMeters, roads);
 
   if (minimised) {
     return (
@@ -68,6 +74,7 @@ export function RoutePreviewCard({
         role="img"
       >
         <title>{mode === "junction" ? "下一個路口" : "全程路線"}</title>
+        <rect width={scene.width} height={scene.height} fill="#1e293b" />
         {scene.lines.map((line, index) => (
           <path key={`${line.kind}-${index}`} className={lineClass(line.kind)} d={pointsToPath(line.points)} />
         ))}
@@ -85,6 +92,17 @@ export function RoutePreviewCard({
             cy={marker.at.y}
             r={marker.kind === "position" ? 4.5 : 3.6}
           />
+        ))}
+        {scene.labels.map((label) => (
+          <text
+            key={`${label.text}-${label.at.x.toFixed(1)}`}
+            x={label.at.x}
+            y={label.at.y}
+            className="route-preview-card__label"
+            textAnchor="middle"
+          >
+            {label.text}
+          </text>
         ))}
       </svg>
     </section>

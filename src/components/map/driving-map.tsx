@@ -39,7 +39,7 @@ import {
   TAIWAN_OVERVIEW_ZOOM,
 } from "@/lib/constants";
 import type { GuidanceArrowMode } from "@/lib/guidance-arrow-mode";
-import { nearbyRoadLines } from "@/lib/junction-roads";
+import { nearbyRoadSketches, type RoadSketch } from "@/lib/junction-roads";
 import {
   emptyNavAutoZoomState,
   stepNavAutoZoom,
@@ -195,7 +195,7 @@ type DrivingMapProps = {
   offRoute?: boolean;
   autoZoomEnabled?: boolean;
   turnCueMeters?: number[];
-  onJunctionRoads?: (lines: [number, number][][]) => void;
+  onJunctionRoads?: (lines: RoadSketch[]) => void;
   onPreviewPhase?: (phase: NavAutoZoomPhase) => void;
   destination: RouteDestination | null;
   overlayPadding?: {
@@ -1200,15 +1200,10 @@ export function DrivingMap({
         onJunctionRoadsRef.current &&
         now - lastRoadQueryRef.current > 800
       ) {
-        const nextCue = turnCuesRef.current.find(
-          (meters) => meters >= routeMetersRef.current - 20,
-        );
-        if (nextCue != null && nextCue - routeMetersRef.current <= 220) {
-          const pose = pointAlongRoute(routeRef.current, nextCue);
-          if (pose) {
-            lastRoadQueryRef.current = now;
-            onJunctionRoadsRef.current(nearbyRoadLines(mapNow, pose));
-          }
+        const pose = pointAlongRoute(routeRef.current, routeMetersRef.current);
+        if (pose) {
+          lastRoadQueryRef.current = now;
+          onJunctionRoadsRef.current(nearbyRoadSketches(mapNow, pose, 160));
         }
       }
 

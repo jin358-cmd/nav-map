@@ -15,12 +15,18 @@ export type PreviewMarker = {
   kind: "position" | "destination" | "maneuver";
 };
 
+export type PreviewLabel = {
+  at: LocalPoint;
+  text: string;
+};
+
 export type PreviewScene = {
   mode: PreviewMode;
   width: number;
   height: number;
   lines: PreviewPolyline[];
   markers: PreviewMarker[];
+  labels: PreviewLabel[];
 };
 
 const VIEW_W = 160;
@@ -129,6 +135,7 @@ function sceneFrom(
   lines: [number, number][][],
   kinds: PreviewPolyline["kind"][],
   markers: Array<{ at: [number, number]; kind: PreviewMarker["kind"] }>,
+  labels: Array<{ at: [number, number]; text: string }> = [],
 ): PreviewScene {
   const origin = lines.flat()[0] ?? markers[0]?.at ?? [0, 0];
   const localLines = lines.map((line) => line.map((coord) => localOf(origin, coord)));
@@ -136,7 +143,17 @@ function sceneFrom(
     kind: marker.kind,
     at: localOf(origin, marker.at),
   }));
-  const cloud = localLines.flat().concat(localMarkers.map((marker) => marker.at));
+  const localLabels = labels
+    .filter((label) => label.text.trim().length > 0)
+    .slice(0, 4)
+    .map((label) => ({
+      text: label.text.trim(),
+      at: localOf(origin, label.at),
+    }));
+  const cloud = localLines
+    .flat()
+    .concat(localMarkers.map((marker) => marker.at))
+    .concat(localLabels.map((label) => label.at));
   const project = fitTransform(cloud, VIEW_W, VIEW_H, PAD);
   const epsilon = mode === "overview" ? 18 : 4;
   return {
@@ -151,20 +168,42 @@ function sceneFrom(
       kind: marker.kind,
       at: project(marker.at),
     })),
+    labels: localLabels.map((label) => ({
+      text: label.text,
+      at: project(label.at),
+    })),
   };
 }
 
 export function buildOverviewScene(
   route: [number, number][],
   routeMeters: number,
+  roads: Array<{ line: [number, number][]; name?: string }> = [],
 ): PreviewScene {
   const simplified = simplifyLngLat(route, 22);
   const position = asLng(pointAlongRoute(route, Math.max(0, routeMeters)));
   const destination = route[route.length - 1] ?? null;
+  const start = route[0] ?? null;
   const markers: Array<{ at: [number, number]; kind: PreviewMarker["kind"] }> = [];
   if (position) markers.push({ at: position, kind: "position" });
+  if (start && (!position || start[0] !== position[0] || start[1] !== position[1])) {
+    markers.push({ at: start, kind: "maneuver" });
+  }
   if (destination) markers.push({ at: destination, kind: "destination" });
-  return sceneFrom("overview", [simplified], ["route"], markers);
+  const context = roads.filter((road) => road.line.length >= 2);
+  const labels = context
+    .filter((road) => road.name)
+    .map((road) => ({
+      text: road.name ?? "",
+      at: road.line[Math.floor(road.line.length / 2)] ?? road.line[0],
+    }));
+  return sceneFrom(
+    "overview",
+    [simplified, ...context.map((road) => simplifyLngLat(road.line, 18))],
+    ["route", ...context.map(() => "context" as const)],
+    markers,
+    labels,
+  );
 }
 
 export function buildJunctionScene(

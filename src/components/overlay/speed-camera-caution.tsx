@@ -3,18 +3,19 @@
 import { cn } from "@/lib/utils";
 import type { SpeedCameraAlert } from "@/lib/speed-camera-alert";
 
+function distanceLabel(meters: number) {
+  if (meters >= 250) return "300 公尺";
+  if (meters >= 100) return "150 公尺";
+  return "50 公尺";
+}
+
 export function SpeedCameraCaution({
   alert,
 }: {
   alert: SpeedCameraAlert;
 }) {
   const meters = Math.max(0, Math.round(alert.distanceMeters));
-  const copy =
-    alert.phase === 50
-      ? "即將測速，請減速"
-      : alert.phase === 150
-        ? "接近測速，請減速"
-        : "前方測速，請減速";
+  const limit = alert.speedLimitKph > 0 ? String(alert.speedLimitKph) : "—";
 
   return (
     <div
@@ -29,11 +30,15 @@ export function SpeedCameraCaution({
             : "speed-camera-caution--watch",
       )}
     >
-      <p className="speed-camera-caution__title">測速照相</p>
-      <p className="speed-camera-caution__copy">{copy}</p>
-      <p className="speed-camera-caution__meta">
-        前方 {meters} 公尺 · 限速 {alert.speedLimitKph}
-      </p>
+      <span className="speed-limit-sign" aria-hidden>
+        <span className="speed-limit-sign__number">{limit}</span>
+      </span>
+      <span className="speed-camera-caution__aside">
+        <span className="speed-camera-caution__glyph" aria-hidden>
+          ⌖
+        </span>
+        <span className="speed-camera-caution__distance">{distanceLabel(meters)}</span>
+      </span>
     </div>
   );
 }

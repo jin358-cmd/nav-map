@@ -79,11 +79,11 @@ export function MapStyleMenu({
         aria-controls="navpilot-map-style"
         onClick={onToggle}
         className={cn(
-          "relative z-10 size-12 rounded-full backdrop-blur-md disabled:border-zinc-700 disabled:bg-zinc-900/80 disabled:text-zinc-500 touch-manipulation",
+          "hud-round-btn relative z-10 rounded-full backdrop-blur-md disabled:border-zinc-700 disabled:bg-zinc-900/80 disabled:text-zinc-500 touch-manipulation",
           mapControlButtonClass(tone, open),
         )}
       >
-        <Layers className="size-6" strokeWidth={2.5} />
+        <Layers className="size-5" strokeWidth={2.5} />
       </Button>
     </div>
   );

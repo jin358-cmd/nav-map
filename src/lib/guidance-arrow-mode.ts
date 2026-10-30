@@ -1,5 +1,8 @@
 export type GuidanceArrowMode = "flat" | "float";
 
+/** Hide the 平面/立體 control everywhere. The stored mode still drives the arrow. */
+export const SHOW_GUIDANCE_ARROW_MODE_TOGGLE = false;
+
 const STORAGE_KEY = "navpilot.guidance-arrow-mode.v1";
 const CHANGE_EVENT = "navpilot-guidance-arrow-mode";
 

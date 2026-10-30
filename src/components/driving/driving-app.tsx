@@ -132,6 +132,7 @@ import {
   writeMapDisplayMode,
 } from "@/lib/map-display-mode";
 import {
+  SHOW_GUIDANCE_ARROW_MODE_TOGGLE,
   getServerGuidanceArrowModeSnapshot,
   readGuidanceArrowMode,
   subscribeGuidanceArrowMode,
@@ -146,6 +147,7 @@ import {
 } from "@/lib/nav-auto-zoom-setting";
 import { GuidanceArrowToggle } from "@/components/overlay/guidance-arrow-toggle";
 import { RoutePreviewCard } from "@/components/overlay/route-preview-card";
+import type { RoadSketch } from "@/lib/junction-roads";
 import {
   deleteSavedPlace,
   findSavedCustomPlace,
@@ -282,7 +284,7 @@ export function DrivingApp() {
     getServerNavAutoZoomSnapshot,
   );
   const [previewPhase, setPreviewPhase] = useState<NavAutoZoomPhase>("cruise");
-  const [junctionRoads, setJunctionRoads] = useState<[number, number][][]>([]);
+  const [junctionRoads, setJunctionRoads] = useState<RoadSketch[]>([]);
   const [pendingMapDisplayMode, setPendingMapDisplayMode] =
     useState<MapDisplayMode | null>(null);
   const [styleMenuOpen, setStyleMenuOpen] = useState(false);
@@ -706,6 +708,7 @@ export function DrivingApp() {
           raw: pose,
           model: context.routeProgressModel,
           previousRouteMeters: next?.routeMeters,
+          wasSnapped: displayVehicleLiveRef.current?.snapped === true,
         });
         displayVehicleLiveRef.current = snapped;
         flushHudVehicle(pose, snapped);
@@ -1172,6 +1175,7 @@ export function DrivingApp() {
           raw: pose,
           model: routeProgressModel,
           previousRouteMeters: next?.routeMeters,
+          wasSnapped: displayVehicleLiveRef.current?.snapped === true,
         })
       : null;
     displayVehicleLiveRef.current = snapped;
@@ -1332,6 +1336,7 @@ export function DrivingApp() {
             raw: pose,
             model,
             previousRouteMeters: next?.routeMeters,
+            wasSnapped: displayVehicleLiveRef.current?.snapped === true,
           })
         : null;
       displayVehicleLiveRef.current = snappedPose;
@@ -1848,10 +1853,12 @@ export function DrivingApp() {
 
       {navigating ? (
         <div className="hud-anchor-arrow-mode">
-          <GuidanceArrowToggle
-            mode={guidanceArrowMode}
-            onChange={writeGuidanceArrowMode}
-          />
+          {SHOW_GUIDANCE_ARROW_MODE_TOGGLE ? (
+            <GuidanceArrowToggle
+              mode={guidanceArrowMode}
+              onChange={writeGuidanceArrowMode}
+            />
+          ) : null}
           <button
             type="button"
             className={

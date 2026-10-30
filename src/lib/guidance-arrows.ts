@@ -26,8 +26,8 @@ export const TURN_LINE_GLOW_ID = "navpilot-turn-line-glow-v3";
 export const TURN_LINE_SIDE_ID = "navpilot-turn-line-side-v3";
 export const TURN_LINE_EDGE_ID = "navpilot-turn-line-edge-v3";
 export const TURN_LINE_LAYER_ID = "navpilot-turn-line-layer-v3";
-const FLAT_ARROW_ID = "navpilot-flat-arrow-v2";
-const FLOAT_ARROW_ID = "navpilot-float-arrow-v2";
+const FLAT_ARROW_ID = "navpilot-flat-arrow-v3";
+const FLOAT_ARROW_ID = "navpilot-float-arrow-v3";
 const STALE_TURN_IDS = [
   "navpilot-turn-line",
   "navpilot-turn-line-glow",
@@ -57,17 +57,15 @@ function ensureImages(map: MapLibreMap) {
   add(FLOAT_ARROW_ID, paintFloatArrow("right", 0), 2);
 }
 
-function turnGlowWidth(): ExpressionSpecification {
-  return ["interpolate", ["linear"], ["zoom"], 12, 16, 17, 28];
+function turnShadowWidth(): ExpressionSpecification {
+  return ["interpolate", ["linear"], ["zoom"], 12, 9, 17, 14];
 }
 function turnEdgeWidth(): ExpressionSpecification {
-  return ["interpolate", ["linear"], ["zoom"], 12, 10, 17, 16];
+  // About 2px of dark outline on each side of the amber body.
+  return ["interpolate", ["linear"], ["zoom"], 12, 11, 17, 16];
 }
 function turnLineWidth(): ExpressionSpecification {
-  return ["interpolate", ["linear"], ["zoom"], 12, 6.4, 17, 11];
-}
-function turnSideWidth(): ExpressionSpecification {
-  return ["interpolate", ["linear"], ["zoom"], 12, 8, 17, 13];
+  return ["interpolate", ["linear"], ["zoom"], 12, 7, 17, 12];
 }
 
 /** Bright packets marching toward the head of the arrow. Stops stay sorted. */
@@ -78,8 +76,8 @@ function flowGradient(phase: number): ExpressionSpecification {
   for (let index = 0; index <= samples; index += 1) {
     const t = index / samples;
     const wave = (t - shift + 1) % 1;
-    const bright = wave < 0.16;
-    stops.push(t, bright ? "#f8fafc" : "rgba(56, 189, 248, 0.28)");
+    const bright = wave < 0.1;
+    stops.push(t, bright ? "#fde68a" : "#f59e0b");
   }
   return stops as ExpressionSpecification;
 }
@@ -93,10 +91,9 @@ function stripStaleTurnLayers(map: MapLibreMap) {
 
 function ensureTurnLine(map: MapLibreMap) {
   stripStaleTurnLayers(map);
-  const glowWidth = turnGlowWidth();
+  const shadowWidth = turnShadowWidth();
   const edgeWidth = turnEdgeWidth();
   const lineWidth = turnLineWidth();
-  const sideWidth = turnSideWidth();
   if (!map.getSource(TURN_LINE_SOURCE_ID)) {
     map.addSource(TURN_LINE_SOURCE_ID, {
       type: "geojson",
@@ -112,15 +109,18 @@ function ensureTurnLine(map: MapLibreMap) {
       type: "line",
       source: TURN_LINE_SOURCE_ID,
       paint: {
-        "line-color": "#7dd3fc",
-        "line-width": glowWidth,
-        "line-opacity": 0.34,
-        "line-blur": 7,
+        "line-color": "#111827",
+        "line-width": shadowWidth,
+        "line-opacity": 0.28,
+        "line-blur": 4,
+        "line-translate": [0, 3],
+        "line-translate-anchor": "map",
       },
       layout: { "line-cap": "round", "line-join": "round" },
     });
   } else {
-    map.setPaintProperty(TURN_LINE_GLOW_ID, "line-width", glowWidth);
+    map.setPaintProperty(TURN_LINE_GLOW_ID, "line-width", shadowWidth);
+    map.setPaintProperty(TURN_LINE_GLOW_ID, "line-color", "#111827");
   }
   if (!map.getLayer(TURN_LINE_SIDE_ID)) {
     map.addLayer({
@@ -128,10 +128,10 @@ function ensureTurnLine(map: MapLibreMap) {
       type: "line",
       source: TURN_LINE_SOURCE_ID,
       paint: {
-        "line-color": "#0c4a6e",
-        "line-width": sideWidth,
+        "line-color": "#1f2937",
+        "line-width": edgeWidth,
         "line-opacity": 0,
-        "line-offset": 3.5,
+        "line-offset": 0,
       },
       layout: { "line-cap": "round", "line-join": "round" },
     });
@@ -142,9 +142,9 @@ function ensureTurnLine(map: MapLibreMap) {
       type: "line",
       source: TURN_LINE_SOURCE_ID,
       paint: {
-        "line-color": "#ffffff",
+        "line-color": "#1f2937",
         "line-width": edgeWidth,
-        "line-opacity": 0.95,
+        "line-opacity": 1,
       },
       layout: { "line-cap": "round", "line-join": "round" },
     });
@@ -158,29 +158,33 @@ function ensureTurnLine(map: MapLibreMap) {
       source: TURN_LINE_SOURCE_ID,
       paint: {
         "line-width": lineWidth,
-        "line-opacity": 0.96,
+        "line-opacity": 1,
         "line-gradient": flowGradient(0),
       },
       layout: { "line-cap": "round", "line-join": "round" },
     });
   } else {
     map.setPaintProperty(TURN_LINE_LAYER_ID, "line-width", lineWidth);
-    map.setPaintProperty(TURN_LINE_LAYER_ID, "line-opacity", 0.96);
+    map.setPaintProperty(TURN_LINE_LAYER_ID, "line-opacity", 1);
   }
 }
 
 function liftRibbon(map: MapLibreMap, floating: boolean) {
-  const lift: [number, number] = floating ? [0, -6] : [0, 0];
   for (const id of [TURN_LINE_SIDE_ID, TURN_LINE_EDGE_ID, TURN_LINE_LAYER_ID]) {
     if (!map.getLayer(id)) continue;
-    map.setPaintProperty(id, "line-translate", lift);
+    map.setPaintProperty(id, "line-translate", [0, 0]);
+    map.setPaintProperty(id, "line-translate-anchor", "map");
+    map.setPaintProperty(id, "line-offset", 0);
   }
   if (map.getLayer(TURN_LINE_SIDE_ID)) {
-    map.setPaintProperty(TURN_LINE_SIDE_ID, "line-opacity", floating ? 0.95 : 0);
+    map.setPaintProperty(TURN_LINE_SIDE_ID, "line-opacity", 0);
   }
   if (map.getLayer(TURN_LINE_GLOW_ID)) {
-    map.setPaintProperty(TURN_LINE_GLOW_ID, "line-opacity", floating ? 0.42 : 0.3);
-    map.setPaintProperty(TURN_LINE_GLOW_ID, "line-blur", floating ? 9 : 6);
+    const drop: [number, number] = floating ? [0, 4] : [0, 2];
+    map.setPaintProperty(TURN_LINE_GLOW_ID, "line-translate", drop);
+    map.setPaintProperty(TURN_LINE_GLOW_ID, "line-translate-anchor", "map");
+    map.setPaintProperty(TURN_LINE_GLOW_ID, "line-opacity", floating ? 0.5 : 0.22);
+    map.setPaintProperty(TURN_LINE_GLOW_ID, "line-blur", floating ? 6 : 3);
   }
 }
 
@@ -191,14 +195,14 @@ function arrowIconSize() {
 
 function ensureChevronLayer(
   map: MapLibreMap,
-  floating: boolean,
+  _floating: boolean,
   imageId: string,
 ) {
   const existing = map.getLayer(GUIDANCE_LAYER_ID);
   if (existing && "source" in existing && existing.source !== GUIDANCE_SOURCE_ID) {
     map.removeLayer(GUIDANCE_LAYER_ID);
   }
-  // Both heads follow the road bearing. 3D lifts the icon in screen space.
+  // Both heads sit on the route. No screen-space lift.
   const rotate = ["get", "bearing"] as ExpressionSpecification;
   const alignment = "map" as const;
   const layout = {
@@ -223,7 +227,8 @@ function ensureChevronLayer(
       layout,
       paint: {
         "icon-opacity": ["get", "opacity"],
-        "icon-translate": floating ? [0, -6] : [0, 0],
+        "icon-translate": [0, 0],
+        "icon-translate-anchor": "map",
       },
     });
     return;
@@ -233,11 +238,8 @@ function ensureChevronLayer(
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-image", imageId);
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-size", arrowIconSize());
   if (map.getLayer(GUIDANCE_LAYER_ID)) {
-    map.setPaintProperty(
-      GUIDANCE_LAYER_ID,
-      "icon-translate",
-      floating ? [0, -6] : [0, 0],
-    );
+    map.setPaintProperty(GUIDANCE_LAYER_ID, "icon-translate", [0, 0]);
+    map.setPaintProperty(GUIDANCE_LAYER_ID, "icon-translate-anchor", "map");
   }
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-anchor", "center");
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-offset", [0, 0]);
@@ -347,16 +349,17 @@ export function upsertGuidanceArrows(
   const mode: GuidanceArrowMode = options.arrowMode === "float" ? "float" : "flat";
   const floating = mode === "float";
   const apex = stepped.hold.apexMeters ?? routeMeters + Math.max(0, distanceToNext);
+  const clearance = 18;
+  const start = Math.max(0, routeMeters + clearance);
+  const pastCorner = Math.max(0, apex - start);
   const line =
     stepped.visible && route.length >= 2
-      ? sliceRouteAhead(
-          route,
-          Math.max(0, routeMeters) + 6,
-          Math.max(28, apex + 16 - routeMeters),
-        )
+      ? sliceRouteAhead(route, start, Math.max(48, pastCorner + 42))
       : [];
   const span = lineLengthMeters(line);
-  const pose = line.length >= 2 ? pointAlongRoute(line, Math.max(0, span - 4)) : null;
+  const headAlong =
+    pastCorner > 4 ? Math.min(Math.max(0, span - 3), pastCorner + 12) : Math.min(Math.max(0, span - 3), 14);
+  const pose = line.length >= 2 ? pointAlongRoute(line, headAlong) : null;
   const imageId = floating ? FLOAT_ARROW_ID : FLAT_ARROW_ID;
 
   if (process.env.NODE_ENV !== "production") {

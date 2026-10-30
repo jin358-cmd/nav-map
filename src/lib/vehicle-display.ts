@@ -96,19 +96,26 @@ export function stepVehicleDisplay({
   const incoming = { lng: target.lng, lat: target.lat };
   const incomingJump = distanceKm(here, incoming) * 1000;
   const noisy = isNoisyFix(raw.accuracy, incomingJump, speedMps);
-  const goal = noisy
-    ? { lng: current.holdLng, lat: current.holdLat }
-    : incoming;
+  const goal =
+    noisy && !snapped
+      ? { lng: current.holdLng, lat: current.holdLat }
+      : incoming;
   const jumpMeters = distanceKm(here, goal) * 1000;
   const stationary =
     speedMps < STATIONARY_SPEED_MPS && jumpMeters < STATIONARY_HOLD_METERS;
+  // A stopped fix that is still off the route must ease onto the polyline.
+  const holdOffRoute = snapped && jumpMeters > 1.5;
 
-  if (stationary) {
-    const holdLimit = speedMps < 0.35 ? HEADING_HOLD_SLOW_DEG : HEADING_HOLD_DEG;
+  if (stationary && !holdOffRoute) {
+    const holdLimit = snapped
+      ? 3
+      : speedMps < 0.35
+        ? HEADING_HOLD_SLOW_DEG
+        : HEADING_HOLD_DEG;
     const holdHeading =
       headingDelta(current.heading, target.heading) < holdLimit
         ? current.heading
-        : lerpAngle(current.heading, target.heading, damp(dtSeconds, 0.55));
+        : lerpAngle(current.heading, target.heading, damp(dtSeconds, snapped ? 0.28 : 0.55));
     return {
       ...current,
       heading: holdHeading,

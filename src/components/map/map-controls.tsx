@@ -10,6 +10,9 @@ import {
   type ReactNode,
 } from "react";
 import { ChevronLeft, Compass, LayoutGrid, Loader2, LocateFixed, ShoppingCart } from "lucide-react";
+
+/** Portrait hides the compass. The control and its handler stay in the tree. */
+export const SHOW_PORTRAIT_COMPASS = false;
 import { MapStyleMenu } from "@/components/overlay/map-style-menu";
 import { Button } from "@/components/ui/button";
 import {
@@ -239,7 +242,7 @@ export function MapControls({
         >
           {poiLayersLoading ? (
             <span className="relative inline-flex size-6 items-center justify-center">
-              <ShoppingCart className="size-6" strokeWidth={2.5} />
+              <ShoppingCart className="size-5" strokeWidth={2.5} />
               <span
                 className="poi-layer-read-pie poi-layer-read-pie--icon-ring"
                 style={
@@ -249,7 +252,7 @@ export function MapControls({
               />
             </span>
           ) : (
-            <ShoppingCart className="size-6" strokeWidth={2.5} />
+            <ShoppingCart className="size-5" strokeWidth={2.5} />
           )}
         </ControlButton>
       ) : null}
@@ -299,7 +302,7 @@ export function MapControls({
             controls="navpilot-function-drawer"
             tone={tone}
           >
-            <LayoutGrid className="size-6" strokeWidth={2.5} />
+            <LayoutGrid className="size-5" strokeWidth={2.5} />
           </ControlButton>
         </div>
       ) : null}
@@ -318,9 +321,9 @@ export function MapControls({
           className={mapViewToggleClass(tone, followVehicle && !locating)}
         >
           {locating ? (
-            <Loader2 className="size-6 animate-spin" strokeWidth={2.5} />
+            <Loader2 className="size-5 animate-spin" strokeWidth={2.5} />
           ) : (
-            <LocateFixed className="size-6" strokeWidth={2.5} />
+            <LocateFixed className="size-5" strokeWidth={2.5} />
           )}
         </ControlButton>
         <ControlButton
@@ -333,9 +336,13 @@ export function MapControls({
           active={false}
           pressed={northUp}
           tone={tone}
-          className={mapViewToggleClass(tone, northUp)}
+          className={cn(
+            "hud-rail-compass",
+            !SHOW_PORTRAIT_COMPASS && "hud-rail-compass--portrait-off",
+            mapViewToggleClass(tone, northUp),
+          )}
         >
-          <Compass className="size-6" strokeWidth={2.5} />
+          <Compass className="size-5" strokeWidth={2.5} />
         </ControlButton>
       </div>
     </div>
@@ -375,7 +382,7 @@ function ControlButton({
       aria-controls={controls}
       onClick={onClick}
       className={cn(
-        "size-12 rounded-full backdrop-blur-md disabled:border-zinc-700 disabled:bg-zinc-900/80 disabled:text-zinc-500 touch-manipulation",
+        "hud-round-btn rounded-full backdrop-blur-md disabled:border-zinc-700 disabled:bg-zinc-900/80 disabled:text-zinc-500 touch-manipulation",
         mapControlButtonClass(tone, active),
         className,
       )}

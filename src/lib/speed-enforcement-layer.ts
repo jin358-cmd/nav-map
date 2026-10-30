@@ -49,21 +49,31 @@ export function upsertSpeedEnforcementLayer(
       source: SPEED_ENFORCEMENT_SOURCE_ID,
       minzoom: 10.5,
       paint: {
-        "circle-color": "#fbbf24",
+        "circle-color": "#ffffff",
         "circle-radius": [
           "interpolate",
           ["linear"],
           ["zoom"],
           10.5,
-          6,
+          7,
           14,
-          10,
+          9,
           17,
-          13,
+          12,
         ],
-        "circle-stroke-color": "rgba(251, 191, 36, 0.5)",
-        "circle-stroke-width": 7,
-        "circle-opacity": 0.96,
+        "circle-stroke-color": "#dc2626",
+        "circle-stroke-width": [
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          10.5,
+          2.2,
+          14,
+          2.6,
+          17,
+          3.4,
+        ],
+        "circle-opacity": 1,
       },
     });
   }
@@ -95,9 +105,9 @@ export function upsertSpeedEnforcementLayer(
         "text-ignore-placement": true,
       },
       paint: {
-        "text-color": "#1c1917",
-        "text-halo-color": "rgba(255,255,255,0.35)",
-        "text-halo-width": 0.5,
+        "text-color": "#111827",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 0.4,
       },
     });
   }
