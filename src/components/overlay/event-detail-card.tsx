@@ -102,14 +102,21 @@ export function congestionToCard(item: TrafficSegment): EventCardModel {
     description: item.congestionLabel,
     updatedAt: item.updatedAt,
     severity: item.level,
-    source: item.source === "tdx" ? "TDX 即時路況" : item.source === "mock" ? "示範資料" : "未提供",
+    source:
+      item.dataOrigin === "tdx-fixture"
+        ? "TDX 路況樣本"
+        : item.source === "tdx"
+          ? "TDX 即時路況"
+          : item.source === "mock"
+            ? "示範資料"
+            : "未提供",
     freshness:
       item.dataOrigin === "unavailable"
         ? "unavailable"
         : item.dataOrigin === "tdx-live"
           ? "live"
           : "stale",
-    origin: item.dataOrigin,
+    origin: item.dataOrigin === "tdx-fixture" ? "mock" : item.dataOrigin,
   };
 }
 

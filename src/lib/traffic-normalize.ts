@@ -1,5 +1,6 @@
 import { parseWktLine } from "@/lib/traffic-wkt";
 import type {
+  CongestionBand,
   TrafficDataOrigin,
   TrafficLevel,
   TrafficSegment,
@@ -13,14 +14,24 @@ export type TdxLiveRow = {
   CongestionLevelID?: string | number;
   CongestionLevel?: string | number;
   DataCollectTime?: string;
+  SubAuthorityCode?: string;
+};
+
+export type TdxSectionPoint = {
+  PositionLon?: number;
+  PositionLat?: number;
 };
 
 export type TdxSectionRow = {
   SectionID?: string;
   SectionName?: string;
   RoadName?: string;
+  RoadClass?: number;
   Direction?: string;
   RoadDirection?: string;
+  SubAuthorityCode?: string;
+  SectionStart?: TdxSectionPoint;
+  SectionEnd?: TdxSectionPoint;
 };
 
 export type TrafficSegmentSeed = {
@@ -32,10 +43,18 @@ export type TrafficSegmentSeed = {
   dataOrigin: TrafficDataOrigin;
   speedKmh?: number;
   travelTimeSec?: number;
+  congestionBand?: CongestionBand;
   congestionLabel?: string;
   updatedAt?: string;
   direction?: string;
 };
+
+export function bandFromTrafficLevel(level: TrafficLevel): CongestionBand {
+  if (level === "smooth") return "green";
+  if (level === "slow") return "yellow";
+  if (level === "unknown") return "unknown";
+  return "red";
+}
 
 export function finalizeTrafficSegment(
   seed: TrafficSegmentSeed,
@@ -45,6 +64,7 @@ export function finalizeTrafficSegment(
     roadName: seed.name,
     direction: seed.direction?.trim() || "",
     congestionLevel: seed.level,
+    congestionBand: seed.congestionBand ?? bandFromTrafficLevel(seed.level),
     source:
       seed.dataOrigin === "tdx-live"
         ? "tdx"

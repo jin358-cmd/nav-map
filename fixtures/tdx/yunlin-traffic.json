@@ -1,0 +1,308 @@
+{
+  "city": {
+    "live": {
+      "AuthorityCode": "YLC",
+      "UpdateTime": "2026-10-30T10:00:00+08:00",
+      "UpdateInterval": 60,
+      "Items": [
+        {
+          "SectionID": "YL-GREEN",
+          "TravelSpeed": 48,
+          "TravelTime": 90,
+          "CongestionLevelID": "STD",
+          "CongestionLevel": "1",
+          "DataCollectTime": "2026-10-30T10:00:00+08:00"
+        },
+        {
+          "SectionID": "YL-YELLOW",
+          "TravelSpeed": 30,
+          "TravelTime": 140,
+          "CongestionLevelID": "STD",
+          "CongestionLevel": "2",
+          "DataCollectTime": "2026-10-30T10:00:00+08:00"
+        },
+        {
+          "SectionID": "YL-RED3",
+          "TravelSpeed": 15,
+          "TravelTime": 220,
+          "CongestionLevelID": "STD",
+          "CongestionLevel": "3",
+          "DataCollectTime": "2026-10-30T10:00:00+08:00"
+        },
+        {
+          "SectionID": "YL-RED4",
+          "TravelSpeed": 8,
+          "TravelTime": 400,
+          "CongestionLevelID": "STD",
+          "CongestionLevel": "4",
+          "DataCollectTime": "2026-10-30T10:00:00+08:00"
+        },
+        {
+          "SectionID": "YL-CLOSED",
+          "TravelSpeed": -1,
+          "TravelTime": -1,
+          "CongestionLevelID": "STD",
+          "CongestionLevel": "-1",
+          "DataCollectTime": "2026-10-30T10:00:00+08:00"
+        },
+        {
+          "SectionID": "YL-BAD",
+          "TravelSpeed": 55,
+          "TravelTime": 40,
+          "CongestionLevelID": "STD",
+          "CongestionLevel": "-99",
+          "DataCollectTime": "2026-10-30T10:00:00+08:00"
+        },
+        {
+          "SectionID": "YL-MISSING",
+          "TravelSpeed": 50,
+          "TravelTime": 70,
+          "CongestionLevelID": "STD",
+          "CongestionLevel": "",
+          "DataCollectTime": "2026-10-30T10:00:00+08:00"
+        },
+        {
+          "SectionID": "YL-ZERO",
+          "TravelSpeed": 33,
+          "TravelTime": 100,
+          "CongestionLevelID": "STD",
+          "CongestionLevel": "0",
+          "DataCollectTime": "2026-10-30T10:00:00+08:00"
+        },
+        {
+          "SectionID": "YL-NOGEO",
+          "TravelSpeed": 40,
+          "TravelTime": 80,
+          "CongestionLevelID": "STD",
+          "CongestionLevel": "1",
+          "DataCollectTime": "2026-10-30T10:00:00+08:00"
+        },
+        {
+          "SectionID": "YL-ENDS",
+          "TravelSpeed": 27,
+          "TravelTime": 160,
+          "CongestionLevelID": "STD",
+          "CongestionLevel": "2",
+          "DataCollectTime": "2026-10-30T10:00:00+08:00"
+        },
+        {
+          "SectionID": "YL-ALT",
+          "TravelSpeed": 22,
+          "TravelTime": 180,
+          "CongestionLevelID": "ALT",
+          "CongestionLevel": "2",
+          "DataCollectTime": "2026-10-30T10:00:00+08:00"
+        }
+      ]
+    },
+    "sections": {
+      "AuthorityCode": "YLC",
+      "Items": [
+        {
+          "SectionID": "YL-GREEN",
+          "SectionName": "斗六市中山路",
+          "RoadName": "中山路",
+          "RoadClass": 6,
+          "RoadDirection": "東向"
+        },
+        {
+          "SectionID": "YL-YELLOW",
+          "SectionName": "虎尾鎮林森路",
+          "RoadName": "林森路",
+          "RoadClass": 6,
+          "RoadDirection": "北向"
+        },
+        {
+          "SectionID": "YL-RED3",
+          "SectionName": "北港鎮中山路",
+          "RoadName": "中山路",
+          "RoadClass": 6,
+          "RoadDirection": "西向"
+        },
+        {
+          "SectionID": "YL-RED4",
+          "SectionName": "斗南鎮延平路",
+          "RoadName": "延平路",
+          "RoadClass": 6,
+          "RoadDirection": "南向"
+        },
+        {
+          "SectionID": "YL-CLOSED",
+          "SectionName": "西螺鎮中山路",
+          "RoadName": "中山路",
+          "RoadClass": 6,
+          "RoadDirection": "東向"
+        },
+        {
+          "SectionID": "YL-BAD",
+          "SectionName": "土庫鎮中正路",
+          "RoadName": "中正路",
+          "RoadClass": 6,
+          "RoadDirection": "南向"
+        },
+        {
+          "SectionID": "YL-MISSING",
+          "SectionName": "麥寮鄉中山路",
+          "RoadName": "中山路",
+          "RoadClass": 6,
+          "RoadDirection": "西向"
+        },
+        {
+          "SectionID": "YL-ZERO",
+          "SectionName": "古坑鄉中山路",
+          "RoadName": "中山路",
+          "RoadClass": 6,
+          "RoadDirection": "北向"
+        },
+        {
+          "SectionID": "YL-NOGEO",
+          "SectionName": "缺少線型",
+          "RoadName": "未繪路段",
+          "RoadClass": 6,
+          "RoadDirection": "東向"
+        },
+        {
+          "SectionID": "YL-ENDS",
+          "SectionName": "崙背鄉起迄點",
+          "RoadName": "鄉道",
+          "RoadClass": 5,
+          "RoadDirection": "東向",
+          "SectionStart": { "PositionLon": 120.33, "PositionLat": 23.68 },
+          "SectionEnd": { "PositionLon": 120.36, "PositionLat": 23.69 }
+        },
+        {
+          "SectionID": "YL-ALT",
+          "SectionName": "自訂水準組別",
+          "RoadName": "自訂路",
+          "RoadClass": 6,
+          "RoadDirection": "南向"
+        }
+      ]
+    },
+    "shapes": {
+      "AuthorityCode": "YLC",
+      "Items": [
+        { "SectionID": "YL-GREEN", "Geometry": "LINESTRING(120.52 23.70, 120.55 23.72)" },
+        { "SectionID": "YL-YELLOW", "Geometry": "LINESTRING(120.40 23.62, 120.45 23.66)" },
+        { "SectionID": "YL-RED3", "Geometry": "LINESTRING(120.25 23.55, 120.32 23.58)" },
+        { "SectionID": "YL-RED4", "Geometry": "LINESTRING(120.48 23.75, 120.53 23.78)" },
+        { "SectionID": "YL-CLOSED", "Geometry": "LINESTRING(120.60 23.68, 120.64 23.72)" },
+        { "SectionID": "YL-BAD", "Geometry": "LINESTRING(120.20 23.60, 120.24 23.64)" },
+        { "SectionID": "YL-MISSING", "Geometry": "LINESTRING(120.35 23.72, 120.38 23.76)" },
+        { "SectionID": "YL-ZERO", "Geometry": "LINESTRING(120.58 23.55, 120.62 23.58)" },
+        { "SectionID": "YL-ALT", "Geometry": "LINESTRING(120.42 23.74, 120.46 23.77)" }
+      ]
+    },
+    "links": {
+      "AuthorityCode": "YLC",
+      "Items": [
+        {
+          "SectionID": "YL-GREEN",
+          "LinkIDs": [{ "LinkID": "L1" }, { "LinkID": "L2" }]
+        },
+        {
+          "SectionID": "YL-YELLOW",
+          "LinkIDs": [{ "LinkID": "L3" }]
+        }
+      ]
+    },
+    "levels": {
+      "AuthorityCode": "YLC",
+      "Items": [
+        {
+          "CongestionLevelID": "STD",
+          "CongestionLevelName": "一般道路",
+          "MeasureIndex": "Speed",
+          "Levels": [
+            { "Level": 1, "LevelName": "順暢" },
+            { "Level": 2, "LevelName": "車多" },
+            { "Level": 3, "LevelName": "壅塞" },
+            { "Level": 4, "LevelName": "嚴重壅塞" },
+            { "Level": -1, "LevelName": "道路封閉" },
+            { "Level": 0, "LevelName": "未知" }
+          ]
+        },
+        {
+          "CongestionLevelID": "ALT",
+          "CongestionLevelName": "自訂組別",
+          "MeasureIndex": "Speed",
+          "Levels": [{ "Level": 2, "LevelName": "順暢" }]
+        }
+      ]
+    }
+  },
+  "highway": {
+    "live": {
+      "AuthorityCode": "THB",
+      "UpdateTime": "2026-10-30T10:00:00+08:00",
+      "UpdateInterval": 60,
+      "Items": [
+        {
+          "SectionID": "HW-YUN",
+          "TravelSpeed": 18,
+          "TravelTime": 300,
+          "CongestionLevelID": "STD",
+          "CongestionLevel": "3",
+          "DataCollectTime": "2026-10-30T10:00:00+08:00"
+        },
+        {
+          "SectionID": "HW-NORTH",
+          "TravelSpeed": 70,
+          "TravelTime": 40,
+          "CongestionLevelID": "STD",
+          "CongestionLevel": "1",
+          "DataCollectTime": "2026-10-30T10:00:00+08:00"
+        }
+      ]
+    },
+    "sections": {
+      "AuthorityCode": "THB",
+      "Items": [
+        {
+          "SectionID": "HW-YUN",
+          "SectionName": "台1線雲林段",
+          "RoadName": "台1線",
+          "RoadClass": 3,
+          "RoadDirection": "北向"
+        },
+        {
+          "SectionID": "HW-NORTH",
+          "SectionName": "台1線臺北段",
+          "RoadName": "台1線",
+          "RoadClass": 3,
+          "RoadDirection": "北向"
+        }
+      ]
+    },
+    "shapes": {
+      "AuthorityCode": "THB",
+      "Items": [
+        { "SectionID": "HW-YUN", "Geometry": "LINESTRING(120.30 23.60, 120.50 23.70)" },
+        { "SectionID": "HW-NORTH", "Geometry": "LINESTRING(121.50 25.03, 121.55 25.08)" }
+      ]
+    },
+    "links": {
+      "AuthorityCode": "THB",
+      "Items": [
+        { "SectionID": "HW-YUN", "LinkIDs": [{ "LinkID": "H1" }] },
+        { "SectionID": "HW-NORTH", "LinkIDs": [{ "LinkID": "H2" }] }
+      ]
+    },
+    "levels": {
+      "AuthorityCode": "THB",
+      "Items": [
+        {
+          "CongestionLevelID": "STD",
+          "CongestionLevelName": "省道",
+          "MeasureIndex": "Speed",
+          "Levels": [
+            { "Level": 1, "LevelName": "順暢" },
+            { "Level": 2, "LevelName": "車多" },
+            { "Level": 3, "LevelName": "壅塞" },
+            { "Level": 4, "LevelName": "嚴重壅塞" }
+          ]
+        }
+      ]
+    }
+  }
+}

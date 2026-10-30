@@ -198,7 +198,7 @@ import type {
 } from "@/types/domain";
 
 const DEFAULT_LAYER_VISIBILITY: LayerKindVisibility = {
-  congestion: false,
+  congestion: true,
   cctv: true,
   construction: true,
   accident: true,
@@ -748,10 +748,12 @@ export function DrivingApp() {
     [selectedCctv, visible],
   );
 
-  const mapTraffic = trafficView.origin === "tdx-live" ? trafficView.visible : [];
+  const trafficDrawable =
+    trafficView.origin === "tdx-live" || trafficView.origin === "tdx-fixture";
+  const mapTraffic = trafficDrawable ? trafficView.visible : [];
   const mapLayerVisibility = {
     ...layerVisibility,
-    congestion: trafficView.origin === "tdx-live" && layerVisibility.congestion,
+    congestion: trafficDrawable && layerVisibility.congestion,
   };
 
   const intel = useMemo(() => {
@@ -1594,7 +1596,7 @@ export function DrivingApp() {
 
   const kindOrigin = (kind: RoadIntelKind) => {
     if (kind === "cctv") return origin;
-    if (kind === "congestion") return "unavailable";
+    if (kind === "congestion") return trafficView.origin;
     if (kind === "disaster") return disasterOrigin;
     if (kind === "accident") return accidentOrigin;
     return constructionOrigin;

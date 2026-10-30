@@ -40,7 +40,9 @@
     "reconstruct:nlsc-fails": "node scripts/reconstruct-nlsc-fails.mjs",
     "retry:nlsc-fails": "node scripts/retry-nlsc-fails.mjs",
     "preflight:tdx": "node scripts/tdx-env-preflight.mjs",
-    "test:tdx:env": "node --test scripts/tdx-env-preflight.test.mjs"
+    "test:tdx:env": "node --test scripts/tdx-env-preflight.test.mjs",
+    "test:traffic": "npx --yes tsx src/lib/__tests__/traffic-congestion.test.ts",
+    "trial:traffic": "npx --yes tsx scripts/yunlin-traffic-trial.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

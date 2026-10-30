@@ -6,6 +6,12 @@ import {
   TDX_TOKEN_URL,
 } from "@/lib/traffic-constants";
 import {
+  readTdxEnvelope,
+  type TdxCongestionDefinition,
+  type TdxEnvelope,
+  type TdxLinkRow,
+} from "@/lib/traffic-congestion";
+import {
   unwrapTdxList,
   type TdxLiveRow,
   type TdxSectionRow,
@@ -38,28 +44,108 @@ export function isTdxConfigured(): boolean {
   return getTdxCredentials() !== null;
 }
 
+const LIVE_SELECT =
+  "SectionID,SubAuthorityCode,TravelTime,TravelSpeed,CongestionLevelID,CongestionLevel,DataCollectTime";
+const SECTION_SELECT =
+  "SectionID,SubAuthorityCode,SectionName,RoadName,RoadClass,RoadDirection,SectionStart,SectionEnd";
+const SHAPE_SELECT = "SectionID,SubAuthorityCode,Geometry";
+const LINK_SELECT = "SectionID,SubAuthorityCode,StartLinkID,EndLinkID,LinkIDs";
+
 export async function fetchTainanCityLive(): Promise<TdxLiveRow[]> {
-  const payload = await fetchTdxJson(
-    `/v2/Road/Traffic/Live/City/${TDX_TAINAN_CITY}`,
-  );
-  return unwrapTdxList<TdxLiveRow>(payload, ["LiveTraffics", "liveTraffics"]);
+  const envelope = await fetchCityTrafficLive(TDX_TAINAN_CITY);
+  return envelope.items;
 }
 
 export async function fetchTainanCitySections(): Promise<TdxSectionRow[]> {
-  const payload = await fetchTdxJson(
-    `/v2/Road/Traffic/Section/City/${TDX_TAINAN_CITY}`,
-  );
-  return unwrapTdxList<TdxSectionRow>(payload, ["Sections", "sections"]);
+  const envelope = await fetchCityTrafficSections(TDX_TAINAN_CITY);
+  return envelope.items;
 }
 
 export async function fetchTainanCityShapes(): Promise<TdxShapeRow[]> {
-  const payload = await fetchTdxJson(
-    `/v2/Road/Traffic/SectionShape/City/${TDX_TAINAN_CITY}`,
+  const envelope = await fetchCityTrafficShapes(TDX_TAINAN_CITY);
+  return envelope.items;
+}
+
+export function fetchCityTrafficLive(city: string) {
+  return fetchTdxCollection<TdxLiveRow>(
+    `/v2/Road/Traffic/Live/City/${assertCityCode(city)}`,
+    ["LiveTraffics", "liveTraffics"],
+    LIVE_SELECT,
   );
-  return unwrapTdxList<TdxShapeRow>(payload, [
-    "SectionShapes",
-    "sectionShapes",
-  ]);
+}
+
+export function fetchCityTrafficSections(city: string) {
+  return fetchTdxCollection<TdxSectionRow>(
+    `/v2/Road/Traffic/Section/City/${assertCityCode(city)}`,
+    ["Sections", "sections"],
+    SECTION_SELECT,
+  );
+}
+
+export function fetchCityTrafficShapes(city: string) {
+  return fetchTdxCollection<TdxShapeRow>(
+    `/v2/Road/Traffic/SectionShape/City/${assertCityCode(city)}`,
+    ["SectionShapes", "sectionShapes"],
+    SHAPE_SELECT,
+  );
+}
+
+export function fetchCityTrafficLinks(city: string) {
+  return fetchTdxCollection<TdxLinkRow>(
+    `/v2/Road/Traffic/SectionLink/City/${assertCityCode(city)}`,
+    ["SectionLinks", "sectionLinks"],
+    LINK_SELECT,
+  );
+}
+
+export function fetchCityCongestionLevels(city: string) {
+  return fetchTdxCollection<TdxCongestionDefinition>(
+    `/v2/Road/Traffic/CongestionLevel/City/${assertCityCode(city)}`,
+    ["CongestionLevels", "congestionLevels"],
+  );
+}
+
+export function fetchHighwayTrafficLive() {
+  return fetchTdxCollection<TdxLiveRow>(
+    "/v2/Road/Traffic/Live/Highway",
+    ["LiveTraffics", "liveTraffics"],
+    LIVE_SELECT,
+    8,
+  );
+}
+
+export function fetchHighwayTrafficSections() {
+  return fetchTdxCollection<TdxSectionRow>(
+    "/v2/Road/Traffic/Section/Highway",
+    ["Sections", "sections"],
+    SECTION_SELECT,
+    8,
+  );
+}
+
+export function fetchHighwayTrafficShapes() {
+  return fetchTdxCollection<TdxShapeRow>(
+    "/v2/Road/Traffic/SectionShape/Highway",
+    ["SectionShapes", "sectionShapes"],
+    SHAPE_SELECT,
+    8,
+  );
+}
+
+export function fetchHighwayTrafficLinks() {
+  return fetchTdxCollection<TdxLinkRow>(
+    "/v2/Road/Traffic/SectionLink/Highway",
+    ["SectionLinks", "sectionLinks"],
+    LINK_SELECT,
+    8,
+  );
+}
+
+export function fetchHighwayCongestionLevels() {
+  return fetchTdxCollection<TdxCongestionDefinition>(
+    "/v2/Road/Traffic/CongestionLevel/Highway",
+    ["CongestionLevels", "congestionLevels"],
+  );
 }
 
 export async function fetchTainanCityIncidents(): Promise<Record<string, unknown>[]> {
@@ -163,6 +249,43 @@ export async function fetchTdxRaw(
   }
 }
 
+function assertCityCode(city: string) {
+  if (!/^[A-Za-z]+$/.test(city)) {
+    throw new Error("Invalid TDX city code");
+  }
+  return city;
+}
+
+async function fetchTdxCollection<T>(
+  path: string,
+  legacyKeys: string[],
+  select?: string,
+  maxPages = 4,
+): Promise<TdxEnvelope<T>> {
+  const pageSize = TDX_PAGE_SIZE;
+  const items: T[] = [];
+  let authorityCode = "";
+  let updateTime: string | undefined;
+  let updateIntervalSec: number | undefined;
+  let count: number | undefined;
+  for (let page = 0; page < maxPages; page += 1) {
+    const payload = await fetchTdxJson(path, {
+      top: pageSize,
+      skip: page * pageSize,
+      select,
+    });
+    const envelope = readTdxEnvelope<T>(payload, legacyKeys);
+    if (!authorityCode) authorityCode = envelope.authorityCode;
+    updateTime ??= envelope.updateTime;
+    updateIntervalSec ??= envelope.updateIntervalSec;
+    count ??= envelope.count;
+    items.push(...envelope.items);
+    if (envelope.items.length < pageSize) break;
+    if (count !== undefined && items.length >= count) break;
+  }
+  return { authorityCode, updateTime, updateIntervalSec, count, items };
+}
+
 async function fetchTdxJson(
   path: string,
   options?: { top?: number; skip?: number; filter?: string; select?: string },
@@ -181,10 +304,14 @@ async function fetchTdxJson(
   return response.json();
 }
 
-async function authorizedFetch(url: URL, retried = false): Promise<Response> {
+async function authorizedFetch(
+  url: URL,
+  retried = false,
+  rateRetried = false,
+): Promise<Response> {
   const token = await getAccessToken();
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 12_000);
+  const timer = setTimeout(() => controller.abort(), 20_000);
   try {
     const response = await fetch(url, {
       headers: {
@@ -196,7 +323,11 @@ async function authorizedFetch(url: URL, retried = false): Promise<Response> {
     });
     if (response.status === 401 && !retried) {
       tokenCache = null;
-      return authorizedFetch(url, true);
+      return authorizedFetch(url, true, rateRetried);
+    }
+    if (response.status === 429 && !rateRetried) {
+      await new Promise((resolve) => setTimeout(resolve, 1_500));
+      return authorizedFetch(url, retried, true);
     }
     return response;
   } finally {

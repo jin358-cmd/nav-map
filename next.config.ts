@@ -47,6 +47,7 @@ const nextConfig: NextConfig = {
       "./fixtures/roadwork/official-sample.json",
       "./fixtures/roadwork/structural-notices.json",
     ],
+    "/api/traffic": ["./fixtures/tdx/yunlin-traffic.json"],
     "/api/traffic-signals": ["./fixtures/traffic-signals/tainan-110-signals.json"],
   },
 };

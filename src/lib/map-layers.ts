@@ -15,11 +15,15 @@ import {
 import type { TrafficSegment } from "@/types/domain";
 
 const TRAFFIC_COLOR: Record<string, string> = {
+  green: "#22c55e",
+  yellow: "#facc15",
+  red: "#ef4444",
+  unknown: "#94a3b8",
   smooth: "#22c55e",
   slow: "#facc15",
-  congested: "#f97316",
+  congested: "#ef4444",
   severe: "#ef4444",
-  blocked: "#7f1d1d",
+  blocked: "#ef4444",
 };
 
 const TRAFFIC_WIDTH: ExpressionSpecification = [
@@ -58,26 +62,26 @@ const TRAFFIC_WIDTH: ExpressionSpecification = [
 
 const TRAFFIC_OPACITY: ExpressionSpecification = [
   "match",
-  ["get", "level"],
-  "smooth",
-  0.78,
-  0.96,
+  ["get", "band"],
+  "unknown",
+  0.55,
+  "green",
+  0.82,
+  0.94,
 ];
 
 const TRAFFIC_COLOR_EXPR: ExpressionSpecification = [
   "match",
-  ["get", "level"],
-  "smooth",
-  TRAFFIC_COLOR.smooth,
-  "slow",
-  TRAFFIC_COLOR.slow,
-  "congested",
-  TRAFFIC_COLOR.congested,
-  "severe",
-  TRAFFIC_COLOR.severe,
-  "blocked",
-  TRAFFIC_COLOR.blocked,
-  TRAFFIC_COLOR.slow,
+  ["get", "band"],
+  "green",
+  TRAFFIC_COLOR.green,
+  "yellow",
+  TRAFFIC_COLOR.yellow,
+  "red",
+  TRAFFIC_COLOR.red,
+  "unknown",
+  TRAFFIC_COLOR.unknown,
+  TRAFFIC_COLOR.unknown,
 ];
 
 function removeLayer(map: MapLibreMap, id: string) {
@@ -128,6 +132,7 @@ export function upsertIntelligenceLayers(
       properties: {
         id: segment.id,
         level: segment.level,
+        band: segment.congestionBand,
         name: segment.name,
         sourceType: segment.sourceType,
       },

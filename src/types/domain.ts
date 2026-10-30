@@ -101,9 +101,12 @@ export type TrafficLevel =
   | "slow"
   | "congested"
   | "severe"
-  | "blocked";
-export type TrafficSourceType = "city" | "freeway";
-export type TrafficDataOrigin = "tdx-live" | "mock" | "unavailable";
+  | "blocked"
+  | "unknown";
+/** green = 順暢, yellow = 車多, red = 壅塞／嚴重壅塞／封閉, unknown = -99／缺值 */
+export type CongestionBand = "green" | "yellow" | "red" | "unknown";
+export type TrafficSourceType = "city" | "freeway" | "highway";
+export type TrafficDataOrigin = "tdx-live" | "tdx-fixture" | "mock" | "unavailable";
 export type TrafficPublishSource = "tdx" | "mock" | "unavailable";
 
 export type TrafficSegment = {
@@ -113,6 +116,7 @@ export type TrafficSegment = {
   direction: string;
   level: TrafficLevel;
   congestionLevel: TrafficLevel;
+  congestionBand: CongestionBand;
   coordinates: [number, number][];
   sourceType: TrafficSourceType;
   dataOrigin: TrafficDataOrigin;

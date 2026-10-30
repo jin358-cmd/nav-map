@@ -61,6 +61,7 @@ export function cctvOriginLabel(origin: CctvDataOrigin) {
 
 export function trafficOriginLabel(origin: TrafficDataOrigin) {
   if (origin === "tdx-live") return "TDX 即時路況";
+  if (origin === "tdx-fixture") return "TDX 路況樣本";
   if (origin === "mock") return "示範路況";
   return "資料暫時無法取得";
 }
@@ -76,6 +77,7 @@ export function trafficLevelLabel(level: TrafficLevel) {
   if (level === "slow") return "車多";
   if (level === "congested") return "壅塞";
   if (level === "severe") return "嚴重壅塞";
+  if (level === "unknown") return "未知";
   return "接近停滯";
 }
 
