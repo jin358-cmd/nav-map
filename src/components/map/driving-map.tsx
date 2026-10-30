@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, type MutableRefObject } from "react";
-import { Map as MapLibreMap, Marker } from "maplibre-gl";
+import { LngLatBounds, Map as MapLibreMap, Marker } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import {
   createVehicleMarkerElement,
@@ -62,6 +62,8 @@ import {
   PARKING_LAYER_ID,
   upsertParkingLayer,
 } from "@/lib/parking-layer";
+import { syncDeliveryMarkers } from "@/lib/delivery-layer";
+import type { DeliveryMapPin } from "@/lib/delivery/types";
 import {
   bindPoiLayerClicks,
   isPoiMapLayer,
@@ -178,6 +180,7 @@ type DrivingMapProps = {
   parkingLots?: ParkingLot[];
   selectedParkingId?: string | null;
   parkingVisible?: boolean;
+  deliveryPins?: DeliveryMapPin[];
   mapPois?: MapPoiFeature[];
   selectedPoiId?: string | null;
   layerVisibility?: LayerKindVisibility;
@@ -489,6 +492,7 @@ export function DrivingMap({
   parkingLots = [],
   selectedParkingId = null,
   parkingVisible = false,
+  deliveryPins = [],
   mapPois = [],
   selectedPoiId = null,
   layerVisibility = DEFAULT_LAYER_VISIBILITY,
@@ -575,6 +579,7 @@ export function DrivingMap({
   const parkingLotsRef = useRef(parkingLots);
   const selectedParkingRef = useRef(selectedParkingId);
   const parkingVisibleRef = useRef(parkingVisible);
+  const deliveryPinsRef = useRef(deliveryPins);
   const mapPoisRef = useRef(mapPois);
   const selectedPoiRef = useRef(selectedPoiId);
   const selectedDisasterRef = useRef(selectedDisasterId);
@@ -700,6 +705,7 @@ export function DrivingMap({
     parkingLotsRef.current = parkingLots;
     selectedParkingRef.current = selectedParkingId;
     parkingVisibleRef.current = parkingVisible;
+    deliveryPinsRef.current = deliveryPins;
     mapPoisRef.current = mapPois;
     selectedPoiRef.current = selectedPoiId;
     selectedDisasterRef.current = selectedDisasterId;
@@ -765,6 +771,7 @@ export function DrivingMap({
     parkingLots,
     selectedParkingId,
     parkingVisible,
+    deliveryPins,
     mapPois,
     selectedPoiId,
     layerVisibility,
@@ -1282,6 +1289,7 @@ export function DrivingMap({
           parkingVisibleRef.current,
         );
         bindParkingLayerClicks(map, (id) => onParkingSelectRef.current?.(id));
+        syncDeliveryMarkers(map, deliveryPinsRef.current);
         upsertPoiLayer(map, mapPoisRef.current);
         bindPoiLayerClicks(map, (id) => onPoiSelectRef.current?.(id));
         upsertGuidanceArrows(
@@ -1704,6 +1712,7 @@ export function DrivingMap({
           parkingVisibleRef.current,
         );
         bindParkingLayerClicks(map, (id) => onParkingSelectRef.current?.(id));
+        syncDeliveryMarkers(map, deliveryPinsRef.current);
         upsertPoiLayer(map, mapPoisRef.current);
         bindPoiLayerClicks(map, (id) => onPoiSelectRef.current?.(id));
         upsertGuidanceArrows(
@@ -1824,27 +1833,71 @@ export function DrivingMap({
   }, [parkingLots, parkingVisible, selectedParkingId]);
 
   useEffect(() => {
+    if (deliveryPins.length === 0) {
+      const map = mapRef.current;
+      if (map && readyRef.current) syncDeliveryMarkers(map, []);
+      return;
+    }
+    let timer = 0;
+    const apply = () => {
+      const map = mapRef.current;
+      if (!map || !readyRef.current) return false;
+      syncDeliveryMarkers(map, deliveryPins);
+      const bounds = new LngLatBounds();
+      for (const pin of deliveryPins) bounds.extend([pin.lng, pin.lat]);
+      const landscape = window.innerWidth > window.innerHeight;
+      map.fitBounds(bounds, {
+        padding: landscape
+          ? { top: 64, bottom: 48, left: Math.round(window.innerWidth * 0.4), right: 128 }
+          : { top: 96, bottom: Math.round(window.innerHeight * 0.52), left: 28, right: 64 },
+        maxZoom: 15.2,
+        duration: 450,
+      });
+      return true;
+    };
+    if (!apply()) {
+      timer = window.setInterval(() => {
+        if (apply()) window.clearInterval(timer);
+      }, 200);
+    }
+    const later = window.setTimeout(() => {
+      apply();
+    }, 800);
+    return () => {
+      if (timer) window.clearInterval(timer);
+      window.clearTimeout(later);
+    };
+  }, [deliveryPins]);
+
+  useEffect(() => {
     const map = mapRef.current;
     if (!readyRef.current || !isStyleReady(map)) return;
     upsertPoiLayer(map, mapPois);
   }, [mapPois, selectedPoiId]);
 
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !readyRef.current || !focusTarget) return;
-    const camera = {
-      center: [focusTarget.lng, focusTarget.lat] as [number, number],
-      zoom: Math.max(map.getZoom(), 16.2),
-      essential: true as const,
+    if (!focusTarget) return;
+    let timer = 0;
+    const apply = () => {
+      const map = mapRef.current;
+      if (!map || !readyRef.current) return false;
+      const camera = {
+        center: [focusTarget.lng, focusTarget.lat] as [number, number],
+        zoom: Math.max(map.getZoom(), 16.2),
+        essential: true as const,
+      };
+      if (focusTarget.immediate) map.jumpTo(camera);
+      else map.easeTo({ ...camera, duration: 480 });
+      return true;
     };
-    if (focusTarget.immediate) {
-      map.jumpTo(camera);
-      return;
+    if (!apply()) {
+      timer = window.setInterval(() => {
+        if (apply()) window.clearInterval(timer);
+      }, 200);
     }
-    map.easeTo({
-      ...camera,
-      duration: 480,
-    });
+    return () => {
+      if (timer) window.clearInterval(timer);
+    };
   }, [focusTarget]);
 
   useEffect(() => {

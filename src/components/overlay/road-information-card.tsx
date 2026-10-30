@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Heart } from "lucide-react";
+import { Heart, Bike } from "lucide-react";
 import {
   AccidentTriangleIcon,
   CctvLensIcon,
@@ -93,6 +93,9 @@ export function RoadInformationCard({
   parkingOn = false,
   parkingLoading = false,
   onToggleParking,
+  deliveryEnabled = false,
+  deliveryOpen = false,
+  onToggleDelivery,
 }: {
   items: RoadIntelItem[];
   origin: CctvDataOrigin;
@@ -121,6 +124,9 @@ export function RoadInformationCard({
   parkingOn?: boolean;
   parkingLoading?: boolean;
   onToggleParking?: () => void;
+  deliveryEnabled?: boolean;
+  deliveryOpen?: boolean;
+  onToggleDelivery?: () => void;
 }) {
   const [openKind, setOpenKind] = useState<RoadIntelKind | null>(null);
   const selectedKind = activeKind ?? openKind;
@@ -236,6 +242,25 @@ export function RoadInformationCard({
             </span>
             <span className="function-chip__label">停車</span>
           </button>
+          {deliveryEnabled ? (
+            <button
+              type="button"
+              title="外送"
+              aria-label="外送"
+              aria-pressed={deliveryOpen}
+              data-testid="delivery-key"
+              onClick={() => onToggleDelivery?.()}
+              className={cn(
+                "function-chip relative flex items-center justify-center border touch-manipulation",
+                deliveryOpen
+                  ? "border-emerald-300/80 bg-emerald-500/35 text-emerald-50"
+                  : "border-emerald-400/40 bg-emerald-500/15 text-emerald-200",
+              )}
+            >
+              <Bike className="function-chip__icon" strokeWidth={1.75} />
+              <span className="function-chip__label">外送</span>
+            </button>
+          ) : null}
           {BOTTOM_KIND_ORDER.map((kind) => (
             <KindChip
               key={kind}

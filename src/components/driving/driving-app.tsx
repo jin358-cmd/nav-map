@@ -28,6 +28,9 @@ import { ParkingArrivalCard } from "@/components/overlay/parking-arrival-card";
 import { PoiLayerDrawer } from "@/components/overlay/poi-layer-drawer";
 import { PoiLayerReadProgress } from "@/components/overlay/poi-layer-read-progress";
 import { ParkingPanel } from "@/components/overlay/parking-panel";
+import { DeliverySession } from "@/components/delivery/delivery-portal";
+import { fetchDeliveryConfig } from "@/lib/delivery/client";
+import type { DeliveryMapPin } from "@/lib/delivery/types";
 import { PlaceInfoCard } from "@/components/overlay/place-info-card";
 import { NextIntersectionHud } from "@/components/overlay/navigation-banner";
 import { RoadInformationCard } from "@/components/overlay/road-information-card";
@@ -328,6 +331,9 @@ export function DrivingApp() {
   const [poiReadFocus, setPoiReadFocus] = useState<PoiMainLayerId | null>(null);
   const [focusTarget, setFocusTarget] = useState<MapFocusTarget | null>(null);
   const [parkingOpen, setParkingOpen] = useState(false);
+  const [deliveryOpen, setDeliveryOpen] = useState(false);
+  const [deliveryEnabled, setDeliveryEnabled] = useState(false);
+  const [deliveryPins, setDeliveryPins] = useState<DeliveryMapPin[]>([]);
   const [parkingMinimized, setParkingMinimized] = useState(false);
   const [parkingSort, setParkingSort] = useState<ParkingSort>("distance");
   const [selectedParking, setSelectedParking] = useState<ParkingLot | null>(null);
@@ -1060,6 +1066,7 @@ export function DrivingApp() {
     setMusicMode("off");
     setSelectedMapPlace(null);
     setParkingSort("distance");
+    setDeliveryOpen(false);
   }, []);
 
   const currentPlace = destination ? destinationToHit(destination) : null;
@@ -1075,6 +1082,32 @@ export function DrivingApp() {
     setSelectedEvent(null);
     setEventListKind(null);
     setMusicMode("off");
+    setSelectedMapPlace(null);
+    setDeliveryOpen(false);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchDeliveryConfig().then((config) => {
+      if (!cancelled) setDeliveryEnabled(config.ok === true && config.enabled === true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleToggleDelivery = useCallback(() => {
+    setDeliveryOpen((open) => !open);
+    setParkingOpen(false);
+    setParkingMinimized(false);
+    setSelectedParking(null);
+    setFavoritesOpen(false);
+    setPoiMenuOpen(false);
+    setToolsDrawerOpen(false);
+    setMusicMode("off");
+    setSelectedCctv(null);
+    setSelectedEvent(null);
+    setEventListKind(null);
     setSelectedMapPlace(null);
   }, []);
 
@@ -1639,6 +1672,7 @@ export function DrivingApp() {
         parkingLots={parkingLots}
         selectedParkingId={selectedParking?.id ?? null}
         parkingVisible={parkingOpen}
+        deliveryPins={deliveryPins}
         mapPois={visibleMapPois}
         selectedPoiId={selectedMapPlace?.kind === "poi" ? selectedMapPlace.id : null}
         onParkingSelect={(id) => {
@@ -2165,12 +2199,16 @@ export function DrivingApp() {
               parkingOn={parkingOpen}
               parkingLoading={parkingLoading}
               onToggleParking={handleToggleParking}
+              deliveryEnabled={deliveryEnabled}
+              deliveryOpen={deliveryOpen}
+              onToggleDelivery={handleToggleDelivery}
               onPreviewOpen={() => {
                 setFavoritesOpen(false);
                 setSelectedCctv(null);
                 setSelectedEvent(null);
                 setEventListKind(null);
                 setMusicMode("off");
+                setDeliveryOpen(false);
               }}
               onToggleMusic={() => {
                 setFavoritesOpen(false);
@@ -2180,6 +2218,7 @@ export function DrivingApp() {
                 setSelectedEvent(null);
                 setEventListKind(null);
                 setSelectedMapPlace(null);
+                setDeliveryOpen(false);
                 setMusicMode((mode) => {
                   if (mode === "off") return "open";
                   return "off";
@@ -2248,6 +2287,20 @@ export function DrivingApp() {
         <div className="speed-camera-caution-anchor">
           <SpeedCameraCaution alert={cameraSpeedLimit} />
         </div>
+      ) : null}
+
+      {deliveryEnabled ? (
+        <DeliverySession
+          open={deliveryOpen}
+          vehicle={{ lng: vehicle.lng, lat: vehicle.lat }}
+          googleSub={googleAccount.account?.sub ?? null}
+          googleIdToken={googleAccount.account?.idToken ?? null}
+          onClose={() => setDeliveryOpen(false)}
+          onPins={(pins) => {
+            setDeliveryPins(pins);
+            if (pins.length > 0) setFollowVehicle(false);
+          }}
+        />
       ) : null}
 
       {parkingOpen ? (

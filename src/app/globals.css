@@ -513,6 +513,36 @@
   right: 0.05rem;
 }
 
+.delivery-pin {
+  display: grid;
+  width: 1.7rem;
+  height: 1.7rem;
+  place-items: center;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+}
+
+.delivery-pin--courier {
+  background: #059669;
+}
+
+.delivery-pin--dropoff {
+  background: #d97706;
+}
+
+.delivery-pin--pickup {
+  background: #7c3aed;
+}
+
+.delivery-pin--customer {
+  background: #2563eb;
+}
+
 .parking-p-mark {
   display: inline-flex;
   align-items: center;
@@ -551,6 +581,13 @@
   border: 3px solid rgba(125, 211, 252, 0.2);
   border-top-color: #7dd3fc;
   animation: parking-chip-spin 0.7s linear infinite;
+}
+
+@media (max-width: 430px) and (orientation: portrait) {
+  .function-chip {
+    width: 2.62rem;
+    min-height: 2.7rem;
+  }
 }
 
 @media (max-width: 430px) and (orientation: landscape) {
