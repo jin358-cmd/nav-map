@@ -239,8 +239,8 @@ export function planNavGuidance(input: {
     isTurn,
     showLayerA,
     showGuidanceLine: showLayerA,
-    // Always place V-chevrons while navigating. Gating to ≤150m / turns hid
-    // them on long straights; mobile 3D then looked like “no 路標”.
+    // Guidance stays on for the whole drive. The map layer draws only a few
+    // small carets on the route (see embeddedRouteChevrons), not a stack.
     showChevrons: showLayerA,
     showTurnBow: showLayerA && isTurn && near200,
     near200,
@@ -331,6 +331,39 @@ export function guidanceArrowsAlong(
       ),
     };
   });
+}
+
+/**
+ * Two small carets on the route just ahead of the vehicle.
+ * Farther marks used to stack into the sightline.
+ */
+export function embeddedRouteChevrons(
+  line: [number, number][],
+  options: { count?: number; spacingMeters?: number; startMeters?: number } = {},
+): GuidanceArrow[] {
+  if (line.length < 2) return [];
+  const count = Math.max(1, options.count ?? 2);
+  const spacing = options.spacingMeters ?? 42;
+  const start = options.startMeters ?? 18;
+  const segments = segmentsFromRoute(line);
+  const total = lineLengthMeters(line);
+  const arrows: GuidanceArrow[] = [];
+  for (let index = 0; index < count; index += 1) {
+    const at = start + index * spacing;
+    if (at > total - 2) break;
+    const pose = poseAlongSegments(segments, at);
+    if (!pose) continue;
+    const lead = index === 0;
+    arrows.push({
+      lng: pose.lng,
+      lat: pose.lat,
+      bearing: pose.bearing,
+      kind: "straight",
+      scale: lead ? 1 : 0.88,
+      opacity: lead ? 0.96 : 0.86,
+    });
+  }
+  return arrows;
 }
 
 export function approachLookaheadMeters(distanceToNext: number) {

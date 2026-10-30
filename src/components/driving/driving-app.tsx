@@ -132,6 +132,13 @@ import {
   writeMapDisplayMode,
 } from "@/lib/map-display-mode";
 import {
+  getServerGuidanceArrowModeSnapshot,
+  readGuidanceArrowMode,
+  subscribeGuidanceArrowMode,
+  writeGuidanceArrowMode,
+} from "@/lib/guidance-arrow-mode";
+import { GuidanceArrowToggle } from "@/components/overlay/guidance-arrow-toggle";
+import {
   deleteSavedPlace,
   findSavedCustomPlace,
   getSavedPlacesSnapshot,
@@ -255,6 +262,11 @@ export function DrivingApp() {
     subscribeMapDisplayMode,
     readMapDisplayMode,
     getServerMapDisplayModeSnapshot,
+  );
+  const guidanceArrowMode = useSyncExternalStore(
+    subscribeGuidanceArrowMode,
+    readGuidanceArrowMode,
+    getServerGuidanceArrowModeSnapshot,
   );
   const [pendingMapDisplayMode, setPendingMapDisplayMode] =
     useState<MapDisplayMode | null>(null);
@@ -1626,6 +1638,8 @@ export function DrivingApp() {
         }
         maneuverStepId={activeNavigationStep?.id ?? null}
         maneuverAlertPhase={nextAlertPhase}
+        guidanceArrowMode={guidanceArrowMode}
+        offRoute={navigationProgress?.offRoute ?? false}
         destination={destination}
         overlayPadding={navigating ? overlayPadding : null}
         fitRouteKey={fitRouteKey}
@@ -1787,6 +1801,15 @@ export function DrivingApp() {
               setPickMode(false);
               setPickLocation(null);
             }}
+          />
+        </div>
+      ) : null}
+
+      {navigating ? (
+        <div className="hud-anchor-arrow-mode">
+          <GuidanceArrowToggle
+            mode={guidanceArrowMode}
+            onChange={writeGuidanceArrowMode}
           />
         </div>
       ) : null}

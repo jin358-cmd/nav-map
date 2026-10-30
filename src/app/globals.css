@@ -1017,6 +1017,40 @@
   bottom: max(5.75rem, calc(env(safe-area-inset-bottom) + 5.1rem));
 }
 
+.hud-anchor-arrow-mode {
+  position: absolute;
+  left: max(0.45rem, env(safe-area-inset-left));
+  top: 58%;
+  z-index: 24;
+  transform: translateY(-50%);
+}
+
+.guidance-arrow-toggle {
+  display: flex;
+  padding: 0.15rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(15, 23, 42, 0.72);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+}
+
+.guidance-arrow-toggle__option {
+  min-width: 2.6rem;
+  height: 1.65rem;
+  padding: 0 0.45rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(248, 250, 252, 0.78);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.guidance-arrow-toggle__option--on {
+  background: #0e7490;
+  color: #f8fafc;
+}
+
 .speed-camera-caution-anchor {
   position: absolute;
   left: max(0.5rem, env(safe-area-inset-left));

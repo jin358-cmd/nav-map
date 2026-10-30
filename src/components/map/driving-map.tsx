@@ -38,6 +38,7 @@ import {
   TAIWAN_OVERVIEW,
   TAIWAN_OVERVIEW_ZOOM,
 } from "@/lib/constants";
+import type { GuidanceArrowMode } from "@/lib/guidance-arrow-mode";
 import { type ManeuverAlertPhase } from "@/lib/maneuver-guidance";
 import { approachCameraProgress } from "@/lib/upcoming-route";
 import { bindCctvLayerClicks, upsertCctvLayer } from "@/lib/cctv-layer";
@@ -182,6 +183,8 @@ type DrivingMapProps = {
   maneuverCueMeters?: number;
   maneuverStepId?: string | null;
   maneuverAlertPhase?: ManeuverAlertPhase;
+  guidanceArrowMode?: GuidanceArrowMode;
+  offRoute?: boolean;
   destination: RouteDestination | null;
   overlayPadding?: {
     top: number;
@@ -468,6 +471,8 @@ export function DrivingMap({
   maneuverCueMeters = 0,
   maneuverStepId = null,
   maneuverAlertPhase = "cruise",
+  guidanceArrowMode = "flat",
+  offRoute = false,
   destination,
   overlayPadding = null,
   fitRouteKey,
@@ -551,6 +556,8 @@ export function DrivingMap({
   const isTurnRef = useRef(isTurnManeuver);
   const cueMetersRef = useRef(maneuverCueMeters);
   const stepIdRef = useRef(maneuverStepId);
+  const arrowModeRef = useRef(guidanceArrowMode);
+  const offRouteRef = useRef(offRoute);
   const alertPhaseRef = useRef(maneuverAlertPhase);
   const recoverUntilRef = useRef(0);
   const recoverFromRef = useRef(0);
@@ -663,6 +670,8 @@ export function DrivingMap({
     isTurnRef.current = isTurnManeuver;
     cueMetersRef.current = maneuverCueMeters;
     stepIdRef.current = maneuverStepId;
+    arrowModeRef.current = guidanceArrowMode;
+    offRouteRef.current = offRoute;
     alertPhaseRef.current = maneuverAlertPhase;
     routeMetersRef.current = routeMeters;
     distanceToNextRef.current = distanceToNextMeters;
@@ -712,6 +721,8 @@ export function DrivingMap({
     maneuverCueMeters,
     maneuverStepId,
     maneuverAlertPhase,
+    guidanceArrowMode,
+    offRoute,
     routeMeters,
     distanceToNextMeters,
     overlayPadding,
@@ -921,6 +932,11 @@ export function DrivingMap({
                 cameraMode: modeRef.current,
                 isTurn: isTurnRef.current,
                 cueMeters: cueMetersRef.current,
+                arrowMode: arrowModeRef.current,
+                heading: display.heading,
+                offRoute: offRouteRef.current,
+                stepId: stepIdRef.current,
+                nowMs: now,
                 fade: recoverBlendAt(
                   now,
                   recoverUntilRef.current,
@@ -1170,6 +1186,11 @@ export function DrivingMap({
             cameraMode: modeRef.current,
             isTurn: isTurnRef.current,
             cueMeters: cueMetersRef.current,
+            arrowMode: arrowModeRef.current,
+            heading: vehicleRef.current.heading,
+            offRoute: offRouteRef.current,
+            stepId: stepIdRef.current,
+            nowMs: performance.now(),
           },
         );
       } catch (error) {
@@ -1587,6 +1608,11 @@ export function DrivingMap({
             cameraMode: modeRef.current,
             isTurn: isTurnRef.current,
             cueMeters: cueMetersRef.current,
+            arrowMode: arrowModeRef.current,
+            heading: vehicleRef.current.heading,
+            offRoute: offRouteRef.current,
+            stepId: stepIdRef.current,
+            nowMs: performance.now(),
           },
         );
       } catch (error) {
