@@ -77,6 +77,14 @@ function testJunctionHighlightsTheExit() {
   assert.ok(position && maneuver);
   assert.ok(position.at.x > 0 && position.at.x < scene.width);
   assert.ok(maneuver.at.y > 0 && maneuver.at.y < scene.height);
+  const bare = buildJunctionScene(route, apex - 40, apex, [], {
+    approach: "民生路",
+    exit: "文賢路",
+  });
+  assert.ok(bare.lines.some((line) => line.kind === "major" || line.kind === "context"));
+  assert.ok(bare.labels.some((label) => label.text === "民生路" || label.text === "文賢路"));
+  assert.equal(bare.arrow.length, 3);
+  assert.ok(bare.blocks.length >= 1);
   const overview = buildOverviewScene(route, apex - 40, [
     {
       line: [

@@ -285,6 +285,7 @@ export function DrivingApp() {
   );
   const [previewPhase, setPreviewPhase] = useState<NavAutoZoomPhase>("cruise");
   const [junctionRoads, setJunctionRoads] = useState<RoadSketch[]>([]);
+  const [junctionBlocks, setJunctionBlocks] = useState<[number, number][][]>([]);
   const [pendingMapDisplayMode, setPendingMapDisplayMode] =
     useState<MapDisplayMode | null>(null);
   const [styleMenuOpen, setStyleMenuOpen] = useState(false);
@@ -1676,6 +1677,7 @@ export function DrivingApp() {
         autoZoomEnabled={autoZoomEnabled}
         turnCueMeters={turnCueMeters}
         onJunctionRoads={setJunctionRoads}
+        onJunctionBlocks={setJunctionBlocks}
         onPreviewPhase={setPreviewPhase}
         destination={destination}
         overlayPadding={navigating ? overlayPadding : null}
@@ -1849,6 +1851,9 @@ export function DrivingApp() {
         routeMeters={previewRouteMeters}
         turnCueMeters={turnCueMeters}
         roads={junctionRoads}
+        blocks={junctionBlocks}
+        steps={routeSteps}
+        distanceMeters={distanceToNextMeters}
       />
 
       {navigating ? (

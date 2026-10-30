@@ -39,7 +39,7 @@ import {
   TAIWAN_OVERVIEW_ZOOM,
 } from "@/lib/constants";
 import type { GuidanceArrowMode } from "@/lib/guidance-arrow-mode";
-import { nearbyRoadSketches, type RoadSketch } from "@/lib/junction-roads";
+import { nearbyBlockRings, nearbyRoadSketches, type RoadSketch } from "@/lib/junction-roads";
 import {
   emptyNavAutoZoomState,
   stepNavAutoZoom,
@@ -196,6 +196,7 @@ type DrivingMapProps = {
   autoZoomEnabled?: boolean;
   turnCueMeters?: number[];
   onJunctionRoads?: (lines: RoadSketch[]) => void;
+  onJunctionBlocks?: (blocks: [number, number][][]) => void;
   onPreviewPhase?: (phase: NavAutoZoomPhase) => void;
   destination: RouteDestination | null;
   overlayPadding?: {
@@ -506,6 +507,7 @@ export function DrivingMap({
   autoZoomEnabled = true,
   turnCueMeters = [],
   onJunctionRoads,
+  onJunctionBlocks,
   onPreviewPhase,
   destination,
   overlayPadding = null,
@@ -596,6 +598,7 @@ export function DrivingMap({
   const turnCuesRef = useRef(turnCueMeters);
   const autoZoomStateRef = useRef<NavAutoZoomState>(emptyNavAutoZoomState());
   const onJunctionRoadsRef = useRef(onJunctionRoads);
+  const onJunctionBlocksRef = useRef(onJunctionBlocks);
   const onPreviewPhaseRef = useRef(onPreviewPhase);
   const previewPhaseRef = useRef<NavAutoZoomPhase>("cruise");
   const lastRoadQueryRef = useRef(0);
@@ -653,6 +656,7 @@ export function DrivingMap({
     onStyleAppliedRef.current = onStyleApplied;
     onStyleFallbackRef.current = onStyleFallback;
     onJunctionRoadsRef.current = onJunctionRoads;
+    onJunctionBlocksRef.current = onJunctionBlocks;
     onPreviewPhaseRef.current = onPreviewPhase;
     modeRef.current = cameraMode;
     followOrientationRef.current = followOrientation;
@@ -739,6 +743,7 @@ export function DrivingMap({
     onStyleApplied,
     onStyleFallback,
     onJunctionRoads,
+    onJunctionBlocks,
     onPreviewPhase,
     cameraMode,
     followOrientation,
@@ -1204,6 +1209,7 @@ export function DrivingMap({
         if (pose) {
           lastRoadQueryRef.current = now;
           onJunctionRoadsRef.current(nearbyRoadSketches(mapNow, pose, 160));
+          onJunctionBlocksRef.current?.(nearbyBlockRings(mapNow, pose, 140));
         }
       }
 
