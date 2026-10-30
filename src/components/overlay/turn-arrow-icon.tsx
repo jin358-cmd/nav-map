@@ -138,6 +138,23 @@ function VersionBArrow({
   return <SmoothStraight className={className} />;
 }
 
+/** One filled silhouette. A second stroked head used to fuse into the shaft. */
+function SolidGlyph({
+  d,
+  className,
+  fillRule,
+}: {
+  d: string;
+  className?: string;
+  fillRule?: "evenodd" | "nonzero";
+}) {
+  return (
+    <ArrowFrame className={className}>
+      <path d={d} fill="currentColor" fillRule={fillRule} />
+    </ArrowFrame>
+  );
+}
+
 function SmoothBend({
   kind,
   className,
@@ -147,16 +164,14 @@ function SmoothBend({
 }) {
   const left = kind === "left";
   return (
-    <ArrowFrame className={className}>
-      <path
-        d={left ? "M40 56 V32 H20" : "M24 56 V32 H44"}
-        {...lineProps()}
-      />
-      <path
-        d={left ? "M34 20 L16 32 L34 44" : "M30 20 L48 32 L30 44"}
-        {...lineProps()}
-      />
-    </ArrowFrame>
+    <SolidGlyph
+      className={className}
+      d={
+        left
+          ? "M42 58 H30 V40 H18 V52 L2 34 L18 16 V28 H42 Z"
+          : "M22 58 H34 V40 H46 V52 L62 34 L46 16 V28 H22 Z"
+      }
+    />
   );
 }
 
@@ -169,16 +184,14 @@ function SmoothSlight({
 }) {
   const left = kind === "left";
   return (
-    <ArrowFrame className={className}>
-      <path
-        d={left ? "M36 56 C36 40 28 28 18 16" : "M28 56 C28 40 36 28 46 16"}
-        {...lineProps()}
-      />
-      <path
-        d={left ? "M8 26 L18 10 L32 22" : "M56 26 L46 10 L32 22"}
-        {...lineProps()}
-      />
-    </ArrowFrame>
+    <SolidGlyph
+      className={className}
+      d={
+        left
+          ? "M44 52 L33 58 L18 28 L22 36 L4 14 L26 12 L20 24 L40 48 Z"
+          : "M20 52 L31 58 L46 28 L42 36 L60 14 L38 12 L44 24 L24 48 Z"
+      }
+    />
   );
 }
 
@@ -191,16 +204,14 @@ function SmoothSharp({
 }) {
   const left = kind === "left";
   return (
-    <ArrowFrame className={className}>
-      <path
-        d={left ? "M40 56 V30 C40 16 26 16 16 28" : "M24 56 V30 C24 16 38 16 48 28"}
-        {...lineProps()}
-      />
-      <path
-        d={left ? "M16 16 L6 32 L24 36" : "M48 16 L58 32 L40 36"}
-        {...lineProps()}
-      />
-    </ArrowFrame>
+    <SolidGlyph
+      className={className}
+      d={
+        left
+          ? "M44 58 L32 58 L32 30 L24 30 L16 48 L8 30 L20 30 L20 18 L44 18 Z"
+          : "M20 58 L32 58 L32 30 L40 30 L48 48 L56 30 L44 30 L44 18 L20 18 Z"
+      }
+    />
   );
 }
 
@@ -214,14 +225,14 @@ function SmoothRamp({
   const left = kind === "left";
   return (
     <ArrowFrame className={className}>
-      <path d="M32 56 V16" {...lineProps()} opacity={0.3} />
+      <path d="M29 58 H35 V8 H29 Z" fill="currentColor" opacity={0.28} />
       <path
-        d={left ? "M32 34 C24 26 16 18 12 12" : "M32 34 C40 26 48 18 52 12"}
-        {...lineProps()}
-      />
-      <path
-        d={left ? "M4 22 L12 6 L26 16" : "M60 22 L52 6 L38 16"}
-        {...lineProps()}
+        d={
+          left
+            ? "M29 40 H35 L22 22 L26 28 L8 10 L28 14 L22 20 L35 34 V40 Z"
+            : "M29 40 H35 L42 22 L38 28 L56 10 L36 14 L42 20 L29 34 V40 Z"
+        }
+        fill="currentColor"
       />
     </ArrowFrame>
   );
@@ -237,20 +248,18 @@ function SmoothFork({
   const left = kind === "left";
   return (
     <ArrowFrame className={className}>
-      <path d="M32 56 V36" {...lineProps()} />
       <path
-        d="M32 36 C42 26 48 18 52 12"
-        {...lineProps()}
-        opacity={left ? 0.28 : 1}
+        d={left ? "M32 56 H40 L52 18 L46 18 L36 48 Z" : "M24 56 H32 L28 48 L18 18 L12 18 Z"}
+        fill="currentColor"
+        opacity={0.28}
       />
       <path
-        d="M32 36 C22 26 16 18 12 12"
-        {...lineProps()}
-        opacity={left ? 1 : 0.28}
-      />
-      <path
-        d={left ? "M4 22 L12 6 L26 16" : "M60 22 L52 6 L38 16"}
-        {...lineProps()}
+        d={
+          left
+            ? "M24 56 H32 L28 46 L14 22 L18 30 L4 12 L24 14 L18 22 L32 48 V56 Z"
+            : "M32 56 H40 L36 46 L50 22 L46 30 L60 12 L40 14 L46 22 L32 48 V56 Z"
+        }
+        fill="currentColor"
       />
     </ArrowFrame>
   );
@@ -258,36 +267,26 @@ function SmoothFork({
 
 function SmoothStraight({ className }: { className?: string }) {
   return (
-    <ArrowFrame className={className}>
-      <path d="M32 62 V8" {...lineProps()} />
-      <path d="M22 20 L32 4 L42 20" {...lineProps()} />
-    </ArrowFrame>
+    <SolidGlyph className={className} d="M26 58 H38 V30 H50 L32 6 L14 30 H26 Z" />
   );
 }
 
 function SmoothUTurn({ className }: { className?: string }) {
   return (
-    <ArrowFrame className={className}>
-      <path d="M20 56 V26 A12 12 0 0 1 44 26 V34" {...lineProps()} />
-      <path d="M30 24 L44 42 L58 24" {...lineProps()} />
-    </ArrowFrame>
+    <SolidGlyph
+      className={className}
+      d="M14 58 V20 H50 V38 H60 L46 54 L34 38 H38 V30 H26 V58 Z"
+    />
   );
 }
 
 function SmoothRoundabout({ className }: { className?: string }) {
   return (
-    <ArrowFrame className={className}>
-      <circle
-        cx="32"
-        cy="36"
-        r="12"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2.6"
-      />
-      <path d="M32 56 V48" {...lineProps()} />
-      <path d="M18 22 L32 8 L46 22" {...lineProps()} />
-    </ArrowFrame>
+    <SolidGlyph
+      className={className}
+      fillRule="evenodd"
+      d="M32 20 A14 14 0 1 1 31.99 20 Z M32 28 A6 6 0 1 0 31.99 28 Z M26 58 H38 V48 H26 Z M20 18 L32 4 L44 18 L36 18 L32 12 L28 18 Z"
+    />
   );
 }
 
@@ -309,17 +308,7 @@ function shaftProps() {
   return {
     fill: "none" as const,
     stroke: "currentColor",
-    strokeWidth: 2.6,
-    strokeLinecap: "round" as const,
-    strokeLinejoin: "round" as const,
-  };
-}
-
-function lineProps() {
-  return {
-    fill: "none" as const,
-    stroke: "currentColor",
-    strokeWidth: 2.6,
+    strokeWidth: 10,
     strokeLinecap: "round" as const,
     strokeLinejoin: "round" as const,
   };

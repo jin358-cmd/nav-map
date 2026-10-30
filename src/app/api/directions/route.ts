@@ -1,8 +1,12 @@
 import { maneuverFromOsrm, stepsFromOsrm, type OsrmStep } from "@/lib/osrm-maneuver";
-import { fetchValhallaMotorcycleRoute } from "@/lib/valhalla-route";
+import {
+  buildOsrmRouteUrl,
+  OSRM_ROUTE_TIMEOUT_MS,
+  resolveOsrmBaseUrl,
+} from "@/lib/osrm-route";
+import type { TravelMode } from "@/types/domain";
 
-const OSRM_CAR = "https://router.project-osrm.org/route/v1/driving";
-const OSRM_TIMEOUT_MS = 8_000;
+export const dynamic = "force-dynamic";
 
 type OsrmPayload = {
   code?: string;
@@ -17,12 +21,17 @@ type OsrmPayload = {
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const fromLng = Number(url.searchParams.get("fromLng"));
-  const fromLat = Number(url.searchParams.get("fromLat"));
-  const toLng = Number(url.searchParams.get("toLng"));
-  const toLat = Number(url.searchParams.get("toLat"));
+  const coordinate = (name: string) => {
+    const raw = url.searchParams.get(name);
+    if (raw == null || raw.trim() === "") return Number.NaN;
+    return Number(raw);
+  };
+  const fromLng = coordinate("fromLng");
+  const fromLat = coordinate("fromLat");
+  const toLng = coordinate("toLng");
+  const toLat = coordinate("toLat");
   const label = url.searchParams.get("label")?.trim() || "目的地";
-  const travelMode =
+  const travelMode: TravelMode =
     url.searchParams.get("mode") === "motorcycle" ? "motorcycle" : "car";
 
   if (
@@ -31,18 +40,22 @@ export async function GET(request: Request) {
     return Response.json({ error: "起訖座標不完整" }, { status: 400 });
   }
 
-  if (travelMode === "motorcycle") {
-    return routeMotorcycle(fromLng, fromLat, toLng, toLat, label);
+  const resolved = resolveOsrmBaseUrl(travelMode);
+  if (!resolved.ok) {
+    return Response.json(
+      { error: resolved.error, code: resolved.code, travelMode },
+      { status: resolved.status },
+    );
   }
 
-  return routeFromOsrmLike(
-    OSRM_CAR,
+  return routeFromOsrm(
+    resolved.baseUrl,
     fromLng,
     fromLat,
     toLng,
     toLat,
     label,
-    "car",
+    travelMode,
   );
 }
 
@@ -54,7 +67,7 @@ function planPayload(
   label: string,
   toLng: number,
   toLat: number,
-  travelMode: "car" | "motorcycle",
+  travelMode: TravelMode,
 ) {
   return {
     coordinates,
@@ -71,49 +84,11 @@ function planPayload(
   };
 }
 
-async function routeMotorcycle(
-  fromLng: number,
-  fromLat: number,
-  toLng: number,
-  toLat: number,
-  label: string,
-) {
-  try {
-    const routed = await fetchValhallaMotorcycleRoute(
-      fromLng,
-      fromLat,
-      toLng,
-      toLat,
-    );
-    if (!routed) {
-      return Response.json(
-        { error: "找不到可騎乘路線", travelMode: "motorcycle" },
-        { status: 404 },
-      );
-    }
-    return Response.json(
-      planPayload(
-        routed.coordinates,
-        routed.distanceMeters,
-        routed.durationSeconds,
-        routed.steps,
-        label,
-        toLng,
-        toLat,
-        "motorcycle",
-      ),
-    );
-  } catch {
-    return Response.json(
-      { error: "機車路線規劃失敗，請再試一次", travelMode: "motorcycle" },
-      { status: 502 },
-    );
-  }
-}
-
-async function fetchOsrmRoute(endpoint: URL): Promise<OsrmPayload | "timeout" | "invalid"> {
+async function fetchOsrmRoute(
+  endpoint: URL,
+): Promise<OsrmPayload | "timeout" | "invalid"> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), OSRM_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), OSRM_ROUTE_TIMEOUT_MS);
   try {
     const response = await fetch(endpoint, {
       headers: { Accept: "application/json" },
@@ -137,25 +112,16 @@ async function fetchOsrmRoute(endpoint: URL): Promise<OsrmPayload | "timeout" | 
   }
 }
 
-async function routeFromOsrmLike(
+async function routeFromOsrm(
   baseUrl: string,
   fromLng: number,
   fromLat: number,
   toLng: number,
   toLat: number,
   label: string,
-  travelMode: "car" | "motorcycle",
+  travelMode: TravelMode,
 ) {
-  const path = `${fromLng},${fromLat};${toLng},${toLat}`;
-  const endpoint = new URL(
-    baseUrl.includes("{path}")
-      ? baseUrl.replace("{path}", path)
-      : `${baseUrl.replace(/\/$/, "")}/${path}`,
-  );
-  endpoint.searchParams.set("overview", "full");
-  endpoint.searchParams.set("geometries", "geojson");
-  endpoint.searchParams.set("steps", "true");
-  endpoint.searchParams.set("alternatives", "false");
+  const endpoint = buildOsrmRouteUrl(baseUrl, fromLng, fromLat, toLng, toLat);
 
   try {
     const data = await fetchOsrmRoute(endpoint);
@@ -168,7 +134,8 @@ async function routeFromOsrmLike(
     if (data === "invalid") {
       return Response.json(
         {
-          error: travelMode === "motorcycle" ? "找不到可騎乘路線" : "找不到可開車路線",
+          error:
+            travelMode === "motorcycle" ? "找不到可騎乘路線" : "找不到可開車路線",
           travelMode,
         },
         { status: 404 },
@@ -179,7 +146,8 @@ async function routeFromOsrmLike(
     if (data.code !== "Ok" || coordinates.length < 2) {
       return Response.json(
         {
-          error: travelMode === "motorcycle" ? "找不到可騎乘路線" : "找不到可開車路線",
+          error:
+            travelMode === "motorcycle" ? "找不到可騎乘路線" : "找不到可開車路線",
           travelMode,
         },
         { status: 404 },

@@ -152,18 +152,18 @@ export async function fetchYoutubeLibrary(
     status: "connected",
     message:
       playlists.length > 0
-        ? "已連線。僅能讀取 YouTube Data API 提供的播放清單，不含私人 YouTube Music 曲庫。"
+        ? "已連線。僅能讀取 YouTube 提供的播放清單，不含私人 YouTube Music 曲庫。"
         : "已連線，但這個帳號沒有可讀取的播放清單。",
   };
 }
 
 export function statusMessage(status: YoutubeLibraryStatus) {
-  if (status === "unconfigured") return "尚未設定 Google Client ID。";
+  if (status === "unconfigured") return "尚未設定 Google 登入。";
   if (status === "unauthorized") return "尚未授權 YouTube 播放清單。";
   if (status === "loading") return "正在載入播放清單…";
   if (status === "connected") return "已連線";
   if (status === "insufficient") return "權限不足，請重新授權 YouTube。";
-  if (status === "api-disabled") return "專案尚未啟用 YouTube Data API。";
+  if (status === "api-disabled") return "尚未啟用 YouTube 播放清單服務。";
   if (status === "expired") return "授權已過期，請重新授權。";
   if (status === "failed") return "登入失敗或無法載入播放清單。";
   return "尚未連線 YouTube。";

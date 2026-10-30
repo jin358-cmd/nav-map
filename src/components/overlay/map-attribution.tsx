@@ -51,7 +51,7 @@ export function MapAttribution({
         )}
       >
         <span aria-hidden="true">©</span>
-        <span>OSM</span>
+        <span>來源</span>
       </button>
       {open ? (
         <div

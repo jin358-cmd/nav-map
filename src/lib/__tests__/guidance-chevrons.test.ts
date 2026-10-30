@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   deriveGeometryTurn,
+  embeddedRouteChevrons,
   guidanceArrowsAlong,
   lineLengthMeters,
   planNavGuidance,
@@ -48,9 +49,25 @@ function testTurnMarqueeStaysOnLine() {
   }
 }
 
+function testEmbeddedChevronsAreFewAndSpaced() {
+  const line = sliceRouteAhead(northLine(), 8, 220);
+  const arrows = embeddedRouteChevrons(line);
+  assert.ok(arrows.length >= 1 && arrows.length <= 2, `expected 1–2 carets, got ${arrows.length}`);
+  for (const arrow of arrows) {
+    assert.ok(arrow.scale <= 1);
+    assert.ok(arrow.opacity >= 0.8 && arrow.opacity <= 1);
+    assert.ok(Number.isFinite(arrow.bearing));
+  }
+  if (arrows.length >= 2) {
+    const separation = Math.abs(arrows[1].lat - arrows[0].lat);
+    assert.ok(separation > 0.00015, `carets stacked, Δlat=${separation}`);
+  }
+}
+
 testSliceAheadHasLength();
 testCruiseChevronsHaveBearing();
 testTurnMarqueeStaysOnLine();
+testEmbeddedChevronsAreFewAndSpaced();
 
 function elbowRoute(): [number, number][] {
   const origin: [number, number] = [120.2, 23.0];
@@ -117,4 +134,4 @@ function testGuidanceNotGatedOnOsrmTurn() {
 
 testGeometryTurnFallback();
 testGuidanceNotGatedOnOsrmTurn();
-console.log(JSON.stringify({ ok: true, suite: "guidance-chevrons", tests: 5 }));
+console.log(JSON.stringify({ ok: true, suite: "guidance-chevrons", tests: 6 }));

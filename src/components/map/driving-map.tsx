@@ -38,8 +38,16 @@ import {
   TAIWAN_OVERVIEW,
   TAIWAN_OVERVIEW_ZOOM,
 } from "@/lib/constants";
+import type { GuidanceArrowMode } from "@/lib/guidance-arrow-mode";
+import { nearbyBlockRings, nearbyRoadSketches, type RoadSketch } from "@/lib/junction-roads";
+import {
+  emptyNavAutoZoomState,
+  stepNavAutoZoom,
+  type NavAutoZoomPhase,
+  type NavAutoZoomState,
+} from "@/lib/nav-auto-zoom";
 import { type ManeuverAlertPhase } from "@/lib/maneuver-guidance";
-import { approachCameraProgress } from "@/lib/upcoming-route";
+import { approachCameraProgress, pointAlongRoute } from "@/lib/upcoming-route";
 import { bindCctvLayerClicks, upsertCctvLayer } from "@/lib/cctv-layer";
 import {
   bindConstructionLayerClicks,
@@ -82,6 +90,7 @@ import {
 import { upsertIntelligenceLayers } from "@/lib/map-layers";
 import { configureMapLibreWorker } from "@/lib/maplibre-worker";
 import { formatTaiwanRoadName } from "@/lib/geocoding/format-taiwan-display-address";
+import { applyChineseBasemapLabels } from "@/lib/basemap-labels";
 import {
   applyResolvedTheme,
   basemapStyle,
@@ -191,6 +200,13 @@ type DrivingMapProps = {
   maneuverCueMeters?: number;
   maneuverStepId?: string | null;
   maneuverAlertPhase?: ManeuverAlertPhase;
+  guidanceArrowMode?: GuidanceArrowMode;
+  offRoute?: boolean;
+  autoZoomEnabled?: boolean;
+  turnCueMeters?: number[];
+  onJunctionRoads?: (lines: RoadSketch[]) => void;
+  onJunctionBlocks?: (blocks: [number, number][][]) => void;
+  onPreviewPhase?: (phase: NavAutoZoomPhase) => void;
   destination: RouteDestination | null;
   overlayPadding?: {
     top: number;
@@ -295,6 +311,42 @@ function drivingPadding(
   };
 }
 
+function navZoomRange(
+  width: number,
+  height: number,
+  mode: CameraMode,
+  navigating: boolean,
+) {
+  const compact = isCompactViewport(width);
+  const portrait = height > width;
+  const portrait2dNav = navigating && mode === "2d" && portrait;
+  const base =
+    mode === "3d"
+      ? portrait
+        ? navigating
+          ? DRIVING_ZOOM_PORTRAIT
+          : DRIVING_ZOOM_MOBILE
+        : compact
+          ? DRIVING_ZOOM_MOBILE
+          : DRIVING_ZOOM
+      : compact
+        ? OVERHEAD_NAV_ZOOM_MOBILE
+        : OVERHEAD_NAV_ZOOM;
+  const focus =
+    mode === "3d"
+      ? portrait
+        ? INTERSECTION_ZOOM_PORTRAIT
+        : compact
+          ? INTERSECTION_ZOOM_MOBILE
+          : INTERSECTION_ZOOM
+      : portrait2dNav
+        ? OVERHEAD_TURN_ZOOM_PORTRAIT
+        : compact
+          ? OVERHEAD_TURN_ZOOM_MOBILE
+          : OVERHEAD_TURN_ZOOM;
+  return { base, focus, portrait, compact, portrait2dNav };
+}
+
 function cameraOptions(
   map: MapLibreMap,
   vehicle: VehiclePose,
@@ -308,42 +360,24 @@ function cameraOptions(
   recoverBlend = 0,
   compassHeading: number | null = null,
   routeBearing: number | null = null,
+  autoZoom: { zoom: number; tightness: number } | null = null,
 ) {
   const height = map.getContainer().clientHeight;
   const width = map.getContainer().clientWidth;
-  const compact = isCompactViewport(width);
-  const portrait = height > width;
-  const portrait2dNav = navigating && mode === "2d" && portrait;
+  const { base: cruiseZoom, focus: focusZoom, portrait, portrait2dNav } = navZoomRange(
+    width,
+    height,
+    mode,
+    navigating,
+  );
   const rawApproach = navigating
     ? approachCameraProgress(distanceToNext, portrait2dNav)
     : 0;
   const approachBlend = mode === "3d" ? rawApproach * 0.38 : rawApproach;
-  const blend = Math.max(approachBlend, recoverBlend);
-  const cruiseZoom =
-    mode === "3d"
-      ? portrait
-        ? navigating
-          ? DRIVING_ZOOM_PORTRAIT
-          : DRIVING_ZOOM_MOBILE
-        : compact
-          ? DRIVING_ZOOM_MOBILE
-          : DRIVING_ZOOM
-      : compact
-        ? OVERHEAD_NAV_ZOOM_MOBILE
-        : OVERHEAD_NAV_ZOOM;
-  const focusZoom =
-    mode === "3d"
-      ? portrait
-        ? INTERSECTION_ZOOM_PORTRAIT
-        : compact
-          ? INTERSECTION_ZOOM_MOBILE
-          : INTERSECTION_ZOOM
-      : portrait2dNav
-        ? OVERHEAD_TURN_ZOOM_PORTRAIT
-        : compact
-          ? OVERHEAD_TURN_ZOOM_MOBILE
-          : OVERHEAD_TURN_ZOOM;
-  const navZoom = lerp(cruiseZoom, focusZoom, blend);
+  const blend = autoZoom
+    ? autoZoom.tightness
+    : Math.max(approachBlend, recoverBlend);
+  const navZoom = autoZoom ? autoZoom.zoom : lerp(cruiseZoom, focusZoom, blend);
   const cruisePitch = navigating
     ? portrait
       ? NAVIGATION_PITCH_PORTRAIT
@@ -484,6 +518,13 @@ export function DrivingMap({
   maneuverCueMeters = 0,
   maneuverStepId = null,
   maneuverAlertPhase = "cruise",
+  guidanceArrowMode = "flat",
+  offRoute = false,
+  autoZoomEnabled = true,
+  turnCueMeters = [],
+  onJunctionRoads,
+  onJunctionBlocks,
+  onPreviewPhase,
   destination,
   overlayPadding = null,
   fitRouteKey,
@@ -576,6 +617,16 @@ export function DrivingMap({
   const isTurnRef = useRef(isTurnManeuver);
   const cueMetersRef = useRef(maneuverCueMeters);
   const stepIdRef = useRef(maneuverStepId);
+  const arrowModeRef = useRef(guidanceArrowMode);
+  const offRouteRef = useRef(offRoute);
+  const autoZoomEnabledRef = useRef(autoZoomEnabled);
+  const turnCuesRef = useRef(turnCueMeters);
+  const autoZoomStateRef = useRef<NavAutoZoomState>(emptyNavAutoZoomState());
+  const onJunctionRoadsRef = useRef(onJunctionRoads);
+  const onJunctionBlocksRef = useRef(onJunctionBlocks);
+  const onPreviewPhaseRef = useRef(onPreviewPhase);
+  const previewPhaseRef = useRef<NavAutoZoomPhase>("cruise");
+  const lastRoadQueryRef = useRef(0);
   const alertPhaseRef = useRef(maneuverAlertPhase);
   const recoverUntilRef = useRef(0);
   const recoverFromRef = useRef(0);
@@ -631,6 +682,9 @@ export function DrivingMap({
     onPickLocationRef.current = onPickLocation;
     onStyleAppliedRef.current = onStyleApplied;
     onStyleFallbackRef.current = onStyleFallback;
+    onJunctionRoadsRef.current = onJunctionRoads;
+    onJunctionBlocksRef.current = onJunctionBlocks;
+    onPreviewPhaseRef.current = onPreviewPhase;
     modeRef.current = cameraMode;
     followOrientationRef.current = followOrientation;
     pickModeRef.current = pickMode;
@@ -695,6 +749,13 @@ export function DrivingMap({
     isTurnRef.current = isTurnManeuver;
     cueMetersRef.current = maneuverCueMeters;
     stepIdRef.current = maneuverStepId;
+    arrowModeRef.current = guidanceArrowMode;
+    offRouteRef.current = offRoute;
+    autoZoomEnabledRef.current = autoZoomEnabled;
+    turnCuesRef.current = turnCueMeters;
+    if (!navigating || !autoZoomEnabled) {
+      autoZoomStateRef.current = emptyNavAutoZoomState();
+    }
     alertPhaseRef.current = maneuverAlertPhase;
     routeMetersRef.current = routeMeters;
     distanceToNextRef.current = distanceToNextMeters;
@@ -715,6 +776,9 @@ export function DrivingMap({
     onPickLocation,
     onStyleApplied,
     onStyleFallback,
+    onJunctionRoads,
+    onJunctionBlocks,
+    onPreviewPhase,
     cameraMode,
     followOrientation,
     pickMode,
@@ -751,6 +815,10 @@ export function DrivingMap({
     maneuverCueMeters,
     maneuverStepId,
     maneuverAlertPhase,
+    guidanceArrowMode,
+    offRoute,
+    autoZoomEnabled,
+    turnCueMeters,
     routeMeters,
     distanceToNextMeters,
     overlayPadding,
@@ -960,6 +1028,11 @@ export function DrivingMap({
                 cameraMode: modeRef.current,
                 isTurn: isTurnRef.current,
                 cueMeters: cueMetersRef.current,
+                arrowMode: arrowModeRef.current,
+                heading: display.heading,
+                offRoute: offRouteRef.current,
+                stepId: stepIdRef.current,
+                nowMs: now,
                 fade: recoverBlendAt(
                   now,
                   recoverUntilRef.current,
@@ -1030,6 +1103,36 @@ export function DrivingMap({
             : null;
         const routeBearing = along?.heading ?? null;
         const northUp = !headingUp && !navigatingNow;
+        const zoomRange = navZoomRange(
+          mapNow.getContainer().clientWidth,
+          mapNow.getContainer().clientHeight,
+          modeRef.current,
+          navigatingNow,
+        );
+        const autoZoomOn = navigatingNow && autoZoomEnabledRef.current;
+        const autoZoom = navigatingNow
+          ? stepNavAutoZoom({
+              previous: autoZoomStateRef.current,
+              nowMs: now,
+              enabled: true,
+              navigating: true,
+              held: gestureBusy || userZoomRef.current != null,
+              heldZoom: mapNow.getZoom(),
+              recenter: snapCamera,
+              speedMps: raw.speedMps ?? 0,
+              routeMeters: routeMetersRef.current,
+              turnCues: turnCuesRef.current,
+              baseZoom: zoomRange.base,
+              focusZoom: zoomRange.focus,
+            })
+          : null;
+        if (autoZoom) {
+          autoZoomStateRef.current = autoZoom.state;
+          if (autoZoom.phase !== previewPhaseRef.current) {
+            previewPhaseRef.current = autoZoom.phase;
+            onPreviewPhaseRef.current?.(autoZoom.phase);
+          }
+        }
         const wanted = cameraOptions(
           mapNow,
           displayPose,
@@ -1043,6 +1146,9 @@ export function DrivingMap({
           recoverBlend,
           deviceCompassRef.current,
           routeBearing,
+          autoZoomOn && autoZoom
+            ? { zoom: autoZoom.zoom, tightness: autoZoom.tightness }
+            : null,
         );
         lastBlendRef.current = wanted.blend;
         const center = mapNow.getCenter();
@@ -1050,17 +1156,21 @@ export function DrivingMap({
           ? mapNow.getZoom()
           : (userZoomRef.current ?? wanted.zoom);
         const followTau = presentationFollowTau(raw.speedMps ?? 0, wanted.blend);
-        const posTau = navigatingNow ? 0.04 : followTau.posTau;
-        const posT = snapCamera ? 1 : damp(dt, posTau);
-        const zoomT = pinchingRef.current ? 0 : snapCamera ? 1 : damp(dt, followTau.zoomTau);
+        const posT = snapCamera ? 1 : damp(dt, followTau.posTau);
+        const zoomT =
+          pinchingRef.current
+            ? 0
+            : snapCamera || autoZoomOn
+              ? 1
+              : damp(dt, followTau.zoomTau);
         const currentBearing = mapNow.getBearing();
         const still = (raw.speedMps ?? 0) < COMPASS_SPEED_MPS;
         const bearingTau = northUp
           ? 0.07
           : navigatingNow
             ? still
-              ? 0.12
-              : 0.05
+              ? 0.42
+              : Math.max(0.22, followTau.bearingTau)
             : still
               ? 0.18
               : followTau.bearingTau;
@@ -1068,8 +1178,8 @@ export function DrivingMap({
           ? 2.2
           : navigatingNow
             ? still
-              ? 1.2
-              : 0.25
+              ? 4.8
+              : Math.max(4, followTau.bearingHoldDeg)
             : still
               ? 3.2
               : followTau.bearingHoldDeg;
@@ -1083,7 +1193,7 @@ export function DrivingMap({
               : lerpAngle(
                   currentBearing,
                   wanted.bearing,
-                  damp(dt, largeJump ? 0.08 : bearingTau),
+                  damp(dt, largeJump ? 0.38 : bearingTau),
                 );
         try {
           mapNow.jumpTo({
@@ -1129,6 +1239,19 @@ export function DrivingMap({
         emitViewport();
       }
 
+      if (
+        navigatingNow &&
+        onJunctionRoadsRef.current &&
+        now - lastRoadQueryRef.current > 800
+      ) {
+        const pose = pointAlongRoute(routeRef.current, routeMetersRef.current);
+        if (pose) {
+          lastRoadQueryRef.current = now;
+          onJunctionRoadsRef.current(nearbyRoadSketches(mapNow, pose, 160));
+          onJunctionBlocksRef.current?.(nearbyBlockRings(mapNow, pose, 140));
+        }
+      }
+
       if (navigatingNow) {
         marker.setRotationAlignment("viewport");
         marker.setPitchAlignment("viewport");
@@ -1148,12 +1271,12 @@ export function DrivingMap({
         const rotationTarget = display.heading;
         const markerGap = headingDelta(markerRotationRef.current, rotationTarget);
         markerRotationRef.current =
-          markerGap < 0.4
-            ? rotationTarget
+          markerGap < 2.2
+            ? markerRotationRef.current
             : lerpAngle(
                 markerRotationRef.current,
                 rotationTarget,
-                damp(dt, 0.06),
+                damp(dt, 0.24),
               );
       }
       marker.setRotation(markerRotationRef.current);
@@ -1166,6 +1289,7 @@ export function DrivingMap({
       if (!isStyleReady(map)) return;
       const visible = layerVisibilityRef.current;
       try {
+        applyChineseBasemapLabels(map);
         applyResolvedTheme(map, styleKeyRef.current);
         ensureHeadingConeLayers(map);
         upsertIntelligenceLayers(
@@ -1219,6 +1343,11 @@ export function DrivingMap({
             cameraMode: modeRef.current,
             isTurn: isTurnRef.current,
             cueMeters: cueMetersRef.current,
+            arrowMode: arrowModeRef.current,
+            heading: vehicleRef.current.heading,
+            offRoute: offRouteRef.current,
+            stepId: stepIdRef.current,
+            nowMs: performance.now(),
           },
         );
       } catch (error) {
@@ -1677,6 +1806,11 @@ export function DrivingMap({
             cameraMode: modeRef.current,
             isTurn: isTurnRef.current,
             cueMeters: cueMetersRef.current,
+            arrowMode: arrowModeRef.current,
+            heading: vehicleRef.current.heading,
+            offRoute: offRouteRef.current,
+            stepId: stepIdRef.current,
+            nowMs: performance.now(),
           },
         );
       } catch (error) {

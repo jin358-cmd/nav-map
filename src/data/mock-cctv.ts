@@ -90,7 +90,7 @@ export const TAINAN_CCTV: CctvCamera[] = [
     location: { lng: 120.2268, lat: 23.0408 },
     url: "",
     updatedAt: "2026-09-01T15:12:10+08:00",
-    snapshotLabel: "國道 CCTV",
+    snapshotLabel: "國道監視器",
   },
   {
     id: "cctv-jh-fq",

@@ -1,8 +1,14 @@
 /**
- * 導航中改為細長白箭頭。平時仍用三角車頭。
+ * 立體三角車頭：與安裝圖示同語言。
  * 旋轉走 Marker.setRotation；根節點不做 CSS rotate。
+ * 圖標本身以 rotateX(15deg) 呈現 15° 仰角；viewBox 正方形、重心在中心。
  */
-const YELLOW_TRIANGLE = `
+export function createVehicleMarkerElement(): HTMLDivElement {
+  const root = document.createElement("div");
+  root.className = "vehicle-marker";
+  root.innerHTML = `
+    <div class="vehicle-marker__body" aria-hidden="true">
+      <svg viewBox="0 0 64 64" width="58" height="58">
         <ellipse cx="32" cy="51" rx="11" ry="3.1" fill="rgba(15,23,42,0.3)"/>
         <path d="M16 46 L32 52 L48 46 L32 40 Z" fill="#713f12"/>
         <path d="M32 4 L50 46 L32 40 Z" fill="#92400e"/>
@@ -22,23 +28,7 @@ const YELLOW_TRIANGLE = `
           stroke-width="1.7"
           stroke-linecap="round"
           opacity="0.9"
-        />`;
-
-const NAV_WHITE_ARROW = `
-        <path
-          d="M32 6 L40 22 L35.2 22 L35.2 58 L28.8 58 L28.8 22 L24 22 Z"
-          fill="#ffffff"
-          stroke="#0f172a"
-          stroke-width="1.4"
-          stroke-linejoin="round"
-        />`;
-
-export function createVehicleMarkerElement(): HTMLDivElement {
-  const root = document.createElement("div");
-  root.className = "vehicle-marker";
-  root.innerHTML = `
-    <div class="vehicle-marker__body" aria-hidden="true">
-      <svg viewBox="0 0 64 64" width="58" height="58">${YELLOW_TRIANGLE}
+        />
       </svg>
     </div>
   `;
@@ -50,11 +40,6 @@ export function setVehicleMarkerNavigating(
   navigating: boolean,
 ) {
   element.classList.toggle("vehicle-marker--nav", navigating);
-  const graphic = element.querySelector<SVGSVGElement>(".vehicle-marker__body svg");
-  if (!graphic) return;
-  graphic.innerHTML = navigating ? NAV_WHITE_ARROW : YELLOW_TRIANGLE;
-  graphic.setAttribute("width", navigating ? "28" : "58");
-  graphic.setAttribute("height", navigating ? "58" : "58");
 }
 
 export function setVehicleMarkerHeading(element: HTMLElement, heading: number) {

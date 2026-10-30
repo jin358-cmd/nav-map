@@ -1,4 +1,3 @@
-import { headingDelta } from "@/lib/geo";
 import {
   pointAtRouteMeters,
   projectToRoute,
@@ -6,22 +5,27 @@ import {
 } from "@/lib/route-progress";
 import type { DisplayPose, LngLat, VehiclePose } from "@/types/domain";
 
-function clamp(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, value));
+/** Snap onto the route inside this band. A vague accuracy reading cannot widen it past 30 m. */
+export function routeSnapLimitMeters(accuracy: number | undefined, wasSnapped: boolean) {
+  const sensed = accuracy == null ? 27 : Math.min(30, Math.max(25, accuracy));
+  return wasSnapped ? Math.min(36, sensed + 6) : sensed;
 }
 
 /**
- * 把原始 GPS 投影到目前導航路線，供黃色箭頭使用。
- * 不覆寫 GPS；偏離過遠、精度不足或疑似平行路時不強制吸附。
+ * Display-only projection onto the active route. Raw GPS is left untouched
+ * for rerouting. Within about 25–30 m the marker uses the route point and
+ * the route bearing; farther than that it stays on the raw fix.
  */
 export function snapVehicleToRoute({
   raw,
   model,
   previousRouteMeters,
+  wasSnapped = false,
 }: {
   raw: VehiclePose;
   model: RouteProgressModel;
   previousRouteMeters?: number;
+  wasSnapped?: boolean;
 }): DisplayPose {
   const rawPosition: LngLat = { lng: raw.lng, lat: raw.lat };
   const fallback: DisplayPose = {
@@ -40,48 +44,22 @@ export function snapVehicleToRoute({
   const accuracy = raw.accuracy ?? 12;
   const lookback = Math.max(28, accuracy);
   const lookahead = Math.max(70, speedMps * 3.2 + accuracy);
-
   const local = projectToRoute(
     rawPosition,
     model.segments,
     Math.max(0, progress - lookback),
     Math.min(model.totalMeters, progress + lookahead),
   );
-
   const candidate = local ?? nearest;
   const along = pointAtRouteMeters(model, candidate.routeMeters);
   if (!along) return fallback;
 
-  const headingGap = headingDelta(raw.heading, along.heading);
-  const snapMaxMeters = Math.max(22, Math.min(55, accuracy * 1.6));
-  const parallelRisk =
-    nearest.distanceMeters + 8 < candidate.distanceMeters &&
-    Math.abs(nearest.routeMeters - progress) > 80;
-  const headingReject = speedMps > 2 && headingGap > 55;
-  const accuracyReject = accuracy > 50;
-  const distanceReject = candidate.distanceMeters > snapMaxMeters;
-
-  const distScore = 1 - clamp(candidate.distanceMeters / snapMaxMeters, 0, 1);
-  const headingScore = 1 - clamp(headingGap / 70, 0, 1);
-  const accuracyScore = 1 - clamp((accuracy - 8) / 42, 0, 1);
-  const snapConfidence = clamp(
-    distScore * 0.45 + headingScore * 0.3 + accuracyScore * 0.25,
-    0,
-    1,
-  );
-
-  const snapped =
-    snapConfidence >= 0.48 &&
-    !parallelRisk &&
-    !headingReject &&
-    !accuracyReject &&
-    !distanceReject;
-
-  if (!snapped) {
+  const limit = routeSnapLimitMeters(raw.accuracy, wasSnapped);
+  if (candidate.distanceMeters > limit) {
     return {
       ...fallback,
       routeMeters: progress,
-      snapConfidence,
+      snapConfidence: 0,
     };
   }
 
@@ -90,7 +68,7 @@ export function snapVehicleToRoute({
     lat: along.point.lat,
     heading: along.heading,
     routeMeters: candidate.routeMeters,
-    snapConfidence,
+    snapConfidence: Math.max(0, 1 - candidate.distanceMeters / Math.max(limit, 1)),
     snapped: true,
   };
 }

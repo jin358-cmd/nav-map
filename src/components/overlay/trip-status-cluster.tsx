@@ -35,7 +35,7 @@ export function TripStatusCluster({
         <p className="hud-trip-label">剩餘距離</p>
         <p className="hud-trip-metric hud-trip-metric--distance">
           <span>{km}</span>
-          <span className="hud-trip-metric-unit">km</span>
+          <span className="hud-trip-metric-unit">公里</span>
         </p>
       </div>
       <div className="hud-trip-cell">

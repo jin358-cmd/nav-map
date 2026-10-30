@@ -338,7 +338,7 @@ export function YouTubeMusicPlayer({
               </p>
               {libraryStatus === "connected" && playlists.length === 0 ? (
                 <p className="mt-1 text-[11px] text-zinc-500">
-                  YouTube Data API 無法提供私人 YouTube Music 曲庫，僅顯示可讀取播放清單。
+                  YouTube 無法提供私人 YouTube Music 曲庫，僅顯示可讀取的播放清單。
                 </p>
               ) : null}
               {libraryStatus !== "connected" && libraryStatus !== "loading" ? (
@@ -348,7 +348,7 @@ export function YouTubeMusicPlayer({
                   className="mt-1.5 w-full rounded-lg border border-white/10 bg-white/6 px-2 py-1 text-left text-[11px] text-zinc-200 hover:bg-white/10 touch-manipulation"
                 >
                   {libraryStatus === "unconfigured"
-                    ? "尚未設定，請先完成 Google OAuth"
+                    ? "尚未設定，請先完成 Google 登入"
                     : !signedIn || libraryStatus === "idle"
                       ? "先登入 Google，再授權 YouTube 歌單"
                       : libraryStatus === "unauthorized" || libraryStatus === "expired" || libraryStatus === "insufficient"

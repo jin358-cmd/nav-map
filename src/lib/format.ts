@@ -43,20 +43,25 @@ export function freshnessLabel(value?: DataFreshness) {
 
 export function eventOriginLabel(origin?: EventDataOrigin | TrafficDataOrigin | DisasterDataOrigin | CctvDataOrigin | ParkingDataOrigin) {
   if (origin === "tdx-live") return "TDX 路外停車場（含民營）";
-  if (origin === "tainan-open") return "臺南市停車 Open Data（含民營）";
-  if (origin === "taipei-open") return "臺北市停管處 Open Data（含民營）";
+  if (origin === "tainan-open") return "臺南市停車開放資料（含民營）";
+  if (origin === "taipei-open") return "臺北市停管處開放資料（含民營）";
   if (origin === "osm-open") return "OpenStreetMap 停車場";
   if (origin === "ncdr-live") return "NCDR 即時災害";
-  if (origin === "snapshot") return "SNAPSHOT";
+  if (origin === "snapshot") return "快照資料";
   if (origin === "mock") return "示範資料";
   return "資料暫時無法取得";
 }
 
 export function cctvOriginLabel(origin: CctvDataOrigin) {
-  if (origin === "tdx-live") return "TDX LIVE";
-  if (origin === "snapshot") return "SNAPSHOT";
+  if (origin === "tdx-live") return "TDX 即時";
+  if (origin === "snapshot") return "快照資料";
   if (origin === "mock") return "示範資料";
   return "資料暫時無法取得";
+}
+
+export function presentRouteError(message: string) {
+  if (message.includes("NOT CONFIGURED")) return "機車路線尚未設定。";
+  return message;
 }
 
 export function trafficOriginLabel(origin: TrafficDataOrigin) {

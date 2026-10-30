@@ -7,7 +7,7 @@ import type { RoadIntelItem, RoadIntelKind } from "@/types/domain";
 
 const KIND_LABEL: Record<RoadIntelKind, string> = {
   congestion: "交通壅塞",
-  cctv: "CCTV",
+  cctv: "監視器",
   construction: "道路施工",
   accident: "交通事故",
   disaster: "災害警報",

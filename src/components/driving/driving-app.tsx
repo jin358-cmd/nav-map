@@ -121,6 +121,7 @@ import {
 import { distanceKm } from "@/lib/geo";
 import { requestDeviceCompassPermission } from "@/lib/device-compass";
 import { nextIntersectionStep } from "@/lib/osrm-maneuver";
+import { travelModeSwitch } from "@/lib/travel-mode";
 import {
   createRouteProgressModel,
   updateNavigationProgress,
@@ -136,6 +137,23 @@ import {
   subscribeMapDisplayMode,
   writeMapDisplayMode,
 } from "@/lib/map-display-mode";
+import {
+  SHOW_GUIDANCE_ARROW_MODE_TOGGLE,
+  getServerGuidanceArrowModeSnapshot,
+  readGuidanceArrowMode,
+  subscribeGuidanceArrowMode,
+  writeGuidanceArrowMode,
+} from "@/lib/guidance-arrow-mode";
+import { type NavAutoZoomPhase } from "@/lib/nav-auto-zoom";
+import {
+  getServerNavAutoZoomSnapshot,
+  readNavAutoZoomEnabled,
+  subscribeNavAutoZoom,
+  writeNavAutoZoomEnabled,
+} from "@/lib/nav-auto-zoom-setting";
+import { GuidanceArrowToggle } from "@/components/overlay/guidance-arrow-toggle";
+import { RoutePreviewCard } from "@/components/overlay/route-preview-card";
+import type { RoadSketch } from "@/lib/junction-roads";
 import {
   deleteSavedPlace,
   findSavedCustomPlace,
@@ -261,6 +279,19 @@ export function DrivingApp() {
     readMapDisplayMode,
     getServerMapDisplayModeSnapshot,
   );
+  const guidanceArrowMode = useSyncExternalStore(
+    subscribeGuidanceArrowMode,
+    readGuidanceArrowMode,
+    getServerGuidanceArrowModeSnapshot,
+  );
+  const autoZoomEnabled = useSyncExternalStore(
+    subscribeNavAutoZoom,
+    readNavAutoZoomEnabled,
+    getServerNavAutoZoomSnapshot,
+  );
+  const [previewPhase, setPreviewPhase] = useState<NavAutoZoomPhase>("cruise");
+  const [junctionRoads, setJunctionRoads] = useState<RoadSketch[]>([]);
+  const [junctionBlocks, setJunctionBlocks] = useState<[number, number][][]>([]);
   const [pendingMapDisplayMode, setPendingMapDisplayMode] =
     useState<MapDisplayMode | null>(null);
   const [styleMenuOpen, setStyleMenuOpen] = useState(false);
@@ -455,6 +486,19 @@ export function DrivingApp() {
       ? activeNavigationStep.cueMeters
       : (maneuver?.distanceMeters ?? activeNavigationStep?.distanceMeters ?? 0);
   const turnManeuver = isTurnManeuver(activeNavigationStep);
+  const previewRouteMeters = navigationProgress?.routeMeters ?? 0;
+
+  const turnCueMeters = useMemo(() => {
+    if (!routeProgressModel) return [] as number[];
+    const cues: number[] = [];
+    routeSteps.forEach((step, index) => {
+      if (!isTurnManeuver(step)) return;
+      const meters = routeProgressModel.stepMeters[index];
+      if (typeof meters === "number" && Number.isFinite(meters)) cues.push(meters);
+    });
+    return cues;
+  }, [routeProgressModel, routeSteps]);
+
   const followingStep = navigationProgress
     ? (routeSteps[navigationProgress.stepIndex + 1] ?? null)
     : (routeSteps[1] ?? null);
@@ -707,6 +751,7 @@ export function DrivingApp() {
           raw: pose,
           model: context.routeProgressModel,
           previousRouteMeters: next?.routeMeters,
+          wasSnapped: displayVehicleLiveRef.current?.snapped === true,
         });
         displayVehicleLiveRef.current = snapped;
         flushHudVehicle(pose, snapped);
@@ -1178,6 +1223,7 @@ export function DrivingApp() {
           raw: pose,
           model: routeProgressModel,
           previousRouteMeters: next?.routeMeters,
+          wasSnapped: displayVehicleLiveRef.current?.snapped === true,
         })
       : null;
     displayVehicleLiveRef.current = snapped;
@@ -1338,6 +1384,7 @@ export function DrivingApp() {
             raw: pose,
             model,
             previousRouteMeters: next?.routeMeters,
+            wasSnapped: displayVehicleLiveRef.current?.snapped === true,
           })
         : null;
       displayVehicleLiveRef.current = snappedPose;
@@ -1700,6 +1747,13 @@ export function DrivingApp() {
         }
         maneuverStepId={activeNavigationStep?.id ?? null}
         maneuverAlertPhase={nextAlertPhase}
+        guidanceArrowMode={guidanceArrowMode}
+        offRoute={navigationProgress?.offRoute ?? false}
+        autoZoomEnabled={autoZoomEnabled}
+        turnCueMeters={turnCueMeters}
+        onJunctionRoads={setJunctionRoads}
+        onJunctionBlocks={setJunctionBlocks}
+        onPreviewPhase={setPreviewPhase}
         destination={destination}
         overlayPadding={navigating ? overlayPadding : null}
         fitRouteKey={fitRouteKey}
@@ -1865,6 +1919,41 @@ export function DrivingApp() {
         </div>
       ) : null}
 
+      <RoutePreviewCard
+        navigating={navigating}
+        phase={previewPhase}
+        route={route}
+        routeMeters={previewRouteMeters}
+        turnCueMeters={turnCueMeters}
+        roads={junctionRoads}
+        blocks={junctionBlocks}
+        steps={routeSteps}
+        distanceMeters={distanceToNextMeters}
+      />
+
+      {navigating ? (
+        <div className="hud-anchor-arrow-mode">
+          {SHOW_GUIDANCE_ARROW_MODE_TOGGLE ? (
+            <GuidanceArrowToggle
+              mode={guidanceArrowMode}
+              onChange={writeGuidanceArrowMode}
+            />
+          ) : null}
+          <button
+            type="button"
+            className={
+              autoZoomEnabled
+                ? "nav-auto-zoom-toggle nav-auto-zoom-toggle--on"
+                : "nav-auto-zoom-toggle"
+            }
+            aria-pressed={autoZoomEnabled}
+            onClick={() => writeNavAutoZoomEnabled(!autoZoomEnabled)}
+          >
+            路口放大
+          </button>
+        </div>
+      ) : null}
+
       {destination && navigating ? (
         <div className="hud-anchor-maneuver">
           <NextIntersectionHud
@@ -1920,9 +2009,10 @@ export function DrivingApp() {
                 else addFavorite(currentPlace);
               }}
               onTravelMode={(mode) => {
-                setTravelMode(mode);
+                const next = travelModeSwitch(mode, Boolean(lastRouteHitRef.current));
+                setTravelMode(next.mode);
                 const hit = lastRouteHitRef.current;
-                if (hit) void applyRoute(hit, mode);
+                if (next.replan && hit) void applyRoute(hit, next.mode);
               }}
               onStartNav={startNavigation}
               onClear={clearRoute}
@@ -2128,7 +2218,7 @@ export function DrivingApp() {
               items={intel}
               origin={origin}
               disasterOrigin={disasterOrigin}
-              emptyHint="目前畫面內尚無 CCTV、事故或災害情報。"
+              emptyHint="目前畫面內尚無監視器、事故或災害情報。"
               onSelectCctv={selectCamera}
               layerVisibility={layerVisibility}
               activeKind={
@@ -2182,8 +2272,11 @@ export function DrivingApp() {
       </div>
 
       {!navigating ? (
-        <div className="pointer-events-none absolute bottom-28 left-2 z-10 hidden max-w-[11rem] sm:bottom-36 sm:left-3 sm:block">
-          <Legend signalsOn={signalsVisible} onToggleSignals={() => setSignalsVisible((on) => !on)} />
+        <div className="browse-legend pointer-events-none absolute z-10 hidden max-w-[11rem] sm:block">
+          <Legend
+            signalsOn={signalsVisible}
+            onToggleSignals={() => setSignalsVisible((on) => !on)}
+          />
         </div>
       ) : null}
 
@@ -2489,16 +2582,17 @@ function Legend({
 }) {
   const items = [
     { color: "bg-[#3ee0ff]", label: "導航路線" },
-    { color: "bg-[#c084fc]", label: "CCTV" },
+    { color: "bg-[#c084fc]", label: "監視器" },
     { color: "bg-[#fbbf24]", label: "測速執法" },
     { color: "bg-[#22c55e]", label: "停車場（充足）" },
     { color: "bg-[#eab308]", label: "施工／車位不多" },
+    { color: "bg-[#93c5fd]", label: "已確認施工" },
     { color: "bg-[#ef4444]", label: "事故" },
     { color: "bg-[#ff9f1c]", label: "災害" },
   ];
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/40 px-3 py-2 text-[11px] text-zinc-300 backdrop-blur-md">
+    <div className="pointer-events-auto rounded-2xl border border-white/10 bg-black/40 px-3 py-2 text-[11px] text-zinc-300 backdrop-blur-md">
       {items.map((item) => (
         <div key={item.label} className="flex items-center gap-2 py-0.5">
           <span className={`size-2.5 rounded-full ${item.color}`} />

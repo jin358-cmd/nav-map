@@ -41,7 +41,7 @@ function raw(speedMps: number): VehiclePose {
   };
 }
 
-function testCoastsWhileGpsStaysPut() {
+function testPredictionStaysOnRouteWithoutAHop() {
   const model = northRoute();
   let state = createVehicleDisplayState(pose(23, 0));
   const target = pose(23, 0);
@@ -57,7 +57,8 @@ function testCoastsWhileGpsStaysPut() {
     });
   }
   const moved = distanceKm({ lng: 120.2, lat: 23 }, state) * 1000;
-  assert.ok(moved > 8 && moved < 14, `expected about 10m of coast, got ${moved}`);
+  // TDX caps route prediction at 5 m and eases toward that point.
+  assert.ok(moved > 2 && moved <= 5.2, `expected a short route lead, got ${moved}`);
   const steps: number[] = [];
   let previous = state;
   const jumped = pose(23.00009, 10);
@@ -75,7 +76,7 @@ function testCoastsWhileGpsStaysPut() {
     previous = state;
   }
   const biggest = Math.max(...steps);
-  assert.ok(biggest < 2.5, `frame step should stay smooth, got ${biggest}`);
+  assert.ok(biggest < 4, `frame step should stay smooth, got ${biggest}`);
 }
 
 function testStationaryFixDoesNotHop() {
@@ -94,5 +95,5 @@ function testStationaryFixDoesNotHop() {
   assert.ok(moved < 1, `parked GPS jitter should hold, got ${moved}`);
 }
 
-testCoastsWhileGpsStaysPut();
+testPredictionStaysOnRouteWithoutAHop();
 testStationaryFixDoesNotHop();

@@ -6,8 +6,8 @@ export const HEADING_CONE_SOURCE = "np-heading-cone";
 export const HEADING_CONE_FILL = "np-heading-cone-fill";
 export const HEADING_CONE_EDGE = "np-heading-cone-edge";
 
-/** Google Maps–like fan: ~66° total, not a 120° sweep. */
-const HALF_ANGLE_DEG = 33;
+/** About a 48° fan. Wider than a needle, short of the old 66° sweep. */
+const HALF_ANGLE_DEG = 24;
 const ARC_STEPS = 22;
 const STILL_HEADING_HOLD_DEG = 5;
 const STILL_HEADING_TAU = 0.12;
@@ -35,7 +35,7 @@ export function stepConeHeading(
 
 export function coneRadiusMeters(zoom: number) {
   const t = (Math.max(13, Math.min(17, zoom)) - 14) / 3;
-  return 70 + t * 50;
+  return 40 + t * 30;
 }
 
 export function coneHeadingTarget({

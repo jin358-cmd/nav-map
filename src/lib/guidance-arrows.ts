@@ -3,13 +3,19 @@ import type {
   GeoJSONSource,
   Map as MapLibreMap,
 } from "maplibre-gl";
+import { paintFlatArrow, paintFloatArrow } from "@/lib/guidance-arrow-paint";
+import type { GuidanceArrowMode } from "@/lib/guidance-arrow-mode";
+import {
+  emptyTurnArrowHold,
+  stepTurnArrowHold,
+  type TurnArrowHold,
+  type TurnArrowSide,
+} from "@/lib/turn-arrow-hold";
 import {
   deriveGeometryTurn,
-  guidanceArrowsAlong,
-  planNavGuidance,
-  shouldShowGroundBow,
+  lineLengthMeters,
+  pointAlongRoute,
   sliceRouteAhead,
-  turnGuidanceLine,
 } from "@/lib/upcoming-route";
 import type { CameraMode } from "@/types/domain";
 
@@ -17,16 +23,18 @@ export const GUIDANCE_SOURCE_ID = "navpilot-turn-arrows";
 export const GUIDANCE_LAYER_ID = "navpilot-turn-arrows-layer";
 export const TURN_LINE_SOURCE_ID = "navpilot-turn-line-v3";
 export const TURN_LINE_GLOW_ID = "navpilot-turn-line-glow-v3";
+export const TURN_LINE_SIDE_ID = "navpilot-turn-line-side-v3";
+export const TURN_LINE_EDGE_ID = "navpilot-turn-line-edge-v3";
 export const TURN_LINE_LAYER_ID = "navpilot-turn-line-layer-v3";
-const CHEVRON_IMAGE_ID = "navpilot-ground-chevron-yellow-v14";
-const COMPACT_MAP_WIDTH = 640;
+const FLAT_ARROW_ID = "navpilot-flat-arrow-v3";
+const FLOAT_ARROW_ID = "navpilot-float-arrow-v3";
 const STALE_TURN_IDS = [
   "navpilot-turn-line",
   "navpilot-turn-line-glow",
   "navpilot-turn-line-layer",
 ];
 
-let showing = false;
+let arrowHold: TurnArrowHold = emptyTurnArrowHold();
 
 function emptyCollection() {
   return { type: "FeatureCollection" as const, features: [] };
@@ -36,103 +44,42 @@ function emptyLine() {
   return { type: "FeatureCollection" as const, features: [] };
 }
 
-function isCompactMap(map: MapLibreMap) {
-  return map.getContainer().clientWidth < COMPACT_MAP_WIDTH;
-}
-
-function createChevronImage() {
-  const size = 128;
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return null;
-  ctx.clearRect(0, 0, size, size);
-  ctx.translate(size / 2, size / 2);
-
-  // Yellow filled ^ on the cyan route; 3D uses map pitch so it sits on the road.
-  const chevronPath = () => {
-    ctx.beginPath();
-    ctx.moveTo(0, -4);
-    ctx.lineTo(-44, 56);
-    ctx.lineTo(-18, 58);
-    ctx.lineTo(0, 20);
-    ctx.lineTo(18, 58);
-    ctx.lineTo(44, 56);
-    ctx.closePath();
-  };
-
-  ctx.save();
-  ctx.shadowColor = "rgba(69, 26, 3, 0.92)";
-  ctx.shadowBlur = 18;
-  chevronPath();
-  ctx.fillStyle = "#713f12";
-  ctx.fill();
-  ctx.restore();
-
-  chevronPath();
-  ctx.fillStyle = "#facc15";
-  ctx.fill();
-  ctx.lineJoin = "round";
-  ctx.lineCap = "round";
-  ctx.lineWidth = 7;
-  ctx.strokeStyle = "#a16207";
-  ctx.stroke();
-
-  return ctx.getImageData(0, 0, size, size);
-}
-
 function ensureImages(map: MapLibreMap) {
-  if (map.hasImage(CHEVRON_IMAGE_ID)) return;
-  const image = createChevronImage();
-  if (!image) return;
-  try {
-    map.addImage(CHEVRON_IMAGE_ID, image, { pixelRatio: 2 });
-  } catch {
-    /* style swap may still hold the previous id for one frame */
-  }
+  const add = (id: string, image: ImageData | null, pixelRatio: number) => {
+    if (!image || map.hasImage(id)) return;
+    try {
+      map.addImage(id, image, { pixelRatio });
+    } catch {
+      /* style swap may still hold the previous id for one frame */
+    }
+  };
+  add(FLAT_ARROW_ID, paintFlatArrow(), 2);
+  add(FLOAT_ARROW_ID, paintFloatArrow("right", 0), 2);
 }
 
-function turnGlowWidth(compact: boolean): ExpressionSpecification {
-  return [
-    "interpolate",
-    ["linear"],
-    ["zoom"],
-    12,
-    compact ? 10 : 6,
-    17,
-    compact ? 20 : 12,
-  ];
+function turnShadowWidth(): ExpressionSpecification {
+  return ["interpolate", ["linear"], ["zoom"], 12, 9, 17, 14];
 }
-function turnLineWidth(compact: boolean): ExpressionSpecification {
-  return [
-    "interpolate",
-    ["linear"],
-    ["zoom"],
-    12,
-    compact ? 5.5 : 3,
-    17,
-    compact ? 12 : 7.5,
-  ];
+function turnEdgeWidth(): ExpressionSpecification {
+  // About 2px of dark outline on each side of the amber body.
+  return ["interpolate", ["linear"], ["zoom"], 12, 11, 17, 16];
+}
+function turnLineWidth(): ExpressionSpecification {
+  return ["interpolate", ["linear"], ["zoom"], 12, 7, 17, 12];
 }
 
+/** Bright packets marching toward the head of the arrow. Stops stay sorted. */
 function flowGradient(phase: number): ExpressionSpecification {
-  const p = 0.12 + (((phase % 1) + 1) % 1) * 0.76;
-  return [
-    "interpolate",
-    ["linear"],
-    ["line-progress"],
-    0,
-    "rgba(56, 189, 233, 0.14)",
-    p - 0.1,
-    "rgba(56, 189, 233, 0.2)",
-    p,
-    "#e0f2fe",
-    p + 0.1,
-    "rgba(224, 242, 254, 0.55)",
-    1,
-    "rgba(56, 189, 233, 0.16)",
-  ];
+  const shift = ((phase % 1) + 1) % 1;
+  const stops: unknown[] = ["interpolate", ["linear"], ["line-progress"]];
+  const samples = 8;
+  for (let index = 0; index <= samples; index += 1) {
+    const t = index / samples;
+    const wave = (t - shift + 1) % 1;
+    const bright = wave < 0.1;
+    stops.push(t, bright ? "#fde68a" : "#f59e0b");
+  }
+  return stops as ExpressionSpecification;
 }
 
 function stripStaleTurnLayers(map: MapLibreMap) {
@@ -142,10 +89,11 @@ function stripStaleTurnLayers(map: MapLibreMap) {
   if (map.getSource("navpilot-turn-line")) map.removeSource("navpilot-turn-line");
 }
 
-function ensureTurnLine(map: MapLibreMap, compact: boolean) {
+function ensureTurnLine(map: MapLibreMap) {
   stripStaleTurnLayers(map);
-  const glowWidth = turnGlowWidth(compact);
-  const lineWidth = turnLineWidth(compact);
+  const shadowWidth = turnShadowWidth();
+  const edgeWidth = turnEdgeWidth();
+  const lineWidth = turnLineWidth();
   if (!map.getSource(TURN_LINE_SOURCE_ID)) {
     map.addSource(TURN_LINE_SOURCE_ID, {
       type: "geojson",
@@ -161,16 +109,47 @@ function ensureTurnLine(map: MapLibreMap, compact: boolean) {
       type: "line",
       source: TURN_LINE_SOURCE_ID,
       paint: {
-        "line-color": "#38bdf8",
-        "line-width": glowWidth,
-        "line-opacity": compact ? 0.4 : 0.28,
-        "line-blur": compact ? 5 : 4,
+        "line-color": "#111827",
+        "line-width": shadowWidth,
+        "line-opacity": 0.28,
+        "line-blur": 4,
+        "line-translate": [0, 3],
+        "line-translate-anchor": "map",
       },
       layout: { "line-cap": "round", "line-join": "round" },
     });
   } else {
-    map.setPaintProperty(TURN_LINE_GLOW_ID, "line-width", glowWidth);
-    map.setPaintProperty(TURN_LINE_GLOW_ID, "line-opacity", compact ? 0.4 : 0.28);
+    map.setPaintProperty(TURN_LINE_GLOW_ID, "line-width", shadowWidth);
+    map.setPaintProperty(TURN_LINE_GLOW_ID, "line-color", "#111827");
+  }
+  if (!map.getLayer(TURN_LINE_SIDE_ID)) {
+    map.addLayer({
+      id: TURN_LINE_SIDE_ID,
+      type: "line",
+      source: TURN_LINE_SOURCE_ID,
+      paint: {
+        "line-color": "#1f2937",
+        "line-width": edgeWidth,
+        "line-opacity": 0,
+        "line-offset": 0,
+      },
+      layout: { "line-cap": "round", "line-join": "round" },
+    });
+  }
+  if (!map.getLayer(TURN_LINE_EDGE_ID)) {
+    map.addLayer({
+      id: TURN_LINE_EDGE_ID,
+      type: "line",
+      source: TURN_LINE_SOURCE_ID,
+      paint: {
+        "line-color": "#1f2937",
+        "line-width": edgeWidth,
+        "line-opacity": 1,
+      },
+      layout: { "line-cap": "round", "line-join": "round" },
+    });
+  } else {
+    map.setPaintProperty(TURN_LINE_EDGE_ID, "line-width", edgeWidth);
   }
   if (!map.getLayer(TURN_LINE_LAYER_ID)) {
     map.addLayer({
@@ -179,51 +158,56 @@ function ensureTurnLine(map: MapLibreMap, compact: boolean) {
       source: TURN_LINE_SOURCE_ID,
       paint: {
         "line-width": lineWidth,
-        "line-opacity": 0.95,
+        "line-opacity": 1,
         "line-gradient": flowGradient(0),
       },
       layout: { "line-cap": "round", "line-join": "round" },
     });
   } else {
     map.setPaintProperty(TURN_LINE_LAYER_ID, "line-width", lineWidth);
-    map.setPaintProperty(TURN_LINE_LAYER_ID, "line-opacity", 0.95);
+    map.setPaintProperty(TURN_LINE_LAYER_ID, "line-opacity", 1);
   }
 }
 
-function chevronSize(compact: boolean, pitched: boolean): ExpressionSpecification {
-  const boost = (compact ? 1.55 : 1) * (pitched ? 2 : 1.28);
-  return [
-    "interpolate",
-    ["linear"],
-    ["zoom"],
-    14.2,
-    ["*", ["get", "scale"], 0.36 * boost],
-    16.2,
-    ["*", ["get", "scale"], 0.5 * boost],
-    17.4,
-    ["*", ["get", "scale"], 0.64 * boost],
-    18.6,
-    ["*", ["get", "scale"], 0.76 * boost],
-  ];
+function liftRibbon(map: MapLibreMap, floating: boolean) {
+  for (const id of [TURN_LINE_SIDE_ID, TURN_LINE_EDGE_ID, TURN_LINE_LAYER_ID]) {
+    if (!map.getLayer(id)) continue;
+    map.setPaintProperty(id, "line-translate", [0, 0]);
+    map.setPaintProperty(id, "line-translate-anchor", "map");
+    map.setPaintProperty(id, "line-offset", 0);
+  }
+  if (map.getLayer(TURN_LINE_SIDE_ID)) {
+    map.setPaintProperty(TURN_LINE_SIDE_ID, "line-opacity", 0);
+  }
+  if (map.getLayer(TURN_LINE_GLOW_ID)) {
+    const drop: [number, number] = floating ? [0, 4] : [0, 2];
+    map.setPaintProperty(TURN_LINE_GLOW_ID, "line-translate", drop);
+    map.setPaintProperty(TURN_LINE_GLOW_ID, "line-translate-anchor", "map");
+    map.setPaintProperty(TURN_LINE_GLOW_ID, "line-opacity", floating ? 0.5 : 0.22);
+    map.setPaintProperty(TURN_LINE_GLOW_ID, "line-blur", floating ? 6 : 3);
+  }
+}
+
+function arrowIconSize() {
+  // Head is about 2.5× the ribbon body (~11px at nav zoom).
+  return 0.62;
 }
 
 function ensureChevronLayer(
   map: MapLibreMap,
-  compact: boolean,
-  pitched: boolean,
-  screenUp: boolean,
+  _floating: boolean,
+  imageId: string,
 ) {
   const existing = map.getLayer(GUIDANCE_LAYER_ID);
   if (existing && "source" in existing && existing.source !== GUIDANCE_SOURCE_ID) {
     map.removeLayer(GUIDANCE_LAYER_ID);
   }
-  const rotate = screenUp
-    ? 0
-    : (["get", "bearing"] as ExpressionSpecification);
-  const alignment = screenUp ? ("viewport" as const) : ("map" as const);
+  // Both heads sit on the route. No screen-space lift.
+  const rotate = ["get", "bearing"] as ExpressionSpecification;
+  const alignment = "map" as const;
   const layout = {
-    "icon-image": CHEVRON_IMAGE_ID,
-    "icon-size": chevronSize(compact, pitched),
+    "icon-image": imageId,
+    "icon-size": arrowIconSize(),
     "icon-anchor": "center" as const,
     "icon-offset": [0, 0] as [number, number],
     "icon-rotate": rotate,
@@ -243,14 +227,20 @@ function ensureChevronLayer(
       layout,
       paint: {
         "icon-opacity": ["get", "opacity"],
+        "icon-translate": [0, 0],
+        "icon-translate-anchor": "map",
       },
     });
     return;
   }
 
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "symbol-placement", "point");
-  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-image", CHEVRON_IMAGE_ID);
-  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-size", chevronSize(compact, pitched));
+  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-image", imageId);
+  map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-size", arrowIconSize());
+  if (map.getLayer(GUIDANCE_LAYER_ID)) {
+    map.setPaintProperty(GUIDANCE_LAYER_ID, "icon-translate", [0, 0]);
+    map.setPaintProperty(GUIDANCE_LAYER_ID, "icon-translate-anchor", "map");
+  }
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-anchor", "center");
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-offset", [0, 0]);
   map.setLayoutProperty(GUIDANCE_LAYER_ID, "icon-rotate", rotate);
@@ -267,6 +257,8 @@ function stackGuidanceLayers(map: MapLibreMap) {
     "demo-route-line",
     "demo-route-maneuver",
     TURN_LINE_GLOW_ID,
+    TURN_LINE_SIDE_ID,
+    TURN_LINE_EDGE_ID,
     TURN_LINE_LAYER_ID,
   ]) {
     if (map.getLayer(id)) map.moveLayer(id);
@@ -294,6 +286,20 @@ function setTurnLine(map: MapLibreMap, line: [number, number][]) {
   }
 }
 
+function prefersReducedMotion() {
+  return (
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+}
+
+function sideFromGeometry(signed: number): TurnArrowSide | null {
+  if (signed <= -12) return "left";
+  if (signed >= 12) return "right";
+  return null;
+}
+
 export function upsertGuidanceArrows(
   map: MapLibreMap,
   route: [number, number][] = [],
@@ -306,78 +312,89 @@ export function upsertGuidanceArrows(
     isTurn?: boolean;
     cueMeters?: number;
     fade?: number;
+    arrowMode?: GuidanceArrowMode;
+    heading?: number;
+    offRoute?: boolean;
+    stepId?: string | null;
+    nowMs?: number;
   } = {},
 ) {
   if (!map.isStyleLoaded()) return;
-  const compact = isCompactMap(map);
-  const pitched = (options.cameraMode ?? "3d") === "3d";
   ensureImages(map);
-  ensureTurnLine(map, compact);
+  ensureTurnLine(map);
 
-  const geometry = deriveGeometryTurn(route, routeMeters);
-  const plan = planNavGuidance({
+  const geometry = deriveGeometryTurn(route, routeMeters, 140);
+  const upcomingSide = sideFromGeometry(geometry.signed);
+  const exitAt = Number.isFinite(distanceToNext)
+    ? routeMeters + Math.max(0, distanceToNext) + 14
+    : routeMeters;
+  const exit = pointAlongRoute(route, exitAt);
+  const motionOff = prefersReducedMotion();
+  const flowPhase = motionOff ? 0 : phase;
+  const stepped = stepTurnArrowHold({
+    previous: arrowHold,
+    nowMs: options.nowMs ?? (typeof performance !== "undefined" ? performance.now() : 0),
     navigating,
-    routeLength: route.length,
-    distanceToNext,
-    isTurnStep: options.isTurn === true,
-    geometryTurn: geometry.isTurn,
+    offRoute: options.offRoute === true,
+    isTurn: options.isTurn === true,
+    stepId: options.stepId ?? null,
+    side: arrowHold.side ?? upcomingSide,
+    routeMeters,
+    distanceToApex: distanceToNext,
+    exitBearing: exit?.bearing ?? null,
+    heading: options.heading ?? exit?.bearing ?? 0,
   });
-  const bow =
-    plan.showTurnBow && shouldShowGroundBow(distanceToNext, showing);
-  showing = bow;
+  arrowHold = stepped.hold;
 
-  const cruiseAhead =
-    plan.near200 || plan.showTurnBow ? 220 : compact || pitched ? 176 : 120;
-  let line =
-    plan.showGuidanceLine && route.length >= 2
-      ? bow
-        ? turnGuidanceLine(
-            route,
-            routeMeters,
-            distanceToNext,
-            options.cueMeters,
-            true,
-          )
-        : sliceRouteAhead(route, Math.max(0, routeMeters) + 6, cruiseAhead)
+  const mode: GuidanceArrowMode = options.arrowMode === "float" ? "float" : "flat";
+  const floating = mode === "float";
+  const apex = stepped.hold.apexMeters ?? routeMeters + Math.max(0, distanceToNext);
+  const clearance = 18;
+  const start = Math.max(0, routeMeters + clearance);
+  const pastCorner = Math.max(0, apex - start);
+  const line =
+    stepped.visible && route.length >= 2
+      ? sliceRouteAhead(route, start, Math.max(48, pastCorner + 42))
       : [];
-  if (plan.showGuidanceLine && line.length < 2 && navigating && route.length >= 2) {
-    line = sliceRouteAhead(route, Math.max(0, routeMeters) + 4, cruiseAhead);
-  }
-  // Ground chevrons were the large yellow arrows on the route. The cyan
-  // route line remains; maneuver direction stays on the guidance card.
-  const arrows: ReturnType<typeof guidanceArrowsAlong> = [];
+  const span = lineLengthMeters(line);
+  const headAlong =
+    pastCorner > 4 ? Math.min(Math.max(0, span - 3), pastCorner + 12) : Math.min(Math.max(0, span - 3), 14);
+  const pose = line.length >= 2 ? pointAlongRoute(line, headAlong) : null;
+  const imageId = floating ? FLOAT_ARROW_ID : FLAT_ARROW_ID;
 
   if (process.env.NODE_ENV !== "production") {
     console.debug("[NavGuidance]", {
       navigating,
-      isTurn: plan.isTurn,
-      isTurnStep: options.isTurn === true,
-      geometryTurn: geometry.isTurn,
+      visible: stepped.visible,
+      reason: stepped.reason,
+      mode,
+      side: stepped.hold.side ?? upcomingSide,
       distanceToNext,
       routeMeters,
-      cueMeters: options.cueMeters,
-      routeLength: route.length,
-      compact,
-      pitched,
-      arrowCount: arrows.length,
-      linePoints: line.length,
+      arrowCount: pose && stepped.visible ? 1 : 0,
     });
   }
+
   const data = {
     type: "FeatureCollection" as const,
-    features: arrows.map((arrow, index) => ({
-      type: "Feature" as const,
-      id: index,
-      properties: {
-        bearing: arrow.bearing,
-        opacity: arrow.opacity,
-        scale: arrow.scale,
-      },
-      geometry: {
-        type: "Point" as const,
-        coordinates: [arrow.lng, arrow.lat],
-      },
-    })),
+    features:
+      stepped.visible && pose
+        ? [
+            {
+              type: "Feature" as const,
+              id: 0,
+              properties: {
+                bearing: pose.bearing,
+                opacity: 0.94,
+                scale: 1,
+              },
+              geometry: {
+                type: "Point" as const,
+                coordinates: [pose.lng, pose.lat],
+              },
+            },
+          ]
+        : [],
   };
 
   const source = map.getSource(GUIDANCE_SOURCE_ID);
@@ -387,16 +404,17 @@ export function upsertGuidanceArrows(
     map.addSource(GUIDANCE_SOURCE_ID, { type: "geojson", data });
   }
 
-  setTurnLine(map, line);
+  setTurnLine(map, stepped.visible ? line : []);
   if (map.getLayer(TURN_LINE_LAYER_ID)) {
-    map.setPaintProperty(TURN_LINE_LAYER_ID, "line-gradient", flowGradient(phase));
+    map.setPaintProperty(TURN_LINE_LAYER_ID, "line-gradient", flowGradient(flowPhase));
   }
-  ensureChevronLayer(map, compact, pitched, navigating);
+  liftRibbon(map, floating && stepped.visible);
+  ensureChevronLayer(map, floating, imageId);
   stackGuidanceLayers(map);
 }
 
 export function resetGuidanceArrowCache() {
-  showing = false;
+  arrowHold = emptyTurnArrowHold();
 }
 
 export function clearGuidanceArrows(map: MapLibreMap) {

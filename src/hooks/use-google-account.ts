@@ -211,7 +211,7 @@ export function useGoogleAccount() {
 
   const explainTokenFailure = useCallback((reason: GoogleTokenReason) => {
     if (reason === "cancel" || reason === "popup") return "已取消登入。若沒有看到 Google 視窗，請再按一次。";
-    if (reason === "origin") return "登入網域尚未加入 Google Authorized Origins。";
+    if (reason === "origin") return "這個網站尚未加入 Google 登入的授權網域。";
     if (reason === "unconfigured") return "Google 登入尚未完成設定";
     return "登入沒有完成，請再試一次。";
   }, []);

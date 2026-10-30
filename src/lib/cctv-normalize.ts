@@ -136,13 +136,13 @@ export function normalizeFallbackCamera(
     url: record.url,
     updatedAt: new Date().toISOString(),
     snapshotLabel:
-      record.sourceType === "freeway" ? "國道 CCTV" : "市區路口監控",
+      record.sourceType === "freeway" ? "國道監視器" : "市區路口監控",
   };
 }
 
 export function dataOriginLabel(origin: CctvDataOrigin): string {
-  if (origin === "tdx-live") return "TDX LIVE";
-  if (origin === "snapshot") return "SNAPSHOT";
+  if (origin === "tdx-live") return "TDX 即時";
+  if (origin === "snapshot") return "快照資料";
   if (origin === "mock") return "示範資料";
   return "資料暫時無法取得";
 }

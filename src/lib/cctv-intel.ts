@@ -14,7 +14,7 @@ export function roadIntelFromCameras(
       eventId: camera.id,
       kind: "cctv" as const,
       title: camera.intersection,
-      detail: `${prefix} CCTV · ${kind}`,
+      detail: `${prefix}監視器 · ${kind}`,
       distanceMeters: meters,
       cameraId: camera.id,
       location: camera.location,
