@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { liveTrafficCityAt } from "@/lib/traffic-cities";
 import {
   CITY_TRAFFIC_MOVE_REFRESH_KM,
   CITY_TRAFFIC_ZOOM_REFRESH_DELTA,
@@ -32,19 +33,22 @@ function quantizeZoom(zoom: number) {
 const inflightKeys = new Set<string>();
 
 async function fetchTrafficCatalog(
+  city: string,
   force = false,
   external?: AbortSignal,
 ): Promise<TrafficCatalog> {
   const controller = new AbortController();
-  const timer = window.setTimeout(() => controller.abort(), 12_000);
+  const timer = window.setTimeout(() => controller.abort(), 60_000);
   const onAbort = () => controller.abort();
   if (external?.aborted) controller.abort();
   else external?.addEventListener("abort", onAbort, { once: true });
   try {
-    const response = await fetch(
-      force ? "/api/traffic?fresh=1" : "/api/traffic",
-      { cache: "no-store", signal: controller.signal },
-    );
+    const params = new URLSearchParams({ city });
+    if (force) params.set("fresh", "1");
+    const response = await fetch(`/api/traffic?${params.toString()}`, {
+      cache: force ? "no-store" : "default",
+      signal: controller.signal,
+    });
     if (!response.ok) {
       throw new Error("traffic catalog failed");
     }
@@ -113,6 +117,7 @@ export function useTrafficView({
     [searchLat, searchLng],
   );
   const zoom = quantizeZoom(viewport?.zoom ?? 16.5);
+  const city = liveTrafficCityAt(viewport?.center ?? queryOrigin);
 
   const applyCatalog = useCallback((result: TrafficCatalog) => {
     setCatalog(result.segments);
@@ -122,7 +127,7 @@ export function useTrafficView({
     setStale(result.stale);
     setError(
       result.origin === "unavailable"
-        ? "即時路況暫時無法取得"
+        ? "路況資料暫時無法取得"
         : result.stale
           ? "路況資料偏舊，仍顯示上次可靠資料"
           : null,
@@ -130,11 +135,12 @@ export function useTrafficView({
   }, []);
 
   useEffect(() => {
-    const requestKey = refreshNonce > 0 ? "traffic:fresh" : "traffic:live";
+    if (!city) return;
+    const requestKey = `${city}:${refreshNonce > 0 ? "fresh" : "live"}`;
     if (inflightKeys.has(requestKey)) return;
     const controller = new AbortController();
     inflightKeys.add(requestKey);
-    void fetchTrafficCatalog(refreshNonce > 0, controller.signal)
+    void fetchTrafficCatalog(city, refreshNonce > 0, controller.signal)
       .then((result) => {
         if (controller.signal.aborted) return;
         applyCatalog(result);
@@ -142,7 +148,7 @@ export function useTrafficView({
       .catch(() => {
         if (controller.signal.aborted) return;
         setStale(true);
-        setError("即時路況更新失敗，仍顯示上次資料。");
+        setError("路況資料暫時無法取得");
       })
       .finally(() => {
         inflightKeys.delete(requestKey);
@@ -151,31 +157,33 @@ export function useTrafficView({
       controller.abort();
       inflightKeys.delete(requestKey);
     };
-  }, [applyCatalog, refreshNonce]);
+  }, [applyCatalog, city, refreshNonce]);
 
   useEffect(() => {
+    if (!city) return;
     const controller = new AbortController();
     const timer = window.setInterval(() => {
-      if (inflightKeys.has("traffic:live")) return;
-      inflightKeys.add("traffic:live");
-      void fetchTrafficCatalog(false, controller.signal)
+      const requestKey = `${city}:live`;
+      if (inflightKeys.has(requestKey)) return;
+      inflightKeys.add(requestKey);
+      void fetchTrafficCatalog(city, false, controller.signal)
         .then((result) => {
           if (!controller.signal.aborted) applyCatalog(result);
         })
         .catch(() => {
           if (!controller.signal.aborted) {
-            setError("即時路況更新失敗，仍顯示上次資料。");
+            setError("路況資料暫時無法取得");
           }
         })
         .finally(() => {
-          inflightKeys.delete("traffic:live");
+          inflightKeys.delete(requestKey);
         });
     }, TRAFFIC_LIVE_CACHE_MS);
     return () => {
       window.clearInterval(timer);
       controller.abort();
     };
-  }, [applyCatalog]);
+  }, [applyCatalog, city]);
 
   const scored = useMemo(
     () =>
@@ -196,13 +204,14 @@ export function useTrafficView({
   );
 
   const reload = useCallback(() => {
-    void fetchTrafficCatalog(true)
+    if (!city) return;
+    void fetchTrafficCatalog(city, true)
       .then(applyCatalog)
       .catch(() => {
         setStale(true);
-        setError("即時路況更新失敗，仍顯示上次資料。");
+        setError("路況資料暫時無法取得");
       });
-  }, [applyCatalog]);
+  }, [applyCatalog, city]);
 
   return {
     origin,

@@ -130,25 +130,25 @@ export const YOUTUBE_PLAYLISTS: readonly YoutubePlaylist[] = [
     id: "drive",
     label: "開車",
     hint: "駕駛混音",
-    videoIds: ["jfKfPfyJRdk", "4xDzrJKXOOY"],
+    videoIds: ["5qap5aO4i9A", "DWcJFNfaw9c", "jfKfPfyJRdk"],
   },
   {
     id: "lofi",
     label: "低保真",
     hint: "專注路況",
-    videoIds: ["jfKfPfyJRdk"],
+    videoIds: ["5qap5aO4i9A", "jfKfPfyJRdk"],
   },
   {
     id: "night",
     label: "夜車",
     hint: "合成器夜曲",
-    videoIds: ["4xDzrJKXOOY"],
+    videoIds: ["4xDzrJKXOOY", "DWcJFNfaw9c"],
   },
   {
     id: "chill",
     label: "輕鬆",
     hint: "輕鬆嘻哈",
-    videoIds: ["5yx6BWlEVcY"],
+    videoIds: ["5yx6BWlEVcY", "5qap5aO4i9A"],
   },
 ] as const;
 

@@ -9,6 +9,7 @@ const LEVEL_WEIGHT: Record<TrafficLevel, number> = {
   congested: 3,
   slow: 2,
   smooth: 0,
+  unknown: 0,
 };
 
 export function deriveTrafficIntel(
@@ -18,6 +19,7 @@ export function deriveTrafficIntel(
   const alerts = scored.filter(
     (segment) =>
       segment.level !== "smooth" &&
+      segment.level !== "unknown" &&
       (segment.nearby || segment.alongRoute) &&
       (segment.alongRoute || segment.distanceKm <= maxDistanceKm),
   );

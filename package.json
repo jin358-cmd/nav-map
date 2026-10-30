@@ -8,6 +8,8 @@
     "start": "next start --port 43145",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
+    "test:roadwork": "node scripts/roadwork-selftest.mjs",
+    "test:signals": "node scripts/traffic-signal-selftest.mjs",
     "update:speed-enforcement": "node scripts/update-speed-enforcement-data.mjs",
     "ingest:pois": "node scripts/ingest-osm-extract.mjs",
     "ingest:chains": "node scripts/ingest-chain-stores.mjs",
@@ -39,7 +41,11 @@
     "advise:address": "node scripts/advise-address-index.mjs",
     "classify:geo-fail": "node scripts/classify-gcis-geo-failures.mjs",
     "reconstruct:nlsc-fails": "node scripts/reconstruct-nlsc-fails.mjs",
-    "retry:nlsc-fails": "node scripts/retry-nlsc-fails.mjs"
+    "retry:nlsc-fails": "node scripts/retry-nlsc-fails.mjs",
+    "preflight:tdx": "node scripts/tdx-env-preflight.mjs",
+    "test:tdx:env": "node --test scripts/tdx-env-preflight.test.mjs",
+    "test:traffic": "npx --yes tsx src/lib/__tests__/traffic-congestion.test.ts",
+    "trial:traffic": "npx --yes tsx scripts/yunlin-traffic-trial.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

@@ -3,6 +3,7 @@ import {
   CITY_TRAFFIC_NEARBY_KM,
   CITY_TRAFFIC_PRIORITY_KM,
   CITY_TRAFFIC_ROUTE_BUFFER_KM,
+  COUNTY_TRAFFIC_MAP_CAP,
 } from "@/lib/traffic-constants";
 import { distanceKm } from "@/lib/geo";
 import type { LngLat, MapViewport, TrafficLevel, TrafficSegment } from "@/types/domain";
@@ -13,7 +14,15 @@ const LEVEL_WEIGHT: Record<TrafficLevel, number> = {
   congested: 3,
   slow: 2,
   smooth: 0,
+  unknown: 0,
 };
+
+const BAND_WEIGHT = {
+  red: 3,
+  yellow: 2,
+  green: 1,
+  unknown: 0,
+} as const;
 
 export type ScoredTrafficSegment = TrafficSegment & {
   distanceKm: number;
@@ -70,15 +79,7 @@ export function scoreTraffic(
         nearby: km <= CITY_TRAFFIC_NEARBY_KM,
       };
     })
-    .filter(
-      (segment) =>
-        Number.isFinite(segment.distanceKm) &&
-        (segment.nearby ||
-          segment.alongRoute ||
-          segment.level === "blocked" ||
-          segment.level === "severe" ||
-          segment.level === "congested"),
-    )
+    .filter((segment) => Number.isFinite(segment.distanceKm))
     .sort((a, b) => {
       const aRank =
         LEVEL_WEIGHT[a.level] * 3 +
@@ -100,47 +101,48 @@ export function mapVisibleTraffic(
 ): ScoredTrafficSegment[] {
   const zoom = viewport?.zoom ?? 16;
   const limit =
-    zoom < 13 ? 16 : zoom < 15 ? 24 : zoom < 17 ? 32 : CITY_TRAFFIC_MAP_CAP;
+    zoom < 12
+      ? COUNTY_TRAFFIC_MAP_CAP
+      : zoom < 14
+        ? 400
+        : zoom < 16
+          ? 240
+          : CITY_TRAFFIC_MAP_CAP;
 
-  const focused =
-    maxDistanceKm == null
-      ? scored
-      : scored.filter(
-          (segment) =>
-            segment.distanceKm <= maxDistanceKm || segment.alongRoute,
-        );
-
-  const nearby = focused.filter(
-    (segment) =>
-      segment.nearby ||
-      segment.alongRoute ||
-      segment.level === "blocked" ||
-      segment.level === "severe" ||
-      segment.level === "congested",
-  );
-  const inView = viewport
-    ? nearby.filter((segment) =>
-        segment.coordinates.some(
+  const inViewport = (segment: ScoredTrafficSegment) =>
+    viewport
+      ? segment.coordinates.some(
           ([lng, lat]) =>
             lng >= viewport.bounds.west &&
             lng <= viewport.bounds.east &&
             lat >= viewport.bounds.south &&
             lat <= viewport.bounds.north,
-        ),
-      )
-    : nearby;
+        )
+      : segment.nearby || segment.alongRoute;
 
-  const pool = inView.length ? inView : nearby;
-  const preferred = pool.filter(
-    (segment) =>
-      segment.alongRoute ||
-      segment.level === "blocked" ||
-      segment.level === "severe" ||
-      segment.level === "congested" ||
-      segment.distanceKm <= CITY_TRAFFIC_PRIORITY_KM,
-  );
-  const rest = pool.filter((segment) => !preferred.includes(segment));
-  return [...preferred, ...rest].slice(0, limit);
+  const focused =
+    maxDistanceKm == null || viewport
+      ? scored.filter(inViewport)
+      : scored.filter(
+          (segment) =>
+            segment.distanceKm <= maxDistanceKm || segment.alongRoute,
+        );
+
+  return [...focused]
+    .sort((a, b) => {
+      const band =
+        (BAND_WEIGHT[b.congestionBand] ?? 0) - (BAND_WEIGHT[a.congestionBand] ?? 0);
+      if (band !== 0) return band;
+      if (a.alongRoute !== b.alongRoute) return a.alongRoute ? -1 : 1;
+      if (
+        (a.distanceKm <= CITY_TRAFFIC_PRIORITY_KM) !==
+        (b.distanceKm <= CITY_TRAFFIC_PRIORITY_KM)
+      ) {
+        return a.distanceKm <= CITY_TRAFFIC_PRIORITY_KM ? -1 : 1;
+      }
+      return a.distanceKm - b.distanceKm;
+    })
+    .slice(0, limit);
 }
 
 function sampleLine(line: [number, number][], step: number): [number, number][] {

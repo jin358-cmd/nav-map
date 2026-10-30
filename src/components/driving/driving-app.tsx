@@ -31,6 +31,8 @@ import { ParkingPanel } from "@/components/overlay/parking-panel";
 import { PlaceInfoCard } from "@/components/overlay/place-info-card";
 import { NextIntersectionHud } from "@/components/overlay/navigation-banner";
 import { RoadInformationCard } from "@/components/overlay/road-information-card";
+import { RoadworkDetailCard, RoadworkPanel } from "@/components/overlay/roadwork-panel";
+import { TrafficSignalCard } from "@/components/overlay/traffic-signal-card";
 import { RouteConfirmBar } from "@/components/overlay/route-preview";
 import { YouTubeMusicPlayer } from "@/components/overlay/youtube-music-player";
 import { useCctvView } from "@/hooks/use-cctv-view";
@@ -39,6 +41,9 @@ import { useGoogleAccount } from "@/hooks/use-google-account";
 import { useLandscape } from "@/hooks/use-landscape";
 import { useYoutubeLibrary } from "@/hooks/use-youtube-library";
 import { useNavigationVoice } from "@/hooks/use-navigation-voice";
+import { useRoadworkView } from "@/hooks/use-roadwork-view";
+import { useTrafficSignals } from "@/hooks/use-traffic-signals";
+import { useTrafficView } from "@/hooks/use-traffic-view";
 import { useSpeedEnforcementView } from "@/hooks/use-speed-enforcement-view";
 import { useMapPois } from "@/hooks/use-map-pois";
 import { useLocatedRegion } from "@/hooks/use-located-region";
@@ -54,6 +59,7 @@ import { mapVisibleDisasters } from "@/lib/disaster-query";
 import { isDemoDataEnabled } from "@/lib/runtime-demo";
 import { rememberAddress } from "@/lib/address-history";
 import { segmentAnchor } from "@/lib/traffic-query";
+import { nextVoiceAlert } from "@/lib/roadwork/proximity.mjs";
 import {
   DEFAULT_POI_LAYER_VISIBILITY,
   activePoiLayerIds,
@@ -210,7 +216,7 @@ import type {
 } from "@/types/domain";
 
 const DEFAULT_LAYER_VISIBILITY: LayerKindVisibility = {
-  congestion: false,
+  congestion: true,
   cctv: true,
   construction: true,
   accident: true,
@@ -327,6 +333,10 @@ export function DrivingApp() {
   const [poiMenuOpen, setPoiMenuOpen] = useState(false);
   const [poiReadFocus, setPoiReadFocus] = useState<PoiMainLayerId | null>(null);
   const [focusTarget, setFocusTarget] = useState<MapFocusTarget | null>(null);
+  const [constructionPanelOpen, setConstructionPanelOpen] = useState(false);
+  const [signalsVisible, setSignalsVisible] = useState(true);
+  const [selectedSignalId, setSelectedSignalId] = useState<string | null>(null);
+  const [selectedRoadworkId, setSelectedRoadworkId] = useState<string | null>(null);
   const [parkingOpen, setParkingOpen] = useState(false);
   const [parkingMinimized, setParkingMinimized] = useState(false);
   const [parkingSort, setParkingSort] = useState<ParkingSort>("distance");
@@ -499,6 +509,31 @@ export function DrivingApp() {
     isTurnManeuver(followingStep) ? followingStep?.distanceMeters : undefined,
   );
   const approachingIntersection = maneuverAlertActive(nextAlertPhase);
+  const roadworkView = useRoadworkView(refreshNonce);
+  const signalView = useTrafficSignals(viewport, route, navigating, signalsVisible);
+  const selectedRoadwork = useMemo(
+    () => roadworkView.events.find((event) => event.id === selectedRoadworkId) ?? null,
+    [roadworkView.events, selectedRoadworkId],
+  );
+  const selectedSignal = useMemo(
+    () => signalView.signals.find((signal) => signal.intersectionId === selectedSignalId) ?? null,
+    [selectedSignalId, signalView.signals],
+  );
+  const roadworkAlertId = useMemo(() => {
+    if (!voiceEnabled || !navigating || vehicle.source !== "gps") return null;
+    return nextVoiceAlert(
+      roadworkView.catalog.mapEvents,
+      { lng: vehicle.lng, lat: vehicle.lat },
+      new Set(),
+    );
+  }, [
+    voiceEnabled,
+    navigating,
+    vehicle.source,
+    vehicle.lng,
+    vehicle.lat,
+    roadworkView.catalog.mapEvents,
+  ]);
 
   useNavigationVoice({
     enabled: voiceEnabled,
@@ -508,6 +543,7 @@ export function DrivingApp() {
     offRoute: navigationProgress?.offRoute ?? false,
     destinationLabel: destination?.label ?? "",
     routeGeneration: routeEpoch,
+    roadworkAlertId,
   });
 
   const queryOrigin = useMemo(
@@ -539,6 +575,12 @@ export function DrivingApp() {
         : { lng: queryLng, lat: queryLat },
     [queryLat, queryLng],
   );
+  const trafficView = useTrafficView({
+    queryOrigin: searchOrigin,
+    viewport,
+    route,
+    refreshNonce,
+  });
   const liveHeading =
     gpsStatus === "active" && vehicle.source === "gps" ? vehicle.heading : 0;
 
@@ -751,10 +793,12 @@ export function DrivingApp() {
     [selectedCctv, visible],
   );
 
-  const mapTraffic: [] = [];
+  const trafficDrawable =
+    trafficView.origin === "tdx-live" || trafficView.origin === "tdx-fixture";
+  const mapTraffic = trafficDrawable ? trafficView.visible : [];
   const mapLayerVisibility = {
     ...layerVisibility,
-    congestion: false,
+    congestion: trafficDrawable && layerVisibility.congestion,
   };
 
   const intel = useMemo(() => {
@@ -1018,6 +1062,7 @@ export function DrivingApp() {
     setEventListKind(null);
     setSelectedEvent(null);
     setSelectedCctv(null);
+    setConstructionPanelOpen(false);
     setMusicMode("off");
     setStyleMenuOpen(false);
     setSelectedMapPlace(null);
@@ -1057,6 +1102,7 @@ export function DrivingApp() {
     setEventListKind(null);
     setSelectedEvent(null);
     setSelectedCctv(null);
+    setConstructionPanelOpen(false);
     setMusicMode("off");
     setSelectedMapPlace(null);
     setParkingSort("distance");
@@ -1074,6 +1120,7 @@ export function DrivingApp() {
     setSelectedCctv(null);
     setSelectedEvent(null);
     setEventListKind(null);
+    setConstructionPanelOpen(false);
     setMusicMode("off");
     setSelectedMapPlace(null);
   }, []);
@@ -1553,6 +1600,17 @@ export function DrivingApp() {
 
   const handleKindClick = useCallback(
     (kind: RoadIntelKind) => {
+      if (kind === "construction") {
+        setParkingOpen(false);
+        setSelectedParking(null);
+        setFavoritesOpen(false);
+        setMusicMode("off");
+        setSelectedMapPlace(null);
+        setEventListKind(null);
+        setConstructionPanelOpen((open) => !open);
+        return;
+      }
+      setConstructionPanelOpen(false);
       const visible = layerVisibility[kind];
       if (visible && (eventListKind === kind || selectedEvent?.kind === kind)) {
         setLayerVisibility((current) => ({ ...current, [kind]: false }));
@@ -1585,7 +1643,7 @@ export function DrivingApp() {
 
   const kindOrigin = (kind: RoadIntelKind) => {
     if (kind === "cctv") return origin;
-    if (kind === "congestion") return "unavailable";
+    if (kind === "congestion") return trafficView.origin;
     if (kind === "disaster") return disasterOrigin;
     if (kind === "accident") return accidentOrigin;
     return constructionOrigin;
@@ -1632,8 +1690,13 @@ export function DrivingApp() {
         disasters={visibleDisasters}
         accidents={visibleAccidents}
         constructions={visibleConstructions}
+        roadwork={roadworkView.catalog.mapEvents}
+        trafficSignals={signalView.signals}
+        selectedSignalId={selectedSignalId}
+        signalsVisible={signalsVisible}
         selectedAccidentId={selectedAccident?.id ?? null}
         selectedConstructionId={selectedConstruction?.id ?? null}
+        selectedRoadworkId={selectedRoadworkId}
         layerVisibility={mapLayerVisibility}
         focusTarget={focusTarget}
         parkingLots={parkingLots}
@@ -1641,6 +1704,18 @@ export function DrivingApp() {
         parkingVisible={parkingOpen}
         mapPois={visibleMapPois}
         selectedPoiId={selectedMapPlace?.kind === "poi" ? selectedMapPlace.id : null}
+        onRoadworkSelect={(id) => {
+          setSelectedRoadworkId(id);
+          setConstructionPanelOpen(true);
+          setSelectedEvent(null);
+          setSelectedCctv(null);
+        }}
+        onSignalSelect={(id) => {
+          setSelectedSignalId(id);
+          setSelectedEvent(null);
+          setSelectedCctv(null);
+          setSelectedMapPlace(null);
+        }}
         onParkingSelect={(id) => {
           const found = parkingLots.find((lot) => lot.id === id) ?? null;
           setSelectedParking(found);
@@ -2146,7 +2221,12 @@ export function DrivingApp() {
               emptyHint="目前畫面內尚無監視器、事故或災害情報。"
               onSelectCctv={selectCamera}
               layerVisibility={layerVisibility}
-              activeKind={eventListKind ?? selectedEvent?.kind ?? null}
+              activeKind={
+                constructionPanelOpen
+                  ? "construction"
+                  : (eventListKind ?? selectedEvent?.kind ?? null)
+              }
+              constructionNoticeCount={roadworkView.catalog.counts.notices}
               onKindClick={handleKindClick}
               musicOpen={musicMode !== "off"}
               favorites={userFavorites}
@@ -2179,6 +2259,7 @@ export function DrivingApp() {
                 setSelectedCctv(null);
                 setSelectedEvent(null);
                 setEventListKind(null);
+                setConstructionPanelOpen(false);
                 setSelectedMapPlace(null);
                 setMusicMode((mode) => {
                   if (mode === "off") return "open";
@@ -2192,7 +2273,10 @@ export function DrivingApp() {
 
       {!navigating ? (
         <div className="browse-legend pointer-events-none absolute z-10 hidden max-w-[11rem] sm:block">
-          <Legend />
+          <Legend
+            signalsOn={signalsVisible}
+            onToggleSignals={() => setSignalsVisible((on) => !on)}
+          />
         </div>
       ) : null}
 
@@ -2384,7 +2468,41 @@ export function DrivingApp() {
             onClose={() => setSelectedMapPlace(null)}
           />
         ) : null}
-        {eventListKind ? (
+        {selectedRoadwork ? (
+          <RoadworkDetailCard
+            event={selectedRoadwork}
+            onClose={() => setSelectedRoadworkId(null)}
+          />
+        ) : null}
+        {selectedSignal ? (
+          <TrafficSignalCard signal={selectedSignal} onClose={() => setSelectedSignalId(null)} />
+        ) : null}
+        {constructionPanelOpen ? (
+          <RoadworkPanel
+            catalog={roadworkView.catalog}
+            events={intelByKind.construction}
+            eventOrigin={constructionOrigin}
+            layerOn={layerVisibility.construction}
+            sampleActive={roadworkView.sample === "structural"}
+            onShowSample={roadworkView.showStructuralSample}
+            onClearSample={roadworkView.clearSample}
+            onToggleLayer={() =>
+              setLayerVisibility((current) => ({
+                ...current,
+                construction: !current.construction,
+              }))
+            }
+            onClose={() => setConstructionPanelOpen(false)}
+            onSelectEvent={openIntelItem}
+            onSelectNotice={(event) => {
+              setSelectedRoadworkId(event.id);
+              setSelectedEvent(null);
+              setSelectedCctv(null);
+              setSelectedMapPlace(null);
+            }}
+          />
+        ) : null}
+        {eventListKind && eventListKind !== "construction" ? (
           <EventListPanel
             kind={eventListKind}
             items={intelByKind[eventListKind]}
@@ -2446,34 +2564,50 @@ export function DrivingApp() {
         </div>
       </footer>
 
-      {cctvError || speedEnforcementError || disasterError || parkingError ? (
+      {cctvError || speedEnforcementError || disasterError || parkingError || roadworkView.error || trafficView.error ? (
         <div className="pointer-events-none absolute top-[max(11rem,calc(env(safe-area-inset-top)+10rem))] left-1/2 z-20 -translate-x-1/2 rounded-xl border border-amber-300/25 bg-black/65 px-3 py-2 text-xs text-amber-100">
-          {cctvError ?? speedEnforcementError ?? disasterError ?? parkingError}
+          {cctvError ?? speedEnforcementError ?? disasterError ?? parkingError ?? roadworkView.error ?? trafficView.error}
         </div>
       ) : null}
     </div>
   );
 }
 
-function Legend() {
+function Legend({
+  signalsOn,
+  onToggleSignals,
+}: {
+  signalsOn: boolean;
+  onToggleSignals: () => void;
+}) {
   const items = [
     { color: "bg-[#3ee0ff]", label: "導航路線" },
     { color: "bg-[#c084fc]", label: "監視器" },
     { color: "bg-[#fbbf24]", label: "測速執法" },
     { color: "bg-[#22c55e]", label: "停車場（充足）" },
     { color: "bg-[#eab308]", label: "施工／車位不多" },
+    { color: "bg-[#93c5fd]", label: "已確認施工" },
     { color: "bg-[#ef4444]", label: "事故" },
     { color: "bg-[#ff9f1c]", label: "災害" },
   ];
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/40 px-3 py-2 text-[11px] text-zinc-300 backdrop-blur-md">
+    <div className="pointer-events-auto rounded-2xl border border-white/10 bg-black/40 px-3 py-2 text-[11px] text-zinc-300 backdrop-blur-md">
       {items.map((item) => (
         <div key={item.label} className="flex items-center gap-2 py-0.5">
           <span className={`size-2.5 rounded-full ${item.color}`} />
           {item.label}
         </div>
       ))}
+      <button
+        type="button"
+        aria-pressed={signalsOn}
+        onClick={onToggleSignals}
+        className="mt-1 flex w-full items-center gap-2 border-t border-white/10 pt-1 text-left text-zinc-200"
+      >
+        <span className={`size-2.5 rounded-sm ${signalsOn ? "bg-zinc-300" : "bg-zinc-600"}`} />
+        路口號誌
+      </button>
     </div>
   );
 }

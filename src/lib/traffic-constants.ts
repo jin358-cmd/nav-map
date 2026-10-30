@@ -1,3 +1,6 @@
+/** County-wide congestion lines kept when the map is zoomed out. */
+export const COUNTY_TRAFFIC_MAP_CAP = 800;
+
 /** City live traffic search / draw limits. Freeway types are reserved. */
 export const CITY_TRAFFIC_NEARBY_KM = 8;
 /** 常態只畫車輛附近 5 公里與路線沿線路況 */
@@ -8,10 +11,12 @@ export const CITY_TRAFFIC_MAP_CAP = 160;
 export const CITY_TRAFFIC_MOVE_REFRESH_KM = 0.35;
 export const CITY_TRAFFIC_ZOOM_REFRESH_DELTA = 0.55;
 
-/** Live TravelSpeed / CongestionLevel refresh. */
-export const TRAFFIC_LIVE_CACHE_MS = 5 * 60 * 1000;
+/** Live TravelSpeed / CongestionLevel refresh. Client poll uses the same interval. */
+export const TRAFFIC_LIVE_CACHE_MS = 60 * 1000;
+/** Manual refresh cannot call TDX faster than this, even with ?fresh=1. */
+export const TRAFFIC_MIN_REFRESH_MS = 15 * 1000;
 /** A successful live snapshot older than this must be labelled stale. */
-export const TRAFFIC_STALE_AFTER_MS = 8 * 60 * 1000;
+export const TRAFFIC_STALE_AFTER_MS = 3 * 60 * 1000;
 /** Section metadata + WKT shapes change slowly. */
 export const TRAFFIC_SHAPE_CACHE_MS = 15 * 60 * 1000;
 

@@ -9,7 +9,8 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
-import { ChevronLeft, Compass, LayoutGrid, Loader2, LocateFixed, ShoppingCart } from "lucide-react";
+import { ChevronLeft, Compass, LayoutGrid, Loader2, LocateFixed } from "lucide-react";
+import { LifeLayerIcon } from "@/components/overlay/life-shortcut-icons";
 
 /** Portrait hides the compass. The control and its handler stay in the tree. */
 export const SHOW_PORTRAIT_COMPASS = false;
@@ -242,7 +243,7 @@ export function MapControls({
         >
           {poiLayersLoading ? (
             <span className="relative inline-flex size-6 items-center justify-center">
-              <ShoppingCart className="size-5" strokeWidth={2.5} />
+              <LifeLayerIcon className="size-5" />
               <span
                 className="poi-layer-read-pie poi-layer-read-pie--icon-ring"
                 style={
@@ -252,7 +253,7 @@ export function MapControls({
               />
             </span>
           ) : (
-            <ShoppingCart className="size-5" strokeWidth={2.5} />
+            <LifeLayerIcon className="size-5" />
           )}
         </ControlButton>
       ) : null}

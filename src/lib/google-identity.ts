@@ -186,6 +186,22 @@ export function writeYoutubeAccess(access: YoutubeAccess | null) {
   writeScopedAccess(YOUTUBE_TOKEN_STORAGE_KEY, YOUTUBE_TOKEN_EVENT, access);
 }
 
+function accountFromProfile(
+  profile: { sub?: string; name?: string; email?: string; picture?: string },
+  accessToken: string,
+  expiresIn: number,
+): GoogleAccount | null {
+  if (!profile.sub) return null;
+  return {
+    sub: profile.sub,
+    name: profile.name?.trim() || profile.email?.split("@")[0] || "Google 帳號",
+    email: profile.email?.trim() || "",
+    picture: profile.picture?.trim() || "",
+    idToken: accessToken,
+    exp: Math.floor((Date.now() + expiresIn * 1000) / 1000),
+  };
+}
+
 export async function fetchGoogleProfile(
   accessToken: string,
   expiresIn = 3600,
@@ -195,22 +211,30 @@ export async function fetchGoogleProfile(
       headers: { Authorization: `Bearer ${accessToken}` },
       cache: "no-store",
     });
+    if (response.ok) {
+      const profile = (await response.json()) as {
+        sub?: string;
+        name?: string;
+        email?: string;
+        picture?: string;
+      };
+      const account = accountFromProfile(profile, accessToken, expiresIn);
+      if (account) return account;
+    }
+  } catch {
+    /* userinfo 失敗時改問 tokeninfo */
+  }
+  try {
+    const response = await fetch(
+      `https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=${encodeURIComponent(accessToken)}`,
+      { cache: "no-store" },
+    );
     if (!response.ok) return null;
     const profile = (await response.json()) as {
       sub?: string;
-      name?: string;
       email?: string;
-      picture?: string;
     };
-    if (!profile.sub) return null;
-    return {
-      sub: profile.sub,
-      name: profile.name?.trim() || profile.email?.split("@")[0] || "Google 帳號",
-      email: profile.email?.trim() || "",
-      picture: profile.picture?.trim() || "",
-      idToken: accessToken,
-      exp: Math.floor((Date.now() + expiresIn * 1000) / 1000),
-    };
+    return accountFromProfile(profile, accessToken, expiresIn);
   } catch {
     return null;
   }

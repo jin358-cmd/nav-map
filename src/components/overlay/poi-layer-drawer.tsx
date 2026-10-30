@@ -1,7 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { Check, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  BookOpen,
+  CarFront,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  HeartPulse,
+  House,
+  Landmark,
+  Shirt,
+  Ticket,
+  Utensils,
+  type LucideIcon,
+} from "lucide-react";
 import {
   LIFE_CIRCLE_LAYER_LABEL,
   POI_LAYER_COLORS,
@@ -16,6 +29,17 @@ import {
 } from "@/lib/poi/subcategories";
 import { PoiLayerReadBanner } from "@/components/overlay/poi-layer-read-progress";
 import { cn } from "@/lib/utils";
+
+const LAYER_ICONS: Record<PoiMainLayerId, LucideIcon> = {
+  food: Utensils,
+  clothing: Shirt,
+  housing: House,
+  transport: CarFront,
+  education: BookOpen,
+  leisure: Ticket,
+  medical: HeartPulse,
+  life: Landmark,
+};
 
 export function PoiLayerDrawer({
   open,
@@ -149,6 +173,7 @@ export function PoiLayerDrawer({
           {POI_MAIN_LAYERS.map((layer) => {
             const on = visibility[layer.id];
             const { selected, total } = poiSubSelectionCount(layer.id, subVisibility);
+            const LayerIcon = LAYER_ICONS[layer.id];
             return (
               <div
                 key={layer.id}
@@ -164,10 +189,15 @@ export function PoiLayerDrawer({
                   aria-label={`${layer.short} ${layer.yp}，點入選擇小分類`}
                 >
                   <span
-                    className="size-3 shrink-0 rounded-full border border-white/70"
-                    style={{ background: POI_LAYER_COLORS[layer.id] }}
+                    className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg"
+                    style={{
+                      background: POI_LAYER_COLORS[layer.id],
+                      color: "#0f172a",
+                    }}
                     aria-hidden
-                  />
+                  >
+                    <LayerIcon className="size-4" strokeWidth={2.4} />
+                  </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm font-semibold leading-tight">
                       {layer.short}

@@ -93,6 +93,7 @@ export function RoadInformationCard({
   parkingOn = false,
   parkingLoading = false,
   onToggleParking,
+  constructionNoticeCount = 0,
 }: {
   items: RoadIntelItem[];
   origin: CctvDataOrigin;
@@ -121,6 +122,7 @@ export function RoadInformationCard({
   parkingOn?: boolean;
   parkingLoading?: boolean;
   onToggleParking?: () => void;
+  constructionNoticeCount?: number;
 }) {
   const [openKind, setOpenKind] = useState<RoadIntelKind | null>(null);
   const selectedKind = activeKind ?? openKind;
@@ -241,6 +243,12 @@ export function RoadInformationCard({
               key={kind}
               kind={kind}
               count={counts[kind]}
+              badgeText={kind === "construction" ? `${counts[kind]}|${constructionNoticeCount}` : undefined}
+              ariaLabel={
+                kind === "construction"
+                  ? `施工，施工事件 ${counts[kind]}，官方公告 ${constructionNoticeCount}`
+                  : undefined
+              }
               layerOn={layerVisibility ? layerVisibility[kind] : true}
               selected={selectedKind === kind}
               onClick={() => handleKind(kind)}
@@ -260,12 +268,16 @@ export function RoadInformationCard({
 function KindChip({
   kind,
   count,
+  badgeText,
+  ariaLabel,
   layerOn,
   selected,
   onClick,
 }: {
   kind: RoadIntelKind;
   count: number;
+  badgeText?: string;
+  ariaLabel?: string;
   layerOn: boolean;
   selected: boolean;
   onClick: () => void;
@@ -276,7 +288,7 @@ function KindChip({
     <button
       type="button"
       title={meta.label}
-      aria-label={`${meta.label}${count}則`}
+      aria-label={ariaLabel ?? `${meta.label}${count}則`}
       aria-pressed={layerOn}
       onClick={onClick}
       className={cn(
@@ -289,7 +301,7 @@ function KindChip({
       <Icon className="function-chip__icon" />
       <span className="function-chip__label">{meta.label}</span>
       <span className="function-chip__badge absolute flex min-w-4 items-center justify-center rounded-full bg-black/80 px-1 text-[10px] leading-4 text-zinc-200">
-        {count}
+        {badgeText ?? count}
       </span>
     </button>
   );

@@ -1,6 +1,6 @@
 # Phase 3 Traffic — TDX 即時路況
 
-智駕NavPilot 已接上 MOTC TDX 臺南市區即時路況，並保留 mock fallback。沒有重做 CCTV、地址搜尋或 OSRM 路線。
+智駕NavPilot 已接上 MOTC TDX 縣市發布路段即時路況。雲林縣（`YunlinCounty`）優先，並把公路局省道（`/Highway`）裁到該縣範圍。沒有重做 CCTV、地址搜尋或 OSRM 路線。
 
 未設定 `TDX_CLIENT_ID` / `TDX_CLIENT_SECRET`（或 live 失敗）時，地圖與 HUD 走臺南示意路段。
 
@@ -12,7 +12,8 @@
 - 獨立圖層：`traffic-source` / `traffic-layer`。舊的 `mock-traffic` 會在 upsert 時清掉。
 - 圖層順序（下→上）：底圖 → 路況線 → CCTV → 青綠路線 → HTML 車輛／事故／災害。
 - 不一次畫全市：附近 8 km、沿線 400 m、壅塞／阻塞優先，zoom cap 約 16／24／32／40。
-- 更新：live cache 60 秒、形狀 cache 15 分鐘、手動「重新整理情報」、60 秒輪詢。拖曳／縮放不重打 TDX。
+- 更新：伺服器 live cache 60 秒、形狀 cache 15 分鐘、CDN `s-maxage=60`、客戶端每 60 秒打 `/api/traffic`（不直連 TDX）。手動重新整理最快 15 秒。拖曳／縮放不重打 TDX。
+- 顏色：機關壅塞水準 1 綠、2 黃、3–5 與封閉紅，`-99`／缺值／未知灰。省道使用公路局自己的壅塞水準。
 - HUD：沿線優先，再取最近的車多／壅塞／阻塞；6 km 外的交流道不會壓過前方路段。
 - 型別：`TrafficSourceType = "city" | "freeway"`。本階段只抓臺南 **city** live。
 
@@ -23,9 +24,14 @@ Token：`POST https://tdx.transportdata.tw/auth/realms/TDXConnect/protocol/openi
 
 | 用途 | Path |
 | --- | --- |
-| 即時路況 | `GET /v2/Road/Traffic/Live/City/Tainan` → `LiveTraffics` |
-| 路段名稱 | `GET /v2/Road/Traffic/Section/City/Tainan` → `Sections` |
-| 線型 WKT | `GET /v2/Road/Traffic/SectionShape/City/Tainan` → `SectionShapes` |
+| 即時路況 | `GET /v2/Road/Traffic/Live/City/{City}` → `Items`（仍接受舊的 `LiveTraffics`） |
+| 路段名稱 | `GET /v2/Road/Traffic/Section/City/{City}` → `Items` |
+| 線型 WKT | `GET /v2/Road/Traffic/SectionShape/City/{City}` → `Items` |
+| 基礎路段組合 | `GET /v2/Road/Traffic/SectionLink/City/{City}` → `Items` |
+| 壅塞水準 | `GET /v2/Road/Traffic/CongestionLevel/City/{City}` → `Items` |
+| 省道即時／路段／線型／水準 | 同上，路徑改為 `/v2/Road/Traffic/{Live,Section,SectionShape,SectionLink,CongestionLevel}/Highway` |
+
+`{City}` 使用 Swagger 列舉。雲林是 `YunlinCounty`。包裝欄位是 `AuthorityCode` + `Items`。
 
 三支都帶 `$format=JSON` 與 `$top=3000`（TDX 預設 `$top=30`）。
 
