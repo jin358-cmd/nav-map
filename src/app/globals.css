@@ -1252,6 +1252,11 @@
   height: 1rem;
 }
 
+.junction-diagram .route-preview-card__block {
+  fill: #74b86c;
+  stroke: #5e9d58;
+}
+
 .junction-diagram .route-preview-card__svg {
   width: 100%;
   height: auto;
@@ -1259,25 +1264,25 @@
   max-height: calc(100dvh - 8.2rem - 11.2rem);
   border-radius: 0;
   background: #8ed18a;
-  transform: perspective(420px) rotateX(18deg);
-  transform-origin: center 85%;
+  transform: perspective(680px) rotateX(8deg);
+  transform-origin: center 58%;
 }
 
 .junction-diagram .route-preview-card__context-case,
 .junction-diagram .route-preview-card__major-case,
 .junction-diagram .route-preview-card__route-case {
   stroke: #f4f4f5;
-  stroke-width: 28;
+  stroke-width: 26;
 }
 
 .junction-diagram .route-preview-card__route-case {
-  stroke-width: 36;
+  stroke-width: 26;
 }
 
 .junction-diagram__asphalt {
   fill: none;
   stroke: #2a2a2a;
-  stroke-width: 24;
+  stroke-width: 20;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
@@ -1724,15 +1729,15 @@
   }
 
   .hud-anchor-trip {
-    left: calc(40vw + 0.7rem);
-    width: min(42vw, 20rem);
+    left: calc(45vw + 0.7rem);
+    width: min(40vw, 18rem);
   }
 
   .junction-diagram {
     top: max(7.15rem, calc(env(safe-area-inset-top) + 6.6rem));
-    bottom: max(0.4rem, env(safe-area-inset-bottom));
+    bottom: max(3.4rem, calc(env(safe-area-inset-bottom) + 3rem));
     left: max(0.35rem, env(safe-area-inset-left));
-    width: 40vw;
+    width: 45vw;
     max-height: none;
     display: flex;
     flex-direction: column;
@@ -1952,6 +1957,10 @@
 }
 
 @media (orientation: portrait) {
+  .junction-diagram {
+    width: min(86vw, calc(100vw - 4.5rem));
+  }
+
   .hud-anchor-rail {
     top: auto;
     bottom: max(10.8rem, calc(env(safe-area-inset-bottom) + 10.4rem));

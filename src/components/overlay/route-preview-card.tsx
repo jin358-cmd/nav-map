@@ -163,7 +163,9 @@ export function RoutePreviewCard({
         {scene.blocks.map((ring, index) => (
           <path key={`block-${index}`} className="route-preview-card__block" d={`${pointsToPath(ring)} Z`} />
         ))}
-        {scene.lines.map((line, index) => (
+        {scene.lines
+          .filter((line) => !(junction && line.kind === "route"))
+          .map((line, index) => (
           <path
             key={`${line.kind}-case-${index}`}
             className={
@@ -176,12 +178,12 @@ export function RoutePreviewCard({
             d={pointsToPath(line.points)}
           />
         ))}
-        {scene.lines.map((line, index) =>
+        {scene.lines.filter((line) => line.kind !== "route").map((line, index) =>
           junction && line.kind === "approach" ? (
             <path
               key={`${line.kind}-${index}`}
               className="junction-diagram__asphalt junction-diagram__asphalt--approach"
-              d={roadRibbon(line.points, 40, 24)}
+              d={roadRibbon(line.points, 36, 22)}
             />
           ) : (
             <path
@@ -192,7 +194,9 @@ export function RoutePreviewCard({
           ),
         )}
         {junction
-          ? scene.lines.map((line, index) => (
+          ? scene.lines
+              .filter((line) => line.kind !== "route")
+              .map((line, index) => (
               <path
                 key={`${line.kind}-lane-${index}`}
                 className="junction-diagram__lane"
@@ -202,20 +206,12 @@ export function RoutePreviewCard({
           : null}
         {junction
           ? scene.lines
-              .filter((line) => line.kind === "approach" || line.kind === "depart")
+              .filter((line) => line.kind === "route")
               .map((line, index) => (
                 <path
                   key={`route-${index}`}
-                  className={
-                    line.kind === "approach"
-                      ? "junction-diagram__route junction-diagram__route--fill"
-                      : "junction-diagram__route"
-                  }
-                  d={
-                    line.kind === "approach"
-                      ? roadRibbon(line.points, 16, 11)
-                      : pointsToPath(line.points)
-                  }
+                  className="junction-diagram__route"
+                  d={pointsToPath(line.points)}
                 />
               ))
           : null}
@@ -233,9 +229,8 @@ export function RoutePreviewCard({
                 className="junction-diagram__car"
                 transform={`translate(${marker.at.x} ${marker.at.y}) rotate(${marker.heading ?? 0})`}
               >
-                <circle r="7.5" />
-                <polygon points="0,-9 4.2,5 -4.2,5" />
-                <path d="M0,-9 V-16" />
+                <circle r="8" />
+                <polygon points="0,-6 4.4,6 -4.4,6" />
               </g>
             ) : (
               <polygon
@@ -261,7 +256,7 @@ export function RoutePreviewCard({
         )}
         <g
           className="route-preview-card__north"
-          transform={`translate(16 16) rotate(${scene.northDeg})`}
+          transform={`translate(${scene.width - 18} 18) rotate(${scene.northDeg})`}
         >
           <polygon points="0,-7 2.4,4 -2.4,4" />
           <text y="-8" textAnchor="middle">北</text>
