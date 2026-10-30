@@ -16,6 +16,29 @@ import {
 } from "@/lib/route-preview-geometry";
 import type { RouteStep } from "@/types/domain";
 
+function roadRibbon(
+  points: { x: number; y: number }[],
+  nearWidth: number,
+  farWidth: number,
+) {
+  if (points.length < 2) return "";
+  const left: string[] = [];
+  const right: string[] = [];
+  for (let index = 0; index < points.length; index += 1) {
+    const t = index / (points.length - 1);
+    const width = (nearWidth + (farWidth - nearWidth) * t) / 2;
+    const prev = points[Math.max(0, index - 1)];
+    const next = points[Math.min(points.length - 1, index + 1)];
+    const angle = Math.atan2(next.y - prev.y, next.x - prev.x);
+    const nx = Math.sin(angle);
+    const ny = -Math.cos(angle);
+    const point = points[index];
+    left.push(`${(point.x + nx * width).toFixed(1)},${(point.y + ny * width).toFixed(1)}`);
+    right.push(`${(point.x - nx * width).toFixed(1)},${(point.y - ny * width).toFixed(1)}`);
+  }
+  return `M${left.join(" L")} L${right.reverse().join(" L")} Z`;
+}
+
 function lineClass(kind: PreviewPolyline["kind"]) {
   if (kind === "depart") return "route-preview-card__depart";
   if (kind === "major") return "route-preview-card__major";
@@ -140,7 +163,9 @@ export function RoutePreviewCard({
         {scene.blocks.map((ring, index) => (
           <path key={`block-${index}`} className="route-preview-card__block" d={`${pointsToPath(ring)} Z`} />
         ))}
-        {scene.lines.map((line, index) => (
+        {scene.lines
+          .filter((line) => !(junction && line.kind === "route"))
+          .map((line, index) => (
           <path
             key={`${line.kind}-case-${index}`}
             className={
@@ -153,15 +178,25 @@ export function RoutePreviewCard({
             d={pointsToPath(line.points)}
           />
         ))}
-        {scene.lines.map((line, index) => (
-          <path
-            key={`${line.kind}-${index}`}
-            className={junction ? "junction-diagram__asphalt" : lineClass(line.kind)}
-            d={pointsToPath(line.points)}
-          />
-        ))}
+        {scene.lines.filter((line) => line.kind !== "route").map((line, index) =>
+          junction && line.kind === "approach" ? (
+            <path
+              key={`${line.kind}-${index}`}
+              className="junction-diagram__asphalt junction-diagram__asphalt--approach"
+              d={roadRibbon(line.points, 36, 22)}
+            />
+          ) : (
+            <path
+              key={`${line.kind}-${index}`}
+              className={junction ? `junction-diagram__asphalt junction-diagram__asphalt--${line.kind}` : lineClass(line.kind)}
+              d={pointsToPath(line.points)}
+            />
+          ),
+        )}
         {junction
-          ? scene.lines.map((line, index) => (
+          ? scene.lines
+              .filter((line) => line.kind !== "route")
+              .map((line, index) => (
               <path
                 key={`${line.kind}-lane-${index}`}
                 className="junction-diagram__lane"
@@ -171,7 +206,7 @@ export function RoutePreviewCard({
           : null}
         {junction
           ? scene.lines
-              .filter((line) => line.kind === "approach" || line.kind === "depart")
+              .filter((line) => line.kind === "route")
               .map((line, index) => (
                 <path
                   key={`route-${index}`}
@@ -194,9 +229,8 @@ export function RoutePreviewCard({
                 className="junction-diagram__car"
                 transform={`translate(${marker.at.x} ${marker.at.y}) rotate(${marker.heading ?? 0})`}
               >
-                <circle r="7.5" />
-                <polygon points="0,-9 4.2,5 -4.2,5" />
-                <path d="M0,-9 V-16" />
+                <circle r="8" />
+                <polygon points="0,-6 4.4,6 -4.4,6" />
               </g>
             ) : (
               <polygon
@@ -222,7 +256,7 @@ export function RoutePreviewCard({
         )}
         <g
           className="route-preview-card__north"
-          transform={`translate(16 16) rotate(${scene.northDeg})`}
+          transform={`translate(${scene.width - 18} 18) rotate(${scene.northDeg})`}
         >
           <polygon points="0,-7 2.4,4 -2.4,4" />
           <text y="-8" textAnchor="middle">北</text>

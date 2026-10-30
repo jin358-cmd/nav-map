@@ -1092,10 +1092,10 @@
 }
 
 .route-preview-card {
-  top: max(8.7rem, calc(env(safe-area-inset-top) + 8rem));
-  left: max(0.45rem, env(safe-area-inset-left));
+  top: max(8.2rem, calc(env(safe-area-inset-top) + 7.6rem));
+  left: max(0.4rem, env(safe-area-inset-left));
   right: auto;
-  width: min(17.2rem, calc(100vw - 4.8rem));
+  width: min(88vw, calc(100vw - 0.8rem));
   padding: 0.3rem 0.35rem 0.4rem;
   border-radius: 0.9rem;
   border: 1px solid rgba(255, 255, 255, 0.14);
@@ -1252,50 +1252,73 @@
   height: 1rem;
 }
 
+.junction-diagram .route-preview-card__block {
+  fill: #74b86c;
+  stroke: #5e9d58;
+}
+
 .junction-diagram .route-preview-card__svg {
-  height: 8.4rem;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  max-height: calc(100dvh - 8.2rem - 11.2rem);
   border-radius: 0;
   background: #8ed18a;
-  transform: perspective(320px) rotateX(16deg);
-  transform-origin: center 80%;
+  transform: perspective(680px) rotateX(8deg);
+  transform-origin: center 58%;
 }
 
 .junction-diagram .route-preview-card__context-case,
 .junction-diagram .route-preview-card__major-case,
 .junction-diagram .route-preview-card__route-case {
   stroke: #f4f4f5;
-  stroke-width: 16;
+  stroke-width: 26;
+}
+
+.junction-diagram .route-preview-card__route-case {
+  stroke-width: 26;
 }
 
 .junction-diagram__asphalt {
   fill: none;
   stroke: #2a2a2a;
-  stroke-width: 11;
+  stroke-width: 20;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
-.junction-diagram__lane {
-  fill: none;
-  stroke: rgba(255, 255, 255, 0.85);
-  stroke-width: 0.8;
-  stroke-dasharray: 2.2 2.4;
-  stroke-linecap: butt;
-  stroke-linejoin: round;
+.junction-diagram__asphalt--approach {
+  fill: #2a2a2a;
+  stroke: #f4f4f5;
+  stroke-width: 3;
 }
 
 .junction-diagram__route {
   fill: none;
   stroke: #f5c400;
-  stroke-width: 4.4;
+  stroke-width: 12;
   stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.junction-diagram__route--fill {
+  fill: #f5c400;
+  stroke: none;
+}
+
+.junction-diagram__lane {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.92);
+  stroke-width: 1.3;
+  stroke-dasharray: 3 3.2;
+  stroke-linecap: butt;
   stroke-linejoin: round;
 }
 
 .junction-diagram__arrow {
   fill: #f5c400;
   stroke: #b45309;
-  stroke-width: 0.4;
+  stroke-width: 0.8;
 }
 
 .junction-diagram__car circle {
@@ -1706,7 +1729,27 @@
   }
 
   .hud-anchor-trip {
-    width: min(46vw, 22rem);
+    left: calc(45vw + 0.7rem);
+    width: min(40vw, 18rem);
+  }
+
+  .junction-diagram {
+    top: max(7.15rem, calc(env(safe-area-inset-top) + 6.6rem));
+    bottom: max(3.4rem, calc(env(safe-area-inset-bottom) + 3rem));
+    left: max(0.35rem, env(safe-area-inset-left));
+    width: 45vw;
+    max-height: none;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .junction-diagram .route-preview-card__svg {
+    flex: 1 1 auto;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    aspect-ratio: auto;
+    max-height: none;
   }
 
   .hud-trip-stack {
@@ -1914,6 +1957,10 @@
 }
 
 @media (orientation: portrait) {
+  .junction-diagram {
+    width: min(86vw, calc(100vw - 4.5rem));
+  }
+
   .hud-anchor-rail {
     top: auto;
     bottom: max(10.8rem, calc(env(safe-area-inset-bottom) + 10.4rem));

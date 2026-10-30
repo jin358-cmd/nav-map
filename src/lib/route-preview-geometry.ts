@@ -1,6 +1,6 @@
-import { destinationPoint } from "@/lib/geo";
+import { bearingDegrees, destinationPoint, distanceKm } from "@/lib/geo";
 import type { NavAutoZoomPhase } from "@/lib/nav-auto-zoom";
-import { lineLengthMeters, pointAlongRoute, sliceRouteAhead } from "@/lib/upcoming-route";
+import { lineLengthMeters, pointAlongRoute } from "@/lib/upcoming-route";
 
 export type PreviewMode = "overview" | "junction";
 
@@ -178,7 +178,9 @@ function sceneFrom(
     .flat()
     .concat(localMarkers.map((marker) => marker.at))
     .concat(localLabels.map((label) => label.at));
-  const project = fitTransform(cloud, VIEW_W, VIEW_H, PAD);
+  const width = mode === "junction" ? 200 : VIEW_W;
+  const height = mode === "junction" ? 200 : VIEW_H;
+  const project = fitTransform(cloud, width, height, mode === "junction" ? 34 : PAD);
   const epsilon = mode === "overview" ? 18 : 3;
   const north = spin({ x: 0, y: 1 });
   const northDeg = (Math.atan2(north.x, north.y) * 180) / Math.PI;
@@ -186,11 +188,12 @@ function sceneFrom(
     kind: kinds[index] ?? "context",
     points: douglasPeucker(points, epsilon).map(project),
   }));
+  const routeLine = drawn.find((line) => line.kind === "route");
   const depart = drawn.find((line) => line.kind === "depart");
   return {
     mode,
-    width: VIEW_W,
-    height: VIEW_H,
+    width,
+    height,
     lines: drawn,
     blocks: localBlocks.map((ring) => douglasPeucker(ring, 6).map(project)),
     markers: localMarkers.map((marker) => ({
@@ -198,13 +201,53 @@ function sceneFrom(
       at: project(marker.at),
       heading: marker.kind === "position" ? 0 : undefined,
     })),
-    labels: localLabels.map((label) => ({
-      text: label.text,
-      at: project(label.at),
-    })),
-    arrow: arrowHead(depart?.points ?? []),
+    labels: placeLabels(
+      localLabels.map((label) => ({
+        text: label.text,
+        at: project(label.at),
+      })),
+      width,
+      height,
+      mode === "junction" ? 0 : 12,
+    ),
+    arrow: arrowHead(routeLine?.points ?? depart?.points ?? []),
     northDeg,
   };
+}
+
+function placeLabels(
+  labels: PreviewLabel[],
+  width: number,
+  height: number,
+  nudgeY = 12,
+): PreviewLabel[] {
+  const kept: Array<{ label: PreviewLabel; left: number; right: number; top: number; bottom: number }> = [];
+  const inset = 14;
+  for (const label of labels) {
+    const textWidth = Math.max(22, label.text.length * 9);
+    const textHeight = 14;
+    let x = label.at.x;
+    let y = label.at.y - nudgeY;
+    x = Math.min(width - inset - textWidth / 2, Math.max(inset + textWidth / 2, x));
+    y = Math.min(height - inset, Math.max(inset + textHeight, y));
+    const box = {
+      left: x - textWidth / 2,
+      right: x + textWidth / 2,
+      top: y - textHeight,
+      bottom: y + 2,
+    };
+    if (box.left < 6 || box.right > width - 6 || box.top < 6 || box.bottom > height - 6) continue;
+    const hits = kept.some(
+      (item) =>
+        box.left < item.right + 4 &&
+        box.right > item.left - 4 &&
+        box.top < item.bottom + 4 &&
+        box.bottom > item.top - 4,
+    );
+    if (hits) continue;
+    kept.push({ label: { text: label.text, at: { x, y } }, ...box });
+  }
+  return kept.map((item) => item.label);
 }
 
 function arrowHead(points: LocalPoint[]): LocalPoint[] {
@@ -212,10 +255,10 @@ function arrowHead(points: LocalPoint[]): LocalPoint[] {
   const tip = points[points.length - 1];
   const prev = points[points.length - 2];
   const angle = Math.atan2(tip.y - prev.y, tip.x - prev.x);
-  const back = 9;
-  const wing = 5;
-  const left = angle + Math.PI - 0.55;
-  const right = angle + Math.PI + 0.55;
+  const back = 22;
+  const wing = 11;
+  const left = angle + Math.PI - 0.7;
+  const right = angle + Math.PI + 0.7;
   return [
     tip,
     { x: tip.x + Math.cos(left) * back + Math.cos(angle + Math.PI / 2) * wing * 0.15, y: tip.y + Math.sin(left) * back },
@@ -263,27 +306,157 @@ function asSketch(input: SketchInput): { line: [number, number][]; name: string;
   return { line: input.line, name: input.name ?? "", rank: input.rank === "major" ? "major" : "minor" };
 }
 
-/** Cross-street stubs when the basemap has no rendered roads at the junction. */
+function turnDelta(from: number, to: number) {
+  return Math.abs(((to - from + 540) % 360) - 180);
+}
+
+/** Angle between two road axes, so a northbound and southbound trace of the same street match. */
+function axisDelta(from: number, to: number) {
+  const delta = turnDelta(from, to);
+  return Math.min(delta, 180 - delta);
+}
+
+function lineBearing(line: [number, number][]) {
+  const from = { lng: line[0][0], lat: line[0][1] };
+  const to = { lng: line[line.length - 1][0], lat: line[line.length - 1][1] };
+  return bearingDegrees(from, to);
+}
+
+function lineMidpoint(line: [number, number][]) {
+  const mid = line[Math.floor(line.length / 2)] ?? line[0];
+  return { lng: mid[0], lat: mid[1] };
+}
+
+function metersToSegment(
+  point: { lng: number; lat: number },
+  line: [number, number][],
+) {
+  const origin = line[0];
+  const toLocal = (coord: [number, number]) => localOf(origin, coord);
+  const target = toLocal([point.lng, point.lat]);
+  let best = Infinity;
+  for (let index = 1; index < line.length; index += 1) {
+    const start = toLocal(line[index - 1]);
+    const end = toLocal(line[index]);
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    const lengthSq = dx * dx + dy * dy;
+    const t =
+      lengthSq < 1e-6
+        ? 0
+        : Math.min(1, Math.max(0, ((target.x - start.x) * dx + (target.y - start.y) * dy) / lengthSq));
+    best = Math.min(best, Math.hypot(target.x - (start.x + dx * t), target.y - (start.y + dy * t)));
+  }
+  return best;
+}
+
+/** One centreline per street: drop specks, and fold dual carriageways that share a name or sit within 15 m. */
+export function mergeJunctionRoads<T extends { line: [number, number][]; name?: string }>(
+  roads: T[],
+): T[] {
+  const sorted = roads
+    .filter((road) => road.line.length >= 2 && lineLengthMeters(road.line) >= 36)
+    .slice()
+    .sort((a, b) => lineLengthMeters(b.line) - lineLengthMeters(a.line));
+  const kept: T[] = [];
+  for (const road of sorted) {
+    const mid = lineMidpoint(road.line);
+    const bearing = lineBearing(road.line);
+    const duplicate = kept.some((other) => {
+      const otherMid = lineMidpoint(other.line);
+      const gap = Math.min(metersToSegment(mid, other.line), metersToSegment(otherMid, road.line));
+      const sameName = Boolean(road.name) && road.name === other.name;
+      const parallel = axisDelta(bearing, lineBearing(other.line)) <= 18;
+      return gap <= 15 && (sameName || parallel);
+    });
+    if (!duplicate) kept.push(road);
+  }
+  return kept;
+}
+
+/** Clip a centreline to the junction disc. Segments that only graze the disc become short and are dropped later. */
+export function clipLineToRadius(
+  line: [number, number][],
+  center: { lng: number; lat: number },
+  radiusMeters: number,
+): [number, number][] {
+  const distanceTo = (coord: [number, number]) =>
+    distanceKm({ lng: coord[0], lat: coord[1] }, center) * 1000;
+  const hits: [number, number][] = [];
+  const push = (coord: [number, number]) => {
+    const prev = hits[hits.length - 1];
+    if (prev && Math.abs(prev[0] - coord[0]) < 1e-9 && Math.abs(prev[1] - coord[1]) < 1e-9) return;
+    hits.push(coord);
+  };
+  for (let index = 1; index < line.length; index += 1) {
+    const start = line[index - 1];
+    const end = line[index];
+    const steps = 8;
+    let prev = start;
+    let prevDist = distanceTo(start);
+    for (let step = 1; step <= steps; step += 1) {
+      const t = step / steps;
+      const next: [number, number] = [
+        start[0] + (end[0] - start[0]) * t,
+        start[1] + (end[1] - start[1]) * t,
+      ];
+      const nextDist = distanceTo(next);
+      const prevIn = prevDist <= radiusMeters;
+      const nextIn = nextDist <= radiusMeters;
+      if (prevIn && nextIn) {
+        push(prev);
+        push(next);
+      } else if (prevIn !== nextIn) {
+        const span = nextDist - prevDist;
+        const edgeT = span === 0 ? 0 : (radiusMeters - prevDist) / span;
+        const clamped = Math.min(1, Math.max(0, edgeT));
+        const edge: [number, number] = [
+          prev[0] + (next[0] - prev[0]) * clamped,
+          prev[1] + (next[1] - prev[1]) * clamped,
+        ];
+        if (prevIn) {
+          push(prev);
+          push(edge);
+        } else {
+          push(edge);
+          if (nextIn) push(next);
+        }
+      }
+      prev = next;
+      prevDist = nextDist;
+    }
+  }
+  return hits.length >= 2 ? hits : [];
+}
+
+/**
+ * One crossbar only, and only when the basemap contributed nothing usable.
+ * The bar follows the exit when the turn is real, otherwise it sits square to the approach.
+ */
 export function fallbackJunctionRoads(
   route: [number, number][],
   apexMeters: number,
-  names: { approach?: string; exit?: string } = {},
+  _names: { approach?: string; exit?: string } = {},
 ): Array<{ line: [number, number][]; name: string; rank: "major" | "minor" }> {
   const apex = pointAlongRoute(route, Math.max(0, apexMeters));
   if (!apex) return [];
   const approachPose = pointAlongRoute(route, Math.max(0, apexMeters - 24));
-  const bearing = approachPose?.bearing ?? apex.bearing;
+  const exitPose = pointAlongRoute(route, apexMeters + 24);
+  const approachBearing = approachPose?.bearing ?? apex.bearing;
+  const exitBearing = exitPose?.bearing ?? approachBearing;
+  const turn = turnDelta(approachBearing, exitBearing);
+  const barBearing = turn > 32 ? exitBearing : approachBearing + 90;
   const center = { lng: apex.lng, lat: apex.lat };
-  const left = destinationPoint(center, 42, bearing - 90);
-  const right = destinationPoint(center, 42, bearing + 90);
+  const left = destinationPoint(center, 68, barBearing);
+  const right = destinationPoint(center, 68, barBearing + 180);
   return [
     {
       line: [
         [left.lng, left.lat],
-        [apex.lng, apex.lat],
+        [center.lng, center.lat],
         [right.lng, right.lat],
       ],
-      name: names.exit || names.approach || "",
+      name: "",
       rank: "major",
     },
   ];
@@ -315,20 +488,50 @@ export function buildJunctionScene(
   blocks: [number, number][][] = [],
 ): PreviewScene {
   const total = lineLengthMeters(route);
-  const from = Math.max(0, apexMeters - 90);
-  const ahead = Math.min(total - from, 150);
-  const slice = sliceRouteAhead(route, from, Math.max(24, ahead));
-  const splitAt = Math.max(0, apexMeters - from);
-  const approach = sliceRouteAhead(slice, 0, Math.max(8, splitAt));
-  const depart = sliceRouteAhead(slice, splitAt, 48);
-  const position = asLng(pointAlongRoute(route, Math.max(0, Math.min(total, routeMeters))));
-  const maneuver = asLng(pointAlongRoute(route, Math.max(0, Math.min(total, apexMeters))));
-  const approachPose = pointAlongRoute(route, Math.max(0, apexMeters - 12));
-  const roads = context.map(asSketch).filter((road) => road.line.length >= 2);
-  const sketches = roads.length
-    ? roads
+  const apex = Math.max(0, Math.min(total, apexMeters));
+  const carMeters = Math.max(0, Math.min(apex, routeMeters));
+  const apexPoint = pointAlongRoute(route, apex);
+  const approachPose = pointAlongRoute(route, Math.max(0, apex - 16));
+  const exitPose = pointAlongRoute(route, Math.min(total, apex + 22));
+  const approachBearing = approachPose?.bearing ?? apexPoint?.bearing ?? 0;
+  const exitBearing = exitPose?.bearing ?? approachBearing;
+  const center = apexPoint ? { lng: apexPoint.lng, lat: apexPoint.lat } : null;
+  const behindCar = apex - carMeters;
+  const tail = center ? destinationPoint(center, behindCar + 36, approachBearing + 180) : null;
+  const car = center ? destinationPoint(center, behindCar, approachBearing + 180) : null;
+  const exitEnd = center ? destinationPoint(center, 64, exitBearing) : null;
+  const approach: [number, number][] =
+    tail && center ? [[tail.lng, tail.lat], [center.lng, center.lat]] : [];
+  const depart: [number, number][] =
+    center && exitEnd ? [[center.lng, center.lat], [exitEnd.lng, exitEnd.lat]] : [];
+  const yellow: [number, number][] =
+    car && center && exitEnd
+      ? behindCar > 0.8
+        ? [[car.lng, car.lat], [center.lng, center.lat], [exitEnd.lng, exitEnd.lat]]
+        : [[center.lng, center.lat], [exitEnd.lng, exitEnd.lat]]
+      : [];
+  const position = yellow[0] ?? null;
+  const maneuver = center ? ([center.lng, center.lat] as [number, number]) : null;
+  const cardRadius = 74;
+  const realCrosses = center
+    ? mergeJunctionRoads(context.map(asSketch).filter((road) => road.line.length >= 2))
+        .map((road) => ({ ...road, line: clipLineToRadius(road.line, center, cardRadius) }))
+        .filter((road) => lineLengthMeters(road.line) >= 42)
+        .filter((road) => {
+          if (!approach.length) return true;
+          const sameAsApproach =
+            axisDelta(lineBearing(road.line), approachBearing) <= 18 &&
+            metersToSegment(lineMidpoint(road.line), approach) <= 15;
+          return !sameAsApproach;
+        })
+        .sort((a, b) => lineLengthMeters(b.line) - lineLengthMeters(a.line))
+        .slice(0, 3)
+    : [];
+  // Stubs are a stand-in for a missing basemap, never an extra fan on top of real roads.
+  const sketches = realCrosses.length
+    ? realCrosses
     : maneuver
-      ? fallbackJunctionRoads(route, apexMeters, names)
+      ? fallbackJunctionRoads(route, apex, names)
       : [];
   const packed: Array<{ line: [number, number][]; kind: PreviewPolyline["kind"] }> = [
     ...sketches.map((road) => ({
@@ -337,29 +540,32 @@ export function buildJunctionScene(
     })),
     { line: approach, kind: "approach" as const },
     { line: depart, kind: "depart" as const },
+    { line: yellow, kind: "route" as const },
   ].filter((item) => item.line.length >= 2);
   const markers: Array<{ at: [number, number]; kind: PreviewMarker["kind"] }> = [];
   if (position) markers.push({ at: position, kind: "position" });
   if (maneuver) markers.push({ at: maneuver, kind: "maneuver" });
   const labels: Array<{ at: [number, number]; text: string }> = [];
-  if (names.approach && approach.length) {
-    labels.push({ text: names.approach, at: approach[Math.max(0, approach.length - 2)] });
+  if (names.approach && center) {
+    const along = destinationPoint(
+      center,
+      Math.min(52, behindCar * 0.4 + 20),
+      approachBearing + 180,
+    );
+    const beside = destinationPoint(along, 34, approachBearing - 90);
+    labels.push({ text: names.approach, at: [beside.lng, beside.lat] });
   }
-  if (names.exit && depart.length) {
-    labels.push({ text: names.exit, at: depart[Math.min(depart.length - 1, 1)] });
-  }
-  for (const road of sketches) {
-    if (!road.name || labels.some((label) => label.text === road.name)) continue;
-    if (labels.length >= 4) break;
-    labels.push({
-      text: road.name,
-      at: road.line[Math.floor(road.line.length / 2)] ?? road.line[0],
-    });
+  if (names.exit && center) {
+    const signed = ((exitBearing - approachBearing + 540) % 360) - 180;
+    const outside = signed >= 0 ? -90 : 90;
+    const along = destinationPoint(center, 42, exitBearing);
+    const beside = destinationPoint(along, 30, exitBearing + outside);
+    labels.push({ text: names.exit, at: [beside.lng, beside.lat] });
   }
   const fills = blocks.length
     ? blocks
     : maneuver
-      ? syntheticBlocks(maneuver, approachPose?.bearing ?? 0)
+      ? syntheticBlocks(maneuver, approachBearing)
       : [];
   return sceneFrom(
     "junction",
@@ -368,7 +574,7 @@ export function buildJunctionScene(
     markers,
     labels,
     fills,
-    approachPose?.bearing ?? null,
+    approachBearing,
   );
 }
 
