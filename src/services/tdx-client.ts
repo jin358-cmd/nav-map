@@ -62,23 +62,6 @@ export async function fetchTainanCityShapes(): Promise<TdxShapeRow[]> {
   ]);
 }
 
-export async function fetchTainanCityIncidents(): Promise<Record<string, unknown>[]> {
-  const payload = await fetchTdxJson(
-    `/v2/Road/Traffic/Incident/City/${TDX_TAINAN_CITY}`,
-  );
-  return unwrapTdxList<Record<string, unknown>>(payload, [
-    "Incidents",
-    "incidents",
-  ]);
-}
-
-export async function fetchTainanCityNews(): Promise<Record<string, unknown>[]> {
-  const payload = await fetchTdxJson(
-    `/v2/Road/Traffic/News/City/${TDX_TAINAN_CITY}`,
-  );
-  return unwrapTdxList<Record<string, unknown>>(payload, ["News", "news"]);
-}
-
 export async function fetchCityParkingLots(
   city: string,
 ): Promise<Record<string, unknown>[]> {

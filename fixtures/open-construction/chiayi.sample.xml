@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<DIG_CASE>
+  <CASE_LIST>
+<CASE_DETAIL xmlns:ns0="http://www.opengis.net/gml" LASTMOD="2026-10-28">
+      <TOWN_CODE>1</TOWN_CODE>
+      <TOWN_NAME>東區</TOWN_NAME>
+      <AC_NO>1151411784</AC_NO>
+      <CASE_ID>49109</CASE_ID>
+      <CONST_NAME>114年度修繕文心街試挖(第一次後續擴充)</CONST_NAME>
+      <LOCATION>文雅村里文心街168號</LOCATION>
+      <A_UN>嘉義市</A_UN>
+      <ABE_DA>2026-10-26</ABE_DA>
+      <AEN_DA>2026-11-09</AEN_DA>
+      <ADG_DA>1</ADG_DA>
+      <DACO_TI>8:00~17:00</DACO_TI>
+      <AREA_TA>10.08</AREA_TA>
+      <UN_NA>嘉義市政府工務處水利工程科</UN_NA>
+      <UR_NA></UR_NA>
+      <UR_DR></UR_DR>
+      <UR_TI></UR_TI>
+      <DG_STATUS>0</DG_STATUS>
+      <CENTER_COORDS>
+        <ns0:Point>
+          <ns0:coordinates>197593.988726882,2597737.43635438</ns0:coordinates>
+        </ns0:Point>
+      </CENTER_COORDS>
+      <POLY_LIST>
+        <POLY_DETAIL WAREA_NO="1">
+          <WAREA_POLY>
+            <ns0:MultiPolygon srsName="EPSG:3822">
+              <ns0:polygonMember>
+                <ns0:Polygon>
+                  <ns0:outerBoundaryIs>
+                    <ns0:LinearRing>
+                      <ns0:coordinates>197593.988726882,2597737.43635438 197594.121018813,2597734.39363996 197605.762708763,2597737.03947859 197604.968957176,2597739.81760914 197593.988726882,2597737.43635438</ns0:coordinates>
+                    </ns0:LinearRing>
+                  </ns0:outerBoundaryIs>
+                </ns0:Polygon>
+              </ns0:polygonMember>
+            </ns0:MultiPolygon>
+          </WAREA_POLY>
+          <WAREA_POINT>
+            <ns0:Point>
+              <ns0:coordinates>197593.988726882,2597737.43635438</ns0:coordinates>
+            </ns0:Point>
+          </WAREA_POINT>
+        </POLY_DETAIL>
+        <POLY_DETAIL WAREA_NO="2">
+          <WAREA_POLY>
+            <ns0:MultiPolygon srsName="EPSG:3822">
+              <ns0:polygonMember>
+                <ns0:Polygon>
+                  <ns0:outerBoundaryIs>
+                    <ns0:LinearRing>
+                      <ns0:coordinates>197500.855207282,2597719.70923559 197500.855207282,2597716.93110504 197511.570853713,2597719.44465173 197509.983350538,2597721.82590649 197500.855207282,2597719.70923559</ns0:coordinates>
+                    </ns0:LinearRing>
+                  </ns0:outerBoundaryIs>
+                </ns0:Polygon>
+              </ns0:polygonMember>
+            </ns0:MultiPolygon>
+          </WAREA_POLY>
+          <WAREA_POINT>
+            <ns0:Point>
+              <ns0:coordinates>197500.855207282,2597719.70923559</ns0:coordinates>
+            </ns0:Point>
+          </WAREA_POINT>
+        </POLY_DETAIL>
+      </POLY_LIST>
+      <CASE_TYPE>0</CASE_TYPE>
+      <WAREA_TYPE>1</WAREA_TYPE>
+    </CASE_DETAIL>
+    
+  </CASE_LIST>
+</DIG_CASE>
