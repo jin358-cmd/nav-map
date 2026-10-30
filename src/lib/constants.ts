@@ -20,15 +20,15 @@ export const DEMO_VEHICLE: VehiclePose = {
   source: "demo",
 };
 
-export const DRIVING_PITCH = 50;
+export const DRIVING_PITCH = 60;
 /**
- * 3D 駕駛視角：pitch 50°（相機在車後上方往前看）。
+ * 3D 駕駛視角：pitch 60°（相機在車後上方往前看）。
  * 建物可見頂面與立面，地面光圈清楚，消失點約在畫面中上。
  */
-export const NAVIGATION_PITCH = 50;
+export const NAVIGATION_PITCH = 60;
 /** 直式導航與橫式同一 3D 仰角。 */
-export const NAVIGATION_PITCH_PORTRAIT = 50;
-export const INTERSECTION_PITCH_PORTRAIT = 52;
+export const NAVIGATION_PITCH_PORTRAIT = 60;
+export const INTERSECTION_PITCH_PORTRAIT = 62;
 export const DRIVING_ZOOM_PORTRAIT = 17.98;
 export const OVERVIEW_PITCH = 0;
 export const DRIVING_ZOOM = 17.72;
@@ -46,7 +46,7 @@ export const INTERSECTION_ZOOM = 18.28;
 export const INTERSECTION_ZOOM_MOBILE = 18.05;
 /** 直式 3D 路口鏡頭上限：接近黃線時放大到此即停止。 */
 export const INTERSECTION_ZOOM_PORTRAIT = 18.52;
-export const INTERSECTION_PITCH = 52;
+export const INTERSECTION_PITCH = 62;
 export const INTERSECTION_APPROACH_METERS = 95;
 export const CRUISE_ZOOM_START_METERS = 500;
 export const PREPARE_ZOOM_METERS = 200;
