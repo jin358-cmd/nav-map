@@ -2131,7 +2131,7 @@ export function DrivingApp() {
               items={intel}
               origin={origin}
               disasterOrigin={disasterOrigin}
-              emptyHint="目前畫面內尚無 CCTV、事故或災害情報。"
+              emptyHint="目前畫面內尚無監視器、事故或災害情報。"
               onSelectCctv={selectCamera}
               layerVisibility={layerVisibility}
               activeKind={eventListKind ?? selectedEvent?.kind ?? null}
@@ -2179,7 +2179,7 @@ export function DrivingApp() {
       </div>
 
       {!navigating ? (
-        <div className="pointer-events-none absolute bottom-28 left-2 z-10 hidden max-w-[11rem] sm:bottom-36 sm:left-3 sm:block">
+        <div className="browse-legend pointer-events-none absolute z-10 hidden max-w-[11rem] sm:block">
           <Legend />
         </div>
       ) : null}
@@ -2446,7 +2446,7 @@ export function DrivingApp() {
 function Legend() {
   const items = [
     { color: "bg-[#3ee0ff]", label: "導航路線" },
-    { color: "bg-[#c084fc]", label: "CCTV" },
+    { color: "bg-[#c084fc]", label: "監視器" },
     { color: "bg-[#fbbf24]", label: "測速執法" },
     { color: "bg-[#22c55e]", label: "停車場（充足）" },
     { color: "bg-[#eab308]", label: "施工／車位不多" },

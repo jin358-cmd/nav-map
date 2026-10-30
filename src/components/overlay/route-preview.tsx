@@ -3,7 +3,7 @@
 import { Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { HudCloseButton } from "@/components/overlay/hud-close-button";
-import { formatDistance } from "@/lib/format";
+import { formatDistance, presentRouteError } from "@/lib/format";
 import {
   formatChainStoreName,
   formatConfirmLocationLine,
@@ -121,11 +121,11 @@ export function RouteConfirmBar({
             )}
           >
             {error
-              ? error
+              ? presentRouteError(error)
               : rerouting
                 ? "正在規劃路線…"
                 : motorcycleUnsupported && travelMode === "motorcycle"
-                  ? "機車模式尚未設定（NOT CONFIGURED）"
+                  ? "機車模式尚未設定。"
                   : (
                       <>
                         <span className="text-zinc-100">

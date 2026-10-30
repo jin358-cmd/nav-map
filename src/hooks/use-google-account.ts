@@ -198,7 +198,7 @@ export function useGoogleAccount() {
         const { token, reason } = await requestGoogleAccess(GOOGLE_LOGIN_SCOPES, "consent");
         if (!token) {
           if (reason === "cancel" || reason === "popup") setHint("已取消登入。");
-          else if (reason === "origin") setHint("登入網域尚未加入 Google Authorized Origins。");
+          else if (reason === "origin") setHint("這個網站尚未加入 Google 登入的授權網域。");
           else if (reason === "unconfigured") setHint("Google 登入尚未完成設定");
           else setHint("登入沒有完成，請再試一次。");
           return;
@@ -239,7 +239,7 @@ export function useGoogleAccount() {
     setBusy(false);
     if (!token) {
       if (reason === "cancel" || reason === "popup") setHint("已取消 YouTube 授權。");
-      else if (reason === "origin") setHint("登入網域尚未加入 Google Authorized Origins。");
+      else if (reason === "origin") setHint("這個網站尚未加入 Google 登入的授權網域。");
       else if (reason === "unconfigured") setHint("Google 登入尚未完成設定");
       else setHint("無法取得 YouTube 授權，請再試一次。");
       return null;

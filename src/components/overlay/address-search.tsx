@@ -37,7 +37,7 @@ import {
   formatTaiwanRoadName,
   sameTaiwanDisplayTitle,
 } from "@/lib/geocoding/format-taiwan-display-address";
-import { formatDistance } from "@/lib/format";
+import { formatDistance, presentRouteError } from "@/lib/format";
 import { distanceKm } from "@/lib/geo";
 import {
   instantKeywordHits,
@@ -562,7 +562,7 @@ export function AddressSearch({
           {!busy && visibleHits.length === 0 && (emptyHint || error) ? (
             <div className="px-3 py-3">
               <p className={cn("text-sm", error ? "text-amber-200" : "text-zinc-200")}>
-                {error ?? emptyHint}
+                {error ? presentRouteError(error) : emptyHint}
               </p>
               {lookup.submitted ? (
                 <div className="mt-2 flex flex-wrap gap-1.5">

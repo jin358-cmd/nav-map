@@ -1,4 +1,5 @@
 import type { Map as MapLibreMap } from "maplibre-gl";
+import { applyChineseBasemapLabels } from "@/lib/basemap-labels";
 import { detectAppliedBasemap } from "@/lib/map-basemap";
 
 export function isLiveStyleGeneration(latest: number, generation: number) {
@@ -49,6 +50,11 @@ export function waitForBasemapStyle(
       return;
     }
     if (!styleIsUsable(map) || !matchesExpected()) return;
+    try {
+      applyChineseBasemapLabels(map);
+    } catch {
+      /* Chinese labels are optional if the style rejects the rewrite. */
+    }
     fulfill();
   }
 

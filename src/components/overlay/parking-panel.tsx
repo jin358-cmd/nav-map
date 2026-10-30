@@ -196,7 +196,7 @@ export function ParkingPanel({
               type="button"
               role="switch"
               aria-checked={arrivalPromptEnabled}
-              aria-label={`到達前提醒 ${arrivalPromptEnabled ? "ON" : "OFF"}`}
+              aria-label={`到達前提醒 ${arrivalPromptEnabled ? "開" : "關"}`}
               onClick={() => onToggleArrivalPrompt(!arrivalPromptEnabled)}
               className={cn(
                 "relative inline-flex h-4 w-8 shrink-0 items-center rounded-full px-0.5 touch-manipulation",
@@ -216,7 +216,7 @@ export function ParkingPanel({
                 arrivalPromptEnabled ? "text-emerald-300" : "text-red-300",
               )}
             >
-              {arrivalPromptEnabled ? "ON" : "OFF"}
+              {arrivalPromptEnabled ? "開" : "關"}
             </span>
           </div>
         ) : null}

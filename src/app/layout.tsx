@@ -20,6 +20,11 @@ export const metadata: Metadata = {
   title: APP_BOOKMARK_NAME,
   description: APP_TAGLINE,
   applicationName: APP_BOOKMARK_NAME,
+  openGraph: {
+    title: APP_BOOKMARK_NAME,
+    description: APP_TAGLINE,
+    locale: "zh_TW",
+  },
   appleWebApp: {
     capable: true,
     title: APP_BOOKMARK_NAME,
@@ -44,7 +49,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
-      lang="zh-Hant"
+      lang="zh-Hant-TW"
       className={`dark ${notoSansTc.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>

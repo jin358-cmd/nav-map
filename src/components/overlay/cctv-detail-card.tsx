@@ -57,7 +57,7 @@ export function CctvDetailCard({
             {camera.intersection}
           </p>
           <p className="truncate text-xs text-zinc-500">
-            {camera.sourceType === "freeway" ? "國道 CCTV" : "市區 CCTV"}
+            {camera.sourceType === "freeway" ? "國道監視器" : "市區監視器"}
             {camera.directionLabel ? ` · ${camera.directionLabel}` : ""}
           </p>
         </div>

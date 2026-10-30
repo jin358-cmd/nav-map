@@ -500,10 +500,12 @@
 }
 
 .function-chip__label {
+  max-width: 100%;
   font-size: 9px;
   line-height: 1;
   font-weight: 600;
-  letter-spacing: 0.01em;
+  letter-spacing: 0;
+  white-space: nowrap;
 }
 
 .function-chip__badge {
@@ -783,6 +785,36 @@
 
 .maplibregl-ctrl-attrib {
   display: none !important;
+}
+
+.browse-legend {
+  bottom: 7rem;
+  left: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .browse-legend {
+    bottom: 9rem;
+    left: 0.75rem;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
+  .browse-legend {
+    bottom: 3.35rem;
+    left: 3.15rem;
+  }
+
+  .browse-legend > div {
+    padding: 0.28rem 0.5rem;
+    font-size: 10px;
+    line-height: 1.25;
+  }
+
+  .browse-legend > div > div {
+    padding-top: 0;
+    padding-bottom: 0;
+  }
 }
 
 .hud-anchor-attrib {
@@ -1307,7 +1339,9 @@
 .hud-speed-gps__unit {
   width: 100%;
   margin-top: 0.15rem;
-  font-size: 11px;
+  font-size: 10px;
+  letter-spacing: 0;
+  white-space: nowrap;
   text-align: center;
 }
 
@@ -1381,6 +1415,7 @@
 
 .hud-trip-metric--distance {
   color: #fff;
+  overflow: visible;
 }
 
 .hud-trip-metric--eta {
@@ -1408,7 +1443,11 @@
   }
 
   .hud-anchor-trip {
-    width: min(42vw, 20rem);
+    width: min(46vw, 22rem);
+  }
+
+  .hud-trip-stack {
+    --hud-trip-cols: minmax(4.5rem, 1fr) minmax(5.1rem, 1.15fr) minmax(5.15rem, 1.15fr);
   }
 
   .hud-speed-column {
@@ -1633,7 +1672,7 @@
   }
 
   .hud-trip-stack {
-    --hud-trip-cols: minmax(4.25rem, 1fr) minmax(0, 1fr) minmax(5.15rem, 1.2fr);
+    --hud-trip-cols: minmax(4.15rem, 0.92fr) minmax(4.9rem, 1.25fr) minmax(4.85rem, 1.1fr);
     gap: 0.35rem;
   }
 

@@ -90,6 +90,7 @@ import {
 import { upsertIntelligenceLayers } from "@/lib/map-layers";
 import { configureMapLibreWorker } from "@/lib/maplibre-worker";
 import { formatTaiwanRoadName } from "@/lib/geocoding/format-taiwan-display-address";
+import { applyChineseBasemapLabels } from "@/lib/basemap-labels";
 import {
   applyResolvedTheme,
   basemapStyle,
@@ -1248,6 +1249,7 @@ export function DrivingMap({
       if (!isStyleReady(map)) return;
       const visible = layerVisibilityRef.current;
       try {
+        applyChineseBasemapLabels(map);
         applyResolvedTheme(map, styleKeyRef.current);
         ensureHeadingConeLayers(map);
         upsertIntelligenceLayers(

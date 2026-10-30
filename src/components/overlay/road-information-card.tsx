@@ -35,7 +35,7 @@ const KIND_META: Record<
   { label: string; className: string; activeClass: string; icon: typeof CongestionCarsIcon }
 > = {
   cctv: {
-    label: "CCTV",
+    label: "監視器",
     className: "text-violet-300 bg-violet-500/15 border-violet-300/20",
     activeClass: "border-violet-300/70 bg-violet-500/30 text-violet-100",
     icon: CctvLensIcon,
@@ -250,7 +250,7 @@ export function RoadInformationCard({
       </div>
       {!compact ? (
         <p className="mt-1 max-w-[min(36rem,calc(100vw-0.75rem))] truncate text-center text-[10px] text-zinc-500">
-          CCTV {cctvOriginLabel(origin)} · 災害 {disasterOriginLabel(disasterOrigin)}
+          監視器 {cctvOriginLabel(origin)} · 災害 {disasterOriginLabel(disasterOrigin)}
         </p>
       ) : null}
     </section>

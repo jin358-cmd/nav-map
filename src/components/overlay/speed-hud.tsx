@@ -24,7 +24,7 @@ export function SpeedHud({ sample }: { sample: SpeedSample }) {
       <p className="hud-speed-gps__value font-black leading-none tabular-nums text-white">
         {display}
       </p>
-      <p className="hud-speed-gps__unit leading-none text-zinc-300">km/h</p>
+      <p className="hud-speed-gps__unit leading-none text-zinc-300">公里/時</p>
     </div>
   );
 }
