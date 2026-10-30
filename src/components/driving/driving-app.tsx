@@ -137,6 +137,12 @@ import {
   subscribeGuidanceArrowMode,
   writeGuidanceArrowMode,
 } from "@/lib/guidance-arrow-mode";
+import {
+  getServerNavAutoZoomSnapshot,
+  readNavAutoZoomEnabled,
+  subscribeNavAutoZoom,
+  writeNavAutoZoomEnabled,
+} from "@/lib/nav-auto-zoom-setting";
 import { GuidanceArrowToggle } from "@/components/overlay/guidance-arrow-toggle";
 import {
   deleteSavedPlace,
@@ -267,6 +273,11 @@ export function DrivingApp() {
     subscribeGuidanceArrowMode,
     readGuidanceArrowMode,
     getServerGuidanceArrowModeSnapshot,
+  );
+  const autoZoomEnabled = useSyncExternalStore(
+    subscribeNavAutoZoom,
+    readNavAutoZoomEnabled,
+    getServerNavAutoZoomSnapshot,
   );
   const [pendingMapDisplayMode, setPendingMapDisplayMode] =
     useState<MapDisplayMode | null>(null);
@@ -458,6 +469,16 @@ export function DrivingApp() {
       ? activeNavigationStep.cueMeters
       : (maneuver?.distanceMeters ?? activeNavigationStep?.distanceMeters ?? 0);
   const turnManeuver = isTurnManeuver(activeNavigationStep);
+  const turnCueMeters = useMemo(() => {
+    if (!routeProgressModel) return [] as number[];
+    const cues: number[] = [];
+    routeSteps.forEach((step, index) => {
+      if (!isTurnManeuver(step)) return;
+      const meters = routeProgressModel.stepMeters[index];
+      if (typeof meters === "number" && Number.isFinite(meters)) cues.push(meters);
+    });
+    return cues;
+  }, [routeProgressModel, routeSteps]);
   const followingStep = navigationProgress
     ? (routeSteps[navigationProgress.stepIndex + 1] ?? null)
     : (routeSteps[1] ?? null);
@@ -1640,6 +1661,8 @@ export function DrivingApp() {
         maneuverAlertPhase={nextAlertPhase}
         guidanceArrowMode={guidanceArrowMode}
         offRoute={navigationProgress?.offRoute ?? false}
+        autoZoomEnabled={autoZoomEnabled}
+        turnCueMeters={turnCueMeters}
         destination={destination}
         overlayPadding={navigating ? overlayPadding : null}
         fitRouteKey={fitRouteKey}
@@ -1811,6 +1834,18 @@ export function DrivingApp() {
             mode={guidanceArrowMode}
             onChange={writeGuidanceArrowMode}
           />
+          <button
+            type="button"
+            className={
+              autoZoomEnabled
+                ? "nav-auto-zoom-toggle nav-auto-zoom-toggle--on"
+                : "nav-auto-zoom-toggle"
+            }
+            aria-pressed={autoZoomEnabled}
+            onClick={() => writeNavAutoZoomEnabled(!autoZoomEnabled)}
+          >
+            路口放大
+          </button>
         </div>
       ) : null}
 
